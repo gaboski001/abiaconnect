@@ -75,6 +75,10 @@ export function Footer() {
   const showLogoImage = !!logoUrl && !logoFailed
 
   useEffect(() => {
+    setLogoFailed(false)
+  }, [settings.site_logo, settings.logo_url, logoUrl])
+
+  useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 400)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   LogOut,
@@ -38,6 +38,10 @@ export function Navbar() {
   const showLogoImage = !!logoUrl && !logoFailed
   const subgroupsEnabled = settings.global_subgroups_enabled !== 'false'
   const storeLink = settings.store_link
+
+  useEffect(() => {
+    setLogoFailed(false)
+  }, [settings.site_logo, settings.logo_url, logoUrl])
 
   const navLinks = (
     <>
