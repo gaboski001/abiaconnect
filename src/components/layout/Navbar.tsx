@@ -28,11 +28,12 @@ export function Navbar() {
   const navigate = useNavigate()
   const { user, role, isAdmin, signOut } = useAuth()
   const { settings } = useSiteSettings()
+  const { data: profile } = useProfile()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
 
   const siteName = settings.site_name || 'AbiaConnect'
-  const logoUrl = settings.site_logo || settings.logo_url
+  const logoUrl = getStorageUrl(settings.site_logo || settings.logo_url, 'site-assets')
   const subgroupsEnabled = settings.global_subgroups_enabled !== 'false'
   const storeLink = settings.store_link
 
@@ -135,18 +136,25 @@ export function Navbar() {
             </SheetContent>
           </Sheet>
 
-          <Link to="/" className="flex items-center gap-2">
-            {logoUrl ? (
-              <img src={logoUrl} alt={siteName} onError={handleImgError} className="h-10 w-10 rounded-xl object-cover" />
-            ) : (
+          {logoUrl ? (
+            <Link to="/" className="flex items-center" aria-label={siteName}>
+              <SafeImage
+                src={logoUrl}
+                fallback=""
+                alt={siteName}
+                className="h-10 w-auto max-w-[160px] object-contain"
+              />
+            </Link>
+          ) : (
+            <Link to="/" className="flex items-center gap-2">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm">
                 <Zap className="size-5" />
               </span>
-            )}
-            <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">
-              {siteName}
-            </span>
-          </Link>
+              <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent hidden sm:block">
+                {siteName}
+              </span>
+            </Link>
+          )}
         </div>
 
         {/* Center: Nav */}
@@ -170,12 +178,13 @@ export function Navbar() {
 
           {user ? (
             <>
-              <Link
-                to="/profile"
-                className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground text-sm font-semibold"
-                aria-label="Profile"
-              >
-                {(user.email?.[0] ?? 'U').toUpperCase()}
+              <Link to="/profile" aria-label="Profile" className="flex">
+                <UserAvatar
+                  avatarUrl={profile?.avatar_url}
+                  displayName={profile?.display_name || user.email}
+                  size="sm"
+                  className="border-0"
+                />
               </Link>
               <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sign out">
                 <LogOut />
