@@ -1240,12 +1240,7 @@ function SiteSettingsSection() {
 
 function SeedDatabaseCard() {
   const { user } = useAuth()
-  const [seeded, setSeeded] = useState(
-    () => typeof window !== 'undefined' && localStorage.getItem('abiaconnect_seeded') === 'true',
-  )
   const [running, setRunning] = useState(false)
-
-  if (seeded) return null
 
   const run = async () => {
     if (!user) {
@@ -1256,7 +1251,6 @@ function SeedDatabaseCard() {
     try {
       const result = await seedDatabase(user.id)
       localStorage.setItem('abiaconnect_seeded', 'true')
-      setSeeded(true)
       toast.success(
         `✅ Database seeded successfully! ${result.counts.categories} categories, ${result.counts.threads} threads, ${result.counts.subgroups} subgroups are ready.`,
       )
