@@ -50,6 +50,8 @@ export default function Login() {
   }
 
   return (
+    <>
+      <SEO title="Sign in to AbiaConnect" description="Sign in to your AbiaConnect account to join discussions, vote in polls, and connect with Abians worldwide." path="/login" />
     <div className="min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 rounded-3xl p-6">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card shadow-xl p-8">
         <div className="flex flex-col items-center gap-3 mb-6">
