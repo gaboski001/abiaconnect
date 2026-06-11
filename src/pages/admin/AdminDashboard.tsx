@@ -1232,7 +1232,57 @@ function SiteSettingsSection() {
           })}
         </div>
       </div>
+
+      <SeedDatabaseCard />
     </SectionShell>
+  )
+}
+
+function SeedDatabaseCard() {
+  const { user } = useAuth()
+  const [seeded, setSeeded] = useState(
+    () => typeof window !== 'undefined' && localStorage.getItem('abiaconnect_seeded') === 'true',
+  )
+  const [running, setRunning] = useState(false)
+
+  if (seeded) return null
+
+  const run = async () => {
+    if (!user) {
+      toast.error('You must be signed in as an admin')
+      return
+    }
+    setRunning(true)
+    try {
+      const result = await seedDatabase(user.id)
+      localStorage.setItem('abiaconnect_seeded', 'true')
+      setSeeded(true)
+      toast.success(
+        `✅ Database seeded successfully! ${result.counts.categories} categories, ${result.counts.threads} threads, ${result.counts.subgroups} subgroups are ready.`,
+      )
+    } catch (e: any) {
+      toast.error(e.message || 'Seeding failed')
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border-2 border-orange-400/70 bg-orange-50/60 dark:bg-orange-950/20 p-4 space-y-3">
+      <div>
+        <h3 className="font-semibold text-orange-900 dark:text-orange-200">
+          ⚠️ Seed Initial Content
+        </h3>
+        <p className="text-sm text-orange-900/80 dark:text-orange-200/80 mt-1">
+          This will populate the forum with starter categories, sample threads, and subgroups. Run
+          once only.
+        </p>
+      </div>
+      <Button onClick={run} disabled={running} variant="default">
+        {running ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+        Seed Database Now
+      </Button>
+    </div>
   )
 }
 
