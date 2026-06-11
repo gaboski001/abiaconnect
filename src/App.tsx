@@ -41,8 +41,8 @@ export default function App() {
           <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="create-thread" element={<CreateThread />} />
-          <Route path="messages" element={<Page name="Messages" />} />
-          <Route path="messages/:conversationId" element={<Page name="Conversation" />} />
+          <Route path="messages" element={<Messages />} />
+          <Route path="messages/:conversationId" element={<Messages />} />
 
           <Route element={<AdminRoute />}>
             <Route path="admin/dashboard" element={<Page name="Admin Dashboard" />} />
