@@ -1,9 +1,17 @@
+import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { handleImgError } from '@/lib/image'
 import { useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { ArrowBigUp, Eye, Flame, MessageSquare, Pin, Plus } from 'lucide-react'
+import { ArrowBigUp, ChevronRight, Eye, Flame, MessageSquare, Pin, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
@@ -13,7 +21,11 @@ interface Category {
   name: string
   description?: string | null
   thread_count?: number | null
+  icon?: string | null
+  color?: string | null
 }
+
+type SortKey = 'latest' | 'replies' | 'views' | 'pinned'
 
 interface Thread {
   id: string
