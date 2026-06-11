@@ -17,6 +17,7 @@ import Notifications from '@/pages/Notifications'
 import Messages from '@/pages/Messages'
 import AdminDashboard from '@/pages/admin/AdminDashboard'
 import LgasGuide from '@/pages/LgasGuide'
+import KnownFor from '@/pages/KnownFor'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="category/:categoryId" element={<CategoryPage />} />
         <Route path="thread/:threadId" element={<Thread />} />
         <Route path="about/lgas" element={<LgasGuide />} />
+        <Route path="about/known-for" element={<KnownFor />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="dashboard" element={<Dashboard />} />
