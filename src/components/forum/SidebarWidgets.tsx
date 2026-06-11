@@ -106,17 +106,12 @@ export function SidebarWidgets() {
               const name = m.profiles?.display_name ?? 'Member'
               return (
                 <li key={m.user_id!} className="flex items-center gap-3">
-                  {m.profiles?.avatar_url ? (
-                    <img
-                      src={m.profiles.avatar_url}
-                      alt={`Profile photo of ${name}`}
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-secondary text-primary-foreground flex items-center justify-center text-xs font-semibold">
-                      {name.charAt(0).toUpperCase()}
-                    </span>
-                  )}
+                  <UserAvatar
+                    avatarUrl={m.profiles?.avatar_url}
+                    displayName={name}
+                    size="sm"
+                    className="border-0"
+                  />
                   <span className="text-sm font-medium truncate">{name}</span>
                 </li>
               )
