@@ -72,31 +72,37 @@ export type Database = {
       }
       categories: {
         Row: {
+          color: string | null
           created_at: string
           description: string | null
           display_order: number
           icon: string | null
           id: string
+          is_popular: boolean
           name: string
           slug: string | null
           updated_at: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           description?: string | null
           display_order?: number
           icon?: string | null
           id?: string
+          is_popular?: boolean
           name: string
           slug?: string | null
           updated_at?: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           description?: string | null
           display_order?: number
           icon?: string | null
           id?: string
+          is_popular?: boolean
           name?: string
           slug?: string | null
           updated_at?: string
@@ -285,7 +291,15 @@ export type Database = {
           is_active?: boolean
           question?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "polls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -519,21 +533,21 @@ export type Database = {
           id: string
           thread_id: string
           user_id: string
-          vote_type: number
+          value: number
         }
         Insert: {
           created_at?: string
           id?: string
           thread_id: string
           user_id: string
-          vote_type?: number
+          value?: number
         }
         Update: {
           created_at?: string
           id?: string
           thread_id?: string
           user_id?: string
-          vote_type?: number
+          value?: number
         }
         Relationships: [
           {
