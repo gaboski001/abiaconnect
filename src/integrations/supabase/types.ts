@@ -562,6 +562,7 @@ export type Database = {
       threads: {
         Row: {
           allow_replies: boolean
+          author_id: string | null
           category_id: string | null
           content: string | null
           created_at: string
@@ -576,6 +577,7 @@ export type Database = {
         }
         Insert: {
           allow_replies?: boolean
+          author_id?: string | null
           category_id?: string | null
           content?: string | null
           created_at?: string
@@ -590,6 +592,7 @@ export type Database = {
         }
         Update: {
           allow_replies?: boolean
+          author_id?: string | null
           category_id?: string | null
           content?: string | null
           created_at?: string
