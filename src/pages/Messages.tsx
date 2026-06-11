@@ -52,9 +52,9 @@ function Avatar({ profile, size = 'md' }: { profile?: Profile | null; size?: 'sm
   const dim = size === 'sm' ? 'h-8 w-8 text-xs' : size === 'lg' ? 'h-12 w-12' : 'h-10 w-10 text-sm'
   if (profile?.avatar_url) {
     return (
-      <img
+    <img
         src={profile.avatar_url}
-        alt={profile.display_name || ''}
+        alt={profile.display_name ? `Profile photo of ${profile.display_name}` : 'Profile photo'}
         className={cn('rounded-full object-cover shrink-0', dim)}
       />
     )
@@ -159,6 +159,8 @@ export default function Messages() {
   )
 
   return (
+    <>
+      <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
     <div className="container mx-auto px-0 md:px-4 py-0 md:py-6">
       <div className="md:rounded-2xl md:border md:bg-card overflow-hidden h-[calc(100vh-5rem)] md:h-[calc(100vh-8rem)] flex">
         {/* LEFT */}
@@ -262,7 +264,8 @@ export default function Messages() {
             />
           )}
         </section>
-      </div>
+    </div>
+    </>
     </div>
   )
 }
