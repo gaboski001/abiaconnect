@@ -9,19 +9,30 @@ const slugify = (s: string) =>
     .replace(/^-+|-+$/g, '')
 
 const CATEGORIES = [
-  { name: 'General Discussion', description: 'Talk about anything and everything happening in Abia State and beyond', icon: '💬', color: '#013220', is_popular: true, display_order: 1 },
-  { name: 'Business & Commerce', description: 'Abia markets, trade, entrepreneurship, and economic opportunities', icon: '💼', color: '#8B6914', is_popular: true, display_order: 2 },
-  { name: 'Politics & Governance', description: 'Abia State government, elections, policy, and civic matters', icon: '🗳️', color: '#1a3a6b', is_popular: true, display_order: 3 },
-  { name: 'Culture & Heritage', description: 'Igbo traditions, festivals, language, arts, and Abia history', icon: '🏛️', color: '#6b2d1a', is_popular: true, display_order: 4 },
-  { name: 'Education & Career', description: 'Schools, scholarships, job opportunities, and professional development', icon: '📚', color: '#1a4a3a', is_popular: false, display_order: 5 },
-  { name: 'Health & Wellness', description: 'Community health, hospitals, mental health, and wellness tips', icon: '❤️', color: '#8b1a1a', is_popular: false, display_order: 6 },
-  { name: 'Agriculture & Farming', description: 'Crops, livestock, farm markets, agribusiness, and food production', icon: '🌿', color: '#2d5a1a', is_popular: false, display_order: 7 },
-  { name: 'Technology & Innovation', description: 'Tech news, startups, digital skills, and innovation in Abia', icon: '💻', color: '#1a2d5a', is_popular: false, display_order: 8 },
-  { name: 'Real Estate & Housing', description: 'Land, property, housing estates, construction, and rentals in Abia', icon: '🏠', color: '#4a2d1a', is_popular: false, display_order: 9 },
-  { name: 'Entertainment & Lifestyle', description: 'Music, movies, sports, fashion, food, and Abia nightlife', icon: '🎭', color: '#4a1a5a', is_popular: false, display_order: 10 },
-  { name: 'Diaspora Connect', description: 'For Abians living abroad — opportunities, support, and keeping home close', icon: '✈️', color: '#1a4a5a', is_popular: true, display_order: 11 },
-  { name: 'Success Stories', description: 'Inspiring achievements, testimonials, and community wins from Abians', icon: '🏆', color: '#5a4a00', is_popular: true, display_order: 12 },
+  { name: 'General Discussion', description: 'Talk about anything and everything happening in Abia State and beyond — news, opinions, announcements, and everyday life.', icon: '💬', color: '#013220', is_popular: true, display_order: 1 },
+  { name: 'Business & Commerce', description: 'Ariaria market, trade routes, entrepreneurship, SME growth, and economic opportunities across Abia State.', icon: '💼', color: '#8B6914', is_popular: true, display_order: 2 },
+  { name: 'Politics & Governance', description: 'State government, local council matters, elections, civic engagement, and public policy discussions.', icon: '🗳️', color: '#1a3a6b', is_popular: true, display_order: 3 },
+  { name: 'Culture & Heritage', description: 'Igbo traditions, festivals, language preservation, Abia history, arts, crafts, and cultural identity.', icon: '🏛️', color: '#6b2d1a', is_popular: true, display_order: 4 },
+  { name: 'Education & Career', description: 'Universities, polytechnics, scholarships, job postings, career advice, and professional development for Abians.', icon: '📚', color: '#1a4a3a', is_popular: false, display_order: 5 },
+  { name: 'Health & Wellness', description: 'Community health initiatives, hospital reviews, mental health, nutrition, and wellness tips for Abia people.', icon: '❤️', color: '#8b1a1a', is_popular: false, display_order: 6 },
+  { name: 'Agriculture & Farming', description: 'Palm oil, cassava, yam, poultry, aquaculture, farm markets, agripreneurship, and food supply in Abia.', icon: '🌿', color: '#2d5a1a', is_popular: false, display_order: 7 },
+  { name: 'Technology & Innovation', description: 'Tech startups, software development, digital skills, fintech, and innovation happening in and from Abia State.', icon: '💻', color: '#1a2d5a', is_popular: false, display_order: 8 },
+  { name: 'Real Estate & Housing', description: 'Land acquisition, property investment, housing estates, construction, and rental market discussions in Abia.', icon: '🏠', color: '#4a2d1a', is_popular: false, display_order: 9 },
+  { name: 'Entertainment & Lifestyle', description: 'Music, Nollywood, sports, fashion, food joints, nightlife, and lifestyle culture across Abia.', icon: '🎭', color: '#4a1a5a', is_popular: false, display_order: 10 },
+  { name: 'Diaspora Connect', description: 'For Abians living outside Nigeria — immigration support, remittances, diaspora investment, and keeping roots strong.', icon: '✈️', color: '#1a4a5a', is_popular: true, display_order: 11 },
+  { name: 'Success Stories', description: 'Inspiring achievements, entrepreneurship wins, community impact stories, and testimonials from Abia indigenes.', icon: '🏆', color: '#5a4a00', is_popular: true, display_order: 12 },
+  { name: 'Security & Safety', description: 'Community safety alerts, vigilante updates, crime prevention, and neighbourhood watch for Abia communities.', icon: '🛡️', color: '#2a1a3a', is_popular: false, display_order: 13 },
+  { name: 'Faith & Spirituality', description: 'Churches, mosques, prayer communities, spiritual discussions, and faith-based initiatives across Abia State.', icon: '🙏', color: '#3a2a00', is_popular: false, display_order: 14 },
 ]
+
+export async function seedCategories(): Promise<{ count: number }> {
+  const rows = CATEGORIES.map((c) => ({ ...c, slug: slugify(c.name), is_active: true }))
+  const { error } = await supabase
+    .from('categories')
+    .upsert(rows, { onConflict: 'name' })
+  if (error) throw new Error(`categories: ${error.message}`)
+  return { count: rows.length }
+}
 
 interface ThreadSeed {
   category: string

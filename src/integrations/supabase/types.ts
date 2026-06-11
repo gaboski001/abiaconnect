@@ -78,9 +78,11 @@ export type Database = {
           display_order: number
           icon: string | null
           id: string
+          is_active: boolean
           is_popular: boolean
           name: string
           slug: string | null
+          thread_count: number
           updated_at: string
         }
         Insert: {
@@ -90,9 +92,11 @@ export type Database = {
           display_order?: number
           icon?: string | null
           id?: string
+          is_active?: boolean
           is_popular?: boolean
           name: string
           slug?: string | null
+          thread_count?: number
           updated_at?: string
         }
         Update: {
@@ -102,9 +106,11 @@ export type Database = {
           display_order?: number
           icon?: string | null
           id?: string
+          is_active?: boolean
           is_popular?: boolean
           name?: string
           slug?: string | null
+          thread_count?: number
           updated_at?: string
         }
         Relationships: []
