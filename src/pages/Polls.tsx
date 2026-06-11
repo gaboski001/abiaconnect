@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { SEO } from '@/components/SEO'
 import { motion } from 'framer-motion'
 import { format, formatDistanceToNow } from 'date-fns'
 import { CalendarIcon, Check, Plus, Vote, X } from 'lucide-react'

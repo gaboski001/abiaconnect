@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { SEO } from '@/components/SEO'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { Award, MapPin, Pencil } from 'lucide-react'
