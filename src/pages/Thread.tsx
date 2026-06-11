@@ -31,6 +31,8 @@ interface ThreadRow {
   category_id?: string | null
   upvotes?: number | null
   downvotes?: number | null
+  view_count?: number | null
+  is_pinned?: boolean | null
   categories?: { id: string; name: string } | null
   profiles?: {
     display_name?: string | null
