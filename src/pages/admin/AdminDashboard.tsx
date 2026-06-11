@@ -55,6 +55,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 
+import CategoriesSection from '@/components/admin/CategoriesSection'
+
 type SectionId =
   | 'overview'
   | 'users'
