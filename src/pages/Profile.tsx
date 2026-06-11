@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { handleImgError } from '@/lib/image'
 import { Link } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useQuery } from '@tanstack/react-query'
@@ -12,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { UserAvatar } from '@/components/ui/UserAvatar'
 
 interface Profile {
   id?: string
@@ -105,13 +105,7 @@ export default function Profile() {
       <SEO title="Your Profile" description="View and edit your AbiaConnect profile, achievements, and recent posts." path="/profile" />
       <section className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-start gap-4">
-          {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt={`Profile photo of ${name}`} onError={handleImgError} loading="lazy" className="h-24 w-24 rounded-full object-cover" />
-          ) : (
-            <span className="h-24 w-24 rounded-full bg-gradient-to-br from-primary to-secondary text-primary-foreground flex items-center justify-center text-3xl font-bold">
-              {name.charAt(0).toUpperCase()}
-            </span>
-          )}
+          <UserAvatar avatarUrl={profile.avatar_url} displayName={name} size="xl" className="h-24 w-24" />
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div>

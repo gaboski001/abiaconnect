@@ -490,7 +490,7 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
         <h2 className="font-bold">Profile</h2>
 
         <div className="flex items-center gap-4">
-          <UserAvatar avatarUrl={profile.avatar_url} displayName={form.display_name || user.email} size="lg" className="h-16 w-16" />
+          <UserAvatar avatarUrl={profile.avatar_url} displayName={form.display_name || user?.email || 'User'} size="lg" className="h-16 w-16" />
           <label className="text-sm">
             <input
               type="file"
