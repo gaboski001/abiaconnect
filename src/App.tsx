@@ -19,6 +19,22 @@ import AdminDashboard from '@/pages/admin/AdminDashboard'
 import LgasGuide from '@/pages/LgasGuide'
 import KnownFor from '@/pages/KnownFor'
 import AbsuGuide from '@/pages/AbsuGuide'
+import About from '@/pages/static/About'
+import Mission from '@/pages/static/Mission'
+import Team from '@/pages/static/Team'
+import Careers from '@/pages/static/Careers'
+import ForumGuidelines from '@/pages/static/ForumGuidelines'
+import Events from '@/pages/static/Events'
+import SuccessStories from '@/pages/static/SuccessStories'
+import MemberSpotlight from '@/pages/static/MemberSpotlight'
+import Help from '@/pages/static/Help'
+import ReportIssue from '@/pages/static/ReportIssue'
+import PrivacyPolicy from '@/pages/static/PrivacyPolicy'
+import TermsOfService from '@/pages/static/TermsOfService'
+import CookiePolicy from '@/pages/static/CookiePolicy'
+import CommunityStandards from '@/pages/static/CommunityStandards'
+
+
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
@@ -39,6 +55,21 @@ export default function App() {
         <Route path="about/lgas" element={<LgasGuide />} />
         <Route path="about/known-for" element={<KnownFor />} />
         <Route path="about/absu" element={<AbsuGuide />} />
+
+        <Route path="about" element={<About />} />
+        <Route path="mission" element={<Mission />} />
+        <Route path="team" element={<Team />} />
+        <Route path="careers" element={<Careers />} />
+        <Route path="forum-guidelines" element={<ForumGuidelines />} />
+        <Route path="events" element={<Events />} />
+        <Route path="success-stories" element={<SuccessStories />} />
+        <Route path="member-spotlight" element={<MemberSpotlight />} />
+        <Route path="help" element={<Help />} />
+        <Route path="report-issue" element={<ReportIssue />} />
+        <Route path="privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="terms-of-service" element={<TermsOfService />} />
+        <Route path="cookie-policy" element={<CookiePolicy />} />
+        <Route path="community-standards" element={<CommunityStandards />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="dashboard" element={<Dashboard />} />
