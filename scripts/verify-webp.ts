@@ -67,7 +67,12 @@ async function verifyDbColumn(
   }
   for (const row of data ?? []) {
     const id = (row as any)[idCol]
-    const url = (row as any)[urlCol] as string | null
+    let url = (row as any)[urlCol] as string | null
+    if (!url) continue
+    // jsonb string columns come back as `"https://..."` — unwrap.
+    if (typeof url === 'string' && url.startsWith('"') && url.endsWith('"')) {
+      try { url = JSON.parse(url) as string } catch { /* keep as-is */ }
+    }
     if (!url) continue
 
     // Extension check
