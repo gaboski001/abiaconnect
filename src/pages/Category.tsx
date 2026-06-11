@@ -63,7 +63,7 @@ export default function CategoryPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('threads')
-        .select('*, profiles(display_name, avatar_url), replies(count)')
+        .select('id, category_id, subgroup_id, user_id, title, content, tags, allow_replies, is_anonymous, is_deleted, created_at, updated_at, is_pinned, upvotes, view_count, profiles(display_name, avatar_url), replies(count)')
         .eq('category_id', categoryId!)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
