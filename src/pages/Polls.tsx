@@ -138,6 +138,7 @@ export default function Polls() {
 
   return (
     <div className="space-y-6">
+      <SEO title="Community Polls" description="Vote on issues that matter to the AbiaConnect community." path="/polls" />
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">

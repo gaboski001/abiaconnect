@@ -101,6 +101,7 @@ export default function Profile() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      <SEO title="Your Profile" description="View and edit your AbiaConnect profile, achievements, and recent posts." path="/profile" />
       <section className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-start gap-4">
           {profile.avatar_url ? (
