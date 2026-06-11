@@ -108,7 +108,7 @@ export function SidebarWidgets() {
                   {m.profiles?.avatar_url ? (
                     <img
                       src={m.profiles.avatar_url}
-                      alt={name}
+                      alt={`Profile photo of ${name}`}
                       className="h-8 w-8 rounded-full object-cover"
                     />
                   ) : (

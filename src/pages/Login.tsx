@@ -56,7 +56,7 @@ export default function Login() {
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground">
             <Zap className="size-6" />
           </span>
-          <h1 className="text-2xl font-bold">Welcome Back</h1>
+          <h1 className="text-2xl font-bold">Sign in to AbiaConnect</h1>
           <p className="text-sm text-muted-foreground text-center">
             Sign in to continue to AbiaConnect
           </p>
