@@ -67,10 +67,12 @@ export function Footer() {
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.3 })
   const [showTop, setShowTop] = useState(false)
   const [email, setEmail] = useState('')
+  const [logoFailed, setLogoFailed] = useState(false)
   const { settings } = useSiteSettings()
   const siteName = settings.site_name || 'AbiaConnect'
   const tagline = settings.site_tagline || 'Connecting Abians Worldwide'
   const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
+  const showLogoImage = !!logoUrl && !logoFailed
 
   useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 400)
@@ -97,12 +99,13 @@ export function Footer() {
         <div className="mx-auto max-w-[1400px] px-6 py-12 space-y-12">
           {/* Brand */}
           <div className="flex flex-col gap-3">
-            {logoUrl ? (
+            {showLogoImage ? (
               <SafeImage
                 src={logoUrl}
                 fallback=""
                 alt={siteName}
                 className="h-12 w-auto max-w-[180px] object-contain"
+                onError={() => setLogoFailed(true)}
               />
             ) : (
               <div className="flex items-center gap-2">
