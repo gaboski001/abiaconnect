@@ -8,21 +8,23 @@ interface SafeImageProps {
   className?: string
   width?: number
   height?: number
+  onError?: () => void
 }
 
-export function SafeImage({ src, fallback, alt, className, width, height }: SafeImageProps) {
-  const initial = src || fallback
-  const [imgSrc, setImgSrc] = useState<string>(initial)
+export function SafeImage({ src, fallback, alt, className, width, height, onError }: SafeImageProps) {
   const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
     setHasError(false)
-    setImgSrc(src || fallback)
   }, [src, fallback])
+
+  const showFallback = hasError || !src
+  // If we'd fall back but have no fallback to show, render nothing (caller renders its own placeholder).
+  if (showFallback && !fallback) return null
 
   return (
     <img
-      src={hasError || !src ? fallback : imgSrc}
+      src={showFallback ? fallback : (src as string)}
       alt={alt}
       width={width}
       height={height}
@@ -31,7 +33,7 @@ export function SafeImage({ src, fallback, alt, className, width, height }: Safe
       onError={() => {
         if (!hasError) {
           setHasError(true)
-          setImgSrc(fallback)
+          onError?.()
         }
       }}
     />
@@ -39,3 +41,4 @@ export function SafeImage({ src, fallback, alt, className, width, height }: Safe
 }
 
 export default SafeImage
+
