@@ -264,9 +264,9 @@ export default function Messages() {
             />
           )}
         </section>
+      </div>
     </div>
     </>
-    </div>
   )
 }
 
