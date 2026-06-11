@@ -20,6 +20,8 @@ interface Thread {
   title: string
   created_at: string
   is_pinned?: boolean | null
+  upvotes?: number | null
+  view_count?: number | null
   user_id?: string | null
   reply_count?: number
   profiles?: { display_name?: string | null; avatar_url?: string | null } | null
