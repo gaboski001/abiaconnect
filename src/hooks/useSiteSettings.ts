@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
@@ -35,8 +36,17 @@ export function useSiteSettings() {
         .upsert({ key, value }, { onConflict: 'key' })
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['site-settings'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['site-settings'] })
+      window.dispatchEvent(new Event('siteSettingsUpdated'))
+    },
   })
+
+  useEffect(() => {
+    const handler = () => qc.invalidateQueries({ queryKey: ['site-settings'] })
+    window.addEventListener('siteSettingsUpdated', handler)
+    return () => window.removeEventListener('siteSettingsUpdated', handler)
+  }, [qc])
 
   return {
     ...query,
