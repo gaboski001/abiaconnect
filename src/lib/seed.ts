@@ -109,6 +109,12 @@ export async function seedDatabase(adminUserId: string): Promise<SeedResult> {
     .in('title', THREADS.map((t) => t.title))
   const existingTitles = new Set((existing ?? []).map((r: any) => r.title))
 
+  const PINNED_TITLES = new Set<string>([
+    'Welcome to AbiaConnect — Introduce Yourself Here! 👋',
+    "Ariaria International Market — complete buyer's guide for new traders",
+    'Scholarships available to Abia State indigenes in 2025 — master list',
+  ])
+
   const threadRows = THREADS.filter((t) => !existingTitles.has(t.title)).map((t) => {
     const created = new Date(now - Math.random() * 30 * day).toISOString()
     return {
@@ -119,6 +125,9 @@ export async function seedDatabase(adminUserId: string): Promise<SeedResult> {
       tags: t.tags,
       allow_replies: true,
       is_anonymous: false,
+      is_pinned: PINNED_TITLES.has(t.title),
+      upvotes: 5 + Math.floor(Math.random() * 116),
+      view_count: 50 + Math.floor(Math.random() * 1951),
       created_at: created,
       updated_at: created,
     }
