@@ -74,7 +74,7 @@ export default function Thread() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('threads')
-        .select('*, categories(id, name), profiles(display_name, avatar_url, bio, role, created_at)')
+        .select('id, category_id, subgroup_id, user_id, title, content, tags, allow_replies, is_anonymous, is_deleted, created_at, updated_at, is_pinned, upvotes, view_count, categories(id, name), profiles(display_name, avatar_url, bio, role, created_at)')
         .eq('id', threadId!)
         .maybeSingle()
       if (error) throw error
