@@ -114,6 +114,7 @@ export default function Notifications() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <SEO title="Notifications" description="See your latest alerts and updates on AbiaConnect." path="/notifications" />
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-secondary/10 p-2 text-secondary">

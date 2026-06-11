@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { Users, MessageSquare, ArrowLeft, Plus, Lock, Pin } from 'lucide-react'
