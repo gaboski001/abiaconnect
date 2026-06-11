@@ -497,7 +497,7 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
 
         <div className="flex items-center gap-4">
           {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt="" className="h-16 w-16 rounded-full object-cover" />
+            <img src={profile.avatar_url} alt="" onError={handleImgError} loading="lazy" className="h-16 w-16 rounded-full object-cover" />
           ) : (
             <span className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-secondary" />
           )}
