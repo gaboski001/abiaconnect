@@ -32,7 +32,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="profile" element={<Profile />} />
-          <Route path="polls" element={<Page name="Polls" />} />
+          <Route path="polls" element={<Polls />} />
           <Route path="subgroups" element={<Page name="Subgroups" />} />
           <Route path="notifications" element={<Page name="Notifications" />} />
           <Route path="create-thread" element={<CreateThread />} />

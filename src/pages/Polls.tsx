@@ -44,7 +44,7 @@ interface Poll {
 export default function Polls() {
   const { user, role } = useAuth()
   const qc = useQueryClient()
-  const canCreate = role === 'Super Admin' || role === 'Admin' || role === 'Moderator'
+  const canCreate = role === 'Super Admin' || role === 'Admin' || (role as string) === 'Moderator'
 
   const pollsQ = useQuery({
     queryKey: ['polls'],
