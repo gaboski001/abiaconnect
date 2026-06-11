@@ -8,6 +8,8 @@ import ForgotPassword from '@/pages/ForgotPassword'
 import CategoryPage from '@/pages/Category'
 import Thread from '@/pages/Thread'
 import CreateThread from '@/pages/CreateThread'
+import Dashboard from '@/pages/Dashboard'
+import Profile from '@/pages/Profile'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
@@ -27,8 +29,8 @@ export default function App() {
         <Route path="thread/:threadId" element={<Thread />} />
 
         <Route element={<ProtectedRoute />}>
-          <Route path="dashboard" element={<Page name="Dashboard" />} />
-          <Route path="profile" element={<Page name="Profile" />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="profile" element={<Profile />} />
           <Route path="polls" element={<Page name="Polls" />} />
           <Route path="subgroups" element={<Page name="Subgroups" />} />
           <Route path="notifications" element={<Page name="Notifications" />} />
