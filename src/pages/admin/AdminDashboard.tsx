@@ -109,7 +109,8 @@ export default function AdminDashboard() {
           </div>
         </aside>
 
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 space-y-4">
+          <SeedDatabaseCard />
           {section === 'overview' && <OverviewSection />}
           {section === 'users' && <UsersSection />}
           {section === 'categories' && <CategoriesSection />}
