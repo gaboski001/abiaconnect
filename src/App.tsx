@@ -7,6 +7,7 @@ import Register from '@/pages/Register'
 import ForgotPassword from '@/pages/ForgotPassword'
 import CategoryPage from '@/pages/Category'
 import Thread from '@/pages/Thread'
+import CreateThread from '@/pages/CreateThread'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
@@ -31,7 +32,7 @@ export default function App() {
           <Route path="polls" element={<Page name="Polls" />} />
           <Route path="subgroups" element={<Page name="Subgroups" />} />
           <Route path="notifications" element={<Page name="Notifications" />} />
-          <Route path="create-thread" element={<Page name="Create Thread" />} />
+          <Route path="create-thread" element={<CreateThread />} />
           <Route path="messages" element={<Page name="Messages" />} />
           <Route path="messages/:conversationId" element={<Page name="Conversation" />} />
 
