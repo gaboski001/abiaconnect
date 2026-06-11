@@ -8,9 +8,13 @@ import {
   ShieldCheck,
   Sparkles,
   Users,
+  Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { SafeImage } from '@/components/ui/SafeImage'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { getStorageUrl } from '@/lib/images'
 
 const STATS = [
   { icon: Users, label: '10,000+ Active Members' },
@@ -63,6 +67,10 @@ export function Footer() {
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.3 })
   const [showTop, setShowTop] = useState(false)
   const [email, setEmail] = useState('')
+  const { settings } = useSiteSettings()
+  const siteName = settings.site_name || 'AbiaConnect'
+  const tagline = settings.site_tagline || 'Connecting Abians Worldwide'
+  const logoUrl = getStorageUrl(settings.site_logo || settings.logo_url, 'site-assets')
 
   useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 400)
