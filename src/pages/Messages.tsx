@@ -171,7 +171,7 @@ export default function Messages() {
           )}
         >
           <div className="p-4 border-b flex items-center justify-between gap-2">
-            <h2 className="text-lg font-bold">Messages</h2>
+            <h1 className="text-lg font-bold">Messages</h1>
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
               <DialogTrigger asChild>
                 <Button size="icon" variant="ghost" aria-label="New message">
