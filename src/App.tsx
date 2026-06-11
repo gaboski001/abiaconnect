@@ -11,6 +11,8 @@ import CreateThread from '@/pages/CreateThread'
 import Dashboard from '@/pages/Dashboard'
 import Profile from '@/pages/Profile'
 import Polls from '@/pages/Polls'
+import Subgroups from '@/pages/Subgroups'
+import SubgroupDetail from '@/pages/SubgroupDetail'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
