@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { UserAvatar } from '@/components/ui/UserAvatar'
 import {
   Dialog,
   DialogContent,
@@ -49,26 +50,13 @@ interface Message {
 }
 
 function Avatar({ profile, size = 'md' }: { profile?: Profile | null; size?: 'sm' | 'md' | 'lg' }) {
-  const dim = size === 'sm' ? 'h-8 w-8 text-xs' : size === 'lg' ? 'h-12 w-12' : 'h-10 w-10 text-sm'
-  if (profile?.avatar_url) {
-    return (
-    <img
-        src={profile.avatar_url}
-        alt={profile.display_name ? `Profile photo of ${profile.display_name}` : 'Profile photo'}
-        className={cn('rounded-full object-cover shrink-0', dim)}
-      />
-    )
-  }
-  const letter = (profile?.display_name?.[0] || profile?.username?.[0] || '?').toUpperCase()
+  const avatarSize = size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'
   return (
-    <span
-      className={cn(
-        'rounded-full flex items-center justify-center shrink-0 bg-gradient-to-br from-primary to-secondary text-primary-foreground font-semibold',
-        dim,
-      )}
-    >
-      {letter}
-    </span>
+    <UserAvatar
+      avatarUrl={profile?.avatar_url}
+      displayName={profile?.display_name || profile?.username || 'User'}
+      size={avatarSize}
+    />
   )
 }
 

@@ -30,8 +30,8 @@ export function getAvatarFallback(displayName: string | null | undefined): strin
       .slice(0, 2)
       .join('')
       .toUpperCase() || 'U'
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><rect width='80' height='80' rx='40' fill='%23013220'/><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='%23c9a84c' font-size='30' font-family='system-ui,-apple-system,sans-serif' font-weight='600'>${initials}</text></svg>`
-  return `data:image/svg+xml;utf8,${svg}`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#013220"/><text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" fill="#c9a84c" font-size="30" font-family="system-ui,-apple-system,sans-serif" font-weight="600">${initials}</text></svg>`
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
 }
 
 export async function validateImageUrl(url: string): Promise<boolean> {

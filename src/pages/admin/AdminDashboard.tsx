@@ -30,6 +30,7 @@ import {
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useSiteSettings, SiteSettings } from '@/hooks/useSiteSettings'
+import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -54,6 +55,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
+import { SafeImage } from '@/components/ui/SafeImage'
 
 import CategoriesSection from '@/components/admin/CategoriesSection'
 
@@ -911,6 +913,7 @@ function SiteSettingsSection() {
   const [draft, setDraft] = useState<SiteSettings>({})
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const draftLogoUrl = useSignedUrl(draft.site_logo, 'site-assets')
 
   useEffect(() => {
     if (!isLoading) setDraft(settings)
@@ -945,10 +948,8 @@ function SiteSettingsSection() {
         contentType: webp.type,
       })
       if (error) throw error
-      const { data } = supabase.storage.from('site-assets').getPublicUrl(path)
-      const url = data.publicUrl
-      await updateSetting.mutateAsync({ key: 'site_logo', value: url })
-      setKey('site_logo', url)
+      await updateSetting.mutateAsync({ key: 'site_logo', value: path })
+      setKey('site_logo', path)
       window.dispatchEvent(new Event('siteSettingsUpdated'))
       toast.success('Logo updated')
     } catch (e: any) {
@@ -1021,8 +1022,9 @@ function SiteSettingsSection() {
             <Label>Logo</Label>
             <div className="flex items-center gap-2">
               {draft.site_logo && (
-                <img
-                  src={draft.site_logo}
+                <SafeImage
+                  src={draftLogoUrl}
+                  fallback=""
                   alt="Logo"
                   className="h-10 w-10 rounded-lg object-cover border"
                 />
