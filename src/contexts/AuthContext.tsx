@@ -39,13 +39,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('user_roles')
-        .select('roles(name)')
+        .select('role')
         .eq('user_id', userId)
       if (error || !data) return 'Member'
-      const names = data
-        // @ts-expect-error joined shape varies
-        .map((r) => (Array.isArray(r.roles) ? r.roles[0]?.name : r.roles?.name))
-        .filter(Boolean) as string[]
+      const names = (data as { role: string }[]).map((r) => r.role).filter(Boolean)
       return names.length ? resolveRole(names) : 'Member'
     } catch {
       return 'Member'

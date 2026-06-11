@@ -91,7 +91,7 @@ export default function Profile() {
 
   const save = async () => {
     if (!user) return
-    const { error } = await supabase.from('profiles').update(form).eq('id', user.id)
+    const { error } = await supabase.from('profiles').update(form as never).eq('id', user.id)
     if (error) return toast.error(error.message)
     toast.success('Profile updated')
     setEditing(false)

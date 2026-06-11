@@ -341,7 +341,7 @@ function UsersSection() {
       if (role !== 'Member') {
         const { error } = await supabase
           .from('user_roles')
-          .insert({ user_id: id, role })
+          .insert({ user_id: id, role: role as 'Admin' | 'Member' | 'Super Admin' })
         if (error) throw error
       }
     },
