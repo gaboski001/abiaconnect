@@ -31,9 +31,11 @@ export function Navbar() {
   const { data: profile } = useProfile()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [logoFailed, setLogoFailed] = useState(false)
 
   const siteName = settings.site_name || 'AbiaConnect'
   const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
+  const showLogoImage = !!logoUrl && !logoFailed
   const subgroupsEnabled = settings.global_subgroups_enabled !== 'false'
   const storeLink = settings.store_link
 
@@ -136,13 +138,14 @@ export function Navbar() {
             </SheetContent>
           </Sheet>
 
-          {logoUrl ? (
+          {showLogoImage ? (
             <Link to="/" className="flex items-center" aria-label={siteName}>
               <SafeImage
                 src={logoUrl}
                 fallback=""
                 alt={siteName}
                 className="h-10 w-auto max-w-[160px] object-contain"
+                onError={() => setLogoFailed(true)}
               />
             </Link>
           ) : (
