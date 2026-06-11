@@ -2,18 +2,25 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
+export type Role = 'Super Admin' | 'Admin' | 'Member' | 'guest'
+
 interface AuthContextValue {
   user: User | null
   session: Session | null
-  role: string | null
+  role: Role
   isAdmin: boolean
   loading: boolean
   signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
-
 const CACHE_KEY = 'abia_cached_user'
+
+function resolveRole(names: string[]): Role {
+  if (names.includes('Super Admin')) return 'Super Admin'
+  if (names.includes('Admin')) return 'Admin'
+  return (names[0] as Role) ?? 'Member'
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -25,21 +32,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null
     }
   })
-  const [role, setRole] = useState<string | null>(null)
+  const [role, setRole] = useState<Role>('guest')
   const [loading, setLoading] = useState(true)
 
-  async function fetchRole(userId: string) {
+  async function fetchRole(userId: string): Promise<Role> {
     try {
       const { data, error } = await supabase
         .from('user_roles')
         .select('roles(name)')
         .eq('user_id', userId)
-        .maybeSingle()
-      if (error) return null
-      // @ts-expect-error - joined shape
-      return (data?.roles?.name as string) ?? null
+      if (error || !data) return 'Member'
+      const names = data
+        // @ts-expect-error joined shape varies
+        .map((r) => (Array.isArray(r.roles) ? r.roles[0]?.name : r.roles?.name))
+        .filter(Boolean) as string[]
+      return names.length ? resolveRole(names) : 'Member'
     } catch {
-      return null
+      return 'Member'
+    }
+  }
+
+  async function applySession(s: Session | null) {
+    setSession(s)
+    setUser(s?.user ?? null)
+    if (s?.user) {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(s.user))
+      setRole(await fetchRole(s.user.id))
+    } else {
+      localStorage.removeItem(CACHE_KEY)
+      setRole('guest')
     }
   }
 
@@ -48,25 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return
-      setSession(data.session)
-      setUser(data.session?.user ?? null)
-      if (data.session?.user) {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(data.session.user))
-        setRole(await fetchRole(data.session.user.id))
-      }
+      await applySession(data.session)
       setLoading(false)
     })
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      setSession(newSession)
-      setUser(newSession?.user ?? null)
-      if (newSession?.user) {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(newSession.user))
-        setRole(await fetchRole(newSession.user.id))
-      } else {
-        localStorage.removeItem(CACHE_KEY)
-        setRole(null)
-      }
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      void applySession(newSession)
     })
 
     return () => {
@@ -78,19 +86,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signOut() {
     await supabase.auth.signOut()
     localStorage.removeItem(CACHE_KEY)
+    setRole('guest')
+    setUser(null)
+    setSession(null)
   }
 
+  const isAdmin = role === 'Super Admin' || role === 'Admin'
+
   return (
-    <AuthContext.Provider
-      value={{ user, session, role, isAdmin: role === 'admin', loading, signOut }}
-    >
+    <AuthContext.Provider value={{ user, session, role, isAdmin, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export function useAuthContext() {
+export function useAuth() {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuthContext must be used within AuthProvider')
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx
 }
+
+export const useAuthContext = useAuth
