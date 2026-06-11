@@ -76,7 +76,27 @@ export default function CategoryPage() {
   })
 
   const category = categoryQ.data
-  const threads = threadsQ.data ?? []
+  const rawThreads = threadsQ.data ?? []
+  const [sort, setSort] = useState<SortKey>('latest')
+
+  const threads = useMemo(() => {
+    const arr = [...rawThreads]
+    if (sort === 'pinned') {
+      arr.sort((a, b) => Number(!!b.is_pinned) - Number(!!a.is_pinned))
+    } else if (sort === 'replies') {
+      arr.sort((a, b) => (b.reply_count ?? 0) - (a.reply_count ?? 0))
+    } else if (sort === 'views') {
+      arr.sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
+    } else {
+      arr.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
+    }
+    return arr
+  }, [rawThreads, sort])
+
+  const totalReplies = rawThreads.reduce((s, t) => s + (t.reply_count ?? 0), 0)
+  const lastActivity = rawThreads[0]?.created_at
 
   return (
     <>
@@ -102,25 +122,65 @@ export default function CategoryPage() {
           },
         ]}
       />
-    <div className="space-y-8">
-      <header className="rounded-2xl border border-border bg-card p-6">
-        <h1 className="text-3xl font-bold">{category?.name ?? 'Category'}</h1>
-        {category?.description && (
-          <p className="text-muted-foreground mt-2">{category.description}</p>
-        )}
-        <div className="flex items-center justify-between mt-4">
-          <span className="text-sm text-muted-foreground">
-            {threads.length} {threads.length === 1 ? 'thread' : 'threads'}
-          </span>
-          {user && (
-            <Button asChild>
-              <Link to={`/create-thread?category=${categoryId}`}>
-                <Plus /> New Thread
-              </Link>
-            </Button>
+    <div className="space-y-6">
+      <nav className="text-sm text-muted-foreground flex items-center gap-1">
+        <Link to="/" className="hover:text-foreground">Forums</Link>
+        <ChevronRight className="size-3.5" />
+        <span className="text-foreground font-medium truncate">{category?.name ?? '…'}</span>
+      </nav>
+
+      <header className="rounded-2xl border border-border bg-card p-6 flex items-start gap-5">
+        <span
+          className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl border shrink-0"
+          style={{
+            backgroundColor: `${category?.color ?? '#013220'}26`,
+            borderColor: `${category?.color ?? '#013220'}4D`,
+          }}
+        >
+          {category?.icon ?? '💬'}
+        </span>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-bold text-foreground">{category?.name ?? 'Category'}</h1>
+          {category?.description && (
+            <p className="text-muted-foreground mt-1">{category.description}</p>
           )}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-3">
+            <span>{rawThreads.length} threads</span>
+            <span>{totalReplies} replies</span>
+            {lastActivity && (
+              <span>
+                Last activity {formatDistanceToNow(new Date(lastActivity), { addSuffix: true })}
+              </span>
+            )}
+          </div>
         </div>
       </header>
+
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="latest">Latest</SelectItem>
+            <SelectItem value="replies">Most Replied</SelectItem>
+            <SelectItem value="views">Most Viewed</SelectItem>
+            <SelectItem value="pinned">Pinned First</SelectItem>
+          </SelectContent>
+        </Select>
+        {user ? (
+          <Button asChild>
+            <Link to={`/create-thread?category=${categoryId}`}>
+              <Plus className="size-4 mr-1" /> New Thread
+            </Link>
+          </Button>
+        ) : (
+          <Link to="/login" className="text-sm font-semibold text-secondary hover:underline">
+            Sign in to post
+          </Link>
+        )}
+      </div>
+
 
       {threadsQ.isLoading ? (
         <div className="space-y-3">
