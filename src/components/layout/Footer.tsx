@@ -28,36 +28,35 @@ const LINK_GROUPS: Array<{ title: string; links: Array<{ label: string; href: st
     title: 'About',
     links: [
       { label: 'About Us', href: '/about' },
-      { label: 'Mission', href: '/mission' },
-      { label: 'Team', href: '/team' },
+      { label: 'Our Mission', href: '/mission' },
+      { label: 'Meet the Team', href: '/team' },
       { label: 'Careers', href: '/careers' },
     ],
   },
   {
     title: 'Community',
     links: [
-      { label: 'Forum Guidelines', href: '/guidelines' },
+      { label: 'Forum Guidelines', href: '/forum-guidelines' },
       { label: 'Events Calendar', href: '/events' },
-      { label: 'Success Stories', href: '/stories' },
-      { label: 'Member Spotlight', href: '/spotlight' },
+      { label: 'Success Stories', href: '/success-stories' },
+      { label: 'Member Spotlight', href: '/member-spotlight' },
     ],
   },
   {
     title: 'Resources',
     links: [
       { label: 'Help Center', href: '/help' },
-      { label: 'API Docs', href: '/docs/api' },
-      { label: 'Developer Portal', href: '/developers' },
-      { label: 'Report an Issue', href: '/report' },
+      { label: 'Report an Issue', href: '/report-issue' },
+      { label: 'Privacy Policy', href: '/privacy-policy' },
     ],
   },
   {
     title: 'Legal',
     links: [
-      { label: 'Privacy Policy', href: '/privacy' },
-      { label: 'Terms of Service', href: '/terms' },
-      { label: 'Cookie Policy', href: '/cookies' },
-      { label: 'Community Standards', href: '/standards' },
+      { label: 'Privacy Policy', href: '/privacy-policy' },
+      { label: 'Terms of Service', href: '/terms-of-service' },
+      { label: 'Cookie Policy', href: '/cookie-policy' },
+      { label: 'Community Standards', href: '/community-standards' },
     ],
   },
 ]
