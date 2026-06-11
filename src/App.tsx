@@ -36,6 +36,7 @@ export default function App() {
         <Route path="category/:categoryId" element={<CategoryPage />} />
         <Route path="thread/:threadId" element={<Thread />} />
         <Route path="about/lgas" element={<LgasGuide />} />
+        <Route path="about/known-for" element={<KnownFor />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="dashboard" element={<Dashboard />} />
