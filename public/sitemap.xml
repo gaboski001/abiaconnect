@@ -46,11 +46,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://abiaconnect.com/category/5fa597a4-05a8-4ae3-bde3-68ca18a3938a</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://abiaconnect.com/category/eccb7d12-f7bc-47e1-884a-08e0d32b7d0b</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -72,6 +67,11 @@
   </url>
   <url>
     <loc>https://abiaconnect.com/category/4cd040ea-6948-4dfb-9174-c0d7fe66dea4</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://abiaconnect.com/category/5fa597a4-05a8-4ae3-bde3-68ca18a3938a</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -102,6 +102,16 @@
   </url>
   <url>
     <loc>https://abiaconnect.com/category/3d030477-a156-4bf9-b3b5-9740f4e26950</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://abiaconnect.com/category/f5eba4f1-6488-49dc-818c-59b4d3caeebf</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://abiaconnect.com/category/52c21121-8d41-4325-8427-6a271a058426</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
