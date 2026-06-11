@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  Bell,
   LogOut,
   Menu,
   Search,
@@ -19,6 +18,7 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 export function Navbar() {
   const navigate = useNavigate()
@@ -162,13 +162,7 @@ export function Navbar() {
 
           <ThemeToggle />
 
-          {user && (
-            <Button variant="ghost" size="icon" aria-label="Notifications" asChild>
-              <Link to="/notifications">
-                <Bell />
-              </Link>
-            </Button>
-          )}
+          {user && <NotificationBell />}
 
           {user ? (
             <>

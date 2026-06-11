@@ -13,6 +13,7 @@ import Profile from '@/pages/Profile'
 import Polls from '@/pages/Polls'
 import Subgroups from '@/pages/Subgroups'
 import SubgroupDetail from '@/pages/SubgroupDetail'
+import Notifications from '@/pages/Notifications'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
@@ -37,7 +38,7 @@ export default function App() {
           <Route path="polls" element={<Polls />} />
           <Route path="subgroups" element={<Subgroups />} />
           <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
-          <Route path="notifications" element={<Page name="Notifications" />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="create-thread" element={<CreateThread />} />
           <Route path="messages" element={<Page name="Messages" />} />
           <Route path="messages/:conversationId" element={<Page name="Conversation" />} />
