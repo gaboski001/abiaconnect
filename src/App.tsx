@@ -8,6 +8,8 @@ import ForgotPassword from '@/pages/ForgotPassword'
 import CategoryPage from '@/pages/Category'
 import Thread from '@/pages/Thread'
 import CreateThread from '@/pages/CreateThread'
+import Dashboard from '@/pages/Dashboard'
+import Profile from '@/pages/Profile'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
