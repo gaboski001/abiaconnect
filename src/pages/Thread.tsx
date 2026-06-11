@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { handleImgError } from '@/lib/image'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
@@ -21,6 +20,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
+import { UserAvatar } from '@/components/ui/UserAvatar'
 
 interface ThreadRow {
   id: string
@@ -56,16 +56,8 @@ interface Reply {
 }
 
 function Avatar({ name, url, size = 8 }: { name: string; url?: string | null; size?: number }) {
-  const cls = `h-${size} w-${size} rounded-full`
-  return url ? (
-    <img src={url} alt={`Profile photo of ${name}`} onError={handleImgError} loading="lazy" className={`${cls} object-cover`} />
-  ) : (
-    <span
-      className={`${cls} bg-gradient-to-br from-primary to-secondary text-primary-foreground flex items-center justify-center text-xs font-semibold`}
-    >
-      {name.charAt(0).toUpperCase()}
-    </span>
-  )
+  const avatarSize = size >= 10 ? 'md' : 'sm'
+  return <UserAvatar avatarUrl={url} displayName={name} size={avatarSize} />
 }
 
 export default function Thread() {
