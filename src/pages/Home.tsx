@@ -67,7 +67,7 @@ export default function Home() {
             </span>
           </h1>
 
-          <p className="max-w-xl text-gray-400 text-base md:text-lg">{tagline}</p>
+          <p className="max-w-xl text-gray-100 text-base md:text-lg">{tagline}</p>
 
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button
