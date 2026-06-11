@@ -5,6 +5,7 @@ import { Flame, MessageSquare, Pin, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { SEO } from '@/components/SEO'
 
 interface Category {
   id: string
@@ -63,6 +64,12 @@ export default function CategoryPage() {
   const threads = threadsQ.data ?? []
 
   return (
+    <>
+      <SEO
+        title={category?.name ? `${category.name} discussions` : 'Category'}
+        description={category?.description ?? `Browse threads and discussions in the ${category?.name ?? 'category'} on AbiaConnect.`}
+        path={`/category/${categoryId ?? ''}`}
+      />
     <div className="space-y-8">
       <header className="rounded-2xl border border-border bg-card p-6">
         <h1 className="text-3xl font-bold">{category?.name ?? 'Category'}</h1>
@@ -143,5 +150,6 @@ export default function CategoryPage() {
         </ul>
       )}
     </div>
+    </>
   )
 }
