@@ -86,7 +86,7 @@ export default function AdminDashboard() {
             <p className="px-3 pt-2 pb-3 text-xs uppercase tracking-wide text-muted-foreground">
               Admin Portal
             </p>
-            <nav className="flex lg:flex-col gap-1 overflow-x-auto">
+            <nav className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:flex lg:flex-col">
               {SECTIONS.map((s) => {
                 const active = s.id === section
                 return (
@@ -94,7 +94,7 @@ export default function AdminDashboard() {
                     key={s.id}
                     onClick={() => setSection(s.id)}
                     className={cn(
-                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap text-left transition-colors',
+                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors',
                       active
                         ? 'bg-secondary/10 text-secondary border-l-4 border-secondary'
                         : 'hover:bg-muted/60 border-l-4 border-transparent',
@@ -1154,6 +1154,8 @@ function SiteSettingsSection() {
         </Button>
       }
     >
+      <SeedDatabaseCard />
+
       <div className="rounded-2xl border bg-card p-4 space-y-4">
         <div className="grid sm:grid-cols-2 gap-3">
           <div className="space-y-1">
@@ -1233,7 +1235,6 @@ function SiteSettingsSection() {
         </div>
       </div>
 
-      <SeedDatabaseCard />
     </SectionShell>
   )
 }
