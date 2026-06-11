@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { handleImgError } from '@/lib/image'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   LogOut,
@@ -18,7 +17,11 @@ import {
 } from '@/components/ui/sheet'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth } from '@/contexts/AuthContext'
+import { useProfile } from '@/hooks/useProfile'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { SafeImage } from '@/components/ui/SafeImage'
+import { UserAvatar } from '@/components/ui/UserAvatar'
+import { getStorageUrl } from '@/lib/images'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 export function Navbar() {
