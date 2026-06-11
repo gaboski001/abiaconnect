@@ -95,6 +95,28 @@ export function Footer() {
 
       <footer className="mt-12 bg-primary/5 border-t border-border">
         <div className="mx-auto max-w-[1400px] px-6 py-12 space-y-12">
+          {/* Brand */}
+          <div className="flex flex-col gap-3">
+            {logoUrl ? (
+              <SafeImage
+                src={logoUrl}
+                fallback=""
+                alt={siteName}
+                className="h-12 w-auto max-w-[180px] object-contain"
+              />
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <span className="font-bold text-xl text-foreground">{siteName}</span>
+              </div>
+            )}
+            <p className="text-muted-foreground text-sm max-w-[240px] leading-relaxed">
+              {tagline}
+            </p>
+          </div>
+
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {STATS.map(({ icon: Icon, label }) => (

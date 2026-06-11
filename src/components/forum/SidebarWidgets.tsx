@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { BookOpen, CalendarDays, MessageSquarePlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { UserAvatar } from '@/components/ui/UserAvatar'
 
 interface Thread {
   id: string
