@@ -41,9 +41,8 @@ Deno.serve(async (req) => {
     for (const r of rows ?? []) s[r.key] = String(r.value ?? '')
 
     if (!s.smtp_host || !s.smtp_user || !s.smtp_password || !s.smtp_from) {
-      return json(
+      return smtpTestError(
         { error: 'SMTP configuration is incomplete. Fill in host, user, password, and from address.' },
-        400,
       )
     }
 
@@ -53,12 +52,15 @@ Deno.serve(async (req) => {
     configuredHost = s.smtp_host
     configuredPort = String(s.smtp_port || 587)
 
+    const port = Number(s.smtp_port || 587)
     const client = new SMTPClient({
       user: s.smtp_user,
       password: s.smtp_password,
       host: s.smtp_host,
-      port: Number(s.smtp_port || 587),
-      tls: true,
+      port,
+      ssl: port === 465,
+      tls: port !== 465,
+      timeout: 10000,
     })
 
     await client.sendAsync({
@@ -77,11 +79,10 @@ Deno.serve(async (req) => {
 
     if (message.includes('ENOTFOUND') || cause?.code === 'ENOTFOUND') {
       const host = cause?.hostname || 'the configured SMTP host'
-      return json(
+      return smtpTestError(
         {
           error: `SMTP host "${host}" could not be found. Enter the exact outgoing mail server from your email provider, then save and test again.`,
         },
-        400,
       )
     }
 
@@ -91,11 +92,10 @@ Deno.serve(async (req) => {
       lowerMessage.includes('timeout') ||
       cause?.code === 'ETIMEDOUT'
     ) {
-      return json(
+      return smtpTestError(
         {
           error: `Could not connect to SMTP host "${configuredHost}" on port ${configuredPort}. The server did not respond, so enter a reachable outgoing SMTP server from your email provider and test again.`,
         },
-        400,
       )
     }
 
@@ -108,4 +108,8 @@ function json(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+function smtpTestError(body: { error: string }) {
+  return json({ ok: false, ...body })
 }

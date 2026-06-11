@@ -1136,7 +1136,7 @@ function EmailSettingsSection() {
     setTesting(true)
     setStatus('unknown')
     try {
-      const { error } = await supabase.functions.invoke('test-email', { method: 'POST' })
+      const { data, error } = await supabase.functions.invoke('test-email', { method: 'POST' })
       if (error) {
         let message = error.message
         const context = (error as { context?: Response }).context
@@ -1155,6 +1155,7 @@ function EmailSettingsSection() {
         }
         throw new Error(message)
       }
+      if (data?.ok === false) throw new Error(data.error || 'Test failed')
       setStatus('ok')
       toast.success('Test email sent')
     } catch (e: any) {
