@@ -13,6 +13,7 @@ import Profile from '@/pages/Profile'
 import Polls from '@/pages/Polls'
 import Subgroups from '@/pages/Subgroups'
 import SubgroupDetail from '@/pages/SubgroupDetail'
+import Notifications from '@/pages/Notifications'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
