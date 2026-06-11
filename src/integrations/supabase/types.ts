@@ -569,11 +569,14 @@ export type Database = {
           id: string
           is_anonymous: boolean
           is_deleted: boolean
+          is_pinned: boolean
           subgroup_id: string | null
           tags: string[] | null
           title: string
           updated_at: string
+          upvotes: number
           user_id: string | null
+          view_count: number
         }
         Insert: {
           allow_replies?: boolean
@@ -584,11 +587,14 @@ export type Database = {
           id?: string
           is_anonymous?: boolean
           is_deleted?: boolean
+          is_pinned?: boolean
           subgroup_id?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string
+          upvotes?: number
           user_id?: string | null
+          view_count?: number
         }
         Update: {
           allow_replies?: boolean
@@ -599,11 +605,14 @@ export type Database = {
           id?: string
           is_anonymous?: boolean
           is_deleted?: boolean
+          is_pinned?: boolean
           subgroup_id?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string
+          upvotes?: number
           user_id?: string | null
+          view_count?: number
         }
         Relationships: [
           {
