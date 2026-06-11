@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { handleImgError } from '@/lib/image'
 import { useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { Flame, MessageSquare, Pin, Plus } from 'lucide-react'
