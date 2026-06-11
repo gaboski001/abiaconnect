@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute'
+import Home from '@/pages/Home'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
@@ -12,7 +13,7 @@ export default function App() {
   return (
     <Routes>
       <Route element={<MainLayout />}>
-        <Route index element={<Page name="Home" />} />
+        <Route index element={<Home />} />
         <Route path="login" element={<Page name="Login" />} />
         <Route path="register" element={<Page name="Register" />} />
         <Route path="forgot-password" element={<Page name="Forgot Password" />} />
