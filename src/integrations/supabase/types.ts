@@ -139,6 +139,39 @@ export type Database = {
         }
         Relationships: []
       }
+      issue_reports: {
+        Row: {
+          contact_email: string | null
+          created_at: string
+          description: string
+          id: string
+          page_url: string | null
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          page_url?: string | null
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          page_url?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
