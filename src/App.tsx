@@ -11,6 +11,8 @@ import CreateThread from '@/pages/CreateThread'
 import Dashboard from '@/pages/Dashboard'
 import Profile from '@/pages/Profile'
 import Polls from '@/pages/Polls'
+import Subgroups from '@/pages/Subgroups'
+import SubgroupDetail from '@/pages/SubgroupDetail'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
@@ -33,7 +35,8 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="profile" element={<Profile />} />
           <Route path="polls" element={<Polls />} />
-          <Route path="subgroups" element={<Page name="Subgroups" />} />
+          <Route path="subgroups" element={<Subgroups />} />
+          <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
           <Route path="notifications" element={<Page name="Notifications" />} />
           <Route path="create-thread" element={<CreateThread />} />
           <Route path="messages" element={<Page name="Messages" />} />
