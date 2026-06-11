@@ -5,6 +5,9 @@ import { SMTPClient } from 'npm:emailjs@4.0.3'
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
+  let configuredHost = 'the configured SMTP host'
+  let configuredPort = 'the configured SMTP port'
+
   try {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
@@ -47,6 +50,9 @@ Deno.serve(async (req) => {
     const to = userData.user.email
     if (!to) return json({ error: 'No recipient email on your account' }, 400)
 
+    configuredHost = s.smtp_host
+    configuredPort = String(s.smtp_port || 587)
+
     const client = new SMTPClient({
       user: s.smtp_user,
       password: s.smtp_password,
@@ -67,12 +73,27 @@ Deno.serve(async (req) => {
     console.error('test-email error', e)
     const message = (e as Error).message || 'Send failed'
     const cause = (e as { previous?: { code?: string; hostname?: string } }).previous
+    const lowerMessage = message.toLowerCase()
 
     if (message.includes('ENOTFOUND') || cause?.code === 'ENOTFOUND') {
       const host = cause?.hostname || 'the configured SMTP host'
       return json(
         {
           error: `SMTP host "${host}" could not be found. Enter the exact outgoing mail server from your email provider, then save and test again.`,
+        },
+        400,
+      )
+    }
+
+    if (
+      lowerMessage.includes('timedout') ||
+      lowerMessage.includes('timed out') ||
+      lowerMessage.includes('timeout') ||
+      cause?.code === 'ETIMEDOUT'
+    ) {
+      return json(
+        {
+          error: `Could not connect to SMTP host "${configuredHost}" on port ${configuredPort}. The server did not respond, so enter a reachable outgoing SMTP server from your email provider and test again.`,
         },
         400,
       )
