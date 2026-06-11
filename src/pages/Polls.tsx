@@ -59,9 +59,9 @@ export default function Polls() {
       if (!list.length) return [] as Poll[]
 
       const ids = list.map((p) => p.id)
-      const [{ data: opts }, { data: votes }] = await Promise.all([
+      const [{ data: opts }, { data: counts }] = await Promise.all([
         supabase.from('poll_options').select('*').in('poll_id', ids),
-        supabase.from('poll_votes').select('poll_id, poll_option_id').in('poll_id', ids),
+        supabase.rpc('get_poll_counts', { _poll_ids: ids }),
       ])
 
       const optsByPoll = new Map<string, PollOption[]>()
