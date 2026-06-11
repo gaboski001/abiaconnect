@@ -127,8 +127,8 @@ export default function LgasGuide() {
   return (
     <>
       <SEO
-        title="The 17 Local Government Areas of Abia State — A Complete Guide"
-        description="Discover all 17 Local Government Areas (LGAs) of Abia State, their administrative headquarters, history, and cultural highlights — from Aba North to Umu Nneochi."
+        title="The 17 LGAs of Abia State — Complete Guide"
+        description="Explore all 17 Local Government Areas of Abia State — headquarters, history and culture from Aba North to Umu Nneochi."
         path="/about/lgas"
         ogType="article"
       />
