@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { toWebP, handleImgError } from '@/lib/image'
+import { toWebP } from '@/lib/image'
 import { Link, useNavigate } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { UserAvatar } from '@/components/ui/UserAvatar'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
 
@@ -97,13 +98,7 @@ export default function Dashboard() {
       <aside className="hidden lg:block">
         <div className="rounded-2xl border border-border bg-card p-5 sticky top-24 space-y-4">
           <div className="flex flex-col items-center text-center gap-2">
-            {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt={`Profile photo of ${displayName}`} onError={handleImgError} loading="lazy" className="h-20 w-20 rounded-full object-cover" />
-            ) : (
-              <span className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-secondary text-primary-foreground flex items-center justify-center text-2xl font-bold">
-                {displayName.charAt(0).toUpperCase()}
-              </span>
-            )}
+            <UserAvatar avatarUrl={profile.avatar_url} displayName={displayName} size="xl" />
             <div>
               <div className="font-bold">{displayName}</div>
               {profile.username && (
@@ -473,8 +468,7 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
       setUploading(false)
       return toast.error(upErr.message)
     }
-    const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path)
-    const { error } = await supabase.from('profiles').update({ avatar_url: pub.publicUrl }).eq('id', user.id)
+    const { error } = await supabase.from('profiles').update({ avatar_url: path }).eq('id', user.id)
     setUploading(false)
     if (error) return toast.error(error.message)
     toast.success('Avatar updated')
@@ -496,11 +490,7 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
         <h2 className="font-bold">Profile</h2>
 
         <div className="flex items-center gap-4">
-          {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt="" onError={handleImgError} loading="lazy" className="h-16 w-16 rounded-full object-cover" />
-          ) : (
-            <span className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-secondary" />
-          )}
+          <UserAvatar avatarUrl={profile.avatar_url} displayName={form.display_name || user.email} size="lg" className="h-16 w-16" />
           <label className="text-sm">
             <input
               type="file"
