@@ -163,13 +163,7 @@ export function Navbar() {
 
           <ThemeToggle />
 
-          {user && (
-            <Button variant="ghost" size="icon" aria-label="Notifications" asChild>
-              <Link to="/notifications">
-                <Bell />
-              </Link>
-            </Button>
-          )}
+          {user && <NotificationBell />}
 
           {user ? (
             <>
