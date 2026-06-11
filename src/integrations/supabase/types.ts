@@ -645,6 +645,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_poll_counts: {
+        Args: { _poll_ids: string[] }
+        Returns: {
+          poll_id: string
+          poll_option_id: string
+          vote_count: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -653,6 +661,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      mark_message_read: { Args: { _message_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "Super Admin" | "Admin" | "Member"
