@@ -106,7 +106,7 @@ export default function Profile() {
       <section className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-start gap-4">
           {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt={`Profile photo of ${name}`} className="h-24 w-24 rounded-full object-cover" />
+            <img src={profile.avatar_url} alt={`Profile photo of ${name}`} onError={handleImgError} loading="lazy" className="h-24 w-24 rounded-full object-cover" />
           ) : (
             <span className="h-24 w-24 rounded-full bg-gradient-to-br from-primary to-secondary text-primary-foreground flex items-center justify-center text-3xl font-bold">
               {name.charAt(0).toUpperCase()}
