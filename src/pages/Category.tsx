@@ -69,6 +69,23 @@ export default function CategoryPage() {
         title={category?.name ? `${category.name} discussions` : 'Category'}
         description={category?.description ?? `Browse threads and discussions in the ${category?.name ?? 'category'} on AbiaConnect.`}
         path={`/category/${categoryId ?? ''}`}
+        jsonLd={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'CollectionPage',
+            name: category?.name || 'Category',
+            description: category?.description || `Browse threads in the ${category?.name || 'category'} on AbiaConnect.`,
+            url: `https://abiaconnect.com/category/${categoryId}`,
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://abiaconnect.com/' },
+              { '@type': 'ListItem', position: 2, name: category?.name || 'Category', item: `https://abiaconnect.com/category/${categoryId}` },
+            ],
+          },
+        ]}
       />
     <div className="space-y-8">
       <header className="rounded-2xl border border-border bg-card p-6">
