@@ -8,9 +8,13 @@ import {
   ShieldCheck,
   Sparkles,
   Users,
+  Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { SafeImage } from '@/components/ui/SafeImage'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { getStorageUrl } from '@/lib/images'
 
 const STATS = [
   { icon: Users, label: '10,000+ Active Members' },
@@ -63,6 +67,10 @@ export function Footer() {
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.3 })
   const [showTop, setShowTop] = useState(false)
   const [email, setEmail] = useState('')
+  const { settings } = useSiteSettings()
+  const siteName = settings.site_name || 'AbiaConnect'
+  const tagline = settings.site_tagline || 'Connecting Abians Worldwide'
+  const logoUrl = getStorageUrl(settings.site_logo || settings.logo_url, 'site-assets')
 
   useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 400)
@@ -87,6 +95,28 @@ export function Footer() {
 
       <footer className="mt-12 bg-primary/5 border-t border-border">
         <div className="mx-auto max-w-[1400px] px-6 py-12 space-y-12">
+          {/* Brand */}
+          <div className="flex flex-col gap-3">
+            {logoUrl ? (
+              <SafeImage
+                src={logoUrl}
+                fallback=""
+                alt={siteName}
+                className="h-12 w-auto max-w-[180px] object-contain"
+              />
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <span className="font-bold text-xl text-foreground">{siteName}</span>
+              </div>
+            )}
+            <p className="text-muted-foreground text-sm max-w-[240px] leading-relaxed">
+              {tagline}
+            </p>
+          </div>
+
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {STATS.map(({ icon: Icon, label }) => (
