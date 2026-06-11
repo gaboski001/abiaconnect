@@ -7,7 +7,9 @@ import DOMPurify from 'dompurify'
 import {
   Bookmark,
   ChevronLeft,
+  Eye,
   Loader2,
+  Pin,
   Share2,
   ThumbsDown,
   ThumbsUp,
@@ -29,6 +31,8 @@ interface ThreadRow {
   category_id?: string | null
   upvotes?: number | null
   downvotes?: number | null
+  view_count?: number | null
+  is_pinned?: boolean | null
   categories?: { id: string; name: string } | null
   profiles?: {
     display_name?: string | null
@@ -99,6 +103,25 @@ export default function Thread() {
       return (data ?? []) as Reply[]
     },
   })
+
+  // Increment view count once per thread per browser session
+  useEffect(() => {
+    if (!threadId) return
+    const key = `viewed:${threadId}`
+    if (sessionStorage.getItem(key)) return
+    sessionStorage.setItem(key, '1')
+    ;(async () => {
+      const { data } = await supabase
+        .from('threads')
+        .select('view_count')
+        .eq('id', threadId)
+        .maybeSingle()
+      const next = ((data as { view_count: number | null } | null)?.view_count ?? 0) + 1
+      await supabase.from('threads').update({ view_count: next }).eq('id', threadId)
+    })()
+  }, [threadId])
+
+
 
   // Realtime subscription
   useEffect(() => {
@@ -242,6 +265,16 @@ export default function Thread() {
       </div>
 
       <article className="rounded-2xl border border-border bg-card p-6 space-y-5">
+        <div className="flex flex-wrap items-center gap-2">
+          {thread.is_pinned && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-secondary/20 text-secondary-foreground px-2 py-0.5 text-xs font-semibold">
+              <Pin className="size-3" /> Pinned
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <Eye className="size-3.5" /> {thread.view_count ?? 0} views
+          </span>
+        </div>
         <h1 className="text-3xl font-bold">{thread.title}</h1>
 
         <div className="flex items-start gap-3">
