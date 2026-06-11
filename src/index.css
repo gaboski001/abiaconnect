@@ -64,25 +64,30 @@
 }
 
 .dark {
-  --background: oklch(0.12 0.02 145);
-  --foreground: oklch(0.98 0.01 145);
-  --card: oklch(0.15 0.03 145);
-  --card-foreground: oklch(0.98 0.01 145);
-  --popover: oklch(0.15 0.03 145);
-  --popover-foreground: oklch(0.98 0.01 145);
-  --primary: oklch(0.85 0.12 85);
-  --primary-foreground: oklch(0.1 0.03 145);
-  --secondary: oklch(0.8 0.12 145);
-  --secondary-foreground: oklch(0.1 0.03 145);
-  --muted: oklch(0.18 0.04 145);
-  --muted-foreground: oklch(0.75 0.05 145);
-  --accent: oklch(0.85 0.12 85);
-  --accent-foreground: oklch(0.1 0.03 145);
-  --destructive: oklch(0.6 0.22 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 25%);
-  --input: oklch(1 0 0 / 30%);
-  --ring: oklch(0.85 0.12 85);
+  --background:         oklch(0.13 0.02 145);
+  --foreground:         oklch(0.97 0.01 145);
+  --card:               oklch(0.17 0.025 145);
+  --card-foreground:    oklch(0.97 0.01 145);
+  --popover:            oklch(0.17 0.025 145);
+  --popover-foreground: oklch(0.97 0.01 145);
+  --primary:            oklch(0.82 0.14 85);
+  --primary-foreground: oklch(0.10 0.03 145);
+  --secondary:          oklch(0.30 0.08 145);
+  --secondary-foreground: oklch(0.95 0.02 145);
+  --muted:              oklch(0.22 0.04 145);
+  --muted-foreground:   oklch(0.72 0.05 145);
+  --accent:             oklch(0.30 0.08 145);
+  --accent-foreground:  oklch(0.95 0.02 145);
+  --destructive:        oklch(0.55 0.22 27);
+  --destructive-foreground: oklch(0.98 0.01 0);
+  --border:             oklch(0.95 0.01 145 / 18%);
+  --input:              oklch(0.95 0.01 145 / 14%);
+  --ring:               oklch(0.82 0.14 85);
+  --chart-1:            oklch(0.82 0.14 85);
+  --chart-2:            oklch(0.65 0.15 145);
+  --chart-3:            oklch(0.55 0.12 200);
+  --chart-4:            oklch(0.75 0.18 70);
+  --chart-5:            oklch(0.60 0.20 30);
 }
 
 body {
@@ -97,6 +102,40 @@ body {
 }
 
 .dark .glass-card {
-  background: oklch(1 0 0 / 5%);
-  border: 1px solid oklch(1 0 0 / 12%);
+  background: oklch(0.18 0.03 145 / 80%);
+  border: 1px solid oklch(0.95 0.01 145 / 15%);
 }
+
+/* Dark-mode safety net for components that hardcoded light-only colors. */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: oklch(0.20 0.03 145);
+  color: oklch(0.97 0.01 145);
+  border-color: oklch(0.95 0.01 145 / 20%);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: oklch(0.60 0.04 145);
+}
+
+.dark .prose,
+.dark .thread-content {
+  color: oklch(0.90 0.02 145);
+}
+.dark .prose strong,
+.dark .thread-content strong {
+  color: oklch(0.97 0.01 145);
+}
+.dark .prose a,
+.dark .thread-content a {
+  color: oklch(0.82 0.14 85);
+}
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4 {
+  color: oklch(0.97 0.01 145);
+}
+
