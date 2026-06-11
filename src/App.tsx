@@ -17,6 +17,7 @@ import Notifications from '@/pages/Notifications'
 import Messages from '@/pages/Messages'
 import AdminDashboard from '@/pages/admin/AdminDashboard'
 import LgasGuide from '@/pages/LgasGuide'
+import KnownFor from '@/pages/KnownFor'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
