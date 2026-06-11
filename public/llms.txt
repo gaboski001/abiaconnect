@@ -7,6 +7,7 @@ AbiaConnect is an online community where Abians worldwide discuss culture, news,
 ## Pages
 
 - [Home](/): Latest discussions, featured threads, and community highlights.
+- [The 17 LGAs of Abia State](/about/lgas): Complete guide to Abia State's local government areas.
 - [Login](/login): Sign in to your AbiaConnect account.
 - [Register](/register): Create a new AbiaConnect account.
 

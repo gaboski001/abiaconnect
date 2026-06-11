@@ -16,6 +16,7 @@ import SubgroupDetail from '@/pages/SubgroupDetail'
 import Notifications from '@/pages/Notifications'
 import Messages from '@/pages/Messages'
 import AdminDashboard from '@/pages/admin/AdminDashboard'
+import LgasGuide from '@/pages/LgasGuide'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="forgot-password" element={<ForgotPassword />} />
         <Route path="category/:categoryId" element={<CategoryPage />} />
         <Route path="thread/:threadId" element={<Thread />} />
+        <Route path="about/lgas" element={<LgasGuide />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="dashboard" element={<Dashboard />} />
