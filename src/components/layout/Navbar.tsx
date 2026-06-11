@@ -19,6 +19,7 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 export function Navbar() {
   const navigate = useNavigate()
