@@ -17,9 +17,9 @@ export default function App() {
     <Routes>
       <Route element={<MainLayout />}>
         <Route index element={<Home />} />
-        <Route path="login" element={<Page name="Login" />} />
-        <Route path="register" element={<Page name="Register" />} />
-        <Route path="forgot-password" element={<Page name="Forgot Password" />} />
+        <Route path="login" element={<Login />} />
+        <Route path="register" element={<Register />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
         <Route path="category/:categoryId" element={<Page name="Category" />} />
         <Route path="thread/:threadId" element={<Page name="Thread" />} />
 
