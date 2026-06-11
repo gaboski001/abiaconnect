@@ -116,7 +116,7 @@ export default function Register() {
       email: v.email,
       password: v.password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: 'https://abiaconnect.com/',
         data: {
           display_name: v.name,
           username: v.username,
