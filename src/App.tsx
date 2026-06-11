@@ -46,7 +46,7 @@ export default function App() {
           <Route path="messages/:conversationId" element={<Messages />} />
 
           <Route element={<AdminRoute />}>
-            <Route path="admin/dashboard" element={<Page name="Admin Dashboard" />} />
+            <Route path="admin/dashboard" element={<AdminDashboard />} />
           </Route>
         </Route>
 
