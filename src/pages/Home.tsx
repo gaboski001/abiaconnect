@@ -20,6 +20,12 @@ export default function Home() {
   const storeLink = settings.store_link || '#'
 
   return (
+    <>
+      <SEO
+        title="AbiaConnect — Connecting Abians Worldwide"
+        description="Community forum for Abians worldwide. Join discussions on culture, news, events, polls, and subgroups across all 17 LGAs of Abia State."
+        path="/"
+      />
     <div className="space-y-12">
       {/* HERO */}
       <motion.section
