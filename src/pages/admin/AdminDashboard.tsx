@@ -311,11 +311,35 @@ function UsersSection() {
         .range(page * pageSize, page * pageSize + pageSize - 1)
       if (search.trim()) {
         const term = `%${search.trim()}%`
-        q = q.or(`display_name.ilike.${term},username.ilike.${term},email.ilike.${term}`)
+        if (search.includes('@')) {
+          const { data: matches } = await supabase.rpc('admin_search_user_ids_by_email', {
+            _term: search.trim(),
+          })
+          const ids = ((matches as { id: string }[] | null) ?? []).map((r) => r.id)
+          if (ids.length === 0) return { rows: [], total: 0 }
+          q = q.in('id', ids)
+        } else {
+          q = q.or(`display_name.ilike.${term},username.ilike.${term}`)
+        }
       }
       const { data, error, count } = await q
       if (error) throw error
-      return { rows: (data ?? []) as any[], total: count ?? 0 }
+      const rows = (data ?? []) as any[]
+      if (rows.length > 0) {
+        const { data: emails } = await supabase.rpc('admin_get_user_emails', {
+          _ids: rows.map((r) => r.id),
+        })
+        const emailMap = new Map(
+          ((emails as { id: string; email: string | null }[] | null) ?? []).map((e) => [
+            e.id,
+            e.email,
+          ]),
+        )
+        rows.forEach((r) => {
+          r.email = emailMap.get(r.id) ?? null
+        })
+      }
+      return { rows, total: count ?? 0 }
     },
   })
 

@@ -19,12 +19,11 @@ export default function Login() {
 
   async function resolveEmail(value: string): Promise<string | null> {
     if (value.includes('@')) return value
-    const { data } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('username', value)
-      .maybeSingle()
-    return (data as { email?: string } | null)?.email ?? null
+    const { data, error } = await supabase.rpc('resolve_username_to_email', {
+      _username: value,
+    })
+    if (error) return null
+    return (data as string | null) ?? null
   }
 
   async function onSubmit(e: React.FormEvent) {

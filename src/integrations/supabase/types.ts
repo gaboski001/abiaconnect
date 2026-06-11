@@ -645,12 +645,58 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_user_emails: {
+        Args: { _ids: string[] }
+        Returns: {
+          email: string
+          id: string
+        }[]
+      }
+      admin_search_user_ids_by_email: {
+        Args: { _term: string }
+        Returns: {
+          id: string
+        }[]
+      }
+      get_my_profile: {
+        Args: never
+        Returns: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          dob: string | null
+          email: string | null
+          id: string
+          is_banned: boolean
+          is_deleted: boolean
+          lga: string | null
+          reputation: number
+          role: string | null
+          updated_at: string
+          username: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_poll_counts: {
         Args: { _poll_ids: string[] }
         Returns: {
           poll_id: string
           poll_option_id: string
           vote_count: number
+        }[]
+      }
+      get_thread_vote_counts: {
+        Args: { _thread_ids: string[] }
+        Returns: {
+          downvotes: number
+          thread_id: string
+          upvotes: number
         }[]
       }
       has_role: {
@@ -662,6 +708,10 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       mark_message_read: { Args: { _message_id: string }; Returns: undefined }
+      resolve_username_to_email: {
+        Args: { _username: string }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "Super Admin" | "Admin" | "Member"
