@@ -21,7 +21,7 @@ import { useProfile } from '@/hooks/useProfile'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { getStorageUrl } from '@/lib/images'
+import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 export function Navbar() {
@@ -33,7 +33,7 @@ export function Navbar() {
   const [query, setQuery] = useState('')
 
   const siteName = settings.site_name || 'AbiaConnect'
-  const logoUrl = getStorageUrl(settings.site_logo || settings.logo_url, 'site-assets')
+  const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
   const subgroupsEnabled = settings.global_subgroups_enabled !== 'false'
   const storeLink = settings.store_link
 

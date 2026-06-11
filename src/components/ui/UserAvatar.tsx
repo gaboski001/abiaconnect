@@ -1,5 +1,6 @@
-import { getStorageUrl, getAvatarFallback } from '@/lib/images'
+import { getAvatarFallback } from '@/lib/images'
 import { SafeImage } from './SafeImage'
+import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { cn } from '@/lib/utils'
 
 interface UserAvatarProps {
@@ -18,7 +19,7 @@ const sizeMap = {
 }
 
 export function UserAvatar({ avatarUrl, displayName, size = 'md', className }: UserAvatarProps) {
-  const resolvedUrl = getStorageUrl(avatarUrl, 'avatars')
+  const resolvedUrl = useSignedUrl(avatarUrl, 'avatars')
   const fallback = getAvatarFallback(displayName)
   return (
     <SafeImage

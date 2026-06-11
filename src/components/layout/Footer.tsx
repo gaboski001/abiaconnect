@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SafeImage } from '@/components/ui/SafeImage'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { getStorageUrl } from '@/lib/images'
+import { useSignedUrl } from '@/hooks/useSignedUrl'
 
 const STATS = [
   { icon: Users, label: '10,000+ Active Members' },
@@ -70,7 +70,7 @@ export function Footer() {
   const { settings } = useSiteSettings()
   const siteName = settings.site_name || 'AbiaConnect'
   const tagline = settings.site_tagline || 'Connecting Abians Worldwide'
-  const logoUrl = getStorageUrl(settings.site_logo || settings.logo_url, 'site-assets')
+  const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
 
   useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 400)
