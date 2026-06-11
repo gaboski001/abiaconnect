@@ -159,10 +159,20 @@ export default function CategoryPage() {
                       <span>{formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}</span>
                     </div>
                   </div>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-medium shrink-0">
-                    <MessageSquare className="size-4" />
-                    {replyCount}
-                  </span>
+                  <div className="flex flex-col items-end gap-1 shrink-0 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-medium text-foreground">
+                      <MessageSquare className="size-4" />
+                      {replyCount}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <ArrowBigUp className="size-3.5" />
+                      {t.upvotes ?? 0}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Eye className="size-3.5" />
+                      {t.view_count ?? 0}
+                    </span>
+                  </div>
                 </div>
               </li>
             )
