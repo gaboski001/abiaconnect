@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { CategoryList } from '@/components/forum/CategoryList'
+import { SEO } from '@/components/SEO'
 import { SidebarWidgets } from '@/components/forum/SidebarWidgets'
 
 const AVATAR_COLORS = [
@@ -108,5 +109,6 @@ export default function Home() {
         </div>
       </div>
     </div>
+    </>
   )
 }
