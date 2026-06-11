@@ -401,7 +401,7 @@ function SavedPosts() {
   })
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>
-  const items = (q.data ?? []) as Array<{
+  const items = (q.data ?? []) as unknown as Array<{
     id: string
     thread_id: string
     threads?: { id: string; title: string; categories?: { name?: string | null } | null } | null
