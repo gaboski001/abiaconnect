@@ -5,6 +5,8 @@ import Home from '@/pages/Home'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
 import ForgotPassword from '@/pages/ForgotPassword'
+import CategoryPage from '@/pages/Category'
+import Thread from '@/pages/Thread'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
@@ -20,8 +22,8 @@ export default function App() {
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
         <Route path="forgot-password" element={<ForgotPassword />} />
-        <Route path="category/:categoryId" element={<Page name="Category" />} />
-        <Route path="thread/:threadId" element={<Page name="Thread" />} />
+        <Route path="category/:categoryId" element={<CategoryPage />} />
+        <Route path="thread/:threadId" element={<Thread />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="dashboard" element={<Page name="Dashboard" />} />
