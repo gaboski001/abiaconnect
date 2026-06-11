@@ -104,6 +104,29 @@ export default function Thread() {
     },
   })
 
+  // Increment view count once per thread per browser session
+  useEffect(() => {
+    if (!threadId) return
+    const key = `viewed:${threadId}`
+    if (sessionStorage.getItem(key)) return
+    sessionStorage.setItem(key, '1')
+    supabase.rpc('increment_thread_views', { _thread_id: threadId }).then(({ error }) => {
+      if (error) {
+        // Fallback: read-modify-write
+        supabase
+          .from('threads')
+          .select('view_count')
+          .eq('id', threadId)
+          .maybeSingle()
+          .then(({ data }) => {
+            const next = (data?.view_count ?? 0) + 1
+            supabase.from('threads').update({ view_count: next }).eq('id', threadId)
+          })
+      }
+    })
+  }, [threadId])
+
+
   // Realtime subscription
   useEffect(() => {
     if (!threadId) return
