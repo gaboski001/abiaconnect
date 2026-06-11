@@ -61,7 +61,7 @@ export default function SubgroupDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('threads')
-        .select('*, profiles:user_id(display_name, avatar_url)')
+        .select('id, category_id, subgroup_id, user_id, title, content, tags, allow_replies, is_anonymous, is_deleted, created_at, updated_at, is_pinned, upvotes, view_count, profiles:user_id(display_name, avatar_url)')
         .eq('subgroup_id', subgroupId!)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
