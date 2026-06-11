@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow, startOfDay, subDays, format } from 'date-fns'
 import {
@@ -90,12 +91,13 @@ export default function Dashboard() {
 
   return (
     <div className="grid lg:grid-cols-[16rem_1fr] gap-6">
+      <SEO title="Your Dashboard" description="Track your posts, replies, bookmarks, and reputation on AbiaConnect." path="/dashboard" />
       {/* Sidebar - desktop */}
       <aside className="hidden lg:block">
         <div className="rounded-2xl border border-border bg-card p-5 sticky top-24 space-y-4">
           <div className="flex flex-col items-center text-center gap-2">
             {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt={displayName} className="h-20 w-20 rounded-full object-cover" />
+              <img src={profile.avatar_url} alt={`Profile photo of ${displayName}`} className="h-20 w-20 rounded-full object-cover" />
             ) : (
               <span className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-secondary text-primary-foreground flex items-center justify-center text-2xl font-bold">
                 {displayName.charAt(0).toUpperCase()}

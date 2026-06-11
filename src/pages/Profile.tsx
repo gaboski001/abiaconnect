@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { SEO } from '@/components/SEO'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { Award, MapPin, Pencil } from 'lucide-react'
@@ -100,10 +101,11 @@ export default function Profile() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      <SEO title="Your Profile" description="View and edit your AbiaConnect profile, achievements, and recent posts." path="/profile" />
       <section className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-start gap-4">
           {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt={name} className="h-24 w-24 rounded-full object-cover" />
+            <img src={profile.avatar_url} alt={`Profile photo of ${name}`} className="h-24 w-24 rounded-full object-cover" />
           ) : (
             <span className="h-24 w-24 rounded-full bg-gradient-to-br from-primary to-secondary text-primary-foreground flex items-center justify-center text-3xl font-bold">
               {name.charAt(0).toUpperCase()}

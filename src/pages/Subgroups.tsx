@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Users, Plus, Search, MessageSquare, Lock } from 'lucide-react'
+import { SEO } from '@/components/SEO'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -149,6 +150,7 @@ export default function Subgroups() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <SEO title="Community Subgroups" description="Discover and join subgroups of like-minded Abians on AbiaConnect." path="/subgroups" />
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-secondary/10 p-2 text-secondary">

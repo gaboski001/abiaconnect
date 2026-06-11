@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { SEO } from '@/components/SEO'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { Bell, CheckCheck } from 'lucide-react'
@@ -113,6 +114,7 @@ export default function Notifications() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <SEO title="Notifications" description="See your latest alerts and updates on AbiaConnect." path="/notifications" />
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-secondary/10 p-2 text-secondary">

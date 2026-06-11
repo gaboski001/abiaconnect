@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
 import { ArrowLeft, MessageSquarePlus, Search, Send, Loader2 } from 'lucide-react'
+import { SEO } from '@/components/SEO'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -51,9 +52,9 @@ function Avatar({ profile, size = 'md' }: { profile?: Profile | null; size?: 'sm
   const dim = size === 'sm' ? 'h-8 w-8 text-xs' : size === 'lg' ? 'h-12 w-12' : 'h-10 w-10 text-sm'
   if (profile?.avatar_url) {
     return (
-      <img
+    <img
         src={profile.avatar_url}
-        alt={profile.display_name || ''}
+        alt={profile.display_name ? `Profile photo of ${profile.display_name}` : 'Profile photo'}
         className={cn('rounded-full object-cover shrink-0', dim)}
       />
     )
@@ -158,6 +159,8 @@ export default function Messages() {
   )
 
   return (
+    <>
+      <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
     <div className="container mx-auto px-0 md:px-4 py-0 md:py-6">
       <div className="md:rounded-2xl md:border md:bg-card overflow-hidden h-[calc(100vh-5rem)] md:h-[calc(100vh-8rem)] flex">
         {/* LEFT */}
@@ -168,7 +171,7 @@ export default function Messages() {
           )}
         >
           <div className="p-4 border-b flex items-center justify-between gap-2">
-            <h2 className="text-lg font-bold">Messages</h2>
+            <h1 className="text-lg font-bold">Messages</h1>
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
               <DialogTrigger asChild>
                 <Button size="icon" variant="ghost" aria-label="New message">
@@ -263,6 +266,7 @@ export default function Messages() {
         </section>
       </div>
     </div>
+    </>
   )
 }
 

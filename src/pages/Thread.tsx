@@ -206,6 +206,27 @@ export default function Thread() {
         description={metaDesc}
         path={`/thread/${threadId ?? ''}`}
         ogType="article"
+        jsonLd={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'DiscussionForumPosting',
+            headline: thread.title,
+            articleBody: plainBody,
+            author: { '@type': 'Person', name: authorName },
+            datePublished: thread.created_at,
+            url: `https://abiaconnect.com/thread/${threadId}`,
+            mainEntityOfPage: { '@type': 'WebPage', '@id': `https://abiaconnect.com/thread/${threadId}` },
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://abiaconnect.com/' },
+              { '@type': 'ListItem', position: 2, name: thread.categories?.name || 'Forums', item: `https://abiaconnect.com/category/${thread.categories?.id}` },
+              { '@type': 'ListItem', position: 3, name: thread.title, item: `https://abiaconnect.com/thread/${threadId}` },
+            ],
+          },
+        ]}
       />
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">

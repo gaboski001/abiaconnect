@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { Users, MessageSquare, ArrowLeft, Plus, Lock, Pin } from 'lucide-react'
@@ -126,6 +127,29 @@ export default function SubgroupDetail() {
 
   return (
     <div className="container mx-auto px-4 py-6">
+      <SEO
+        title={s?.name ? `${s.name} | AbiaConnect` : 'Subgroup'}
+        description={s?.description || 'Join this subgroup on AbiaConnect.'}
+        path={`/subgroups/${subgroupId ?? ''}`}
+        jsonLd={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'CollectionPage',
+            name: s?.name || 'Subgroup',
+            description: s?.description || 'Join this subgroup on AbiaConnect.',
+            url: `https://abiaconnect.com/subgroups/${subgroupId}`,
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://abiaconnect.com/' },
+              { '@type': 'ListItem', position: 2, name: 'Subgroups', item: 'https://abiaconnect.com/subgroups' },
+              { '@type': 'ListItem', position: 3, name: s?.name || 'Subgroup', item: `https://abiaconnect.com/subgroups/${subgroupId}` },
+            ],
+          },
+        ]}
+      />
       <Button asChild variant="ghost" size="sm" className="mb-4">
         <Link to="/subgroups">
           <ArrowLeft className="h-4 w-4 mr-1" /> All subgroups
