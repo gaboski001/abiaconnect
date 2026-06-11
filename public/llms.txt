@@ -1,0 +1,15 @@
+# AbiaConnect
+
+> A community forum connecting indigenous people of Abia State, both at home and abroad.
+
+AbiaConnect is an online community where Abians worldwide discuss culture, news, events, and ideas across categories, threads, polls, and subgroups.
+
+## Pages
+
+- [Home](/): Latest discussions, featured threads, and community highlights.
+- [Login](/login): Sign in to your AbiaConnect account.
+- [Register](/register): Create a new AbiaConnect account.
+
+## Optional
+
+- [Forgot password](/forgot-password): Reset your account password.

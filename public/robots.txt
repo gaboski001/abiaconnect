@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /notifications
+Disallow: /messages
+Disallow: /create-thread
+
+Sitemap: https://abiaconnect.com/sitemap.xml

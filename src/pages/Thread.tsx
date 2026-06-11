@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { SEO } from '@/components/SEO'
 
 interface ThreadRow {
   id: string
@@ -52,7 +53,7 @@ interface Reply {
 function Avatar({ name, url, size = 8 }: { name: string; url?: string | null; size?: number }) {
   const cls = `h-${size} w-${size} rounded-full`
   return url ? (
-    <img src={url} alt={name} className={`${cls} object-cover`} />
+    <img src={url} alt={`Profile photo of ${name}`} className={`${cls} object-cover`} />
   ) : (
     <span
       className={`${cls} bg-gradient-to-br from-primary to-secondary text-primary-foreground flex items-center justify-center text-xs font-semibold`}
@@ -195,7 +196,17 @@ export default function Thread() {
   const authorName = thread.profiles?.display_name ?? 'Member'
   const safeBody = DOMPurify.sanitize(thread.content ?? '')
 
+  const plainBody = (thread.content ?? '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+  const metaDesc = plainBody.slice(0, 160) || `Discussion by ${authorName} on AbiaConnect.`
+
   return (
+    <>
+      <SEO
+        title={thread.title}
+        description={metaDesc}
+        path={`/thread/${threadId ?? ''}`}
+        ogType="article"
+      />
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <ChevronLeft className="size-4" />
@@ -331,5 +342,6 @@ export default function Thread() {
         )}
       </section>
     </div>
+    </>
   )
 }

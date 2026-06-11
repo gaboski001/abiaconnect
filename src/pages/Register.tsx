@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SEO } from '@/components/SEO'
 import {
   Select,
   SelectContent,
@@ -142,6 +143,8 @@ export default function Register() {
   )
 
   return (
+    <>
+      <SEO title="Create your AbiaConnect account" description="Join AbiaConnect — the community forum connecting Abians worldwide. Register in seconds." path="/register" />
     <div className="min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 rounded-3xl p-6">
       <div className="w-full max-w-lg rounded-3xl border border-border bg-card shadow-xl p-8 overflow-hidden">
         <StepDots step={step} />
@@ -266,6 +269,7 @@ export default function Register() {
         </AnimatePresence>
       </div>
     </div>
+    </>
   )
 }
 

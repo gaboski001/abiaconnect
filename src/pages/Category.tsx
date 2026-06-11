@@ -5,6 +5,7 @@ import { Flame, MessageSquare, Pin, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { SEO } from '@/components/SEO'
 
 interface Category {
   id: string
@@ -63,6 +64,12 @@ export default function CategoryPage() {
   const threads = threadsQ.data ?? []
 
   return (
+    <>
+      <SEO
+        title={category?.name ? `${category.name} discussions` : 'Category'}
+        description={category?.description ?? `Browse threads and discussions in the ${category?.name ?? 'category'} on AbiaConnect.`}
+        path={`/category/${categoryId ?? ''}`}
+      />
     <div className="space-y-8">
       <header className="rounded-2xl border border-border bg-card p-6">
         <h1 className="text-3xl font-bold">{category?.name ?? 'Category'}</h1>
@@ -122,7 +129,7 @@ export default function CategoryPage() {
                     </Link>
                     <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
                       {t.profiles?.avatar_url ? (
-                        <img src={t.profiles.avatar_url} alt={author} className="h-6 w-6 rounded-full object-cover" />
+                        <img src={t.profiles.avatar_url} alt={`Profile photo of ${author}`} className="h-6 w-6 rounded-full object-cover" />
                       ) : (
                         <span className="h-6 w-6 rounded-full bg-gradient-to-br from-primary to-secondary text-primary-foreground flex items-center justify-center text-[10px] font-semibold">
                           {author.charAt(0).toUpperCase()}
@@ -143,5 +150,6 @@ export default function CategoryPage() {
         </ul>
       )}
     </div>
+    </>
   )
 }

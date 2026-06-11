@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { SEO } from '@/components/SEO'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -50,13 +51,15 @@ export default function Login() {
   }
 
   return (
+    <>
+      <SEO title="Sign in to AbiaConnect" description="Sign in to your AbiaConnect account to join discussions, vote in polls, and connect with Abians worldwide." path="/login" />
     <div className="min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 rounded-3xl p-6">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card shadow-xl p-8">
         <div className="flex flex-col items-center gap-3 mb-6">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground">
             <Zap className="size-6" />
           </span>
-          <h1 className="text-2xl font-bold">Welcome Back</h1>
+          <h1 className="text-2xl font-bold">Sign in to AbiaConnect</h1>
           <p className="text-sm text-muted-foreground text-center">
             Sign in to continue to AbiaConnect
           </p>
@@ -115,5 +118,6 @@ export default function Login() {
         </form>
       </div>
     </div>
+    </>
   )
 }
