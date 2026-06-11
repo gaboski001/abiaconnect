@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { toWebP, handleImgError } from '@/lib/image'
 import { Link, useNavigate } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -97,7 +98,7 @@ export default function Dashboard() {
         <div className="rounded-2xl border border-border bg-card p-5 sticky top-24 space-y-4">
           <div className="flex flex-col items-center text-center gap-2">
             {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt={`Profile photo of ${displayName}`} className="h-20 w-20 rounded-full object-cover" />
+              <img src={profile.avatar_url} alt={`Profile photo of ${displayName}`} onError={handleImgError} loading="lazy" className="h-20 w-20 rounded-full object-cover" />
             ) : (
               <span className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-secondary text-primary-foreground flex items-center justify-center text-2xl font-bold">
                 {displayName.charAt(0).toUpperCase()}
@@ -462,9 +463,12 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
   const uploadAvatar = async (file: File) => {
     if (!user) return
     setUploading(true)
-    const ext = file.name.split('.').pop()
+    const webp = await toWebP(file)
+    const ext = webp.name.split('.').pop() || 'webp'
     const path = `${user.id}/${Date.now()}.${ext}`
-    const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    const { error: upErr } = await supabase.storage
+      .from('avatars')
+      .upload(path, webp, { upsert: true, contentType: webp.type })
     if (upErr) {
       setUploading(false)
       return toast.error(upErr.message)
@@ -493,7 +497,7 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
 
         <div className="flex items-center gap-4">
           {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt="" className="h-16 w-16 rounded-full object-cover" />
+            <img src={profile.avatar_url} alt="" onError={handleImgError} loading="lazy" className="h-16 w-16 rounded-full object-cover" />
           ) : (
             <span className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-secondary" />
           )}

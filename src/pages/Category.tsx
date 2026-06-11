@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { handleImgError } from '@/lib/image'
 import { useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { Flame, MessageSquare, Pin, Plus } from 'lucide-react'
@@ -146,7 +147,7 @@ export default function CategoryPage() {
                     </Link>
                     <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
                       {t.profiles?.avatar_url ? (
-                        <img src={t.profiles.avatar_url} alt={`Profile photo of ${author}`} className="h-6 w-6 rounded-full object-cover" />
+                        <img src={t.profiles.avatar_url} alt={`Profile photo of ${author}`} onError={handleImgError} loading="lazy" className="h-6 w-6 rounded-full object-cover" />
                       ) : (
                         <span className="h-6 w-6 rounded-full bg-gradient-to-br from-primary to-secondary text-primary-foreground flex items-center justify-center text-[10px] font-semibold">
                           {author.charAt(0).toUpperCase()}

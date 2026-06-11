@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { handleImgError } from '@/lib/image'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   LogOut,
@@ -133,7 +134,7 @@ export function Navbar() {
 
           <Link to="/" className="flex items-center gap-2">
             {logoUrl ? (
-              <img src={logoUrl} alt={siteName} className="h-10 w-10 rounded-xl object-cover" />
+              <img src={logoUrl} alt={siteName} onError={handleImgError} className="h-10 w-10 rounded-xl object-cover" />
             ) : (
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm">
                 <Zap className="size-5" />

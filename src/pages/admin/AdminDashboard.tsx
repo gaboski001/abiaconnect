@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { toWebP } from '@/lib/image'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -1114,9 +1115,11 @@ function SiteSettingsSection() {
     if (!file) return
     setUploading(true)
     try {
-      const path = `logos/${Date.now()}-${file.name}`
-      const { error } = await supabase.storage.from('site-assets').upload(path, file, {
+      const webp = await toWebP(file)
+      const path = `logos/${Date.now()}-${webp.name}`
+      const { error } = await supabase.storage.from('site-assets').upload(path, webp, {
         upsert: true,
+        contentType: webp.type,
       })
       if (error) throw error
       const { data } = supabase.storage.from('site-assets').getPublicUrl(path)

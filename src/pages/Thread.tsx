@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { handleImgError } from '@/lib/image'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
@@ -53,7 +54,7 @@ interface Reply {
 function Avatar({ name, url, size = 8 }: { name: string; url?: string | null; size?: number }) {
   const cls = `h-${size} w-${size} rounded-full`
   return url ? (
-    <img src={url} alt={`Profile photo of ${name}`} className={`${cls} object-cover`} />
+    <img src={url} alt={`Profile photo of ${name}`} onError={handleImgError} loading="lazy" className={`${cls} object-cover`} />
   ) : (
     <span
       className={`${cls} bg-gradient-to-br from-primary to-secondary text-primary-foreground flex items-center justify-center text-xs font-semibold`}
