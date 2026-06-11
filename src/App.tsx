@@ -18,6 +18,7 @@ import Messages from '@/pages/Messages'
 import AdminDashboard from '@/pages/admin/AdminDashboard'
 import LgasGuide from '@/pages/LgasGuide'
 import KnownFor from '@/pages/KnownFor'
+import AbsuGuide from '@/pages/AbsuGuide'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="thread/:threadId" element={<Thread />} />
         <Route path="about/lgas" element={<LgasGuide />} />
         <Route path="about/known-for" element={<KnownFor />} />
+        <Route path="about/absu" element={<AbsuGuide />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="dashboard" element={<Dashboard />} />
