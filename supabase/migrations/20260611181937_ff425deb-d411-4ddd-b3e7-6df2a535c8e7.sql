@@ -1,0 +1,1 @@
+REVOKE SELECT (email, dob) ON public.profiles FROM anon, authenticated;
