@@ -462,9 +462,12 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
   const uploadAvatar = async (file: File) => {
     if (!user) return
     setUploading(true)
-    const ext = file.name.split('.').pop()
+    const webp = await toWebP(file)
+    const ext = webp.name.split('.').pop() || 'webp'
     const path = `${user.id}/${Date.now()}.${ext}`
-    const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    const { error: upErr } = await supabase.storage
+      .from('avatars')
+      .upload(path, webp, { upsert: true, contentType: webp.type })
     if (upErr) {
       setUploading(false)
       return toast.error(upErr.message)
