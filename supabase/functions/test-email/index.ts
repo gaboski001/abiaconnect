@@ -65,7 +65,20 @@ Deno.serve(async (req) => {
     return json({ ok: true, sentTo: to })
   } catch (e) {
     console.error('test-email error', e)
-    return json({ error: (e as Error).message || 'Send failed' }, 500)
+    const message = (e as Error).message || 'Send failed'
+    const cause = (e as { previous?: { code?: string; hostname?: string } }).previous
+
+    if (message.includes('ENOTFOUND') || cause?.code === 'ENOTFOUND') {
+      const host = cause?.hostname || 'the configured SMTP host'
+      return json(
+        {
+          error: `SMTP host "${host}" could not be found. Enter the exact outgoing mail server from your email provider, then save and test again.`,
+        },
+        400,
+      )
+    }
+
+    return json({ error: message }, 500)
   }
 })
 
