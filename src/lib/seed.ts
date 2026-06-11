@@ -28,6 +28,7 @@ interface ThreadSeed {
   title: string
   content: string
   tags: string[]
+  is_pinned?: boolean
 }
 
 const THREADS: ThreadSeed[] = [
