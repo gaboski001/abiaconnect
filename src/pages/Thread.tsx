@@ -265,6 +265,16 @@ export default function Thread() {
       </div>
 
       <article className="rounded-2xl border border-border bg-card p-6 space-y-5">
+        <div className="flex flex-wrap items-center gap-2">
+          {thread.is_pinned && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-secondary/20 text-secondary-foreground px-2 py-0.5 text-xs font-semibold">
+              <Pin className="size-3" /> Pinned
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <Eye className="size-3.5" /> {thread.view_count ?? 0} views
+          </span>
+        </div>
         <h1 className="text-3xl font-bold">{thread.title}</h1>
 
         <div className="flex items-start gap-3">
