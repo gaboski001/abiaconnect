@@ -7,7 +7,9 @@ import DOMPurify from 'dompurify'
 import {
   Bookmark,
   ChevronLeft,
+  Eye,
   Loader2,
+  Pin,
   Share2,
   ThumbsDown,
   ThumbsUp,
