@@ -10,6 +10,7 @@ import Thread from '@/pages/Thread'
 import CreateThread from '@/pages/CreateThread'
 import Dashboard from '@/pages/Dashboard'
 import Profile from '@/pages/Profile'
+import Polls from '@/pages/Polls'
 
 const Page = ({ name }: { name: string }) => (
   <div className="p-8">
