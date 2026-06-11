@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { handleImgError } from '@/lib/image'
 import { Link } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useQuery } from '@tanstack/react-query'
