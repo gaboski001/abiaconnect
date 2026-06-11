@@ -90,9 +90,8 @@ export default function Dashboard() {
   }
 
   return (
-    <>
-      <SEO title="Your Dashboard" description="Track your posts, replies, bookmarks, and reputation on AbiaConnect." path="/dashboard" />
     <div className="grid lg:grid-cols-[16rem_1fr] gap-6">
+      <SEO title="Your Dashboard" description="Track your posts, replies, bookmarks, and reputation on AbiaConnect." path="/dashboard" />
       {/* Sidebar - desktop */}
       <aside className="hidden lg:block">
         <div className="rounded-2xl border border-border bg-card p-5 sticky top-24 space-y-4">
