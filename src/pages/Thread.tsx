@@ -208,12 +208,27 @@ export default function Thread() {
           return { ...t, [key]: Math.max(0, (t[key] ?? 0) - 2) }
         })
       }
+      // Lightweight reconciliation: fetch authoritative counts for just this thread.
+      void reconcileVotes()
     },
     onError: (e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(['thread', threadId], ctx.prev)
       toast.error(e instanceof Error ? e.message : 'Vote failed')
+      void reconcileVotes()
     },
   })
+
+  const reconcileVotes = async () => {
+    if (!threadId) return
+    const { data, error } = await supabase.rpc('get_thread_vote_counts', {
+      _thread_ids: [threadId],
+    })
+    if (error || !data) return
+    const row = (data as Array<{ thread_id: string; upvotes: number; downvotes: number }>)[0]
+    qc.setQueryData<ThreadRow | undefined>(['thread', threadId], (t) =>
+      t ? { ...t, upvotes: Number(row?.upvotes ?? 0), downvotes: Number(row?.downvotes ?? 0) } : t,
+    )
+  }
 
   const bookmark = useMutation({
     mutationFn: async () => {
