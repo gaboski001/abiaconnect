@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -6,6 +6,7 @@ import { format, formatDistanceToNow } from 'date-fns'
 import {
   Users, MessageSquare, ArrowLeft, Plus, Lock, Pin, PinOff,
   ChevronDown, ChevronUp, ShieldCheck, Copy, Trash2, Check, X,
+  ThumbsUp, Eye, Circle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
