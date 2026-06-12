@@ -29,12 +29,19 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
 const schema = z.object({
-  category_id: z.string().min(1, 'Choose a category'),
+  category_id: z.string().optional(),
+  subgroup_id: z.string().optional(),
   title: z.string().trim().min(10, 'At least 10 characters').max(200, 'Max 200 characters'),
   content: z.string().min(30, 'At least 30 characters'),
+  flair: z.string().optional(),
   allow_replies: z.boolean(),
   is_anonymous: z.boolean(),
+}).refine((v) => !!v.category_id || !!v.subgroup_id, {
+  message: 'Choose a category',
+  path: ['category_id'],
 })
+
+const FLAIRS = ['Question', 'Discussion', 'Announcement'] as const
 
 type FormValues = z.infer<typeof schema>
 
