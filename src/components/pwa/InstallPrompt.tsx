@@ -187,14 +187,6 @@ export default function InstallPrompt() {
         className={`ac-card ${closing ? 'ac-closing' : ''} fixed z-[60] left-3 right-3 bottom-3 sm:left-auto sm:right-6 sm:bottom-6 sm:w-[360px] rounded-2xl bg-white text-neutral-900 shadow-2xl border border-neutral-200 p-4`}
         style={{ borderRadius: 16 }}
       >
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label="Dismiss install prompt"
-          className="ac-btn absolute top-2 right-2 h-7 w-7 grid place-items-center rounded-full text-neutral-500 hover:bg-neutral-100"
-        >
-          <span aria-hidden="true">✕</span>
-        </button>
         <div className="flex items-start gap-3">
           <div className="relative shrink-0">
             <img src={ICON} alt="" width={48} height={48} className="rounded-xl" />
@@ -212,17 +204,23 @@ export default function InstallPrompt() {
               Get the full community experience — faster, offline-ready, and always at hand.
             </p>
             <div className="mt-3 flex items-center gap-2">
+              {/* 1: primary action */}
               <button
                 type="button"
+                tabIndex={0}
                 onClick={install}
+                aria-label="Install AbiaConnect app"
                 className="ac-btn px-3.5 py-2 text-sm font-medium text-white rounded-lg hover:opacity-95 transition"
                 style={{ background: '#1a4f3a' }}
               >
                 Install App
               </button>
+              {/* 2: secondary action */}
               <button
                 type="button"
+                tabIndex={0}
                 onClick={dismiss}
+                aria-label="Not now, hide install prompt"
                 className="ac-btn px-3 py-2 text-sm font-medium text-neutral-500 hover:text-neutral-700"
               >
                 Not Now
@@ -230,7 +228,18 @@ export default function InstallPrompt() {
             </div>
           </div>
         </div>
+        {/* 3: tertiary close — last in tab order, visually top-right */}
+        <button
+          type="button"
+          tabIndex={0}
+          onClick={dismiss}
+          aria-label="Dismiss install prompt"
+          className="ac-btn absolute top-2 right-2 h-7 w-7 grid place-items-center rounded-full text-neutral-500 hover:bg-neutral-100"
+        >
+          <span aria-hidden="true">✕</span>
+        </button>
       </div>
+
 
       {showIOS && (
         <div
