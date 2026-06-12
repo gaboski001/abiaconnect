@@ -51,6 +51,17 @@ const TIPS = [
   'Search first to avoid duplicate threads.',
 ]
 
+// Lightweight client-side moderation. Keep tight & fast.
+const BANNED_KEYWORDS = [
+  'kill yourself', 'kys', 'nigger', 'faggot', 'retard',
+  'scam link', 'porn', 'xxx', 'rape',
+]
+
+function findBanned(text: string): string | null {
+  const lower = text.toLowerCase()
+  return BANNED_KEYWORDS.find((w) => lower.includes(w)) ?? null
+}
+
 export default function CreateThread() {
   const navigate = useNavigate()
   const { user } = useAuth()

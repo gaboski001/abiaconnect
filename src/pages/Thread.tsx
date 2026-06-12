@@ -169,9 +169,22 @@ export default function Thread() {
           { onConflict: 'thread_id,user_id' },
         )
       if (error) throw error
+      return value
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : 'Vote failed'),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['thread', threadId] }),
+    onMutate: async (value: 1 | -1) => {
+      await qc.cancelQueries({ queryKey: ['thread', threadId] })
+      const prev = qc.getQueryData<ThreadRow>(['thread', threadId])
+      qc.setQueryData<ThreadRow | undefined>(['thread', threadId], (t) => {
+        if (!t) return t
+        const key = value === 1 ? 'upvotes' : 'downvotes'
+        return { ...t, [key]: (t[key] ?? 0) + 1 }
+      })
+      return { prev }
+    },
+    onError: (e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['thread', threadId], ctx.prev)
+      toast.error(e instanceof Error ? e.message : 'Vote failed')
+    },
   })
 
   const bookmark = useMutation({
