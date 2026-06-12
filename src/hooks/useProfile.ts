@@ -8,13 +8,9 @@ export function useProfile() {
     queryKey: ['profile', user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user!.id)
-        .maybeSingle()
+      const { data, error } = await supabase.rpc('get_my_profile')
       if (error) throw error
-      return data
+      return Array.isArray(data) ? data[0] ?? null : data
     },
   })
 }
