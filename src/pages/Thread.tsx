@@ -83,19 +83,32 @@ export default function Thread() {
     },
   })
 
-  const repliesQ = useQuery({
+  const REPLIES_PAGE_SIZE = 10
+  type RepliesPage = { rows: Reply[]; total: number; nextPage: number | null }
+
+  const repliesQ = useInfiniteQuery<RepliesPage>({
     queryKey: ['replies', threadId],
     enabled: !!threadId,
-    queryFn: async () => {
-      const { data, error } = await supabase
+    initialPageParam: 0,
+    getNextPageParam: (last) => last.nextPage,
+    queryFn: async ({ pageParam = 0 }) => {
+      const page = pageParam as number
+      const from = page * REPLIES_PAGE_SIZE
+      const to = from + REPLIES_PAGE_SIZE - 1
+      const { data, error, count } = await supabase
         .from('replies')
-        .select('*, profiles(display_name, avatar_url)')
+        .select('*, profiles:user_id(display_name, avatar_url)', { count: 'exact' })
         .eq('thread_id', threadId!)
         .order('created_at', { ascending: true })
+        .range(from, to)
       if (error) throw error
-      return (data ?? []) as Reply[]
+      const rows = (data ?? []) as Reply[]
+      const total = count ?? rows.length
+      const hasMore = (page + 1) * REPLIES_PAGE_SIZE < total
+      return { rows, total, nextPage: hasMore ? page + 1 : null }
     },
   })
+
 
   // Increment view count once per thread per browser session
   useEffect(() => {
