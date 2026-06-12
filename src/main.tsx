@@ -10,11 +10,29 @@ import { Toaster } from '@/components/ui/sonner'
 import { registerSW } from './lib/registerSW'
 import './index.css'
 
-registerSW()
+// Defer non-critical work until after first paint.
+type IdleWindow = Window & { requestIdleCallback?: (cb: () => void) => void }
+const onIdle = (cb: () => void) => {
+  const w = window as IdleWindow
+  if (w.requestIdleCallback) w.requestIdleCallback(cb)
+  else window.setTimeout(cb, 1)
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => onIdle(() => registerSW()), { once: true })
+}
+
+// Remove the inline splash once React has rendered the real UI.
+const removeSplash = () => {
+  const el = document.getElementById('ac-splash')
+  if (!el) return
+  el.classList.add('ac-hide')
+  window.setTimeout(() => el.remove(), 260)
+}
 
 const queryClient = new QueryClient()
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootEl = document.getElementById('root')!
+ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
@@ -28,5 +46,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </ThemeProvider>
       </QueryClientProvider>
     </HelmetProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 )
+
+requestAnimationFrame(removeSplash)
+
