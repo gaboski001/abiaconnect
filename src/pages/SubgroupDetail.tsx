@@ -117,7 +117,8 @@ export default function SubgroupDetail() {
     },
     onSuccess: (action) => {
       toast.success(action === 'joined' ? 'Joined subgroup' : 'Already a member')
-      qc.invalidateQueries({ queryKey: ['subgroup-members', subgroupId] })
+      qc.invalidateQueries({ queryKey: ['subgroup-membership', subgroupId] })
+      qc.invalidateQueries({ queryKey: ['subgroup-member-count', subgroupId] })
     },
     onError: (e: any) => toast.error(e.message || 'Failed to join'),
   })
@@ -134,7 +135,8 @@ export default function SubgroupDetail() {
     },
     onSuccess: () => {
       toast.success('Left subgroup')
-      qc.invalidateQueries({ queryKey: ['subgroup-members', subgroupId] })
+      qc.invalidateQueries({ queryKey: ['subgroup-membership', subgroupId] })
+      qc.invalidateQueries({ queryKey: ['subgroup-member-count', subgroupId] })
     },
     onError: (e: any) => toast.error(e.message || 'Failed to leave'),
   })
