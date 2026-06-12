@@ -129,12 +129,12 @@ export default function SubgroupDetail() {
       const to = from + MEMBERS_PAGE_SIZE - 1
       const { data: rows, error } = await supabase
         .from('subgroup_members')
-        .select('user_id, joined_at')
+        .select('user_id, created_at')
         .eq('subgroup_id', subgroupId!)
-        .order('joined_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .range(from, to)
       if (error) throw error
-      const list = (rows ?? []) as Array<{ user_id: string; joined_at: string }>
+      const list = (rows ?? []) as Array<{ user_id: string; created_at: string }>
       if (!list.length) return [] as any[]
       const ids = list.map((r) => r.user_id)
       const [{ data: profs }, { data: threadsByUser }] = await Promise.all([
@@ -154,7 +154,7 @@ export default function SubgroupDetail() {
       })
       return list.map((r) => ({
         user_id: r.user_id,
-        joined_at: r.joined_at,
+        joined_at: r.created_at,
         display_name: profMap.get(r.user_id)?.display_name ?? 'Member',
         avatar_url: profMap.get(r.user_id)?.avatar_url ?? null,
         thread_count: threadCounts[r.user_id] || 0,
