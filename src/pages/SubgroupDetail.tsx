@@ -236,8 +236,21 @@ export default function SubgroupDetail() {
       } as any)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['subgroup-threads', subgroupId] }),
-    onError: (e: any) => toast.error(e.message || 'Failed to update pin'),
+    onMutate: async ({ threadId, pinned }) => {
+      await qc.cancelQueries({ queryKey: ['subgroup-threads', subgroupId] })
+      const prev = qc.getQueriesData({ queryKey: ['subgroup-threads', subgroupId] })
+      qc.setQueriesData({ queryKey: ['subgroup-threads', subgroupId] }, (old: any) =>
+        Array.isArray(old)
+          ? old.map((t: any) => t.id === threadId ? { ...t, is_pinned: pinned, pinned_at: pinned ? new Date().toISOString() : null } : t)
+          : old,
+      )
+      return { prev }
+    },
+    onError: (e: any, _v, ctx) => {
+      ctx?.prev?.forEach(([k, v]: any) => qc.setQueryData(k, v))
+      toast.error(e?.message || 'Failed to update pin')
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['subgroup-threads', subgroupId] }),
   })
 
   const [membersPage, setMembersPage] = useState(0)
@@ -289,12 +302,28 @@ export default function SubgroupDetail() {
       if (error) throw error
       return data && data.length > 0 ? 'joined' : 'duplicate_ignored'
     },
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ['subgroup-membership', subgroupId] })
+      const prevMember = qc.getQueryData(['subgroup-membership', subgroupId, user?.id])
+      const prevCount = qc.getQueryData(['subgroup-member-count', subgroupId])
+      qc.setQueryData(['subgroup-membership', subgroupId, user?.id], true)
+      qc.setQueryData(['subgroup-member-count', subgroupId], (c: any) => (typeof c === 'number' ? c + 1 : c))
+      return { prevMember, prevCount }
+    },
     onSuccess: (action) => {
       toast.success(action === 'joined' ? 'Joined subgroup' : 'Already a member')
+    },
+    onError: (e: any, _v, ctx) => {
+      if (ctx) {
+        qc.setQueryData(['subgroup-membership', subgroupId, user?.id], ctx.prevMember)
+        qc.setQueryData(['subgroup-member-count', subgroupId], ctx.prevCount)
+      }
+      toast.error(e?.message || 'Failed to join')
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['subgroup-membership', subgroupId] })
       qc.invalidateQueries({ queryKey: ['subgroup-member-count', subgroupId] })
     },
-    onError: (e: any) => toast.error(e.message || 'Failed to join'),
   })
 
   const leaveMut = useMutation({
@@ -305,12 +334,26 @@ export default function SubgroupDetail() {
         .eq('subgroup_id', subgroupId!).eq('user_id', user.id)
       if (error) throw error
     },
-    onSuccess: () => {
-      toast.success('Left subgroup')
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ['subgroup-membership', subgroupId] })
+      const prevMember = qc.getQueryData(['subgroup-membership', subgroupId, user?.id])
+      const prevCount = qc.getQueryData(['subgroup-member-count', subgroupId])
+      qc.setQueryData(['subgroup-membership', subgroupId, user?.id], false)
+      qc.setQueryData(['subgroup-member-count', subgroupId], (c: any) => (typeof c === 'number' ? Math.max(0, c - 1) : c))
+      return { prevMember, prevCount }
+    },
+    onSuccess: () => toast.success('Left subgroup'),
+    onError: (e: any, _v, ctx) => {
+      if (ctx) {
+        qc.setQueryData(['subgroup-membership', subgroupId, user?.id], ctx.prevMember)
+        qc.setQueryData(['subgroup-member-count', subgroupId], ctx.prevCount)
+      }
+      toast.error(e?.message || 'Failed to leave')
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['subgroup-membership', subgroupId] })
       qc.invalidateQueries({ queryKey: ['subgroup-member-count', subgroupId] })
     },
-    onError: (e: any) => toast.error(e.message || 'Failed to leave'),
   })
 
   const requestJoinMut = useMutation({
