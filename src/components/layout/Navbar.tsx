@@ -23,6 +23,7 @@ import { SafeImage } from '@/components/ui/SafeImage'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { RealtimeStatus } from '@/components/RealtimeStatus'
 
 export function Navbar() {
   const navigate = useNavigate()
