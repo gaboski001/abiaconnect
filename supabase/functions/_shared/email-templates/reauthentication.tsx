@@ -9,7 +9,7 @@ interface ReauthenticationEmailProps {
 }
 
 export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
-  <BrandLayout preview="Your AbiaConnect verification code">
+  <BrandLayout preview="Your Abiaconnect verification code">
     <h1 style={h1 as any}>Confirm reauthentication</h1>
     <Text style={text}>Use the code below to confirm your identity:</Text>
     <Text style={codeStyle as any}>{token}</Text>

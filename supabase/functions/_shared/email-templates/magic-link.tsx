@@ -13,7 +13,7 @@ export const MagicLinkEmail = ({ siteName, confirmationUrl }: MagicLinkEmailProp
   <BrandLayout preview={`Your login link for ${siteName}`}>
     <h1 style={h1 as any}>Your login link</h1>
     <Text style={text}>
-      Click the button below to log in to <strong>AbiaConnect</strong>. This link will expire
+      Click the button below to log in to <strong>Abiaconnect</strong>. This link will expire
       shortly.
     </Text>
     <div style={{ textAlign: 'center', margin: '8px 0 24px' }}>

@@ -38,7 +38,7 @@ export const BrandLayout = ({
             <table width="100%" cellPadding={0} cellSpacing={0} role="presentation">
               <tr>
                 <td align="left" style={{ verticalAlign: 'middle' }}>
-                  <Text style={brandName}>AbiaConnect</Text>
+                  <Text style={brandName}>Abiaconnect</Text>
                   <Text style={brandTag}>Connecting Abians Worldwide</Text>
                 </td>
                 <td align="right" style={{ verticalAlign: 'middle' }}>
@@ -55,7 +55,7 @@ export const BrandLayout = ({
 
           {/* Footer */}
           <Section style={footer}>
-            <Text style={footerBrand}>AbiaConnect</Text>
+            <Text style={footerBrand}>Abiaconnect</Text>
             <Text style={footerTag}>
               The community forum connecting indigenous people of Abia State at home and abroad.
             </Text>
@@ -71,11 +71,11 @@ export const BrandLayout = ({
             <Text style={footerSocial}>
               <Link href="https://instagram.com/abiaconnect_forum" style={socialPill}>Instagram</Link>
               <Link href="https://facebook.com/Abiaconnect" style={socialPill}>Facebook</Link>
-              <Link href="https://twitter.com/search?q=%23AbiaConnect" style={socialPill}>X / Twitter</Link>
+              <Link href="https://twitter.com/search?q=%23Abiaconnect" style={socialPill}>X / Twitter</Link>
             </Text>
             <Hr style={hr} />
             <Text style={copyright}>
-              © 2026 AbiaConnect — <Link href="https://abiaconnect.com" style={mutedLink}>abiaconnect.com</Link>
+              © 2026 Abiaconnect — <Link href="https://abiaconnect.com" style={mutedLink}>abiaconnect.com</Link>
             </Text>
             <Text style={copyright}>
               <Link href={unsubscribeUrl} style={footerLink}>Unsubscribe</Link>

@@ -13,7 +13,7 @@ export const RecoveryEmail = ({ siteName, confirmationUrl }: RecoveryEmailProps)
   <BrandLayout preview={`Reset your password for ${siteName}`}>
     <h1 style={h1 as any}>Reset your password</h1>
     <Text style={text}>
-      We received a request to reset your password for <strong>AbiaConnect</strong>. Click the
+      We received a request to reset your password for <strong>Abiaconnect</strong>. Click the
       button below to choose a new password.
     </Text>
     <div style={{ textAlign: 'center', margin: '8px 0 24px' }}>
