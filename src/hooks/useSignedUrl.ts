@@ -40,9 +40,13 @@ export function useSignedUrl(
   bucket: 'avatars' | 'site-assets' | string = 'avatars',
   expiresIn = 60 * 60,
 ): string | null {
+  const isPublicUrl = (v: string) =>
+    /^https?:\/\//.test(v) &&
+    (!v.includes('/storage/v1/object/') || v.includes('/storage/v1/object/public/'))
+
   const [url, setUrl] = useState<string | null>(() => {
     if (!pathOrUrl) return null
-    if (/^https?:\/\//.test(pathOrUrl) && !pathOrUrl.includes('/storage/v1/object/')) return pathOrUrl
+    if (isPublicUrl(pathOrUrl)) return pathOrUrl
     return null
   })
 
@@ -52,7 +56,7 @@ export function useSignedUrl(
       setUrl(null)
       return
     }
-    if (/^https?:\/\//.test(pathOrUrl) && !pathOrUrl.includes('/storage/v1/object/')) {
+    if (isPublicUrl(pathOrUrl)) {
       setUrl(pathOrUrl)
       return
     }
