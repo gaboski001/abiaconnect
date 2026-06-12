@@ -47,8 +47,7 @@ export function useRealtimeSubscription({
     const channel = supabase
       .channel(channelName)
       .on(
-        // @ts-expect-error supabase-js types for postgres_changes are overly strict
-        'postgres_changes',
+        'postgres_changes' as never,
         { event, schema: 'public', table, ...(filter ? { filter } : {}) },
         (payload: Payload) => {
           if (payload.eventType === 'INSERT') insertRef.current?.(payload)
