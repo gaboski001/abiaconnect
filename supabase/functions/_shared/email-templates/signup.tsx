@@ -14,9 +14,9 @@ interface SignupEmailProps {
 export const SignupEmail = ({ siteName, recipient, confirmationUrl }: SignupEmailProps) => (
   <BrandLayout preview={`Confirm your email for ${siteName}`}>
     <Text style={text}>Hi there,</Text>
-    <h1 style={h1 as any}>Welcome to AbiaConnect — confirm your email</h1>
+    <h1 style={h1 as any}>Welcome to Abiaconnect — confirm your email</h1>
     <Text style={text}>
-      Thanks for joining <strong>AbiaConnect</strong>, the community forum connecting Abians
+      Thanks for joining <strong>Abiaconnect</strong>, the community forum connecting Abians
       worldwide. Please confirm your email address (
       <Link href={`mailto:${recipient}`} style={link}>{recipient}</Link>) to activate your account
       and start connecting.

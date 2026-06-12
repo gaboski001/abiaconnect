@@ -17,10 +17,10 @@ export const EmailChangeEmail = ({
   newEmail,
   confirmationUrl,
 }: EmailChangeEmailProps) => (
-  <BrandLayout preview={`Confirm your email change for AbiaConnect`}>
+  <BrandLayout preview={`Confirm your email change for Abiaconnect`}>
     <h1 style={h1 as any}>Confirm your email change</h1>
     <Text style={text}>
-      You requested to change your AbiaConnect email address from{' '}
+      You requested to change your Abiaconnect email address from{' '}
       <Link href={`mailto:${oldEmail}`} style={link}>{oldEmail}</Link> to{' '}
       <Link href={`mailto:${newEmail}`} style={link}>{newEmail}</Link>.
     </Text>

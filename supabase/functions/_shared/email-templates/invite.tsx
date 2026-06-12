@@ -11,10 +11,10 @@ interface InviteEmailProps {
 }
 
 export const InviteEmail = ({ confirmationUrl }: InviteEmailProps) => (
-  <BrandLayout preview={`You've been invited to join AbiaConnect`}>
+  <BrandLayout preview={`You've been invited to join Abiaconnect`}>
     <h1 style={h1 as any}>You've been invited</h1>
     <Text style={text}>
-      You've been invited to join <strong>AbiaConnect</strong>, the community forum connecting
+      You've been invited to join <strong>Abiaconnect</strong>, the community forum connecting
       indigenous people of Abia State at home and abroad. Click below to accept and create your
       account.
     </Text>
