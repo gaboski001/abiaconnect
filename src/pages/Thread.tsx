@@ -162,24 +162,52 @@ export default function Thread() {
   const vote = useMutation({
     mutationFn: async (value: 1 | -1) => {
       if (!user || !threadId) throw new Error('Sign in to vote')
+      // Toggle: if a row with same (thread, user, value) exists, delete it; else insert.
+      const { data: existing, error: selErr } = await supabase
+        .from('thread_votes')
+        .select('id')
+        .eq('thread_id', threadId)
+        .eq('user_id', user.id)
+        .eq('value', value)
+        .maybeSingle()
+      if (selErr) throw selErr
+      if (existing) {
+        const { error } = await supabase
+          .from('thread_votes')
+          .delete()
+          .eq('id', (existing as { id: string }).id)
+        if (error) throw error
+        return { value, removed: true as const }
+      }
       const { error } = await supabase
         .from('thread_votes')
         .upsert(
           { thread_id: threadId, user_id: user.id, value },
-          { onConflict: 'thread_id,user_id' },
+          { onConflict: 'thread_id,user_id,value' },
         )
       if (error) throw error
-      return value
+      return { value, removed: false as const }
     },
     onMutate: async (value: 1 | -1) => {
       await qc.cancelQueries({ queryKey: ['thread', threadId] })
       const prev = qc.getQueryData<ThreadRow>(['thread', threadId])
+      // Optimistic: we don't know yet if toggle is on/off; assume "+1" then reconcile on success.
       qc.setQueryData<ThreadRow | undefined>(['thread', threadId], (t) => {
         if (!t) return t
         const key = value === 1 ? 'upvotes' : 'downvotes'
         return { ...t, [key]: (t[key] ?? 0) + 1 }
       })
-      return { prev }
+      return { prev, value }
+    },
+    onSuccess: (res, _v, ctx) => {
+      if (res.removed) {
+        // Toggle-off: roll the optimistic +1 back to -1 net.
+        qc.setQueryData<ThreadRow | undefined>(['thread', threadId], (t) => {
+          if (!t) return t
+          const key = ctx!.value === 1 ? 'upvotes' : 'downvotes'
+          return { ...t, [key]: Math.max(0, (t[key] ?? 0) - 2) }
+        })
+      }
     },
     onError: (e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(['thread', threadId], ctx.prev)
