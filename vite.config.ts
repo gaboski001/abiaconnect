@@ -1,10 +1,24 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { beasties } from "vite-plugin-beasties";
 import path from "path";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    // Inlines above-the-fold CSS into index.html and async-loads the rest
+    // (preload + media=print → onload swap). Runs at build time only.
+    beasties({
+      options: {
+        preload: "swap",
+        pruneSource: false,
+        inlineFonts: true,
+        logLevel: "silent",
+      },
+    }),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
