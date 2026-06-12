@@ -220,12 +220,32 @@ export default function Thread() {
       const to = from + REPLIES_PAGE_SIZE - 1
       const { data, error, count } = await supabase
         .from('replies')
-        .select('*, profiles:user_id(display_name, avatar_url)', { count: 'exact' })
+        .select('*', { count: 'exact' })
         .eq('thread_id', threadId!)
         .order('created_at', { ascending: true })
         .range(from, to)
       if (error) throw error
-      const rows = (data ?? []) as Reply[]
+      const baseRows = (data ?? []) as Reply[]
+      const userIds = Array.from(
+        new Set(baseRows.map((r) => r.user_id).filter((v): v is string => !!v)),
+      )
+      let profilesMap = new Map<string, { display_name: string | null; avatar_url: string | null }>()
+      if (userIds.length > 0) {
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url')
+          .in('id', userIds)
+        profilesMap = new Map(
+          (profs ?? []).map((p) => [
+            p.id as string,
+            { display_name: p.display_name ?? null, avatar_url: p.avatar_url ?? null },
+          ]),
+        )
+      }
+      const rows: Reply[] = baseRows.map((r) => ({
+        ...r,
+        profiles: r.user_id ? profilesMap.get(r.user_id) ?? null : null,
+      }))
       const total = count ?? rows.length
       const hasMore = (page + 1) * REPLIES_PAGE_SIZE < total
       return { rows, total, nextPage: hasMore ? page + 1 : null }
@@ -297,15 +317,24 @@ export default function Thread() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'replies', filter: `thread_id=eq.${threadId}` },
-        (payload) => {
+        async (payload) => {
           const next = payload.new as Reply
+          let withProfile: Reply = next
+          if (next.user_id) {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('display_name, avatar_url')
+              .eq('id', next.user_id)
+              .maybeSingle()
+            if (prof) withProfile = { ...next, profiles: prof as Reply['profiles'] }
+          }
           qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
             if (!prev) return prev
-            const exists = prev.pages.some((p) => p.rows.some((r) => r.id === next.id))
+            const exists = prev.pages.some((p) => p.rows.some((r) => r.id === withProfile.id))
             if (exists) return prev
             const pages = prev.pages.map((p, i) =>
               i === prev.pages.length - 1
-                ? { ...p, rows: [...p.rows, next], total: p.total + 1 }
+                ? { ...p, rows: [...p.rows, withProfile], total: p.total + 1 }
                 : { ...p, total: p.total + 1 },
             )
             return { ...prev, pages }
