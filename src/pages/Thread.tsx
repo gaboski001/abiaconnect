@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 
@@ -16,12 +16,16 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+
+// Lazy-load Textarea — only needed when user opens a reply form.
+const Textarea = lazy(() =>
+  import('@/components/ui/textarea').then((m) => ({ default: m.Textarea })),
+)
 
 interface ThreadRow {
   id: string
@@ -56,10 +60,127 @@ interface Reply {
   profiles?: { display_name?: string | null; avatar_url?: string | null } | null
 }
 
-function Avatar({ name, url, size = 8 }: { name: string; url?: string | null; size?: number }) {
+const Avatar = memo(function Avatar({
+  name,
+  url,
+  size = 8,
+}: {
+  name: string
+  url?: string | null
+  size?: number
+}) {
   const avatarSize = size >= 10 ? 'md' : 'sm'
   return <UserAvatar avatarUrl={url} displayName={name} size={avatarSize} />
+})
+
+interface ReplyItemProps {
+  reply: Reply
+  canVote: boolean
+  canReply: boolean
+  voting: boolean
+  replyingTo: string | null
+  nestedDraft: string
+  submitting: boolean
+  onVote: (replyId: string, value: 1 | -1) => void
+  onToggleReply: (replyId: string) => void
+  onNestedDraftChange: (v: string) => void
+  onSubmitNested: (replyId: string) => void
+  onCancelNested: () => void
 }
+
+const ReplyItem = memo(function ReplyItem({
+  reply: r,
+  canVote,
+  canReply,
+  voting,
+  replyingTo,
+  nestedDraft,
+  submitting,
+  onVote,
+  onToggleReply,
+  onNestedDraftChange,
+  onSubmitNested,
+  onCancelNested,
+}: ReplyItemProps) {
+  const name = r.profiles?.display_name ?? 'Member'
+  const isOptimistic = (r as Reply & { _optimistic?: boolean })._optimistic
+  const safeHtml = useMemo(() => DOMPurify.sanitize(r.content), [r.content])
+  const isOpen = replyingTo === r.id
+  return (
+    <li
+      className={`rounded-2xl border border-border bg-card p-4 transition-opacity ${
+        r.parent_reply_id ? 'ml-8' : ''
+      } ${isOptimistic ? 'opacity-60' : ''}`}
+      aria-busy={isOptimistic ? 'true' : undefined}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <Avatar name={name} url={r.profiles?.avatar_url} />
+        <span className="font-medium text-sm">{name}</span>
+        <span className="text-xs text-muted-foreground">
+          {isOptimistic
+            ? 'Sending…'
+            : formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
+        </span>
+      </div>
+      <div
+        className="prose prose-sm dark:prose-invert max-w-none"
+        dangerouslySetInnerHTML={{ __html: safeHtml }}
+      />
+      <div className="flex items-center gap-1 mt-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={!canVote || voting || isOptimistic}
+          onClick={() => onVote(r.id, 1)}
+        >
+          <ThumbsUp className="size-3.5" /> {r.upvotes ?? 0}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={!canVote || voting || isOptimistic}
+          onClick={() => onVote(r.id, -1)}
+        >
+          <ThumbsDown className="size-3.5" /> {r.downvotes ?? 0}
+        </Button>
+        {canReply && !isOptimistic && (
+          <Button size="sm" variant="ghost" onClick={() => onToggleReply(r.id)}>
+            {isOpen ? 'Cancel' : 'Reply'}
+          </Button>
+        )}
+      </div>
+      {isOpen && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!nestedDraft.trim()) return
+            onSubmitNested(r.id)
+          }}
+          className="mt-3 space-y-2"
+        >
+          <Suspense fallback={<div className="h-20 rounded-md bg-muted animate-pulse" />}>
+            <Textarea
+              value={nestedDraft}
+              onChange={(e) => onNestedDraftChange(e.target.value)}
+              placeholder={`Reply to ${name}…`}
+              rows={3}
+              maxLength={5000}
+              autoFocus
+            />
+          </Suspense>
+          <div className="flex justify-end gap-2">
+            <Button type="button" size="sm" variant="ghost" onClick={onCancelNested}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" disabled={submitting || !nestedDraft.trim()}>
+              {submitting ? 'Posting…' : 'Post'}
+            </Button>
+          </div>
+        </form>
+      )}
+    </li>
+  )
+})
 
 export default function Thread() {
   const { threadId } = useParams<{ threadId: string }>()
@@ -470,6 +591,29 @@ export default function Thread() {
     [repliesQ.data],
   )
 
+  const threadContent = threadQ.data?.content ?? ''
+  const safeBody = useMemo(() => DOMPurify.sanitize(threadContent), [threadContent])
+  const plainBody = useMemo(
+    () => threadContent.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
+    [threadContent],
+  )
+
+  // Stable callbacks so memoized ReplyItem rows don't re-render unnecessarily.
+  const handleReplyVote = useCallback(
+    (replyId: string, value: 1 | -1) => voteReply.mutate({ replyId, value }),
+    [voteReply],
+  )
+  const handleToggleReply = useCallback((id: string) => {
+    setReplyingTo((cur) => (cur === id ? null : id))
+    setNestedDraft('')
+  }, [])
+  const handleNestedDraftChange = useCallback((v: string) => setNestedDraft(v), [])
+  const handleSubmitNested = useCallback(
+    (parentId: string) => submitReply.mutate({ content: nestedDraft, parentId }),
+    [submitReply, nestedDraft],
+  )
+  const handleCancelNested = useCallback(() => setReplyingTo(null), [])
+
   if (threadQ.isLoading) {
     return (
       <div className="py-16 text-center text-muted-foreground">
@@ -486,9 +630,7 @@ export default function Thread() {
   const totalReplies = repliesQ.data?.pages[0]?.total ?? replies.length
 
   const authorName = thread.profiles?.display_name ?? 'Member'
-  const safeBody = DOMPurify.sanitize(thread.content ?? '')
 
-  const plainBody = (thread.content ?? '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
   const metaDesc = plainBody.slice(0, 160) || `Discussion by ${authorName} on AbiaConnect.`
 
   return (
@@ -631,89 +773,23 @@ export default function Thread() {
         ) : (
           <>
             <ul className="space-y-3">
-              {replies.map((r) => {
-                const name = r.profiles?.display_name ?? 'Member'
-                const isOptimistic = (r as Reply & { _optimistic?: boolean })._optimistic
-                return (
-                  <li
-                    key={r.id}
-                    className={`rounded-2xl border border-border bg-card p-4 transition-opacity ${
-                      r.parent_reply_id ? 'ml-8' : ''
-                    } ${isOptimistic ? 'opacity-60' : ''}`}
-                    aria-busy={isOptimistic ? 'true' : undefined}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Avatar name={name} url={r.profiles?.avatar_url} />
-                      <span className="font-medium text-sm">{name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {isOptimistic ? 'Sending…' : formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
-                      </span>
-                    </div>
-
-                    <div
-                      className="prose prose-sm dark:prose-invert max-w-none"
-                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(r.content) }}
-                    />
-                    <div className="flex items-center gap-1 mt-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={!user || voteReply.isPending || isOptimistic}
-                        onClick={() => voteReply.mutate({ replyId: r.id, value: 1 })}
-                      >
-                        <ThumbsUp className="size-3.5" /> {r.upvotes ?? 0}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={!user || voteReply.isPending || isOptimistic}
-                        onClick={() => voteReply.mutate({ replyId: r.id, value: -1 })}
-                      >
-                        <ThumbsDown className="size-3.5" /> {r.downvotes ?? 0}
-                      </Button>
-                      {user && commentingEnabled && !isOptimistic && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setReplyingTo(replyingTo === r.id ? null : r.id)
-                            setNestedDraft('')
-                          }}
-                        >
-                          {replyingTo === r.id ? 'Cancel' : 'Reply'}
-                        </Button>
-                      )}
-                    </div>
-                    {replyingTo === r.id && (
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault()
-                          if (!nestedDraft.trim()) return
-                          submitReply.mutate({ content: nestedDraft, parentId: r.id })
-                        }}
-                        className="mt-3 space-y-2"
-                      >
-                        <Textarea
-                          value={nestedDraft}
-                          onChange={(e) => setNestedDraft(e.target.value)}
-                          placeholder={`Reply to ${name}…`}
-                          rows={3}
-                          maxLength={5000}
-                          autoFocus
-                        />
-                        <div className="flex justify-end gap-2">
-                          <Button type="button" size="sm" variant="ghost" onClick={() => setReplyingTo(null)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit" size="sm" disabled={submitReply.isPending || !nestedDraft.trim()}>
-                            {submitReply.isPending ? 'Posting…' : 'Post'}
-                          </Button>
-                        </div>
-                      </form>
-                    )}
-                  </li>
-                )
-              })}
+              {replies.map((r) => (
+                <ReplyItem
+                  key={r.id}
+                  reply={r}
+                  canVote={!!user}
+                  canReply={!!user && commentingEnabled}
+                  voting={voteReply.isPending}
+                  replyingTo={replyingTo}
+                  nestedDraft={nestedDraft}
+                  submitting={submitReply.isPending}
+                  onVote={handleReplyVote}
+                  onToggleReply={handleToggleReply}
+                  onNestedDraftChange={handleNestedDraftChange}
+                  onSubmitNested={handleSubmitNested}
+                  onCancelNested={handleCancelNested}
+                />
+              ))}
             </ul>
 
             {repliesQ.hasNextPage && (
@@ -747,13 +823,15 @@ export default function Thread() {
               }}
               className="space-y-2"
             >
-              <Textarea
-                value={reply}
-                onChange={(e) => setReply(e.target.value)}
-                placeholder="Write a reply…"
-                rows={4}
-                maxLength={5000}
-              />
+              <Suspense fallback={<div className="h-24 rounded-md bg-muted animate-pulse" />}>
+                <Textarea
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  placeholder="Write a reply…"
+                  rows={4}
+                  maxLength={5000}
+                />
+              </Suspense>
               <div className="flex justify-end">
                 <Button type="submit" disabled={submitReply.isPending || !reply.trim()}>
                   {submitReply.isPending ? 'Posting…' : 'Post Reply'}
