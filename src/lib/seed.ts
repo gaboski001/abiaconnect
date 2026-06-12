@@ -180,3 +180,77 @@ export async function seedDatabase(adminUserId: string): Promise<SeedResult> {
     },
   }
 }
+
+export interface SeedArticlesResult {
+  success: true
+  count: number
+  skipped: number
+}
+
+/**
+ * Seed one long-form article into each of the 14 forum categories.
+ * Idempotent: titles already present in `threads` are skipped (acts like
+ * `onConflict: 'title' ignoreDuplicates`).
+ */
+export async function seedArticles(adminUserId: string): Promise<SeedArticlesResult> {
+  if (!adminUserId) throw new Error('Admin user id is required')
+
+  // 1. Fetch categories and build a name -> id map.
+  const { data: categories, error: catErr } = await supabase
+    .from('categories')
+    .select('id, name')
+  if (catErr) throw new Error(`categories: ${catErr.message}`)
+  if (!categories || categories.length === 0) {
+    throw new Error('No categories found. Seed categories first.')
+  }
+  const categoryMap = new Map<string, string>(
+    categories.map((c: any) => [c.name as string, c.id as string]),
+  )
+
+  // 2. Pre-filter titles that already exist (threads.title has no unique
+  //    constraint, so we dedupe at the application layer).
+  const titles = ARTICLES.map((a) => a.title)
+  const { data: existing } = await supabase
+    .from('threads')
+    .select('title')
+    .in('title', titles)
+  const existingTitles = new Set((existing ?? []).map((r: any) => r.title as string))
+
+  const day = 24 * 60 * 60 * 1000
+  const now = Date.now()
+
+  const rows = ARTICLES
+    .filter((a) => !existingTitles.has(a.title) && categoryMap.has(a.categoryName))
+    .map((a) => {
+      const created = new Date(now - Math.random() * 45 * day).toISOString()
+      return {
+        category_id: categoryMap.get(a.categoryName)!,
+        user_id: adminUserId,
+        title: a.title,
+        content: a.content,
+        tags: a.tags,
+        is_pinned: true,
+        allow_replies: true,
+        is_anonymous: false,
+        upvotes: 20 + Math.floor(Math.random() * 181), // 20–200
+        view_count: 200 + Math.floor(Math.random() * 1301), // 200–1500
+        created_at: created,
+        updated_at: created,
+      }
+    })
+
+  let inserted = 0
+  if (rows.length) {
+    const { error: insErr, count } = await supabase
+      .from('threads')
+      .insert(rows, { count: 'exact' })
+    if (insErr) throw new Error(`articles: ${insErr.message}`)
+    inserted = count ?? rows.length
+  }
+
+  return {
+    success: true,
+    count: inserted,
+    skipped: ARTICLES.length - rows.length,
+  }
+}
