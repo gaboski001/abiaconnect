@@ -1,0 +1,167 @@
+import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
+
+type BIPEvent = Event & {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
+const DISMISS_KEY = 'abiaconnect_install_dismissed'
+const ICON = '/icons/icon-192x192.png'
+
+const isIOS = () =>
+  /iphone|ipad|ipod/i.test(navigator.userAgent) &&
+  // @ts-expect-error legacy iOS standalone
+  window.navigator.standalone !== true
+
+const isStandalone = () =>
+  window.matchMedia('(display-mode: standalone)').matches ||
+  // @ts-expect-error legacy iOS standalone
+  window.navigator.standalone === true
+
+export default function InstallPrompt() {
+  const [visible, setVisible] = useState(false)
+  const [closing, setClosing] = useState(false)
+  const [showIOS, setShowIOS] = useState(false)
+  const deferred = useRef<BIPEvent | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (isStandalone()) return
+    if (localStorage.getItem(DISMISS_KEY)) return
+
+    const onBIP = (e: Event) => {
+      e.preventDefault()
+      deferred.current = e as BIPEvent
+    }
+    const onInstalled = () => {
+      localStorage.setItem(DISMISS_KEY, 'true')
+      setVisible(false)
+      toast.success('🎉 AbiaConnect installed! Welcome to the community.', { duration: 3000 })
+    }
+    window.addEventListener('beforeinstallprompt', onBIP)
+    window.addEventListener('appinstalled', onInstalled)
+
+    const t = window.setTimeout(() => {
+      if (deferred.current || isIOS()) setVisible(true)
+    }, 8000)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBIP)
+      window.removeEventListener('appinstalled', onInstalled)
+      window.clearTimeout(t)
+    }
+  }, [])
+
+  const dismiss = () => {
+    setClosing(true)
+    localStorage.setItem(DISMISS_KEY, 'true')
+    window.setTimeout(() => setVisible(false), 300)
+  }
+
+  const install = async () => {
+    if (deferred.current) {
+      try {
+        await deferred.current.prompt()
+        const { outcome } = await deferred.current.userChoice
+        if (outcome === 'accepted') {
+          localStorage.setItem(DISMISS_KEY, 'true')
+          setVisible(false)
+        }
+      } catch {
+        /* ignore */
+      }
+      deferred.current = null
+    } else if (isIOS()) {
+      setShowIOS(true)
+    }
+  }
+
+  if (!visible) return null
+
+  return (
+    <>
+      <style>{`
+        @keyframes ac-up { from { transform: translateY(120%); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+        @keyframes ac-down { from { transform: translateY(0); opacity: 1 } to { transform: translateY(120%); opacity: 0 } }
+        @keyframes ac-pulse { 0%,100% { transform: scale(1); opacity: 1 } 50% { transform: scale(1.35); opacity: .6 } }
+        .ac-card { animation: ac-up .4s ease-out both }
+        .ac-card.ac-closing { animation: ac-down .3s ease-in both }
+        .ac-dot { animation: ac-pulse 1.6s ease-in-out infinite }
+      `}</style>
+      <div
+        role="dialog"
+        aria-label="Install AbiaConnect"
+        className={`ac-card ${closing ? 'ac-closing' : ''} fixed z-[60] left-3 right-3 bottom-3 sm:left-auto sm:right-6 sm:bottom-6 sm:w-[360px] rounded-2xl bg-white text-neutral-900 shadow-2xl border border-neutral-200 p-4`}
+        style={{ borderRadius: 16 }}
+      >
+        <button
+          onClick={dismiss}
+          aria-label="Close"
+          className="absolute top-2 right-2 h-7 w-7 grid place-items-center rounded-full text-neutral-500 hover:bg-neutral-100"
+        >
+          ✕
+        </button>
+        <div className="flex items-start gap-3">
+          <div className="relative shrink-0">
+            <img src={ICON} alt="" width={48} height={48} className="rounded-xl" />
+            <span className="ac-dot absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full" style={{ background: '#1a4f3a' }} />
+          </div>
+          <div className="flex-1 min-w-0 pr-6">
+            <div className="font-semibold text-[15px] leading-tight">Install AbiaConnect</div>
+            <p className="text-[13px] text-neutral-600 mt-1 leading-snug">
+              Get the full community experience — faster, offline-ready, and always at hand.
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                onClick={install}
+                className="px-3.5 py-2 text-sm font-medium text-white rounded-lg hover:opacity-95 transition"
+                style={{ background: '#1a4f3a' }}
+              >
+                Install App
+              </button>
+              <button
+                onClick={dismiss}
+                className="px-3 py-2 text-sm font-medium text-neutral-500 hover:text-neutral-700"
+              >
+                Not Now
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showIOS && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/40 grid place-items-end sm:place-items-center p-4"
+          onClick={() => setShowIOS(false)}
+        >
+          <div
+            className="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            style={{ borderRadius: 16 }}
+          >
+            <div className="font-semibold text-base mb-2 text-neutral-900">Install AbiaConnect</div>
+            <ol className="text-sm text-neutral-700 space-y-2 list-decimal pl-5">
+              <li>Tap the <strong>Share</strong> button (□↑) in your browser</li>
+              <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
+              <li>Tap <strong>Add</strong> — and you're in!</li>
+            </ol>
+            <div className="mt-3 flex justify-center">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1a4f3a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12l7 7 7-7" />
+              </svg>
+            </div>
+            <button
+              onClick={() => setShowIOS(false)}
+              className="mt-3 w-full px-3 py-2 text-sm font-medium text-white rounded-lg"
+              style={{ background: '#1a4f3a' }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
