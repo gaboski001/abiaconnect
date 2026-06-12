@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import {
-  LogOut,
-  Menu,
-  Search,
-  Zap,
-} from 'lucide-react'
+import { LogOut, Menu, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -28,7 +23,7 @@ import { MessagesBell } from '@/components/messages/MessagesBell'
 
 export function Navbar() {
   const navigate = useNavigate()
-  const { user, role, isAdmin, signOut, loading: authLoading } = useAuth()
+  const { user, role, isAdmin, signOut } = useAuth()
   const { settings } = useSiteSettings()
   const { data: profile } = useProfile()
   const [open, setOpen] = useState(false)
@@ -146,27 +141,21 @@ export function Navbar() {
             </SheetContent>
           </Sheet>
 
-          <Link to="/" className="flex items-center gap-2 relative" aria-label={siteName}>
-            <span
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm"
-              aria-hidden="true"
-            >
-              <Zap className="size-5" />
-            </span>
-            <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent hidden sm:block">
-              {siteName}
-            </span>
-            {showLogoImage && (
+          <Link to="/" className="flex items-center gap-2" aria-label={siteName}>
+            {showLogoImage ? (
               <img
                 src={logoUrl as string}
-                alt=""
-                aria-hidden="true"
+                alt={siteName}
                 onLoad={() => setLogoLoaded(true)}
                 onError={() => setLogoFailed(true)}
-                className={`absolute left-0 top-1/2 -translate-y-1/2 h-10 w-auto max-w-[160px] object-contain bg-background transition-opacity duration-200 ${
+                className={`h-10 w-auto max-w-[180px] object-contain transition-opacity duration-150 ${
                   logoLoaded ? 'opacity-100' : 'opacity-0'
                 }`}
               />
+            ) : (
+              <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">
+                {siteName}
+              </span>
             )}
           </Link>
         </div>
@@ -190,9 +179,7 @@ export function Navbar() {
 
           <RealtimeStatus className="hidden md:inline-flex" />
 
-          {authLoading ? (
-            <div className="h-9 w-24" aria-hidden="true" />
-          ) : user ? (
+          {user ? (
             <>
               <MessagesBell />
               <NotificationBell />
