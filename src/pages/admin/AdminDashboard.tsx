@@ -1117,6 +1117,7 @@ function SeedDatabaseCard() {
     try {
       const result = await seedDatabase(user.id)
       localStorage.setItem('abiaconnect_seeded', 'true')
+      void seededQ.refetch()
       toast.success(
         `✅ Database seeded successfully! ${result.counts.categories} categories, ${result.counts.threads} threads, ${result.counts.subgroups} subgroups are ready.`,
       )
