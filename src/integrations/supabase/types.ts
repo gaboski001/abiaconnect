@@ -712,6 +712,94 @@ export type Database = {
         }
         Relationships: []
       }
+      subgroup_invites: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          single_use: boolean
+          subgroup_id: string
+          token: string
+          used: boolean
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          single_use?: boolean
+          subgroup_id: string
+          token?: string
+          used?: boolean
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          single_use?: boolean
+          subgroup_id?: string
+          token?: string
+          used?: boolean
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subgroup_invites_subgroup_id_fkey"
+            columns: ["subgroup_id"]
+            isOneToOne: false
+            referencedRelation: "subgroups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subgroup_join_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          message: string | null
+          status: string
+          subgroup_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          message?: string | null
+          status?: string
+          subgroup_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          message?: string | null
+          status?: string
+          subgroup_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subgroup_join_requests_subgroup_id_fkey"
+            columns: ["subgroup_id"]
+            isOneToOne: false
+            referencedRelation: "subgroups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subgroup_members: {
         Row: {
           created_at: string
@@ -785,6 +873,7 @@ export type Database = {
           is_featured: boolean
           is_private: boolean
           name: string
+          rules: string[]
           updated_at: string
         }
         Insert: {
@@ -798,6 +887,7 @@ export type Database = {
           is_featured?: boolean
           is_private?: boolean
           name: string
+          rules?: string[]
           updated_at?: string
         }
         Update: {
@@ -811,6 +901,7 @@ export type Database = {
           is_featured?: boolean
           is_private?: boolean
           name?: string
+          rules?: string[]
           updated_at?: string
         }
         Relationships: []
@@ -1067,6 +1158,10 @@ export type Database = {
           id: string
         }[]
       }
+      decide_join_request: {
+        Args: { _approve: boolean; _request_id: string }
+        Returns: undefined
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1185,6 +1280,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      redeem_subgroup_invite: { Args: { _token: string }; Returns: string }
       resolve_username_to_email: {
         Args: { _username: string }
         Returns: string
