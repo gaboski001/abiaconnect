@@ -1129,6 +1129,7 @@ export type Database = {
           upvotes: number
         }[]
       }
+      get_thread_subgroup_id: { Args: { _thread_id: string }; Returns: string }
       get_thread_vote_counts: {
         Args: { _thread_ids: string[] }
         Returns: {
