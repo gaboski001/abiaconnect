@@ -51,6 +51,17 @@ const TIPS = [
   'Search first to avoid duplicate threads.',
 ]
 
+// Lightweight client-side moderation. Keep tight & fast.
+const BANNED_KEYWORDS = [
+  'kill yourself', 'kys', 'nigger', 'faggot', 'retard',
+  'scam link', 'porn', 'xxx', 'rape',
+]
+
+function findBanned(text: string): string | null {
+  const lower = text.toLowerCase()
+  return BANNED_KEYWORDS.find((w) => lower.includes(w)) ?? null
+}
+
 export default function CreateThread() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -129,6 +140,12 @@ export default function CreateThread() {
   const onSubmit = form.handleSubmit(async (values) => {
     if (!user) {
       toast.error('Please sign in')
+      return
+    }
+    const plain = values.content.replace(/<[^>]+>/g, ' ')
+    const banned = findBanned(`${values.title} ${plain}`)
+    if (banned) {
+      toast.error('Your post was flagged for review and not published. Please revise and try again.')
       return
     }
     const { data, error } = await supabase
