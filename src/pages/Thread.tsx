@@ -253,18 +253,19 @@ export default function Thread() {
     }
   }
 
+  type ReplyVars = { content: string; parentId?: string | null }
+
   const submitReply = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, parentId }: ReplyVars) => {
       if (!user || !threadId) throw new Error('Sign in to reply')
       const trimmed = content.trim()
       if (trimmed.length === 0 || trimmed.length > 5000) throw new Error('Reply must be 1–5000 characters')
       const { data, error } = await supabase
         .from('replies')
-        .insert({ thread_id: threadId, user_id: user.id, content: trimmed })
-        .select('id, thread_id, user_id, content, created_at')
+        .insert({ thread_id: threadId, user_id: user.id, content: trimmed, parent_reply_id: parentId ?? null })
+        .select('id, thread_id, user_id, content, created_at, parent_reply_id')
         .single()
       if (error) throw error
-      // Attach profile from current user (avoids PostgREST relationship ambiguity).
       const enriched: Reply = {
         ...(data as Reply),
         profiles: {
@@ -274,15 +275,15 @@ export default function Thread() {
       }
       return enriched
     },
-    onMutate: async (content: string) => {
-      if (!user || !threadId) return { tempId: null as string | null, prevReply: reply }
+    onMutate: async ({ content, parentId }: ReplyVars) => {
+      if (!user || !threadId) return { tempId: null as string | null, prevReply: reply, parentId: parentId ?? null }
       await qc.cancelQueries({ queryKey: ['replies', threadId] })
       const tempId = `temp-${Date.now()}`
       const optimistic: Reply & { _optimistic?: boolean } = {
         id: tempId,
         thread_id: threadId,
         user_id: user.id,
-        parent_reply_id: null,
+        parent_reply_id: parentId ?? null,
         content: content.trim(),
         created_at: new Date().toISOString(),
         upvotes: 0,
@@ -302,14 +303,18 @@ export default function Thread() {
         )
         return { ...prev, pages }
       })
-      const prevReply = reply
-      setReply('')
-      return { tempId, prevReply }
+      const prevReply = parentId ? nestedDraft : reply
+      if (parentId) {
+        setNestedDraft('')
+        setReplyingTo(null)
+      } else {
+        setReply('')
+      }
+      return { tempId, prevReply, parentId: parentId ?? null }
     },
     onSuccess: (newReply, _vars, ctx) => {
       qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
         if (!prev) return prev
-        // De-dupe: realtime may have already inserted the real row.
         const realExists = prev.pages.some((p) =>
           p.rows.some((r) => r.id === newReply.id),
         )
@@ -326,7 +331,6 @@ export default function Thread() {
       })
     },
     onError: (e, _vars, ctx) => {
-      // Roll back optimistic insert and restore the draft text.
       qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
         if (!prev || !ctx?.tempId) return prev
         const pages = prev.pages.map((p) => {
@@ -337,9 +341,80 @@ export default function Thread() {
         })
         return { ...prev, pages }
       })
-      if (ctx?.prevReply) setReply(ctx.prevReply)
+      if (ctx?.prevReply) {
+        if (ctx.parentId) setNestedDraft(ctx.prevReply)
+        else setReply(ctx.prevReply)
+      }
       toast.error(e instanceof Error ? e.message : 'Reply failed')
     },
+  })
+
+  const voteReply = useMutation({
+    mutationFn: async ({ replyId, value }: { replyId: string; value: 1 | -1 }) => {
+      if (!user) throw new Error('Sign in to vote')
+      const { data: existing, error: selErr } = await supabase
+        .from('reply_votes')
+        .select('id')
+        .eq('reply_id', replyId)
+        .eq('user_id', user.id)
+        .eq('value', value)
+        .maybeSingle()
+      if (selErr) throw selErr
+      if (existing) {
+        const { error } = await supabase.from('reply_votes').delete().eq('id', (existing as { id: string }).id)
+        if (error) throw error
+        return { replyId, value, removed: true as const }
+      }
+      const { error } = await supabase
+        .from('reply_votes')
+        .upsert({ reply_id: replyId, user_id: user.id, value }, { onConflict: 'reply_id,user_id,value' })
+      if (error) throw error
+      return { replyId, value, removed: false as const }
+    },
+    onMutate: async ({ replyId, value }) => {
+      await qc.cancelQueries({ queryKey: ['replies', threadId] })
+      qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
+        if (!prev) return prev
+        const key = value === 1 ? 'upvotes' : 'downvotes'
+        const pages = prev.pages.map((p) => ({
+          ...p,
+          rows: p.rows.map((r) => (r.id === replyId ? { ...r, [key]: (r[key] ?? 0) + 1 } : r)),
+        }))
+        return { ...prev, pages }
+      })
+    },
+    onSuccess: async (res) => {
+      if (res.removed) {
+        qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
+          if (!prev) return prev
+          const key = res.value === 1 ? 'upvotes' : 'downvotes'
+          const pages = prev.pages.map((p) => ({
+            ...p,
+            rows: p.rows.map((r) =>
+              r.id === res.replyId ? { ...r, [key]: Math.max(0, (r[key] ?? 0) - 2) } : r,
+            ),
+          }))
+          return { ...prev, pages }
+        })
+      }
+      const { data } = await supabase.rpc('get_reply_vote_counts', { _reply_ids: [res.replyId] })
+      const row = (data as Array<{ reply_id: string; upvotes: number; downvotes: number }> | null)?.[0]
+      if (row) {
+        qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
+          if (!prev) return prev
+          const pages = prev.pages.map((p) => ({
+            ...p,
+            rows: p.rows.map((r) =>
+              r.id === res.replyId
+                ? { ...r, upvotes: Number(row.upvotes), downvotes: Number(row.downvotes) }
+                : r,
+            ),
+          }))
+          return { ...prev, pages }
+        })
+      }
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Vote failed'),
   })
 
 
