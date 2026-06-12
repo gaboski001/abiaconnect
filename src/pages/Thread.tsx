@@ -332,12 +332,9 @@ export default function Thread() {
           const next = payload.new as Reply
           let withProfile: Reply = next
           if (next.user_id) {
-            const { data: prof } = await supabase
-              .from('profiles')
-              .select('display_name, avatar_url')
-              .eq('id', next.user_id)
-              .maybeSingle()
-            if (prof) withProfile = { ...next, profiles: prof as Reply['profiles'] }
+            const { data: profs } = await supabase.rpc('get_public_profiles', { _ids: [next.user_id] })
+            const prof = ((profs ?? []) as Array<{ display_name: string | null; avatar_url: string | null }>)[0]
+            if (prof) withProfile = { ...next, profiles: { display_name: prof.display_name, avatar_url: prof.avatar_url } }
           }
           qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
             if (!prev) return prev
