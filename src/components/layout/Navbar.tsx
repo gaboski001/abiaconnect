@@ -28,12 +28,13 @@ import { MessagesBell } from '@/components/messages/MessagesBell'
 
 export function Navbar() {
   const navigate = useNavigate()
-  const { user, role, isAdmin, signOut } = useAuth()
+  const { user, role, isAdmin, signOut, loading: authLoading } = useAuth()
   const { settings } = useSiteSettings()
   const { data: profile } = useProfile()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [logoFailed, setLogoFailed] = useState(false)
+  const [logoLoaded, setLogoLoaded] = useState(false)
 
   const siteName = settings.site_name || 'AbiaConnect'
   const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
@@ -43,6 +44,7 @@ export function Navbar() {
 
   useEffect(() => {
     setLogoFailed(false)
+    setLogoLoaded(false)
   }, [settings.site_logo, settings.logo_url, logoUrl])
 
   const navLinks = (
@@ -144,26 +146,29 @@ export function Navbar() {
             </SheetContent>
           </Sheet>
 
-          {showLogoImage ? (
-            <Link to="/" className="flex items-center" aria-label={siteName}>
-              <SafeImage
-                src={logoUrl}
-                fallback=""
-                alt={siteName}
-                className="h-10 w-auto max-w-[160px] object-contain"
+          <Link to="/" className="flex items-center gap-2 relative" aria-label={siteName}>
+            <span
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm"
+              aria-hidden="true"
+            >
+              <Zap className="size-5" />
+            </span>
+            <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent hidden sm:block">
+              {siteName}
+            </span>
+            {showLogoImage && (
+              <img
+                src={logoUrl as string}
+                alt=""
+                aria-hidden="true"
+                onLoad={() => setLogoLoaded(true)}
                 onError={() => setLogoFailed(true)}
+                className={`absolute left-0 top-1/2 -translate-y-1/2 h-10 w-auto max-w-[160px] object-contain bg-background transition-opacity duration-200 ${
+                  logoLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
               />
-            </Link>
-          ) : (
-            <Link to="/" className="flex items-center gap-2">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm">
-                <Zap className="size-5" />
-              </span>
-              <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent hidden sm:block">
-                {siteName}
-              </span>
-            </Link>
-          )}
+            )}
+          </Link>
         </div>
 
         {/* Center: Nav */}
@@ -185,11 +190,12 @@ export function Navbar() {
 
           <RealtimeStatus className="hidden md:inline-flex" />
 
-          {user && <MessagesBell />}
-          {user && <NotificationBell />}
-
-          {user ? (
+          {authLoading ? (
+            <div className="h-9 w-24" aria-hidden="true" />
+          ) : user ? (
             <>
+              <MessagesBell />
+              <NotificationBell />
               <Link to="/profile" aria-label="Profile" className="flex">
                 <UserAvatar
                   avatarUrl={profile?.avatar_url}
