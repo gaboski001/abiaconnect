@@ -76,13 +76,22 @@ export default function SubgroupDetail() {
   const joinMut = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('Sign in required')
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('subgroup_members')
-        .upsert({ subgroup_id: subgroupId!, user_id: user.id }, { onConflict: 'subgroup_id,user_id', ignoreDuplicates: true })
+        .upsert(
+          { subgroup_id: subgroupId!, user_id: user.id },
+          { onConflict: 'subgroup_id,user_id', ignoreDuplicates: true },
+        )
+        .select('subgroup_id')
       if (error) throw error
+      const action = data && data.length > 0 ? 'joined' : 'duplicate_ignored'
+      await supabase
+        .from('subgroup_membership_audit')
+        .insert({ subgroup_id: subgroupId!, user_id: user.id, action })
+      return action
     },
-    onSuccess: () => {
-      toast.success('Joined subgroup')
+    onSuccess: (action) => {
+      toast.success(action === 'joined' ? 'Joined subgroup' : 'Already a member')
       qc.invalidateQueries({ queryKey: ['subgroup-members', subgroupId] })
     },
     onError: (e: any) => toast.error(e.message || 'Failed to join'),
@@ -97,6 +106,9 @@ export default function SubgroupDetail() {
         .eq('subgroup_id', subgroupId!)
         .eq('user_id', user.id)
       if (error) throw error
+      await supabase
+        .from('subgroup_membership_audit')
+        .insert({ subgroup_id: subgroupId!, user_id: user.id, action: 'left' })
     },
     onSuccess: () => {
       toast.success('Left subgroup')
