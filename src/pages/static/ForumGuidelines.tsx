@@ -1,99 +1,86 @@
+import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import StaticPage from '@/components/layout/StaticPage'
-
-const RULES = [
-  {
-    icon: '🤝',
-    title: 'Be Respectful',
-    body: 'Personal attacks, insults, and harassment of any kind are not permitted. You may disagree with an idea — you may never attack the person holding it. This includes disagreements about politics, religion, business, or culture.',
-  },
-  {
-    icon: '📰',
-    title: 'Be Accurate',
-    body: 'Do not spread unverified news, rumours, or misinformation about individuals, communities, or institutions. If you are unsure something is true, say so. Label opinions clearly as opinions.',
-  },
-  {
-    icon: '🏛️',
-    title: 'Respect Abia Culture',
-    body: 'This is a platform that honours Igbo identity and Abia heritage. Content that demeans, mocks, or disrespects our culture, language, or traditions will be removed.',
-  },
-  {
-    icon: '🚫',
-    title: 'No Hate Speech',
-    body: 'Content targeting any person or group based on ethnicity, religion, gender, disability, sexual orientation, or political affiliation is strictly forbidden and will result in immediate account suspension.',
-  },
-  {
-    icon: '💼',
-    title: 'No Spam or Unsolicited Advertising',
-    body: 'Do not post the same content repeatedly. Do not promote businesses, products, or services outside the designated Business & Commerce category without moderator approval. Affiliate links must be clearly disclosed.',
-  },
-  {
-    icon: '🔒',
-    title: 'Protect Privacy',
-    body: "Never share another person's private information — phone numbers, home address, personal photographs, financial details — without their explicit consent. This is a serious violation that results in immediate banning.",
-  },
-  {
-    icon: '🔞',
-    title: 'Age-Appropriate Content',
-    body: 'AbiaConnect is accessible to members of all ages. All content must be suitable for a general audience. Explicit, adult, or sexually suggestive content is not permitted under any circumstances.',
-  },
-  {
-    icon: '✅',
-    title: 'Stay On Topic',
-    body: 'Post in the most relevant category. Off-topic posts may be moved by moderators without notice. This keeps the forum organised and useful for everyone.',
-  },
-]
 
 export default function ForumGuidelines() {
   return (
     <StaticPage
       badge="Community Rules"
       title="Forum Guidelines"
-      subtitle="Simple, fair rules that keep AbiaConnect a great place for everyone."
+      subtitle="Rules that keep AbiaConnect a safe, respectful, and productive community."
     >
       <p>
-        AbiaConnect is a community built on respect, authenticity, and shared love for Abia State.
-        These guidelines exist not to restrict you, but to protect the quality of conversation and
-        the safety of every member. Please read them before posting.
+        AbiaConnect exists because we believe Abia people deserve a dignified online space. These
+        guidelines are not restrictions — they are the foundation of the trust that makes this
+        community work. By registering, every member agrees to uphold them.
       </p>
 
       <h2>The Golden Rule</h2>
-      <blockquote className="border-l-4 border-secondary pl-6 italic">
-        Treat every member the way you would want to be treated at an Abia State community
-        gathering. With respect, patience, and goodwill.
+      <blockquote className="not-prose border-l-4 border-secondary bg-secondary/8 rounded-r-xl px-6 py-5 italic text-foreground/90 text-lg my-6">
+        “Treat every member the way you would treat a respected elder or a beloved younger
+        sibling. Dignity, always.”
       </blockquote>
 
-      <h2>The Rules</h2>
-      <div className="not-prose space-y-4 my-6">
-        {RULES.map((r, i) => (
-          <div key={r.title} className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <div className="flex items-start gap-4">
-              <div className="text-2xl">{r.icon}</div>
-              <div>
-                <h3 className="font-semibold text-foreground mb-1">
-                  {i + 1}. {r.title}
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{r.body}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <h2>Consequences</h2>
+      <h2>What Is Encouraged</h2>
       <ul>
-        <li><strong>First violation:</strong> Warning issued by a moderator</li>
-        <li><strong>Second violation:</strong> Temporary suspension (3–7 days)</li>
-        <li><strong>Third violation:</strong> Permanent ban with no appeal</li>
-        <li><strong>Severe violations</strong> (hate speech, privacy breach, harassment): Immediate permanent ban</li>
+        <li>Constructive debate</li>
+        <li>Sharing personal experiences</li>
+        <li>Promoting legitimate businesses</li>
+        <li>Asking for help</li>
+        <li>Celebrating others</li>
+        <li>Respectful disagreement</li>
+        <li>Reporting violations</li>
       </ul>
 
-      <h2>Reporting</h2>
+      <h2>What Is Never Permitted</h2>
+      <ul>
+        <li>Hate speech</li>
+        <li>Ethnic slurs</li>
+        <li>Personal attacks</li>
+        <li>Threats</li>
+        <li>Harassment</li>
+        <li>Sharing false information</li>
+        <li>Spam</li>
+        <li>Pyramid schemes</li>
+        <li>Sharing private information without consent</li>
+        <li>Content that sexualises minors</li>
+        <li>Fake accounts</li>
+        <li>Impersonation</li>
+      </ul>
+
+      <h2>Political Discussion Policy</h2>
       <p>
-        If you see content that violates these guidelines, use the Report button on any post or
-        contact our moderation team at{' '}
-        <a href="mailto:moderation@abiaconnect.com">moderation@abiaconnect.com</a>. We investigate
-        every report, usually within 24 hours.
+        We welcome honest discussion of politics and governance. AbiaConnect does not endorse any
+        political party or candidate. Members may express political opinions but must do so
+        respectfully. Spreading unverified electoral information, inciting violence, or using the
+        platform for coordinated political campaigns is prohibited.
       </p>
+
+      <h2>Enforcement Tiers</h2>
+      <div className="not-prose space-y-3 my-6">
+        {[
+          { t: 'Tier 1 — Warning', d: 'First-time minor violations receive a written warning.' },
+          { t: 'Tier 2 — Temporary Suspension', d: 'Repeated or moderate offences result in 7–30 day suspension.' },
+          { t: 'Tier 3 — Permanent Ban', d: 'Severe violations result in immediate permanent removal.' },
+        ].map((e) => (
+          <div key={e.t} className="bg-card border border-border rounded-2xl p-5">
+            <h3 className="font-semibold text-foreground">{e.t}</h3>
+            <p className="text-sm text-muted-foreground mt-1">{e.d}</p>
+          </div>
+        ))}
+        <p className="text-sm text-muted-foreground">
+          All decisions can be appealed:{' '}
+          <a href="mailto:moderation@abiaconnect.com" className="text-secondary hover:underline">
+            moderation@abiaconnect.com
+          </a>
+        </p>
+      </div>
+
+      <div className="not-prose pt-4">
+        <Button asChild>
+          <Link to="/report-issue">Report an Issue</Link>
+        </Button>
+      </div>
     </StaticPage>
   )
 }

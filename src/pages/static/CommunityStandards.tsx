@@ -1,78 +1,73 @@
 import StaticPage from '@/components/layout/StaticPage'
 
-const STANDARDS = [
-  {
-    icon: '🗣️',
-    title: 'Honest Discourse',
-    body: 'We speak truth even when it is uncomfortable. We cite evidence. We acknowledge when we are wrong. We do not spread rumours or manipulate information for personal or political gain.',
-  },
-  {
-    icon: '🤲',
-    title: 'Generous Contribution',
-    body: 'The best communities give more than they take. Share your knowledge, your experience, and your connections freely. A community where everyone gives is a community where everyone benefits.',
-  },
-  {
-    icon: '🌍',
-    title: 'Diaspora Solidarity',
-    body: 'For Abians abroad, this platform is a piece of home. We welcome and support members of the diaspora with patience and understanding of the unique challenges they face — homesickness, cultural distance, and the pressure to bridge two worlds.',
-  },
-  {
-    icon: '👂',
-    title: 'Active Listening',
-    body: 'Before responding, read carefully. Before criticising, understand. We practice active listening — seeking to understand before seeking to be understood.',
-  },
-  {
-    icon: '🏆',
-    title: 'Celebrating Excellence',
-    body: 'When an Abian achieves something remarkable, we celebrate it loudly. AbiaConnect is a platform for amplifying Abian excellence in every field.',
-  },
-  {
-    icon: '🔧',
-    title: 'Constructive Criticism',
-    body: 'Criticism of government, institutions, businesses, and ideas is healthy and welcome. All criticism must be constructive, evidence-based, and solution-oriented. We do not criticise to tear down — we criticise to build up.',
-  },
-  {
-    icon: '🛡️',
-    title: 'Protecting the Vulnerable',
-    body: 'We are especially protective of young members, women facing harassment, and anyone sharing personal difficulties. If you see a member being targeted, speak up or use the report function. We look out for each other.',
-  },
-  {
-    icon: '🌱',
-    title: 'Long-term Thinking',
-    body: 'We consider the long-term health of our community in every decision we make. Short-term outrage and clickbait culture have no place here. We build for the Abia of tomorrow.',
-  },
-]
-
 export default function CommunityStandards() {
   return (
     <StaticPage
-      badge="Standards"
+      badge="Our Standards"
       title="Community Standards"
-      subtitle="The values and behaviours that make AbiaConnect a great community."
+      subtitle="The values and behaviours that define what AbiaConnect stands for."
     >
       <p>
-        Our Community Standards go deeper than rules. They describe the kind of community we are
-        building together — one that reflects the best of Abia State's people: resilient, generous,
-        proud, and forward-looking.
+        This is the deeper companion to our Forum Guidelines. The Guidelines explain what is and
+        is not allowed; these Standards explain why we hold those lines.
       </p>
 
-      <h2>Who We Are As a Community</h2>
+      <h2>1. The AbiaConnect Standard</h2>
       <p>
-        AbiaConnect is not just a website. It is a representation of Abia people in the digital
-        world. Every post, reply, and interaction reflects on all of us. We hold ourselves to a
-        high standard because Abia deserves it.
+        Community, to us, is not a marketing word. It is the difference between a noisy room and a
+        gathering of kin. AbiaConnect aspires to feel like a well-run village meeting — open,
+        spirited, sometimes loud, but always anchored in shared respect.
       </p>
 
-      <h2>Our Standards</h2>
-      <div className="not-prose grid sm:grid-cols-2 gap-4 my-6">
-        {STANDARDS.map((s) => (
-          <div key={s.title} className="rounded-xl border border-border bg-card p-6 shadow-sm">
-            <div className="text-3xl mb-3">{s.icon}</div>
-            <h3 className="font-semibold text-foreground mb-2">{s.title}</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">{s.body}</p>
-          </div>
-        ))}
-      </div>
+      <h2>2. Dignity as Default</h2>
+      <p>
+        Every member is treated as a guest in our communal home. We assume good faith first, ask
+        questions before accusing, and disagree without diminishing. Dignity is not earned on
+        AbiaConnect — it is the default setting.
+      </p>
+
+      <h2>3. Truth and Accuracy</h2>
+      <p>
+        In an era of viral misinformation, our standard is simple: do not amplify what you have
+        not verified. We do not silence opinion, but we do remove demonstrably false claims that
+        could mislead members about health, safety, elections, or the law.
+      </p>
+
+      <h2>4. Cultural Sensitivity</h2>
+      <p>
+        Abia State is 17 LGAs, multiple sub-dialects of Igbo, and a wide spectrum of religious and
+        political traditions. What is common in one corner of the state may be unfamiliar in
+        another. We expect members to discuss those differences with curiosity rather than
+        contempt.
+      </p>
+
+      <h2>5. Supporting One Another</h2>
+      <p>
+        Positive engagement looks like answering questions when you can, amplifying members who
+        deserve attention, and offering help — not just opinions. The community is stronger every
+        time a member chooses generosity over critique.
+      </p>
+
+      <h2>6. Protecting the Vulnerable</h2>
+      <p>
+        Some members come here in moments of difficulty — grief, financial stress, mental health
+        struggle, or fear. We treat those conversations with extra care. Public ridicule of
+        vulnerable members is treated as a severe violation.
+      </p>
+
+      <h2>7. Our Moderation Philosophy</h2>
+      <p>
+        We are firm but fair, and corrective before punitive. First-time minor infractions usually
+        get a warning. Repeat or serious offences escalate. Our moderators are accountable —
+        every action can be appealed, and every appeal gets a human response.
+      </p>
+
+      <h2>8. Evolving Standards</h2>
+      <p>
+        These standards are not frozen. We review them at least once a year, with input from
+        moderators and members. As the community grows, so should the principles that hold it
+        together.
+      </p>
     </StaticPage>
   )
 }
