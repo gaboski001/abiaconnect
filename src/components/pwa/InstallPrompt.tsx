@@ -6,8 +6,13 @@ type BIPEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-const DISMISS_KEY = 'abiaconnect_install_dismissed'
+const IOS_KEY = 'abiaconnect_install_ios_state'
+const ANDROID_KEY = 'abiaconnect_install_android_state'
+// Legacy combined key — migrate on first read so existing users aren't re-prompted.
+const LEGACY_KEY = 'abiaconnect_install_dismissed'
 const ICON = '/icons/icon-192x192.png'
+
+type InstallState = 'dismissed' | 'accepted'
 
 const isIOS = () =>
   /iphone|ipad|ipod/i.test(navigator.userAgent) &&
@@ -19,23 +24,44 @@ const isStandalone = () =>
   // @ts-expect-error legacy iOS standalone
   window.navigator.standalone === true
 
+const readState = (key: string): InstallState | null => {
+  try {
+    const v = localStorage.getItem(key) || localStorage.getItem(LEGACY_KEY)
+    return v === 'accepted' || v === 'dismissed' ? v : v ? 'dismissed' : null
+  } catch {
+    return null
+  }
+}
+
+const writeState = (key: string, value: InstallState) => {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    /* ignore */
+  }
+}
+
 export default function InstallPrompt() {
   const [visible, setVisible] = useState(false)
   const [closing, setClosing] = useState(false)
   const [showIOS, setShowIOS] = useState(false)
   const deferred = useRef<BIPEvent | null>(null)
+  const platformKey = useRef<string>(ANDROID_KEY)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (isStandalone()) return
-    if (localStorage.getItem(DISMISS_KEY)) return
+
+    const ios = isIOS()
+    platformKey.current = ios ? IOS_KEY : ANDROID_KEY
+    if (readState(platformKey.current)) return
 
     const onBIP = (e: Event) => {
       e.preventDefault()
       deferred.current = e as BIPEvent
     }
     const onInstalled = () => {
-      localStorage.setItem(DISMISS_KEY, 'true')
+      writeState(platformKey.current, 'accepted')
       setVisible(false)
       toast.success('🎉 AbiaConnect installed! Welcome to the community.', { duration: 3000 })
     }
@@ -43,7 +69,7 @@ export default function InstallPrompt() {
     window.addEventListener('appinstalled', onInstalled)
 
     const t = window.setTimeout(() => {
-      if (deferred.current || isIOS()) setVisible(true)
+      if (deferred.current || ios) setVisible(true)
     }, 8000)
 
     return () => {
@@ -55,7 +81,7 @@ export default function InstallPrompt() {
 
   const dismiss = () => {
     setClosing(true)
-    localStorage.setItem(DISMISS_KEY, 'true')
+    writeState(platformKey.current, 'dismissed')
     window.setTimeout(() => setVisible(false), 300)
   }
 
@@ -65,7 +91,7 @@ export default function InstallPrompt() {
         await deferred.current.prompt()
         const { outcome } = await deferred.current.userChoice
         if (outcome === 'accepted') {
-          localStorage.setItem(DISMISS_KEY, 'true')
+          writeState(ANDROID_KEY, 'accepted')
           setVisible(false)
         }
       } catch {
