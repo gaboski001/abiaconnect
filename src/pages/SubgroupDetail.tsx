@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -9,6 +10,9 @@ import { SUBGROUP_MEMBERS_UPSERT_OPTIONS } from '@/lib/subgroupMembers'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const PAGE_SIZE = 15
 
 const gradientFor = (name: string) => {
   const palettes = [
@@ -28,6 +32,7 @@ export default function SubgroupDetail() {
   const { subgroupId } = useParams<{ subgroupId: string }>()
   const { user } = useAuth()
   const qc = useQueryClient()
+  const [page, setPage] = useState(0)
 
   const groupQ = useQuery({
     queryKey: ['subgroup', subgroupId],
@@ -35,44 +40,66 @@ export default function SubgroupDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('subgroups')
-        .select('*')
+        .select('id, name, description, category, cover_image_url, is_private, is_active, created_by, created_at')
         .eq('id', subgroupId!)
         .single()
       if (error) throw error
       return data as any
     },
+    staleTime: 60_000,
   })
 
-  const membersQ = useQuery({
-    queryKey: ['subgroup-members', subgroupId],
+  const memberCountQ = useQuery({
+    queryKey: ['subgroup-member-count', subgroupId],
     enabled: !!subgroupId,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('subgroup_members')
+        .select('subgroup_id', { count: 'exact', head: true })
+        .eq('subgroup_id', subgroupId!)
+      if (error) throw error
+      return count ?? 0
+    },
+    staleTime: 30_000,
+  })
+
+  const membershipQ = useQuery({
+    queryKey: ['subgroup-membership', subgroupId, user?.id],
+    enabled: !!subgroupId && !!user,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('subgroup_members')
         .select('user_id')
         .eq('subgroup_id', subgroupId!)
+        .eq('user_id', user!.id)
+        .maybeSingle()
       if (error) throw error
-      return (data ?? []) as Array<{ user_id: string }>
+      return !!data
     },
+    staleTime: Infinity,
   })
 
   const threadsQ = useQuery({
-    queryKey: ['subgroup-threads', subgroupId],
+    queryKey: ['subgroup-threads', subgroupId, page],
     enabled: !!subgroupId,
     queryFn: async () => {
+      const from = page * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
       const { data, error } = await supabase
         .from('threads')
-        .select('id, category_id, subgroup_id, user_id, title, content, tags, allow_replies, is_anonymous, is_deleted, created_at, updated_at, is_pinned, upvotes, view_count, profiles:user_id(display_name, avatar_url)')
+        .select('id, subgroup_id, author_id, title, tags, is_anonymous, created_at, is_pinned, upvotes, view_count, profiles:author_id(display_name, avatar_url)')
         .eq('subgroup_id', subgroupId!)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
+        .range(from, to)
       if (error) throw error
       return (data ?? []) as any[]
     },
+    placeholderData: (prev) => prev,
   })
 
-  const isMember = !!user && !!membersQ.data?.find((m) => m.user_id === user.id)
-  const memberCount = membersQ.data?.length ?? 0
+  const isMember = membershipQ.data === true
+  const memberCount = memberCountQ.data ?? 0
 
   const joinMut = useMutation({
     mutationFn: async () => {
@@ -90,7 +117,8 @@ export default function SubgroupDetail() {
     },
     onSuccess: (action) => {
       toast.success(action === 'joined' ? 'Joined subgroup' : 'Already a member')
-      qc.invalidateQueries({ queryKey: ['subgroup-members', subgroupId] })
+      qc.invalidateQueries({ queryKey: ['subgroup-membership', subgroupId] })
+      qc.invalidateQueries({ queryKey: ['subgroup-member-count', subgroupId] })
     },
     onError: (e: any) => toast.error(e.message || 'Failed to join'),
   })
@@ -107,15 +135,22 @@ export default function SubgroupDetail() {
     },
     onSuccess: () => {
       toast.success('Left subgroup')
-      qc.invalidateQueries({ queryKey: ['subgroup-members', subgroupId] })
+      qc.invalidateQueries({ queryKey: ['subgroup-membership', subgroupId] })
+      qc.invalidateQueries({ queryKey: ['subgroup-member-count', subgroupId] })
     },
     onError: (e: any) => toast.error(e.message || 'Failed to leave'),
   })
 
   if (groupQ.isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="h-48 rounded-2xl bg-muted/40 animate-pulse" />
+      <div className="container mx-auto px-4 py-8 space-y-4">
+        <Skeleton className="h-48 rounded-2xl" />
+        <Skeleton className="h-6 w-32" />
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
+        </div>
       </div>
     )
   }
@@ -236,10 +271,10 @@ export default function SubgroupDetail() {
 
       <div className="mt-6">
         <h2 className="text-xl font-semibold mb-3">Threads</h2>
-        {threadsQ.isLoading ? (
+        {threadsQ.isLoading && page === 0 ? (
           <div className="space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-20 rounded-xl bg-muted/40 animate-pulse" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 rounded-xl" />
             ))}
           </div>
         ) : (threadsQ.data ?? []).length === 0 ? (
@@ -247,28 +282,47 @@ export default function SubgroupDetail() {
             No threads yet in this subgroup.
           </div>
         ) : (
-          <div className="space-y-2">
-            {threadsQ.data!.map((t: any) => (
-              <Link
-                key={t.id}
-                to={`/thread/${t.id}`}
-                className="block rounded-xl border bg-card p-4 hover:border-secondary/40 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      {t.is_pinned && <Pin className="h-4 w-4 text-secondary" />}
-                      <h3 className="font-semibold truncate">{t.title}</h3>
+          <>
+            <div className="space-y-2">
+              {threadsQ.data!.map((t: any) => (
+                <Link
+                  key={t.id}
+                  to={`/thread/${t.id}`}
+                  className="block rounded-xl border bg-card p-4 hover:border-secondary/40 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        {t.is_pinned && <Pin className="h-4 w-4 text-secondary" />}
+                        <h3 className="font-semibold truncate">{t.title}</h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        by {t.is_anonymous ? 'Anonymous' : (t.profiles?.display_name || 'Member')} ·{' '}
+                        {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      by {t.profiles?.display_name || 'Anonymous'} ·{' '}
-                      {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
-                    </p>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+            <div className="flex justify-center mt-4 gap-2">
+              {page > 0 && (
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                  Previous
+                </Button>
+              )}
+              {(threadsQ.data?.length ?? 0) === PAGE_SIZE && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={threadsQ.isFetching}
+                >
+                  {threadsQ.isFetching ? 'Loading…' : 'Load more'}
+                </Button>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -67,7 +67,7 @@ export default function Subgroups() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('subgroups')
-        .select('*')
+        .select('id, name, description, category, cover_image_url, is_private, is_active')
         .eq('is_active', true)
       if (error) throw error
       const list = (data ?? []) as Subgroup[]
@@ -93,6 +93,7 @@ export default function Subgroups() {
         }))
         .sort((a, b) => (b.member_count || 0) - (a.member_count || 0))
     },
+    staleTime: 60_000,
   })
 
   const myMembershipsQ = useQuery({
