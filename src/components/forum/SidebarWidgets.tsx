@@ -41,26 +41,27 @@ export function SidebarWidgets() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('threads')
-        .select('user_id, created_at, profiles(display_name, avatar_url)')
+        .select('author_id, created_at, profiles:author_id(display_name, avatar_url)')
+        .eq('is_deleted', false)
         .order('created_at', { ascending: false })
         .limit(20)
       if (error) throw error
       const rows = (data ?? []) as unknown as Array<{
-        user_id: string | null
+        author_id: string | null
         created_at: string
         profiles: { display_name?: string | null; avatar_url?: string | null } | { display_name?: string | null; avatar_url?: string | null }[] | null
       }>
       const seen = new Set<string>()
       const out: Thread[] = []
       for (const row of rows) {
-        if (!row.user_id || seen.has(row.user_id)) continue
-        seen.add(row.user_id)
+        if (!row.author_id || seen.has(row.author_id)) continue
+        seen.add(row.author_id)
         const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
         out.push({
-          id: row.user_id,
+          id: row.author_id,
           title: '',
           created_at: row.created_at,
-          user_id: row.user_id,
+          user_id: row.author_id,
           profiles: profile ?? null,
         })
         if (out.length === 5) break
@@ -68,6 +69,7 @@ export function SidebarWidgets() {
       return out
     },
   })
+
 
   return (
     <aside className="space-y-6">

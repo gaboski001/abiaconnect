@@ -82,27 +82,41 @@ export default function CategoryPage() {
     },
   })
 
+  const PAGE_SIZE = 20
+  const [page, setPage] = useState(0)
+
   const threadsQ = useQuery({
-    queryKey: ['threads', categoryId],
+    queryKey: ['threads', categoryId, page],
     enabled: !!categoryId,
+    staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = page * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
+      const { data, error, count } = await supabase
         .from('threads')
-        .select('id, category_id, subgroup_id, user_id, title, content, tags, allow_replies, is_anonymous, is_deleted, created_at, updated_at, is_pinned, upvotes, view_count, profiles(display_name, avatar_url), replies(count)')
+        .select(
+          'id, category_id, user_id, author_id, title, tags, is_pinned, upvotes, view_count, created_at, profiles:author_id(display_name, avatar_url), replies(count)',
+          { count: 'exact' },
+        )
         .eq('category_id', categoryId!)
+        .eq('is_deleted', false)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
+        .range(from, to)
       if (error) throw error
-      return ((data ?? []) as Array<Thread & { replies?: { count: number }[] }>).map((t) => ({
+      const rows = ((data ?? []) as Array<Thread & { replies?: { count: number }[] }>).map((t) => ({
         ...t,
         reply_count: t.replies?.[0]?.count ?? 0,
       })) as Thread[]
+      return { rows, total: count ?? rows.length }
     },
   })
 
   const category = categoryQ.data
-  const rawThreads = threadsQ.data ?? []
+  const rawThreads = threadsQ.data?.rows ?? []
+  const totalThreads = threadsQ.data?.total ?? 0
   const [sort, setSort] = useState<SortKey>('latest')
+
 
   const threads = useMemo(() => {
     const arr = [...rawThreads]
@@ -170,8 +184,8 @@ export default function CategoryPage() {
             <p className="text-muted-foreground mt-1">{category.description}</p>
           )}
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-3">
-            <span>{rawThreads.length} threads</span>
-            <span>{totalReplies} replies</span>
+            <span>{totalThreads} threads</span>
+            <span>{totalReplies} replies on this page</span>
             {lastActivity && (
               <span>
                 Last activity {formatDistanceToNow(new Date(lastActivity), { addSuffix: true })}
@@ -180,6 +194,7 @@ export default function CategoryPage() {
           </div>
         </div>
       </header>
+
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
@@ -209,67 +224,98 @@ export default function CategoryPage() {
 
       {threadsQ.isLoading ? (
         <div className="space-y-3">
-          {[0, 1, 2].map((i) => (
+          {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} className="h-24 rounded-2xl border border-border bg-muted/40 animate-pulse" />
           ))}
+        </div>
+      ) : threadsQ.isError ? (
+        <div className="py-16 text-center space-y-3">
+          <p className="text-muted-foreground">Failed to load threads.</p>
+          <Button onClick={() => threadsQ.refetch()}>Retry</Button>
         </div>
       ) : threads.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground">
           No threads yet. Be the first to post!
         </div>
       ) : (
-        <ul className="space-y-3">
-          {threads.map((t) => {
-            const author = t.profiles?.display_name ?? 'Member'
-            const replyCount = t.reply_count ?? 0
-            return (
-              <li
-                key={t.id}
-                className="rounded-2xl border border-border bg-card p-5 hover:border-primary transition-colors"
+        <>
+          <ul className="space-y-3">
+            {threads.map((t) => {
+              const author = t.profiles?.display_name ?? 'Member'
+              const replyCount = t.reply_count ?? 0
+              return (
+                <li
+                  key={t.id}
+                  className="rounded-2xl border border-border bg-card p-5 hover:border-primary transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        {t.is_pinned && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-secondary/20 text-secondary-foreground px-2 py-0.5 text-xs font-semibold">
+                            <Pin className="size-3" /> Pinned
+                          </span>
+                        )}
+                        {replyCount > 10 && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 text-destructive px-2 py-0.5 text-xs font-semibold">
+                            <Flame className="size-3" /> Hot
+                          </span>
+                        )}
+                      </div>
+                      <Link to={`/thread/${t.id}`} className="block font-bold text-lg hover:text-primary">
+                        {t.title}
+                      </Link>
+                      <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                        <UserAvatar avatarUrl={t.profiles?.avatar_url} displayName={author} size="xs" />
+                        <span className="font-medium text-foreground">{author}</span>
+                        <span>{formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-medium text-foreground">
+                        <MessageSquare className="size-4" />
+                        {replyCount}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <ArrowBigUp className="size-3.5" />
+                        {t.upvotes ?? 0}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Eye className="size-3.5" />
+                        {t.view_count ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+          {totalThreads > PAGE_SIZE && (
+            <div className="flex items-center justify-between pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 0}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      {t.is_pinned && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-secondary/20 text-secondary-foreground px-2 py-0.5 text-xs font-semibold">
-                          <Pin className="size-3" /> Pinned
-                        </span>
-                      )}
-                      {replyCount > 10 && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 text-destructive px-2 py-0.5 text-xs font-semibold">
-                          <Flame className="size-3" /> Hot
-                        </span>
-                      )}
-                    </div>
-                    <Link to={`/thread/${t.id}`} className="block font-bold text-lg hover:text-primary">
-                      {t.title}
-                    </Link>
-                    <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                      <UserAvatar avatarUrl={t.profiles?.avatar_url} displayName={author} size="xs" />
-                      <span className="font-medium text-foreground">{author}</span>
-                      <span>{formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-medium text-foreground">
-                      <MessageSquare className="size-4" />
-                      {replyCount}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <ArrowBigUp className="size-3.5" />
-                      {t.upvotes ?? 0}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Eye className="size-3.5" />
-                      {t.view_count ?? 0}
-                    </span>
-                  </div>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+                Previous
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Page {page + 1} of {Math.max(1, Math.ceil(totalThreads / PAGE_SIZE))}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={(page + 1) * PAGE_SIZE >= totalThreads}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </>
       )}
+
     </div>
     </>
   )
