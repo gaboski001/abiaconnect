@@ -1164,6 +1164,10 @@ function SeedDatabaseCard() {
     }
   }
 
+  // Auto-clean: once both starter content and articles are seeded,
+  // remove the panel entirely so it stops cluttering the admin dashboard.
+  if (coreDone && articlesDone) return null
+
   return (
     <div className="rounded-2xl border-2 border-orange-400/70 bg-orange-50/60 dark:bg-orange-950/20 p-4 space-y-4">
       <div>
@@ -1171,51 +1175,52 @@ function SeedDatabaseCard() {
           ⚠️ Content Seeding
         </h3>
         <p className="text-sm text-orange-900/80 dark:text-orange-200/80 mt-1">
-          Each button can only be used once. Seed categories before articles.
+          Each step runs once. Seed categories before articles.
         </p>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Starter content</p>
-        <p className="text-xs text-muted-foreground">
-          Populates categories, sample threads, and subgroups.
-        </p>
-        <Button onClick={run} disabled={running} variant="default">
-          {running ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-          Seed Database Now
-        </Button>
-      </div>
+      {!coreDone && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Starter content</p>
+          <p className="text-xs text-muted-foreground">
+            Populates categories, sample threads, and subgroups.
+          </p>
+          <Button onClick={run} disabled={running} variant="default">
+            {running ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+            Seed Database Now
+          </Button>
+        </div>
+      )}
 
-      <div className="space-y-2 border-t border-orange-400/30 pt-3">
-        <p className="text-sm font-medium">Long-form articles</p>
-        <p className="text-xs text-muted-foreground">
-          Inserts one pinned, professionally written article into each of the 14 categories.
-        </p>
-        <Button onClick={runArticles} disabled={seedingArticles || articlesDone} variant="secondary">
-          {seedingArticles ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-          {seedingArticles
-            ? 'Seeding articles…'
-            : articlesDone
-              ? 'Articles Already Seeded'
-              : 'Seed Articles (14 pinned threads)'}
-        </Button>
-        {(seedingArticles || articleProgress > 0) && (
-          <div className="space-y-1 pt-1" role="status" aria-live="polite">
-            <div className="h-2 w-full rounded-full bg-orange-200/60 dark:bg-orange-900/40 overflow-hidden">
-              <div
-                className="h-full bg-orange-500 transition-all duration-300"
-                style={{ width: `${articleProgress}%` }}
-              />
+      {!articlesDone && (
+        <div className="space-y-2 border-t border-orange-400/30 pt-3">
+          <p className="text-sm font-medium">Long-form articles</p>
+          <p className="text-xs text-muted-foreground">
+            Inserts one pinned, professionally written article into each of the 14 categories.
+          </p>
+          <Button onClick={runArticles} disabled={seedingArticles || !coreDone} variant="secondary">
+            {seedingArticles ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+            {seedingArticles ? 'Seeding articles…' : 'Seed Articles (14 pinned threads)'}
+          </Button>
+          {(seedingArticles || articleProgress > 0) && (
+            <div className="space-y-1 pt-1" role="status" aria-live="polite">
+              <div className="h-2 w-full rounded-full bg-orange-200/60 dark:bg-orange-900/40 overflow-hidden">
+                <div
+                  className="h-full bg-orange-500 transition-all duration-300"
+                  style={{ width: `${articleProgress}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {articleStatus} {articleProgress > 0 ? `(${articleProgress}%)` : ''}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {articleStatus} {articleProgress > 0 ? `(${articleProgress}%)` : ''}
-            </p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
+
 
 // ---------- 8. EMAIL SETTINGS ----------
 function EmailSettingsSection() {
