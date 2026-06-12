@@ -32,6 +32,7 @@ export default function SubgroupDetail() {
   const { subgroupId } = useParams<{ subgroupId: string }>()
   const { user } = useAuth()
   const qc = useQueryClient()
+  const [page, setPage] = useState(0)
 
   const groupQ = useQuery({
     queryKey: ['subgroup', subgroupId],
@@ -39,44 +40,66 @@ export default function SubgroupDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('subgroups')
-        .select('*')
+        .select('id, name, description, category, cover_image_url, is_private, is_active, created_by, created_at')
         .eq('id', subgroupId!)
         .single()
       if (error) throw error
       return data as any
     },
+    staleTime: 60_000,
   })
 
-  const membersQ = useQuery({
-    queryKey: ['subgroup-members', subgroupId],
+  const memberCountQ = useQuery({
+    queryKey: ['subgroup-member-count', subgroupId],
     enabled: !!subgroupId,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('subgroup_members')
+        .select('subgroup_id', { count: 'exact', head: true })
+        .eq('subgroup_id', subgroupId!)
+      if (error) throw error
+      return count ?? 0
+    },
+    staleTime: 30_000,
+  })
+
+  const membershipQ = useQuery({
+    queryKey: ['subgroup-membership', subgroupId, user?.id],
+    enabled: !!subgroupId && !!user,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('subgroup_members')
         .select('user_id')
         .eq('subgroup_id', subgroupId!)
+        .eq('user_id', user!.id)
+        .maybeSingle()
       if (error) throw error
-      return (data ?? []) as Array<{ user_id: string }>
+      return !!data
     },
+    staleTime: Infinity,
   })
 
   const threadsQ = useQuery({
-    queryKey: ['subgroup-threads', subgroupId],
+    queryKey: ['subgroup-threads', subgroupId, page],
     enabled: !!subgroupId,
     queryFn: async () => {
+      const from = page * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
       const { data, error } = await supabase
         .from('threads')
-        .select('id, category_id, subgroup_id, user_id, title, content, tags, allow_replies, is_anonymous, is_deleted, created_at, updated_at, is_pinned, upvotes, view_count, profiles:user_id(display_name, avatar_url)')
+        .select('id, subgroup_id, author_id, title, tags, is_anonymous, created_at, is_pinned, upvotes, view_count, profiles:author_id(display_name, avatar_url)')
         .eq('subgroup_id', subgroupId!)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
+        .range(from, to)
       if (error) throw error
       return (data ?? []) as any[]
     },
+    placeholderData: (prev) => prev,
   })
 
-  const isMember = !!user && !!membersQ.data?.find((m) => m.user_id === user.id)
-  const memberCount = membersQ.data?.length ?? 0
+  const isMember = membershipQ.data === true
+  const memberCount = memberCountQ.data ?? 0
 
   const joinMut = useMutation({
     mutationFn: async () => {
