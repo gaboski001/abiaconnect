@@ -57,13 +57,14 @@ export default function Login() {
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="identifier">Email or Username</Label>
+            <Label htmlFor="identifier">Email</Label>
             <Input
               id="identifier"
+              type="email"
               required
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              autoComplete="username"
+              autoComplete="email"
             />
           </div>
 
