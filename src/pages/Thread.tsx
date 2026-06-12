@@ -773,89 +773,23 @@ export default function Thread() {
         ) : (
           <>
             <ul className="space-y-3">
-              {replies.map((r) => {
-                const name = r.profiles?.display_name ?? 'Member'
-                const isOptimistic = (r as Reply & { _optimistic?: boolean })._optimistic
-                return (
-                  <li
-                    key={r.id}
-                    className={`rounded-2xl border border-border bg-card p-4 transition-opacity ${
-                      r.parent_reply_id ? 'ml-8' : ''
-                    } ${isOptimistic ? 'opacity-60' : ''}`}
-                    aria-busy={isOptimistic ? 'true' : undefined}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Avatar name={name} url={r.profiles?.avatar_url} />
-                      <span className="font-medium text-sm">{name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {isOptimistic ? 'Sending…' : formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
-                      </span>
-                    </div>
-
-                    <div
-                      className="prose prose-sm dark:prose-invert max-w-none"
-                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(r.content) }}
-                    />
-                    <div className="flex items-center gap-1 mt-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={!user || voteReply.isPending || isOptimistic}
-                        onClick={() => voteReply.mutate({ replyId: r.id, value: 1 })}
-                      >
-                        <ThumbsUp className="size-3.5" /> {r.upvotes ?? 0}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={!user || voteReply.isPending || isOptimistic}
-                        onClick={() => voteReply.mutate({ replyId: r.id, value: -1 })}
-                      >
-                        <ThumbsDown className="size-3.5" /> {r.downvotes ?? 0}
-                      </Button>
-                      {user && commentingEnabled && !isOptimistic && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setReplyingTo(replyingTo === r.id ? null : r.id)
-                            setNestedDraft('')
-                          }}
-                        >
-                          {replyingTo === r.id ? 'Cancel' : 'Reply'}
-                        </Button>
-                      )}
-                    </div>
-                    {replyingTo === r.id && (
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault()
-                          if (!nestedDraft.trim()) return
-                          submitReply.mutate({ content: nestedDraft, parentId: r.id })
-                        }}
-                        className="mt-3 space-y-2"
-                      >
-                        <Textarea
-                          value={nestedDraft}
-                          onChange={(e) => setNestedDraft(e.target.value)}
-                          placeholder={`Reply to ${name}…`}
-                          rows={3}
-                          maxLength={5000}
-                          autoFocus
-                        />
-                        <div className="flex justify-end gap-2">
-                          <Button type="button" size="sm" variant="ghost" onClick={() => setReplyingTo(null)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit" size="sm" disabled={submitReply.isPending || !nestedDraft.trim()}>
-                            {submitReply.isPending ? 'Posting…' : 'Post'}
-                          </Button>
-                        </div>
-                      </form>
-                    )}
-                  </li>
-                )
-              })}
+              {replies.map((r) => (
+                <ReplyItem
+                  key={r.id}
+                  reply={r}
+                  canVote={!!user}
+                  canReply={!!user && commentingEnabled}
+                  voting={voteReply.isPending}
+                  replyingTo={replyingTo}
+                  nestedDraft={nestedDraft}
+                  submitting={submitReply.isPending}
+                  onVote={handleReplyVote}
+                  onToggleReply={handleToggleReply}
+                  onNestedDraftChange={handleNestedDraftChange}
+                  onSubmitNested={handleSubmitNested}
+                  onCancelNested={handleCancelNested}
+                />
+              ))}
             </ul>
 
             {repliesQ.hasNextPage && (
