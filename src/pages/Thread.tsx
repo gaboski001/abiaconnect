@@ -317,15 +317,24 @@ export default function Thread() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'replies', filter: `thread_id=eq.${threadId}` },
-        (payload) => {
+        async (payload) => {
           const next = payload.new as Reply
+          let withProfile: Reply = next
+          if (next.user_id) {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('display_name, avatar_url')
+              .eq('id', next.user_id)
+              .maybeSingle()
+            if (prof) withProfile = { ...next, profiles: prof as Reply['profiles'] }
+          }
           qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
             if (!prev) return prev
-            const exists = prev.pages.some((p) => p.rows.some((r) => r.id === next.id))
+            const exists = prev.pages.some((p) => p.rows.some((r) => r.id === withProfile.id))
             if (exists) return prev
             const pages = prev.pages.map((p, i) =>
               i === prev.pages.length - 1
-                ? { ...p, rows: [...p.rows, next], total: p.total + 1 }
+                ? { ...p, rows: [...p.rows, withProfile], total: p.total + 1 }
                 : { ...p, total: p.total + 1 },
             )
             return { ...prev, pages }
