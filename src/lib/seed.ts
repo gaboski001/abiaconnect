@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { ARTICLES } from '@/lib/articles'
 
 const slugify = (s: string) =>
   s
