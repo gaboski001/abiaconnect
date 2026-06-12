@@ -324,42 +324,24 @@ function UsersSection() {
   const usersQ = useQuery({
     queryKey: ['admin-users', search, page],
     queryFn: async () => {
-      let q = supabase
-        .from('profiles')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(page * pageSize, page * pageSize + pageSize - 1)
-      if (search.trim()) {
-        const term = `%${search.trim()}%`
-        if (search.includes('@')) {
-          const { data: matches } = await supabase.rpc('admin_search_user_ids_by_email', {
-            _term: search.trim(),
-          })
-          const ids = ((matches as { id: string }[] | null) ?? []).map((r) => r.id)
-          if (ids.length === 0) return { rows: [], total: 0 }
-          q = q.in('id', ids)
-        } else {
-          q = q.or(`display_name.ilike.${term},username.ilike.${term}`)
-        }
+      let ids: string[] | null = null
+      if (search.trim() && search.includes('@')) {
+        const { data: matches } = await supabase.rpc('admin_search_user_ids_by_email', {
+          _term: search.trim(),
+        })
+        ids = ((matches as { id: string }[] | null) ?? []).map((r) => r.id)
+        if (ids.length === 0) return { rows: [], total: 0 }
       }
-      const { data, error, count } = await q
+      const { data, error } = await supabase.rpc('admin_list_users', {
+        _search: search.trim() && !search.includes('@') ? search.trim() : undefined,
+        _ids: ids ?? undefined,
+        _limit: pageSize,
+        _offset: page * pageSize,
+      })
       if (error) throw error
       const rows = (data ?? []) as any[]
-      if (rows.length > 0) {
-        const { data: emails } = await supabase.rpc('admin_get_user_emails', {
-          _ids: rows.map((r) => r.id),
-        })
-        const emailMap = new Map(
-          ((emails as { id: string; email: string | null }[] | null) ?? []).map((e) => [
-            e.id,
-            e.email,
-          ]),
-        )
-        rows.forEach((r) => {
-          r.email = emailMap.get(r.id) ?? null
-        })
-      }
-      return { rows, total: count ?? 0 }
+      const total = rows[0]?.total_count ?? 0
+      return { rows, total: Number(total) }
     },
   })
 
