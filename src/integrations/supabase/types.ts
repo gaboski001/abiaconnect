@@ -295,6 +295,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "hero_slides_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       issue_reports: {
@@ -494,6 +501,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "polls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -868,6 +882,7 @@ export type Database = {
           is_anonymous: boolean
           is_deleted: boolean
           is_pinned: boolean
+          private_author_id: string | null
           subgroup_id: string | null
           tags: string[] | null
           title: string
@@ -886,6 +901,7 @@ export type Database = {
           is_anonymous?: boolean
           is_deleted?: boolean
           is_pinned?: boolean
+          private_author_id?: string | null
           subgroup_id?: string | null
           tags?: string[] | null
           title: string
@@ -904,6 +920,7 @@ export type Database = {
           is_anonymous?: boolean
           is_deleted?: boolean
           is_pinned?: boolean
+          private_author_id?: string | null
           subgroup_id?: string | null
           tags?: string[] | null
           title?: string
@@ -918,6 +935,13 @@ export type Database = {
             columns: ["author_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threads_author_id_profiles_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -959,7 +983,48 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string | null
+          is_banned: boolean | null
+          is_deleted: boolean | null
+          lga: string | null
+          reputation: number | null
+          role: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          is_banned?: boolean | null
+          is_deleted?: boolean | null
+          lga?: string | null
+          reputation?: number | null
+          role?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          is_banned?: boolean | null
+          is_deleted?: boolean | null
+          lga?: string | null
+          reputation?: number | null
+          role?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_get_user_emails: {
@@ -1040,6 +1105,22 @@ export type Database = {
           vote_count: number
         }[]
       }
+      get_public_profiles: {
+        Args: { _ids: string[] }
+        Returns: {
+          avatar_url: string
+          bio: string
+          created_at: string
+          display_name: string
+          id: string
+          is_banned: boolean
+          is_deleted: boolean
+          lga: string
+          reputation: number
+          role: string
+          username: string
+        }[]
+      }
       get_reply_vote_counts: {
         Args: { _reply_ids: string[] }
         Returns: {
@@ -1073,6 +1154,12 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      my_thread_ids: {
+        Args: never
+        Returns: {
+          id: string
+        }[]
       }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
