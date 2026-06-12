@@ -17,22 +17,13 @@ export default function Login() {
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  async function resolveEmail(value: string): Promise<string | null> {
-    if (value.includes('@')) return value
-    const { data, error } = await supabase.rpc('resolve_username_to_email', {
-      _username: value,
-    })
-    if (error) return null
-    return (data as string | null) ?? null
-  }
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     try {
-      const email = await resolveEmail(identifier.trim())
-      if (!email) {
-        toast.error('No account found with that username or email.')
+      const email = identifier.trim()
+      if (!email.includes('@')) {
+        toast.error('Please sign in with your email address.')
         return
       }
       const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -66,13 +57,14 @@ export default function Login() {
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="identifier">Email or Username</Label>
+            <Label htmlFor="identifier">Email</Label>
             <Input
               id="identifier"
+              type="email"
               required
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              autoComplete="username"
+              autoComplete="email"
             />
           </div>
 

@@ -198,11 +198,25 @@ export default function Thread() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('threads')
-        .select('id, category_id, subgroup_id, user_id, title, content, tags, allow_replies, is_anonymous, is_deleted, created_at, updated_at, is_pinned, upvotes, view_count, categories(id, name), profiles(display_name, avatar_url, bio, role, created_at)')
+        .select('id, category_id, subgroup_id, user_id, author_id, title, content, tags, allow_replies, is_anonymous, is_deleted, created_at, updated_at, is_pinned, upvotes, view_count, categories(id, name)')
         .eq('id', threadId!)
         .maybeSingle()
       if (error) throw error
-      return data as ThreadRow | null
+      const row = data as (ThreadRow & { author_id?: string | null }) | null
+      if (row?.author_id) {
+        const { data: profs } = await supabase.rpc('get_public_profiles', { _ids: [row.author_id] })
+        const prof = ((profs ?? []) as Array<{ display_name: string | null; avatar_url: string | null; bio: string | null; role: string | null; created_at: string | null }>)[0]
+        if (prof) {
+          row.profiles = {
+            display_name: prof.display_name,
+            avatar_url: prof.avatar_url,
+            bio: prof.bio,
+            role: prof.role,
+            created_at: prof.created_at,
+          }
+        }
+      }
+      return row
     },
   })
 
@@ -231,13 +245,10 @@ export default function Thread() {
       )
       let profilesMap = new Map<string, { display_name: string | null; avatar_url: string | null }>()
       if (userIds.length > 0) {
-        const { data: profs } = await supabase
-          .from('profiles')
-          .select('id, display_name, avatar_url')
-          .in('id', userIds)
+        const { data: profs } = await supabase.rpc('get_public_profiles', { _ids: userIds })
         profilesMap = new Map(
-          (profs ?? []).map((p) => [
-            p.id as string,
+          ((profs ?? []) as Array<{ id: string; display_name: string | null; avatar_url: string | null }>).map((p) => [
+            p.id,
             { display_name: p.display_name ?? null, avatar_url: p.avatar_url ?? null },
           ]),
         )
@@ -321,12 +332,9 @@ export default function Thread() {
           const next = payload.new as Reply
           let withProfile: Reply = next
           if (next.user_id) {
-            const { data: prof } = await supabase
-              .from('profiles')
-              .select('display_name, avatar_url')
-              .eq('id', next.user_id)
-              .maybeSingle()
-            if (prof) withProfile = { ...next, profiles: prof as Reply['profiles'] }
+            const { data: profs } = await supabase.rpc('get_public_profiles', { _ids: [next.user_id] })
+            const prof = ((profs ?? []) as Array<{ display_name: string | null; avatar_url: string | null }>)[0]
+            if (prof) withProfile = { ...next, profiles: { display_name: prof.display_name, avatar_url: prof.avatar_url } }
           }
           qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
             if (!prev) return prev
