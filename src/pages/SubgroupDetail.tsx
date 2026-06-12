@@ -271,10 +271,10 @@ export default function SubgroupDetail() {
 
       <div className="mt-6">
         <h2 className="text-xl font-semibold mb-3">Threads</h2>
-        {threadsQ.isLoading ? (
+        {threadsQ.isLoading && page === 0 ? (
           <div className="space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-20 rounded-xl bg-muted/40 animate-pulse" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 rounded-xl" />
             ))}
           </div>
         ) : (threadsQ.data ?? []).length === 0 ? (
@@ -282,28 +282,47 @@ export default function SubgroupDetail() {
             No threads yet in this subgroup.
           </div>
         ) : (
-          <div className="space-y-2">
-            {threadsQ.data!.map((t: any) => (
-              <Link
-                key={t.id}
-                to={`/thread/${t.id}`}
-                className="block rounded-xl border bg-card p-4 hover:border-secondary/40 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      {t.is_pinned && <Pin className="h-4 w-4 text-secondary" />}
-                      <h3 className="font-semibold truncate">{t.title}</h3>
+          <>
+            <div className="space-y-2">
+              {threadsQ.data!.map((t: any) => (
+                <Link
+                  key={t.id}
+                  to={`/thread/${t.id}`}
+                  className="block rounded-xl border bg-card p-4 hover:border-secondary/40 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        {t.is_pinned && <Pin className="h-4 w-4 text-secondary" />}
+                        <h3 className="font-semibold truncate">{t.title}</h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        by {t.is_anonymous ? 'Anonymous' : (t.profiles?.display_name || 'Member')} ·{' '}
+                        {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      by {t.profiles?.display_name || 'Anonymous'} ·{' '}
-                      {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
-                    </p>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+            <div className="flex justify-center mt-4 gap-2">
+              {page > 0 && (
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                  Previous
+                </Button>
+              )}
+              {(threadsQ.data?.length ?? 0) === PAGE_SIZE && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={threadsQ.isFetching}
+                >
+                  {threadsQ.isFetching ? 'Loading…' : 'Load more'}
+                </Button>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>
