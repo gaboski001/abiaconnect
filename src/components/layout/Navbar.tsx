@@ -44,6 +44,7 @@ export function Navbar() {
 
   useEffect(() => {
     setLogoFailed(false)
+    setLogoLoaded(false)
   }, [settings.site_logo, settings.logo_url, logoUrl])
 
   const navLinks = (
