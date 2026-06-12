@@ -47,6 +47,11 @@ export default function InstallPrompt() {
   const [showIOS, setShowIOS] = useState(false)
   const deferred = useRef<BIPEvent | null>(null)
   const platformKey = useRef<string>(ANDROID_KEY)
+  const cardRef = useRef<HTMLDivElement | null>(null)
+  const iosDialogRef = useRef<HTMLDivElement | null>(null)
+  const iosReturnFocus = useRef<HTMLElement | null>(null)
+
+
 
   useEffect(() => {
     if (typeof window === 'undefined') return
