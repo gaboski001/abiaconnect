@@ -142,6 +142,12 @@ export default function CreateThread() {
       toast.error('Please sign in')
       return
     }
+    const plain = values.content.replace(/<[^>]+>/g, ' ')
+    const banned = findBanned(`${values.title} ${plain}`)
+    if (banned) {
+      toast.error('Your post was flagged for review and not published. Please revise and try again.')
+      return
+    }
     const { data, error } = await supabase
       .from('threads')
       .insert({
