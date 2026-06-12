@@ -8,11 +8,14 @@ import {
   Head,
   Hr,
   Html,
+  Img,
   Link,
   Preview,
   Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+
+const LOGO_URL = 'https://abiaconnect.com/__l5e/assets-v1/00c74f9b-c24a-4ae9-a89c-3bb2a200192f/abialogo.png'
 
 interface BrandLayoutProps {
   preview: string
@@ -38,8 +41,13 @@ export const BrandLayout = ({
             <table width="100%" cellPadding={0} cellSpacing={0} role="presentation">
               <tr>
                 <td align="left" style={{ verticalAlign: 'middle' }}>
-                  <Text style={brandName}>Abiaconnect</Text>
-                  <Text style={brandTag}>Connecting Abians Worldwide</Text>
+                  <Img
+                    src={LOGO_URL}
+                    alt="Abiaconnect"
+                    width="140"
+                    height="40"
+                    style={{ display: 'block', border: 0, outline: 'none', textDecoration: 'none', height: 'auto', maxWidth: '140px' }}
+                  />
                 </td>
                 <td align="right" style={{ verticalAlign: 'middle' }}>
                   <Link href="mailto:support@abiaconnect.com" style={contactBtn}>
