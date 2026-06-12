@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { formatDistanceToNow } from 'date-fns'
-import { Users, MessageSquare, ArrowLeft, Plus, Lock, Pin } from 'lucide-react'
+import { format, formatDistanceToNow } from 'date-fns'
+import { Users, MessageSquare, ArrowLeft, Plus, Lock, Pin, PinOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { SUBGROUP_MEMBERS_UPSERT_OPTIONS } from '@/lib/subgroupMembers'
@@ -11,8 +11,11 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { UserAvatar } from '@/components/ui/UserAvatar'
 
 const PAGE_SIZE = 15
+const MEMBERS_PAGE_SIZE = 20
 
 const gradientFor = (name: string) => {
   const palettes = [
