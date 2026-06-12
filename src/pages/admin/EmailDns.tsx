@@ -150,7 +150,7 @@ export default function EmailDns() {
 
   return (
     <div className="container max-w-4xl py-8 space-y-6">
-      <SEO title="Email DNS Verification" description="Check DMARC, SPF, and DKIM records" />
+      <SEO title="Email DNS Verification" description="Check DMARC, SPF, and DKIM records" path="/admin/email-dns" />
       <div>
         <h1 className="text-3xl font-bold mb-2">Email DNS Verification</h1>
         <p className="text-muted-foreground">
