@@ -554,6 +554,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          parent_reply_id: string | null
           thread_id: string
           updated_at: string
           user_id: string | null
@@ -562,6 +563,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          parent_reply_id?: string | null
           thread_id: string
           updated_at?: string
           user_id?: string | null
@@ -570,16 +572,56 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          parent_reply_id?: string | null
           thread_id?: string
           updated_at?: string
           user_id?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "replies_parent_reply_id_fkey"
+            columns: ["parent_reply_id"]
+            isOneToOne: false
+            referencedRelation: "replies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "replies_thread_id_fkey"
             columns: ["thread_id"]
             isOneToOne: false
             referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reply_votes: {
+        Row: {
+          created_at: string
+          id: string
+          reply_id: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reply_id: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reply_id?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reply_votes_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "replies"
             referencedColumns: ["id"]
           },
         ]
@@ -972,6 +1014,14 @@ export type Database = {
           poll_id: string
           poll_option_id: string
           vote_count: number
+        }[]
+      }
+      get_reply_vote_counts: {
+        Args: { _reply_ids: string[] }
+        Returns: {
+          downvotes: number
+          reply_id: string
+          upvotes: number
         }[]
       }
       get_thread_vote_counts: {
