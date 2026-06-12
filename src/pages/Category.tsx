@@ -184,8 +184,8 @@ export default function CategoryPage() {
             <p className="text-muted-foreground mt-1">{category.description}</p>
           )}
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-3">
-            <span>{rawThreads.length} threads</span>
-            <span>{totalReplies} replies</span>
+            <span>{totalThreads} threads</span>
+            <span>{totalReplies} replies on this page</span>
             {lastActivity && (
               <span>
                 Last activity {formatDistanceToNow(new Date(lastActivity), { addSuffix: true })}
@@ -194,6 +194,7 @@ export default function CategoryPage() {
           </div>
         </div>
       </header>
+
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
