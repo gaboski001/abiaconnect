@@ -433,20 +433,23 @@ export default function Thread() {
             <ul className="space-y-3">
               {replies.map((r) => {
                 const name = r.profiles?.display_name ?? 'Member'
+                const isOptimistic = (r as Reply & { _optimistic?: boolean })._optimistic
                 return (
                   <li
                     key={r.id}
-                    className={`rounded-2xl border border-border bg-card p-4 ${
+                    className={`rounded-2xl border border-border bg-card p-4 transition-opacity ${
                       r.parent_reply_id ? 'ml-8' : ''
-                    }`}
+                    } ${isOptimistic ? 'opacity-60' : ''}`}
+                    aria-busy={isOptimistic ? 'true' : undefined}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Avatar name={name} url={r.profiles?.avatar_url} />
                       <span className="font-medium text-sm">{name}</span>
                       <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
+                        {isOptimistic ? 'Sending…' : formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
                       </span>
                     </div>
+
                     <div
                       className="prose prose-sm dark:prose-invert max-w-none"
                       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(r.content) }}
