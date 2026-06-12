@@ -227,26 +227,51 @@ export default function CreateThread() {
       <form onSubmit={onSubmit} className="lg:col-span-2 space-y-6">
         <h1 className="text-2xl font-bold">Create a Thread</h1>
 
-        {/* Category */}
-        <div className="space-y-1.5">
-          <Label>Category</Label>
-          <Select
-            value={form.watch('category_id')}
-            onValueChange={(v) => form.setValue('category_id', v, { shouldValidate: true })}
-          >
-            <SelectTrigger className="focus:border-primary focus:ring-primary/30">
-              <SelectValue placeholder="Choose a category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.category_id && (
-            <p className="text-xs text-destructive">{form.formState.errors.category_id.message}</p>
-          )}
-        </div>
+        {presetSubgroup ? (
+          <div className="rounded-xl border border-border bg-card p-3 text-sm">
+            Posting in subgroup{' '}
+            <span className="font-semibold">{subgroupQ.data?.name ?? '…'}</span>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <Label>Category</Label>
+            <Select
+              value={form.watch('category_id')}
+              onValueChange={(v) => form.setValue('category_id', v, { shouldValidate: true })}
+            >
+              <SelectTrigger className="focus:border-primary focus:ring-primary/30">
+                <SelectValue placeholder="Choose a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.category_id && (
+              <p className="text-xs text-destructive">{form.formState.errors.category_id.message}</p>
+            )}
+          </div>
+        )}
+
+        {presetSubgroup && (
+          <div className="space-y-1.5">
+            <Label>Flair (optional)</Label>
+            <Select
+              value={form.watch('flair') ?? ''}
+              onValueChange={(v) => form.setValue('flair', v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Question, Discussion, Announcement…" />
+              </SelectTrigger>
+              <SelectContent>
+                {FLAIRS.map((f) => (
+                  <SelectItem key={f} value={f}>{f}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Title */}
         <div className="space-y-1.5">
