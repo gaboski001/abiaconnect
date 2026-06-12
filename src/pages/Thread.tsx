@@ -259,10 +259,18 @@ export default function Thread() {
       const { data, error } = await supabase
         .from('replies')
         .insert({ thread_id: threadId, user_id: user.id, content: trimmed })
-        .select('*, profiles:user_id(display_name, avatar_url)')
+        .select('id, thread_id, user_id, content, created_at')
         .single()
       if (error) throw error
-      return data as Reply
+      // Attach profile from current user (avoids PostgREST relationship ambiguity).
+      const enriched: Reply = {
+        ...(data as Reply),
+        profiles: {
+          display_name: user.user_metadata?.display_name ?? user.email ?? 'You',
+          avatar_url: user.user_metadata?.avatar_url ?? null,
+        },
+      }
+      return enriched
     },
     onMutate: async (content: string) => {
       if (!user || !threadId) return { tempId: null as string | null, prevReply: reply }
