@@ -823,13 +823,15 @@ export default function Thread() {
               }}
               className="space-y-2"
             >
-              <Textarea
-                value={reply}
-                onChange={(e) => setReply(e.target.value)}
-                placeholder="Write a reply…"
-                rows={4}
-                maxLength={5000}
-              />
+              <Suspense fallback={<div className="h-24 rounded-md bg-muted animate-pulse" />}>
+                <Textarea
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  placeholder="Write a reply…"
+                  rows={4}
+                  maxLength={5000}
+                />
+              </Suspense>
               <div className="flex justify-end">
                 <Button type="submit" disabled={submitReply.isPending || !reply.trim()}>
                   {submitReply.isPending ? 'Posting…' : 'Post Reply'}
