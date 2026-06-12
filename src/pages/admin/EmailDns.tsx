@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, CheckCircle2, AlertTriangle, XCircle, RefreshCw } from 'lucide-react'
-import SEO from '@/components/SEO'
+import { SEO } from '@/components/SEO'
 
 type Status = 'pass' | 'warn' | 'fail' | 'info'
 
