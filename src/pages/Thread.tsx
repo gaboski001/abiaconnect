@@ -1,5 +1,5 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 
 import { formatDistanceToNow } from 'date-fns'
@@ -184,6 +184,7 @@ const ReplyItem = memo(function ReplyItem({
 
 export default function Thread() {
   const { threadId } = useParams<{ threadId: string }>()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { settings } = useSiteSettings()
   const qc = useQueryClient()
@@ -191,6 +192,30 @@ export default function Thread() {
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [nestedDraft, setNestedDraft] = useState('')
   const commentingEnabled = settings.global_commenting_enabled !== 'false'
+
+  // If RLS hides this thread because it belongs to a private subgroup,
+  // bounce the visitor to the subgroup landing instead of showing a 404.
+  useEffect(() => {
+    if (!threadId) return
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase.rpc('get_thread_subgroup_id', { _thread_id: threadId })
+      const sgid = data as string | null
+      if (!sgid || cancelled) return
+      const { data: row } = await supabase
+        .from('threads')
+        .select('id')
+        .eq('id', threadId)
+        .maybeSingle()
+      if (!row && !cancelled) {
+        toast.message('Join this subgroup to participate')
+        navigate(`/subgroups/${sgid}`, { replace: true })
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [threadId, navigate])
 
   const threadQ = useQuery({
     queryKey: ['thread', threadId],
