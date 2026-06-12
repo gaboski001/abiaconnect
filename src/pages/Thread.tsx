@@ -647,7 +647,7 @@ export default function Thread() {
             <form
               onSubmit={(e) => {
                 e.preventDefault()
-                submitReply.mutate(reply)
+                submitReply.mutate({ content: reply })
               }}
               className="space-y-2"
             >
