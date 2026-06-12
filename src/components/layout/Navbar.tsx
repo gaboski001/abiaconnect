@@ -146,26 +146,29 @@ export function Navbar() {
             </SheetContent>
           </Sheet>
 
-          {showLogoImage ? (
-            <Link to="/" className="flex items-center" aria-label={siteName}>
-              <SafeImage
-                src={logoUrl}
-                fallback=""
-                alt={siteName}
-                className="h-10 w-auto max-w-[160px] object-contain"
+          <Link to="/" className="flex items-center gap-2 relative" aria-label={siteName}>
+            <span
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm"
+              aria-hidden="true"
+            >
+              <Zap className="size-5" />
+            </span>
+            <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent hidden sm:block">
+              {siteName}
+            </span>
+            {showLogoImage && (
+              <img
+                src={logoUrl as string}
+                alt=""
+                aria-hidden="true"
+                onLoad={() => setLogoLoaded(true)}
                 onError={() => setLogoFailed(true)}
+                className={`absolute left-0 top-1/2 -translate-y-1/2 h-10 w-auto max-w-[160px] object-contain bg-background transition-opacity duration-200 ${
+                  logoLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
               />
-            </Link>
-          ) : (
-            <Link to="/" className="flex items-center gap-2">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm">
-                <Zap className="size-5" />
-              </span>
-              <span className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent hidden sm:block">
-                {siteName}
-              </span>
-            </Link>
-          )}
+            )}
+          </Link>
         </div>
 
         {/* Center: Nav */}
