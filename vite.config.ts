@@ -37,15 +37,29 @@ export default defineConfig({
   build: {
     target: "es2020",
     cssCodeSplit: true,
+    minify: "esbuild",
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
-          if (id.includes("react-dom") || id.match(/[\\/]react[\\/]/) || id.includes("scheduler")) return "react";
-          if (id.includes("@supabase")) return "supabase";
-          if (id.includes("@radix-ui") || id.includes("lucide-react") || id.includes("class-variance-authority") || id.includes("tailwind-merge") || id.includes("clsx")) return "ui";
-          if (id.includes("@tanstack")) return "query";
-          if (id.includes("framer-motion")) return "motion";
+          // React + Router travel together — always needed on first paint.
+          if (
+            id.includes("react-dom") ||
+            id.match(/[\\/]react[\\/]/) ||
+            id.includes("scheduler") ||
+            id.includes("react-router")
+          ) return "vendor-react";
+          if (id.includes("@supabase")) return "vendor-supabase";
+          if (
+            id.includes("@radix-ui") ||
+            id.includes("lucide-react") ||
+            id.includes("class-variance-authority") ||
+            id.includes("tailwind-merge") ||
+            id.includes("clsx")
+          ) return "vendor-ui";
+          if (id.includes("@tanstack")) return "vendor-query";
+          if (id.includes("framer-motion")) return "vendor-motion";
+          if (id.includes("date-fns")) return "vendor-date";
         },
       },
     },
