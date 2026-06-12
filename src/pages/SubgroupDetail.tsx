@@ -331,62 +331,141 @@ export default function SubgroupDetail() {
         </div>
       </div>
 
-      <div className="mt-6">
-        <h2 className="text-xl font-semibold mb-3">Threads</h2>
-        {threadsQ.isLoading && page === 0 ? (
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
-            ))}
-          </div>
-        ) : (threadsQ.data ?? []).length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground rounded-xl border border-dashed">
-            No threads yet in this subgroup.
-          </div>
-        ) : (
-          <>
+      <Tabs defaultValue="threads" className="mt-6">
+        <TabsList>
+          <TabsTrigger value="threads">Threads</TabsTrigger>
+          <TabsTrigger value="members">
+            Members
+            <Badge variant="secondary" className="ml-2">{memberCount}</Badge>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="threads" className="mt-4">
+          {threadsQ.isLoading && page === 0 ? (
             <div className="space-y-2">
-              {threadsQ.data!.map((t: any) => (
-                <Link
-                  key={t.id}
-                  to={`/thread/${t.id}`}
-                  className="block rounded-xl border bg-card p-4 hover:border-secondary/40 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 rounded-xl" />
+              ))}
+            </div>
+          ) : (threadsQ.data ?? []).length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground rounded-xl border border-dashed">
+              No threads yet in this subgroup.
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {threadsQ.data!.map((t: any) => (
+                  <div
+                    key={t.id}
+                    className="rounded-xl border bg-card p-4 hover:border-secondary/40 transition-colors flex items-start justify-between gap-3"
+                  >
+                    <Link to={`/thread/${t.id}`} className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        {t.is_pinned && <Pin className="h-4 w-4 text-secondary" />}
+                        {t.is_pinned && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Pin className="h-3 w-3" /> Pinned
+                          </Badge>
+                        )}
                         <h3 className="font-semibold truncate">{t.title}</h3>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         by {t.is_anonymous ? 'Anonymous' : (t.profiles?.display_name || 'Member')} ·{' '}
                         {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
                       </p>
-                    </div>
+                    </Link>
+                    {isSubgroupAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={pinMut.isPending}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          pinMut.mutate({ threadId: t.id, pinned: !t.is_pinned })
+                        }}
+                        title={t.is_pinned ? 'Unpin' : 'Pin to top'}
+                      >
+                        {t.is_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                      </Button>
+                    )}
                   </div>
-                </Link>
+                ))}
+              </div>
+              <div className="flex justify-center mt-4 gap-2">
+                {page > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                    Previous
+                  </Button>
+                )}
+                {(threadsQ.data?.length ?? 0) === PAGE_SIZE && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={threadsQ.isFetching}
+                  >
+                    {threadsQ.isFetching ? 'Loading…' : 'Load more'}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="members" className="mt-4">
+          {membersDirectoryQ.isLoading && membersPage === 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 rounded-xl" />
               ))}
             </div>
-            <div className="flex justify-center mt-4 gap-2">
-              {page > 0 && (
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))}>
-                  Previous
-                </Button>
-              )}
-              {(threadsQ.data?.length ?? 0) === PAGE_SIZE && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => p + 1)}
-                  disabled={threadsQ.isFetching}
-                >
-                  {threadsQ.isFetching ? 'Loading…' : 'Load more'}
-                </Button>
-              )}
+          ) : (membersDirectoryQ.data ?? []).length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground rounded-xl border border-dashed">
+              No members yet.
             </div>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {membersDirectoryQ.data!.map((m: any) => (
+                  <div
+                    key={m.user_id}
+                    className="rounded-xl border bg-card p-3 flex items-center gap-3"
+                  >
+                    <UserAvatar
+                      src={m.avatar_url}
+                      name={m.display_name}
+                      className="h-10 w-10"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{m.display_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Joined {format(new Date(m.joined_at), 'MMM d, yyyy')} ·{' '}
+                        {m.thread_count} thread{m.thread_count === 1 ? '' : 's'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-center mt-4 gap-2">
+                {membersPage > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => setMembersPage((p) => Math.max(0, p - 1))}>
+                    Previous
+                  </Button>
+                )}
+                {(membersDirectoryQ.data?.length ?? 0) === MEMBERS_PAGE_SIZE && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMembersPage((p) => p + 1)}
+                    disabled={membersDirectoryQ.isFetching}
+                  >
+                    {membersDirectoryQ.isFetching ? 'Loading…' : 'Load more'}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
