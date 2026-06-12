@@ -456,6 +456,11 @@ export default function Thread() {
 
 
 
+  const replies: Reply[] = useMemo(
+    () => repliesQ.data?.pages.flatMap((p) => p.rows) ?? [],
+    [repliesQ.data],
+  )
+
   if (threadQ.isLoading) {
     return (
       <div className="py-16 text-center text-muted-foreground">
@@ -469,10 +474,6 @@ export default function Thread() {
     return <div className="py-16 text-center text-muted-foreground">Thread not found.</div>
   }
 
-  const replies: Reply[] = useMemo(
-    () => repliesQ.data?.pages.flatMap((p) => p.rows) ?? [],
-    [repliesQ.data],
-  )
   const totalReplies = repliesQ.data?.pages[0]?.total ?? replies.length
 
   const authorName = thread.profiles?.display_name ?? 'Member'
