@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -6,6 +6,7 @@ import { format, formatDistanceToNow } from 'date-fns'
 import {
   Users, MessageSquare, ArrowLeft, Plus, Lock, Pin, PinOff,
   ChevronDown, ChevronUp, ShieldCheck, Copy, Trash2, Check, X,
+  ThumbsUp, Eye, Circle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -116,6 +117,63 @@ export default function SubgroupDetail() {
   const isMember = membershipQ.data === true
   const memberCount = memberCountQ.data ?? 0
   const isSubgroupAdmin = !!user && !!groupQ.data && groupQ.data.created_by === user.id
+
+  // 5e: Realtime presence — ephemeral active-member count
+  const [activeCount, setActiveCount] = useState(0)
+  useEffect(() => {
+    if (!subgroupId || !user) return
+    const channel = supabase.channel(`subgroup-presence:${subgroupId}`, {
+      config: { presence: { key: user.id } },
+    })
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState()
+        setActiveCount(Object.keys(state).length)
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ online_at: new Date().toISOString() })
+        }
+      })
+    return () => {
+      channel.untrack().catch(() => {})
+      supabase.removeChannel(channel)
+    }
+  }, [subgroupId, user])
+
+  // 5f: Reply counts for visible threads
+  const threadIds = (threadsQ.data ?? []).map((t: any) => t.id)
+  const replyCountsQ = useQuery({
+    queryKey: ['thread-reply-counts', threadIds],
+    enabled: threadIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await sb.rpc('get_thread_reply_counts', { _thread_ids: threadIds })
+      if (error) throw error
+      const m: Record<string, number> = {}
+      ;(data ?? []).forEach((r: any) => { m[r.thread_id] = Number(r.reply_count) })
+      return m
+    },
+    staleTime: 30_000,
+  })
+
+  // 5f: View tracking — once per session per thread
+  useEffect(() => {
+    if (!threadIds.length) return
+    const key = 'sg_viewed_threads'
+    let seen: Record<string, number> = {}
+    try { seen = JSON.parse(sessionStorage.getItem(key) || '{}') } catch {}
+    const toLog = threadIds.filter((id) => !seen[id])
+    if (!toLog.length) return
+    // Debounce burst — fire all increments after 1.5s of stability
+    const handle = window.setTimeout(() => {
+      toLog.forEach((id) => {
+        sb.rpc('increment_thread_view', { _thread_id: id }).then(() => {}, () => {})
+        seen[id] = Date.now()
+      })
+      try { sessionStorage.setItem(key, JSON.stringify(seen)) } catch {}
+    }, 1500)
+    return () => window.clearTimeout(handle)
+  }, [threadIds.join(',')])
 
   // My pending join request (for private subgroups)
   const myRequestQ = useQuery({
@@ -416,9 +474,15 @@ export default function SubgroupDetail() {
                 )}
               </div>
               <p className="text-white/80 max-w-2xl">{s.description || 'No description provided.'}</p>
-              <div className="flex items-center gap-4 text-sm text-white/80">
+              <div className="flex items-center gap-4 text-sm text-white/80 flex-wrap">
                 <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {memberCount} members</span>
                 <span className="flex items-center gap-1"><MessageSquare className="h-4 w-4" /> {threadsQ.data?.length ?? 0} threads</span>
+                {activeCount > 0 && (
+                  <span className="flex items-center gap-1" title="Members active right now">
+                    <Circle className="h-2.5 w-2.5 fill-emerald-400 text-emerald-400" />
+                    {activeCount} active
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex gap-2">{renderJoinButton()}</div>
@@ -469,6 +533,11 @@ export default function SubgroupDetail() {
                             by {t.is_anonymous ? 'Anonymous' : (t.profiles?.display_name || 'Member')} ·{' '}
                             {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
                           </p>
+                          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" /> {t.upvotes ?? 0}</span>
+                            <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> {replyCountsQ.data?.[t.id] ?? 0}</span>
+                            <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" /> {t.view_count ?? 0}</span>
+                          </div>
                         </Link>
                         {isSubgroupAdmin && (
                           <Button variant="ghost" size="sm" disabled={pinMut.isPending}
