@@ -251,14 +251,15 @@ export default function InstallPrompt() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="ac-ios-title"
-            className="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl"
+            aria-describedby="ac-ios-steps"
+            className="relative bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl"
             onClick={(e) => e.stopPropagation()}
             style={{ borderRadius: 16 }}
           >
-            <h2 id="ac-ios-title" className="font-semibold text-base mb-2 text-neutral-900 m-0">
+            <h2 id="ac-ios-title" className="font-semibold text-base mb-2 text-neutral-900 m-0 pr-8">
               Install AbiaConnect
             </h2>
-            <ol className="text-sm text-neutral-700 space-y-2 list-decimal pl-5">
+            <ol id="ac-ios-steps" className="text-sm text-neutral-700 space-y-2 list-decimal pl-5">
               <li>Tap the <strong>Share</strong> button (□↑) in your browser</li>
               <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
               <li>Tap <strong>Add</strong> — and you're in!</li>
@@ -268,15 +269,28 @@ export default function InstallPrompt() {
                 <path d="M12 5v14M5 12l7 7 7-7" />
               </svg>
             </div>
+            {/* 1: primary confirm */}
             <button
               type="button"
+              tabIndex={0}
               onClick={() => setShowIOS(false)}
               className="ac-btn mt-3 w-full px-3 py-2 text-sm font-medium text-white rounded-lg"
               style={{ background: '#1a4f3a' }}
             >
               Got it
             </button>
+            {/* 2: secondary close — last in tab order */}
+            <button
+              type="button"
+              tabIndex={0}
+              onClick={() => setShowIOS(false)}
+              aria-label="Close install instructions"
+              className="ac-btn absolute top-2 right-2 h-7 w-7 grid place-items-center rounded-full text-neutral-500 hover:bg-neutral-100"
+            >
+              <span aria-hidden="true">✕</span>
+            </button>
           </div>
+
         </div>
       )}
     </>
