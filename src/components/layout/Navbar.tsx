@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import {
-  LogOut,
-  Menu,
-  Search,
-  Zap,
-} from 'lucide-react'
+import { LogOut, Menu, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
