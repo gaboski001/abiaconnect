@@ -1149,7 +1149,7 @@ function SeedDatabaseCard() {
       setArticleProgress(100)
       setArticleStatus(`Inserted ${result.count}, skipped ${result.skipped}`)
       localStorage.setItem('abiaconnect_articles_seeded', 'true')
-      setArticlesDone(true)
+      void seededQ.refetch()
       toast.success(
         `✅ Articles seeded — inserted ${result.count}, skipped ${result.skipped} (already existed) of ${result.count + result.skipped}.`,
       )
