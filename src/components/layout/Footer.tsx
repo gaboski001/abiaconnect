@@ -102,7 +102,7 @@ export function Footer() {
         <div className="mx-auto max-w-[1400px] px-6 py-12 space-y-12">
           {/* Brand */}
           <div className="flex flex-col gap-3">
-            {showLogoImage ? (
+            {showLogoImage && (
               <SafeImage
                 src={logoUrl}
                 fallback=""
@@ -110,13 +110,6 @@ export function Footer() {
                 className="h-12 w-auto max-w-[180px] object-contain"
                 onError={() => setLogoFailed(true)}
               />
-            ) : (
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <span className="font-bold text-xl text-foreground">{siteName}</span>
-              </div>
             )}
             <p className="text-muted-foreground text-sm max-w-[240px] leading-relaxed">
               {tagline}
