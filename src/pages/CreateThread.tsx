@@ -74,6 +74,7 @@ export default function CreateThread() {
   const { user } = useAuth()
   const [params] = useSearchParams()
   const presetCategory = params.get('category') ?? ''
+  const presetSubgroup = params.get('subgroup') ?? ''
 
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
@@ -81,6 +82,7 @@ export default function CreateThread() {
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', 'list'],
+    enabled: !presetSubgroup,
     queryFn: async () => {
       const { data, error } = await supabase.from('categories').select('id, name').order('name')
       if (error) throw error
@@ -88,12 +90,51 @@ export default function CreateThread() {
     },
   })
 
+  const subgroupQ = useQuery({
+    queryKey: ['subgroup-mini', presetSubgroup],
+    enabled: !!presetSubgroup,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subgroups')
+        .select('id, name')
+        .eq('id', presetSubgroup)
+        .single()
+      if (error) throw error
+      return data
+    },
+  })
+
+  const membershipQ = useQuery({
+    queryKey: ['subgroup-membership', presetSubgroup, user?.id],
+    enabled: !!presetSubgroup && !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subgroup_members')
+        .select('user_id')
+        .eq('subgroup_id', presetSubgroup)
+        .eq('user_id', user!.id)
+        .maybeSingle()
+      if (error) throw error
+      return !!data
+    },
+    staleTime: Infinity,
+  })
+
+  useEffect(() => {
+    if (presetSubgroup && membershipQ.isFetched && membershipQ.data === false) {
+      toast.error('Join this subgroup to post')
+      navigate(`/subgroups/${presetSubgroup}`)
+    }
+  }, [presetSubgroup, membershipQ.isFetched, membershipQ.data, navigate])
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       category_id: presetCategory,
+      subgroup_id: presetSubgroup,
       title: '',
       content: '',
+      flair: undefined,
       allow_replies: true,
       is_anonymous: false,
     },
