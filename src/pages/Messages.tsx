@@ -488,7 +488,7 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
     enabled: q.trim().length >= 2,
     queryFn: async () => {
       const term = `%${q.trim()}%`
-      const { data, error } = await (supabase as unknown as { from: (t: string) => ReturnType<typeof supabase.from> })
+      const { data, error } = await supabase
         .from('public_profiles')
         .select('id, display_name, username, avatar_url')
         .or(`display_name.ilike.${term},username.ilike.${term}`)
