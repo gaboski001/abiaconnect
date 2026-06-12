@@ -23,7 +23,7 @@ import { MessagesBell } from '@/components/messages/MessagesBell'
 
 export function Navbar() {
   const navigate = useNavigate()
-  const { user, role, isAdmin, signOut, loading: authLoading } = useAuth()
+  const { user, role, isAdmin, signOut } = useAuth()
   const { settings } = useSiteSettings()
   const { data: profile } = useProfile()
   const [open, setOpen] = useState(false)
