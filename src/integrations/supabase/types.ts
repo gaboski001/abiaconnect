@@ -1227,6 +1227,13 @@ export type Database = {
           upvotes: number
         }[]
       }
+      get_thread_reply_counts: {
+        Args: { _thread_ids: string[] }
+        Returns: {
+          reply_count: number
+          thread_id: string
+        }[]
+      }
       get_thread_subgroup_id: { Args: { _thread_id: string }; Returns: string }
       get_thread_vote_counts: {
         Args: { _thread_ids: string[] }
@@ -1242,6 +1249,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_thread_view: {
+        Args: { _thread_id: string }
+        Returns: undefined
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_subgroup_admin: {
