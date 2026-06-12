@@ -1145,6 +1145,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_subgroup_member: {
+        Args: { _subgroup_id: string; _user_id: string }
+        Returns: boolean
+      }
       mark_message_read: { Args: { _message_id: string }; Returns: undefined }
       move_to_dlq: {
         Args: {
