@@ -129,6 +129,43 @@ export default function Thread() {
     })()
   }, [threadId])
 
+  // Hydrate reply vote counts from DB whenever the list of real reply ids changes.
+  const replyIdsKey = useMemo(() => {
+    const ids = (repliesQ.data?.pages ?? [])
+      .flatMap((p) => p.rows.map((r) => r.id))
+      .filter((id) => !id.startsWith('temp-'))
+    return ids.join(',')
+  }, [repliesQ.data])
+
+  useEffect(() => {
+    if (!threadId || !replyIdsKey) return
+    const ids = replyIdsKey.split(',')
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase.rpc('get_reply_vote_counts', { _reply_ids: ids })
+      if (cancelled || !data) return
+      const map = new Map<string, { upvotes: number; downvotes: number }>(
+        (data as Array<{ reply_id: string; upvotes: number; downvotes: number }>).map((row) => [
+          row.reply_id,
+          { upvotes: Number(row.upvotes), downvotes: Number(row.downvotes) },
+        ]),
+      )
+      qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
+        if (!prev) return prev
+        const pages = prev.pages.map((p) => ({
+          ...p,
+          rows: p.rows.map((r) => {
+            const c = map.get(r.id)
+            return c ? { ...r, upvotes: c.upvotes, downvotes: c.downvotes } : r
+          }),
+        }))
+        return { ...prev, pages }
+      })
+    })()
+    return () => { cancelled = true }
+  }, [threadId, replyIdsKey, qc])
+
+
 
 
   // Realtime subscription
