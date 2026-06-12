@@ -84,7 +84,7 @@ export default function Messages() {
       const otherIds = list.map((c) => (c.user1_id === user!.id ? c.user2_id : c.user1_id))
       const ids = list.map((c) => c.id)
       const [{ data: profiles }, { data: msgs }] = await Promise.all([
-        supabase.from('profiles').select('id, display_name, username, avatar_url').in('id', otherIds),
+        supabase.rpc('get_public_profiles', { _ids: otherIds }),
         supabase
           .from('messages')
           .select('conversation_id, sender_id, content, is_read, created_at')
