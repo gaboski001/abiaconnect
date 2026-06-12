@@ -407,15 +407,15 @@ function SavedPosts() {
     <ul className="space-y-3">
       {items.map((b) => (
         <li key={b.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
-          <div className="min-w-0">
-            <Link to={`/thread/${b.threads?.id ?? b.thread_id}`} className="font-medium hover:text-primary truncate">
+          <div className="min-w-0 flex-1">
+            <Link to={`/thread/${b.threads?.id ?? b.thread_id}`} className="block font-medium hover:text-primary truncate">
               {b.threads?.title ?? 'Thread'}
             </Link>
             {b.threads?.categories?.name && (
-              <div className="text-xs text-muted-foreground">in {b.threads.categories.name}</div>
+              <div className="text-xs text-muted-foreground truncate">in {b.threads.categories.name}</div>
             )}
           </div>
-          <Button size="sm" variant="ghost" onClick={() => remove.mutate(b.id)}>Remove</Button>
+          <Button size="sm" variant="ghost" className="shrink-0" onClick={() => remove.mutate(b.id)}>Remove</Button>
         </li>
       ))}
     </ul>
