@@ -1072,6 +1072,26 @@ function SeedDatabaseCard() {
     () => typeof window !== 'undefined' && localStorage.getItem('abiaconnect_articles_seeded') === 'true',
   )
 
+  const run = async () => {
+    if (!user) {
+      toast.error('You must be signed in as an admin')
+      return
+    }
+    setRunning(true)
+    try {
+      const result = await seedDatabase(user.id)
+      localStorage.setItem('abiaconnect_seeded', 'true')
+      toast.success(
+        `✅ Database seeded successfully! ${result.counts.categories} categories, ${result.counts.threads} threads, ${result.counts.subgroups} subgroups are ready.`,
+      )
+    } catch (e: any) {
+      toast.error(e.message || 'Seeding failed')
+    } finally {
+      setRunning(false)
+    }
+  }
+
+
   const runArticles = async () => {
     if (!user) {
       toast.error('You must be signed in as an admin')
