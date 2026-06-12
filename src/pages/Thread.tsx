@@ -182,7 +182,33 @@ const ReplyItem = memo(function ReplyItem({
   )
 })
 
-export default function Thread() {
+export default function ThreadPage() {
+  const { user, loading } = useAuth()
+  if (loading) {
+    return <div className="p-8 text-sm text-muted-foreground">Loading…</div>
+  }
+  if (!user) {
+    return (
+      <div className="max-w-xl mx-auto mt-16 rounded-2xl border border-border bg-card p-8 text-center space-y-4">
+        <h1 className="text-2xl font-bold">Sign in to view this thread</h1>
+        <p className="text-muted-foreground">
+          Join AbiaConnect to read full discussions, vote, and participate in the conversation.
+        </p>
+        <div className="flex justify-center gap-3 pt-2">
+          <Link to="/login" className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-5 py-2 text-sm font-semibold hover:opacity-90">
+            Sign in
+          </Link>
+          <Link to="/register" className="inline-flex items-center justify-center rounded-md border border-border px-5 py-2 text-sm font-semibold hover:bg-muted">
+            Create account
+          </Link>
+        </div>
+      </div>
+    )
+  }
+  return <Thread />
+}
+
+function Thread() {
   const { threadId } = useParams<{ threadId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
