@@ -201,29 +201,33 @@ export default function Thread() {
   const vote = useMutation({
     mutationFn: async (value: 1 | -1) => {
       if (!user || !threadId) throw new Error('Sign in to vote')
-      // Toggle: if a row with same (thread, user, value) exists, delete it; else insert.
+      // Read any existing vote by this user on this thread.
       const { data: existing, error: selErr } = await supabase
         .from('thread_votes')
-        .select('id')
+        .select('id, value')
         .eq('thread_id', threadId)
         .eq('user_id', user.id)
-        .eq('value', value)
         .maybeSingle()
       if (selErr) throw selErr
-      if (existing) {
-        const { error } = await supabase
-          .from('thread_votes')
-          .delete()
-          .eq('id', (existing as { id: string }).id)
+      const row = existing as { id: string; value: number } | null
+      if (row && row.value === value) {
+        // Toggle off
+        const { error } = await supabase.from('thread_votes').delete().eq('id', row.id)
         if (error) throw error
         return { value, removed: true as const }
       }
+      if (row) {
+        // Switch direction: update existing row to avoid leaving stale opposite vote.
+        const { error } = await supabase
+          .from('thread_votes')
+          .update({ value })
+          .eq('id', row.id)
+        if (error) throw error
+        return { value, removed: false as const }
+      }
       const { error } = await supabase
         .from('thread_votes')
-        .upsert(
-          { thread_id: threadId, user_id: user.id, value },
-          { onConflict: 'thread_id,user_id,value' },
-        )
+        .insert({ thread_id: threadId, user_id: user.id, value })
       if (error) throw error
       return { value, removed: false as const }
     },
@@ -391,20 +395,25 @@ export default function Thread() {
       if (!user) throw new Error('Sign in to vote')
       const { data: existing, error: selErr } = await supabase
         .from('reply_votes')
-        .select('id')
+        .select('id, value')
         .eq('reply_id', replyId)
         .eq('user_id', user.id)
-        .eq('value', value)
         .maybeSingle()
       if (selErr) throw selErr
-      if (existing) {
-        const { error } = await supabase.from('reply_votes').delete().eq('id', (existing as { id: string }).id)
+      const row = existing as { id: string; value: number } | null
+      if (row && row.value === value) {
+        const { error } = await supabase.from('reply_votes').delete().eq('id', row.id)
         if (error) throw error
         return { replyId, value, removed: true as const }
       }
+      if (row) {
+        const { error } = await supabase.from('reply_votes').update({ value }).eq('id', row.id)
+        if (error) throw error
+        return { replyId, value, removed: false as const }
+      }
       const { error } = await supabase
         .from('reply_votes')
-        .upsert({ reply_id: replyId, user_id: user.id, value }, { onConflict: 'reply_id,user_id,value' })
+        .insert({ reply_id: replyId, user_id: user.id, value })
       if (error) throw error
       return { replyId, value, removed: false as const }
     },
