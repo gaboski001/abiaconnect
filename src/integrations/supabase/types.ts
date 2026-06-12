@@ -872,6 +872,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "threads_author_id_profiles_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "threads_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
