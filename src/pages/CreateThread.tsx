@@ -196,17 +196,21 @@ export default function CreateThread() {
       toast.error('Your post was flagged for review and not published. Please revise and try again.')
       return
     }
+    const finalTags = values.flair && !tags.includes(values.flair) ? [values.flair, ...tags] : tags
+    const insertPayload: Record<string, unknown> = {
+      user_id: user.id,
+      title: values.title.trim(),
+      content: values.content,
+      tags: finalTags,
+      allow_replies: values.allow_replies,
+      is_anonymous: values.is_anonymous,
+    }
+    if (values.subgroup_id) insertPayload.subgroup_id = values.subgroup_id
+    if (values.category_id) insertPayload.category_id = values.category_id
+
     const { data, error } = await supabase
       .from('threads')
-      .insert({
-        category_id: values.category_id,
-        user_id: user.id,
-        title: values.title.trim(),
-        content: values.content,
-        tags,
-        allow_replies: values.allow_replies,
-        is_anonymous: values.is_anonymous,
-      })
+      .insert(insertPayload)
       .select('id')
       .single()
 
