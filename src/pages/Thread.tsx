@@ -591,6 +591,29 @@ export default function Thread() {
     [repliesQ.data],
   )
 
+  const threadContent = threadQ.data?.content ?? ''
+  const safeBody = useMemo(() => DOMPurify.sanitize(threadContent), [threadContent])
+  const plainBody = useMemo(
+    () => threadContent.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
+    [threadContent],
+  )
+
+  // Stable callbacks so memoized ReplyItem rows don't re-render unnecessarily.
+  const handleReplyVote = useCallback(
+    (replyId: string, value: 1 | -1) => voteReply.mutate({ replyId, value }),
+    [voteReply],
+  )
+  const handleToggleReply = useCallback((id: string) => {
+    setReplyingTo((cur) => (cur === id ? null : id))
+    setNestedDraft('')
+  }, [])
+  const handleNestedDraftChange = useCallback((v: string) => setNestedDraft(v), [])
+  const handleSubmitNested = useCallback(
+    (parentId: string) => submitReply.mutate({ content: nestedDraft, parentId }),
+    [submitReply, nestedDraft],
+  )
+  const handleCancelNested = useCallback(() => setReplyingTo(null), [])
+
   if (threadQ.isLoading) {
     return (
       <div className="py-16 text-center text-muted-foreground">
@@ -607,9 +630,7 @@ export default function Thread() {
   const totalReplies = repliesQ.data?.pages[0]?.total ?? replies.length
 
   const authorName = thread.profiles?.display_name ?? 'Member'
-  const safeBody = DOMPurify.sanitize(thread.content ?? '')
 
-  const plainBody = (thread.content ?? '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
   const metaDesc = plainBody.slice(0, 160) || `Discussion by ${authorName} on AbiaConnect.`
 
   return (
