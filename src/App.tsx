@@ -13,6 +13,7 @@ import Profile from '@/pages/Profile'
 import Polls from '@/pages/Polls'
 import Subgroups from '@/pages/Subgroups'
 import SubgroupDetail from '@/pages/SubgroupDetail'
+import SubgroupInvite from '@/pages/SubgroupInvite'
 import Notifications from '@/pages/Notifications'
 import Messages from '@/pages/Messages'
 import AdminDashboard from '@/pages/admin/AdminDashboard'
@@ -78,6 +79,7 @@ export default function App() {
           <Route path="polls" element={<Polls />} />
           <Route path="subgroups" element={<Subgroups />} />
           <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
+          <Route path="subgroups/invite/:token" element={<SubgroupInvite />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="create-thread" element={<CreateThread />} />
           <Route path="messages" element={<Messages />} />
