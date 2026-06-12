@@ -322,13 +322,14 @@ function ConversationView({
     const hasUnread = messagesQ.data.some((m) => !m.is_read && m.sender_id !== user.id)
     if (!hasUnread) return
     supabase
-      .from('messages')
-      .update({ is_read: true })
-      .eq('conversation_id', conversationId)
-      .neq('sender_id', user.id)
-      .eq('is_read', false)
-      .then(() => qc.invalidateQueries({ queryKey: ['conversations', user.id] }))
-  }, [messagesQ.data, user, conversationId, qc])
+      .rpc('mark_conversation_read', { _conversation_id: conversationId })
+      .then(() => {
+        qc.invalidateQueries({ queryKey: ['conversations', user.id] })
+        qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
+        qc.invalidateQueries({ queryKey: queryKey })
+      })
+  }, [messagesQ.data, user, conversationId, qc, queryKey])
+
 
   const sendMut = useMutation({
     mutationFn: async (content: string) => {
