@@ -90,9 +90,10 @@ export default function SubgroupDetail() {
       const to = from + PAGE_SIZE - 1
       const { data, error } = await supabase
         .from('threads')
-        .select('id, subgroup_id, author_id, title, tags, is_anonymous, created_at, is_pinned, upvotes, view_count, profiles:author_id(display_name, avatar_url)')
+        .select('id, subgroup_id, author_id, title, tags, is_anonymous, created_at, is_pinned, pinned_at, upvotes, view_count, profiles:author_id(display_name, avatar_url)')
         .eq('subgroup_id', subgroupId!)
         .order('is_pinned', { ascending: false })
+        .order('pinned_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .range(from, to)
       if (error) throw error
@@ -103,6 +104,64 @@ export default function SubgroupDetail() {
 
   const isMember = membershipQ.data === true
   const memberCount = memberCountQ.data ?? 0
+  const isSubgroupAdmin = !!user && !!groupQ.data && groupQ.data.created_by === user.id
+
+  const pinMut = useMutation({
+    mutationFn: async ({ threadId, pinned }: { threadId: string; pinned: boolean }) => {
+      const { error } = await supabase.rpc('pin_subgroup_thread', {
+        _thread_id: threadId,
+        _pinned: pinned,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['subgroup-threads', subgroupId] })
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to update pin'),
+  })
+
+  const [membersPage, setMembersPage] = useState(0)
+  const membersDirectoryQ = useQuery({
+    queryKey: ['subgroup-member-directory', subgroupId, membersPage],
+    enabled: !!subgroupId,
+    queryFn: async () => {
+      const from = membersPage * MEMBERS_PAGE_SIZE
+      const to = from + MEMBERS_PAGE_SIZE - 1
+      const { data: rows, error } = await supabase
+        .from('subgroup_members')
+        .select('user_id, joined_at')
+        .eq('subgroup_id', subgroupId!)
+        .order('joined_at', { ascending: false })
+        .range(from, to)
+      if (error) throw error
+      const list = (rows ?? []) as Array<{ user_id: string; joined_at: string }>
+      if (!list.length) return [] as any[]
+      const ids = list.map((r) => r.user_id)
+      const [{ data: profs }, { data: threadsByUser }] = await Promise.all([
+        supabase.rpc('get_public_profiles', { _ids: ids }),
+        supabase
+          .from('threads')
+          .select('author_id')
+          .eq('subgroup_id', subgroupId!)
+          .in('author_id', ids),
+      ])
+      const profMap = new Map<string, any>()
+      ;(profs ?? []).forEach((p: any) => profMap.set(p.id, p))
+      const threadCounts: Record<string, number> = {}
+      ;(threadsByUser ?? []).forEach((r: any) => {
+        if (!r.author_id) return
+        threadCounts[r.author_id] = (threadCounts[r.author_id] || 0) + 1
+      })
+      return list.map((r) => ({
+        user_id: r.user_id,
+        joined_at: r.joined_at,
+        display_name: profMap.get(r.user_id)?.display_name ?? 'Member',
+        avatar_url: profMap.get(r.user_id)?.avatar_url ?? null,
+        thread_count: threadCounts[r.user_id] || 0,
+      }))
+    },
+    placeholderData: (prev) => prev,
+  })
 
   const joinMut = useMutation({
     mutationFn: async () => {
