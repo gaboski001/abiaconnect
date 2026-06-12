@@ -105,7 +105,18 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="left" className="w-80">
               <SheetHeader>
-                <SheetTitle>{siteName}</SheetTitle>
+                <SheetTitle asChild>
+                  <Link to="/" onClick={() => setOpen(false)} className="flex items-center" aria-label={siteName}>
+                    {showLogoImage && (
+                      <img
+                        src={logoUrl as string}
+                        alt={siteName}
+                        onError={() => setLogoFailed(true)}
+                        className="h-10 w-auto max-w-[180px] object-contain"
+                      />
+                    )}
+                  </Link>
+                </SheetTitle>
               </SheetHeader>
               <form onSubmit={onSearch} className="relative mt-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
