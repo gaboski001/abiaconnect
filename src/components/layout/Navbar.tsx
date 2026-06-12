@@ -179,9 +179,7 @@ export function Navbar() {
 
           <RealtimeStatus className="hidden md:inline-flex" />
 
-          {authLoading ? (
-            <div className="h-9 w-24" aria-hidden="true" />
-          ) : user ? (
+          {user ? (
             <>
               <MessagesBell />
               <NotificationBell />
