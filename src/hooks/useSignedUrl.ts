@@ -58,7 +58,7 @@ export function useSignedUrl(
       setUrl(null)
       return
     }
-    if (isPublicUrl(pathOrUrl)) {
+    if (isExternalUrl(pathOrUrl)) {
       setUrl(pathOrUrl)
       return
     }
