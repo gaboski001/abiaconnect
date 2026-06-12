@@ -143,8 +143,14 @@ export default function SubgroupDetail() {
 
   if (groupQ.isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="h-48 rounded-2xl bg-muted/40 animate-pulse" />
+      <div className="container mx-auto px-4 py-8 space-y-4">
+        <Skeleton className="h-48 rounded-2xl" />
+        <Skeleton className="h-6 w-32" />
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
+        </div>
       </div>
     )
   }
