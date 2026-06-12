@@ -118,6 +118,63 @@ export default function SubgroupDetail() {
   const memberCount = memberCountQ.data ?? 0
   const isSubgroupAdmin = !!user && !!groupQ.data && groupQ.data.created_by === user.id
 
+  // 5e: Realtime presence — ephemeral active-member count
+  const [activeCount, setActiveCount] = useState(0)
+  useEffect(() => {
+    if (!subgroupId || !user) return
+    const channel = supabase.channel(`subgroup-presence:${subgroupId}`, {
+      config: { presence: { key: user.id } },
+    })
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState()
+        setActiveCount(Object.keys(state).length)
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ online_at: new Date().toISOString() })
+        }
+      })
+    return () => {
+      channel.untrack().catch(() => {})
+      supabase.removeChannel(channel)
+    }
+  }, [subgroupId, user])
+
+  // 5f: Reply counts for visible threads
+  const threadIds = (threadsQ.data ?? []).map((t: any) => t.id)
+  const replyCountsQ = useQuery({
+    queryKey: ['thread-reply-counts', threadIds],
+    enabled: threadIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await sb.rpc('get_thread_reply_counts', { _thread_ids: threadIds })
+      if (error) throw error
+      const m: Record<string, number> = {}
+      ;(data ?? []).forEach((r: any) => { m[r.thread_id] = Number(r.reply_count) })
+      return m
+    },
+    staleTime: 30_000,
+  })
+
+  // 5f: View tracking — once per session per thread
+  useEffect(() => {
+    if (!threadIds.length) return
+    const key = 'sg_viewed_threads'
+    let seen: Record<string, number> = {}
+    try { seen = JSON.parse(sessionStorage.getItem(key) || '{}') } catch {}
+    const toLog = threadIds.filter((id) => !seen[id])
+    if (!toLog.length) return
+    // Debounce burst — fire all increments after 1.5s of stability
+    const handle = window.setTimeout(() => {
+      toLog.forEach((id) => {
+        sb.rpc('increment_thread_view', { _thread_id: id }).then(() => {}, () => {})
+        seen[id] = Date.now()
+      })
+      try { sessionStorage.setItem(key, JSON.stringify(seen)) } catch {}
+    }, 1500)
+    return () => window.clearTimeout(handle)
+  }, [threadIds.join(',')])
+
   // My pending join request (for private subgroups)
   const myRequestQ = useQuery({
     queryKey: ['subgroup-my-request', subgroupId, user?.id],
