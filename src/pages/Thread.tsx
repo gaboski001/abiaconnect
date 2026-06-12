@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
+
 import { formatDistanceToNow } from 'date-fns'
 import DOMPurify from 'dompurify'
 import {
@@ -82,19 +83,32 @@ export default function Thread() {
     },
   })
 
-  const repliesQ = useQuery({
+  const REPLIES_PAGE_SIZE = 10
+  type RepliesPage = { rows: Reply[]; total: number; nextPage: number | null }
+
+  const repliesQ = useInfiniteQuery<RepliesPage>({
     queryKey: ['replies', threadId],
     enabled: !!threadId,
-    queryFn: async () => {
-      const { data, error } = await supabase
+    initialPageParam: 0,
+    getNextPageParam: (last) => last.nextPage,
+    queryFn: async ({ pageParam = 0 }) => {
+      const page = pageParam as number
+      const from = page * REPLIES_PAGE_SIZE
+      const to = from + REPLIES_PAGE_SIZE - 1
+      const { data, error, count } = await supabase
         .from('replies')
-        .select('*, profiles(display_name, avatar_url)')
+        .select('*, profiles:user_id(display_name, avatar_url)', { count: 'exact' })
         .eq('thread_id', threadId!)
         .order('created_at', { ascending: true })
+        .range(from, to)
       if (error) throw error
-      return (data ?? []) as Reply[]
+      const rows = (data ?? []) as Reply[]
+      const total = count ?? rows.length
+      const hasMore = (page + 1) * REPLIES_PAGE_SIZE < total
+      return { rows, total, nextPage: hasMore ? page + 1 : null }
     },
   })
+
 
   // Increment view count once per thread per browser session
   useEffect(() => {
@@ -124,12 +138,20 @@ export default function Thread() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'replies', filter: `thread_id=eq.${threadId}` },
         (payload) => {
-          qc.setQueryData<Reply[]>(['replies', threadId], (prev = []) => {
-            const next = payload.new as Reply
-            if (prev.some((r) => r.id === next.id)) return prev
-            return [...prev, next]
+          const next = payload.new as Reply
+          qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
+            if (!prev) return prev
+            const exists = prev.pages.some((p) => p.rows.some((r) => r.id === next.id))
+            if (exists) return prev
+            const pages = prev.pages.map((p, i) =>
+              i === prev.pages.length - 1
+                ? { ...p, rows: [...p.rows, next], total: p.total + 1 }
+                : { ...p, total: p.total + 1 },
+            )
+            return { ...prev, pages }
           })
         },
+
       )
       .subscribe()
     return () => {
@@ -181,19 +203,28 @@ export default function Thread() {
       const { data, error } = await supabase
         .from('replies')
         .insert({ thread_id: threadId, user_id: user.id, content: trimmed })
-        .select('*, profiles(display_name, avatar_url)')
+        .select('*, profiles:user_id(display_name, avatar_url)')
         .single()
       if (error) throw error
       return data as Reply
     },
     onSuccess: (newReply) => {
-      qc.setQueryData<Reply[]>(['replies', threadId], (prev = []) =>
-        prev.some((r) => r.id === newReply.id) ? prev : [...prev, newReply],
-      )
+      qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
+        if (!prev) return prev
+        const exists = prev.pages.some((p) => p.rows.some((r) => r.id === newReply.id))
+        if (exists) return prev
+        const pages = prev.pages.map((p, i) =>
+          i === prev.pages.length - 1
+            ? { ...p, rows: [...p.rows, newReply], total: p.total + 1 }
+            : { ...p, total: p.total + 1 },
+        )
+        return { ...prev, pages }
+      })
       setReply('')
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Reply failed'),
   })
+
 
   if (threadQ.isLoading) {
     return (
@@ -208,7 +239,12 @@ export default function Thread() {
     return <div className="py-16 text-center text-muted-foreground">Thread not found.</div>
   }
 
-  const replies = repliesQ.data ?? []
+  const replies: Reply[] = useMemo(
+    () => repliesQ.data?.pages.flatMap((p) => p.rows) ?? [],
+    [repliesQ.data],
+  )
+  const totalReplies = repliesQ.data?.pages[0]?.total ?? replies.length
+
   const authorName = thread.profiles?.display_name ?? 'Member'
   const safeBody = DOMPurify.sanitize(thread.content ?? '')
 
@@ -311,48 +347,92 @@ export default function Thread() {
 
       <section className="space-y-4">
         <h2 className="text-xl font-bold">
-          {replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}
+          {totalReplies} {totalReplies === 1 ? 'Reply' : 'Replies'}
         </h2>
 
         {repliesQ.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading replies…</p>
+          <ul className="space-y-3" aria-busy="true">
+            {[0, 1, 2].map((i) => (
+              <li
+                key={i}
+                className="rounded-2xl border border-border bg-card p-4 space-y-2 animate-pulse"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="size-8 rounded-full bg-muted" />
+                  <div className="h-3 w-24 rounded bg-muted" />
+                  <div className="h-3 w-16 rounded bg-muted" />
+                </div>
+                <div className="h-3 w-11/12 rounded bg-muted" />
+                <div className="h-3 w-9/12 rounded bg-muted" />
+              </li>
+            ))}
+          </ul>
+        ) : repliesQ.isError ? (
+          <div className="text-sm space-y-2">
+            <p className="text-muted-foreground">Failed to load replies.</p>
+            <Button size="sm" variant="outline" onClick={() => repliesQ.refetch()}>
+              Retry
+            </Button>
+          </div>
         ) : replies.length === 0 ? (
           <p className="text-sm text-muted-foreground">No replies yet.</p>
         ) : (
-          <ul className="space-y-3">
-            {replies.map((r) => {
-              const name = r.profiles?.display_name ?? 'Member'
-              return (
-                <li
-                  key={r.id}
-                  className={`rounded-2xl border border-border bg-card p-4 ${
-                    r.parent_reply_id ? 'ml-8' : ''
-                  }`}
+          <>
+            <ul className="space-y-3">
+              {replies.map((r) => {
+                const name = r.profiles?.display_name ?? 'Member'
+                return (
+                  <li
+                    key={r.id}
+                    className={`rounded-2xl border border-border bg-card p-4 ${
+                      r.parent_reply_id ? 'ml-8' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Avatar name={name} url={r.profiles?.avatar_url} />
+                      <span className="font-medium text-sm">{name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <div
+                      className="prose prose-sm dark:prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(r.content) }}
+                    />
+                    <div className="flex items-center gap-1 mt-2">
+                      <Button size="sm" variant="ghost" disabled={!user}>
+                        <ThumbsUp className="size-3.5" /> {r.upvotes ?? 0}
+                      </Button>
+                      <Button size="sm" variant="ghost" disabled={!user}>
+                        <ThumbsDown className="size-3.5" /> {r.downvotes ?? 0}
+                      </Button>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+
+            {repliesQ.hasNextPage && (
+              <div className="flex justify-center pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => repliesQ.fetchNextPage()}
+                  disabled={repliesQ.isFetchingNextPage}
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Avatar name={name} url={r.profiles?.avatar_url} />
-                    <span className="font-medium text-sm">{name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
-                    </span>
-                  </div>
-                  <div
-                    className="prose prose-sm dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(r.content) }}
-                  />
-                  <div className="flex items-center gap-1 mt-2">
-                    <Button size="sm" variant="ghost" disabled={!user}>
-                      <ThumbsUp className="size-3.5" /> {r.upvotes ?? 0}
-                    </Button>
-                    <Button size="sm" variant="ghost" disabled={!user}>
-                      <ThumbsDown className="size-3.5" /> {r.downvotes ?? 0}
-                    </Button>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+                  {repliesQ.isFetchingNextPage ? (
+                    <>
+                      <Loader2 className="size-3.5 mr-1 animate-spin" /> Loading…
+                    </>
+                  ) : (
+                    `Load more replies (${Math.max(0, totalReplies - replies.length)} left)`
+                  )}
+                </Button>
+              </div>
+            )}
+          </>
         )}
+
 
         {user ? (
           commentingEnabled ? (
