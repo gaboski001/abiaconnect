@@ -208,22 +208,74 @@ export default function Thread() {
       if (error) throw error
       return data as Reply
     },
-    onSuccess: (newReply) => {
+    onMutate: async (content: string) => {
+      if (!user || !threadId) return { tempId: null as string | null, prevReply: reply }
+      await qc.cancelQueries({ queryKey: ['replies', threadId] })
+      const tempId = `temp-${Date.now()}`
+      const optimistic: Reply & { _optimistic?: boolean } = {
+        id: tempId,
+        thread_id: threadId,
+        user_id: user.id,
+        parent_reply_id: null,
+        content: content.trim(),
+        created_at: new Date().toISOString(),
+        upvotes: 0,
+        downvotes: 0,
+        profiles: {
+          display_name: user.user_metadata?.display_name ?? user.email ?? 'You',
+          avatar_url: user.user_metadata?.avatar_url ?? null,
+        },
+        _optimistic: true,
+      }
       qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
         if (!prev) return prev
-        const exists = prev.pages.some((p) => p.rows.some((r) => r.id === newReply.id))
-        if (exists) return prev
         const pages = prev.pages.map((p, i) =>
           i === prev.pages.length - 1
-            ? { ...p, rows: [...p.rows, newReply], total: p.total + 1 }
+            ? { ...p, rows: [...p.rows, optimistic], total: p.total + 1 }
             : { ...p, total: p.total + 1 },
         )
         return { ...prev, pages }
       })
+      const prevReply = reply
       setReply('')
+      return { tempId, prevReply }
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : 'Reply failed'),
+    onSuccess: (newReply, _vars, ctx) => {
+      qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
+        if (!prev) return prev
+        // De-dupe: realtime may have already inserted the real row.
+        const realExists = prev.pages.some((p) =>
+          p.rows.some((r) => r.id === newReply.id),
+        )
+        const pages = prev.pages.map((p) => ({
+          ...p,
+          rows: p.rows.flatMap((r) => {
+            if (r.id === ctx?.tempId) {
+              return realExists ? [] : [newReply]
+            }
+            return [r]
+          }),
+        }))
+        return { ...prev, pages }
+      })
+    },
+    onError: (e, _vars, ctx) => {
+      // Roll back optimistic insert and restore the draft text.
+      qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
+        if (!prev || !ctx?.tempId) return prev
+        const pages = prev.pages.map((p) => {
+          const filtered = p.rows.filter((r) => r.id !== ctx.tempId)
+          return filtered.length === p.rows.length
+            ? { ...p, total: Math.max(0, p.total - 1) }
+            : { ...p, rows: filtered, total: Math.max(0, p.total - 1) }
+        })
+        return { ...prev, pages }
+      })
+      if (ctx?.prevReply) setReply(ctx.prevReply)
+      toast.error(e instanceof Error ? e.message : 'Reply failed')
+    },
   })
+
 
 
   if (threadQ.isLoading) {
