@@ -1080,9 +1080,33 @@ function SeedDatabaseCard() {
   const [seedingArticles, setSeedingArticles] = useState(false)
   const [articleProgress, setArticleProgress] = useState(0)
   const [articleStatus, setArticleStatus] = useState<string>('')
-  const [articlesDone, setArticlesDone] = useState(
-    () => typeof window !== 'undefined' && localStorage.getItem('abiaconnect_articles_seeded') === 'true',
-  )
+
+  // Server-driven "seeded" state: if categories/articles already exist,
+  // hide their respective seed buttons so the panel auto-cleans up.
+  const seededQ = useQuery({
+    queryKey: ['admin-seed-state'],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const [{ count: catCount }, { count: pinnedCount }] = await Promise.all([
+        supabase.from('categories').select('id', { count: 'exact', head: true }),
+        supabase
+          .from('threads')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_pinned', true)
+          .eq('is_deleted', false),
+      ])
+      return {
+        coreDone: (catCount ?? 0) > 0,
+        articlesDone: (pinnedCount ?? 0) >= 14,
+      }
+    },
+  })
+  const coreDone = seededQ.data?.coreDone ?? false
+  const articlesDone =
+    seededQ.data?.articlesDone ??
+    (typeof window !== 'undefined' &&
+      localStorage.getItem('abiaconnect_articles_seeded') === 'true')
+
 
   const run = async () => {
     if (!user) {
