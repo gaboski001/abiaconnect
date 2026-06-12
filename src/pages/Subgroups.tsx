@@ -341,7 +341,7 @@ function CreateSubgroupDialog({
       if (data?.id) {
         await supabase
           .from('subgroup_members')
-          .upsert({ subgroup_id: data.id, user_id: user.id }, { onConflict: 'subgroup_id,user_id', ignoreDuplicates: true })
+          .upsert({ subgroup_id: data.id, user_id: user.id }, SUBGROUP_MEMBERS_UPSERT_OPTIONS)
       }
       toast.success('Subgroup created')
       onCreated()
