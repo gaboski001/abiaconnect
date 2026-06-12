@@ -1,76 +1,101 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import StaticPage from '@/components/layout/StaticPage'
+import {
+  MessagesSquare,
+  BarChart3,
+  Users,
+  Mail,
+  Bell,
+  Trophy,
+} from 'lucide-react'
+
+const FEATURES = [
+  { icon: MessagesSquare, title: 'Community Forums', body: 'Structured discussions across 14 topic categories, from business and politics to culture and faith.' },
+  { icon: BarChart3, title: 'Live Polls', body: 'Real-time community polls that capture the pulse of Abia opinion on issues that matter.' },
+  { icon: Users, title: 'Subgroups', body: 'Focused communities within the community — for LGAs, professions, diaspora cities, and shared interests.' },
+  { icon: Mail, title: 'Private Messaging', body: 'Secure, direct messaging between members for trusted one-on-one conversations.' },
+  { icon: Bell, title: 'Smart Notifications', body: 'Stay informed about replies, mentions, and community activity without noise.' },
+  { icon: Trophy, title: 'Success Stories', body: 'A dedicated space to celebrate Abian achievements and inspire the next generation.' },
+]
+
+const STATS = [
+  { number: '10,000+', label: 'Registered Members' },
+  { number: '14', label: 'Forum Categories' },
+  { number: '100+', label: 'Active Subgroups' },
+  { number: '17', label: 'LGAs Represented' },
+]
 
 export default function About() {
   return (
     <StaticPage
       badge="Our Story"
       title="About AbiaConnect"
-      subtitle="Born from a deep love for Abia State and its people — wherever they are in the world."
+      subtitle="The story behind Nigeria's most dedicated community platform for Abia State indigenes."
     >
       <h2>Who We Are</h2>
       <p>
-        AbiaConnect is the leading digital community platform for Abia State indigenes, residents,
-        and friends of Abia — both at home and across the global diaspora. We are more than a forum.
-        We are a living, breathing connection between the people of the Lion State: a space where
-        ideas are exchanged, businesses are born, cultures are celebrated, and voices are heard.
+        AbiaConnect is a digital community platform built exclusively for the sons and daughters of
+        Abia State, Nigeria — at home and across the world. We are more than a forum. We are a
+        living, breathing extension of the bonds that tie every Abia indigene to their roots, their
+        people, and their shared future.
       </p>
       <p>
-        Founded with the belief that geography should never disconnect us from our roots,
-        AbiaConnect brings together Abians from Aba to Arochukwu, from Umuahia to London, from
-        Ohafia to Houston — under one digital roof.
+        Founded with a simple belief — that Abians are stronger together — AbiaConnect brings
+        together traders from Ariaria, professionals in London and Houston, farmers from Bende and
+        Ikwuano, students at ABSU and FUTO, and leaders across all 17 local government areas into
+        one unified digital home.
       </p>
 
-      <h2>Our Community</h2>
+      <h2>Our Story</h2>
       <p>
-        Today, AbiaConnect is home to thousands of registered members across every Local Government
-        Area in Abia State and beyond. Our community includes:
+        The idea for AbiaConnect was born from a familiar frustration: Abia State has always
+        produced brilliant, industrious, and deeply connected people — yet there was no single
+        trusted online space where that energy could gather. Facebook groups fragmented the
+        conversation. WhatsApp chats were private and temporary. Important announcements, business
+        opportunities, and cultural discussions were scattered across platforms with no continuity.
       </p>
-      <ul>
-        <li>Entrepreneurs and traders from the famous Ariaria International Market</li>
-        <li>Students and academics from ABSU, Abia State Polytechnic, and universities worldwide</li>
-        <li>Government officials, civil servants, and policy advocates</li>
-        <li>Farmers, agripreneurs, and rural community leaders</li>
-        <li>Professionals in medicine, law, technology, and finance</li>
-        <li>Artists, musicians, and cultural custodians</li>
-        <li>Mothers, fathers, and youth who simply love where they come from</li>
-      </ul>
-
-      <h2>What We Offer</h2>
       <p>
-        AbiaConnect provides a safe, moderated space to discuss, discover, and connect.{' '}
-        <strong>Discussion Forums</strong> covering politics, business, culture, health, education,
-        agriculture, technology, and everyday life. <strong>Community Subgroups</strong> for
-        specific interests, LGAs, professions, and diaspora regions. <strong>Community Polls</strong>{' '}
-        to capture the authentic voice of Abia people on important matters.{' '}
-        <strong>Private Messaging</strong> for direct connections between members.{' '}
-        <strong>Events Calendar</strong> to keep you informed of cultural, civic, and business
-        happenings. <strong>Success Stories</strong> to amplify and celebrate Abian excellence.
+        AbiaConnect was created to change that. We built a platform that respects the intelligence
+        of our people, protects their privacy, and gives every Abian — whether in Umuahia or in
+        Toronto — a dignified space to speak, connect, trade, and thrive.
       </p>
 
-      <h2>Our Values</h2>
-      <ul>
-        <li><strong>Respect:</strong> Every member deserves to be heard with dignity.</li>
-        <li><strong>Authenticity:</strong> We celebrate genuine Abia identity — language, culture, and heritage.</li>
-        <li><strong>Progress:</strong> We believe in a better Abia, built by Abians.</li>
-        <li><strong>Inclusion:</strong> No LGA, no background, no profession is more welcome than another.</li>
-        <li><strong>Accountability:</strong> Our community holds itself to high standards of honest discourse.</li>
-      </ul>
+      <h2>What AbiaConnect Offers</h2>
+      <div className="not-prose grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
+        {FEATURES.map(({ icon: Icon, title, body }) => (
+          <div key={title} className="bg-card border border-border rounded-2xl p-6 hover:border-secondary/40 transition-colors">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground">
+                <Icon className="size-5" />
+              </span>
+              <h3 className="font-semibold text-foreground">{title}</h3>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
+          </div>
+        ))}
+      </div>
 
-      <h2>Join the Movement</h2>
+      <h2>AbiaConnect by the Numbers</h2>
+      <div className="not-prose grid grid-cols-2 md:grid-cols-4 gap-4 my-6">
+        {STATS.map((s) => (
+          <div key={s.label} className="bg-card border border-border rounded-2xl p-6 text-center">
+            <div className="text-4xl font-bold text-secondary">{s.number}</div>
+            <div className="text-muted-foreground text-sm mt-1">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <h2>Built by Abians, for Abians</h2>
       <p>
-        Whether you are contributing to discussions, sharing your business, celebrating your
-        culture, or simply staying connected with home — you belong here.
+        AbiaConnect is not owned by a corporation. It was built by Abians, for Abians. Every
+        feature, every policy, and every decision is guided by one question: Does this serve our
+        people? We invite you to join us, contribute, and help shape the future of this community.
       </p>
-      <p><strong>AbiaConnect. One people. One platform. One Abia.</strong></p>
 
-      <div className="not-prose flex flex-wrap gap-3 pt-6">
-        <Button asChild>
+      <div className="not-prose flex justify-center pt-6">
+        <Button asChild size="lg">
           <Link to="/register">Join AbiaConnect Free</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link to="/">Explore the Forum</Link>
         </Button>
       </div>
     </StaticPage>

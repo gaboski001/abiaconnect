@@ -1,6 +1,8 @@
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Mail } from 'lucide-react'
+import { Mail, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Accordion,
   AccordionContent,
@@ -14,108 +16,83 @@ const SECTIONS: { title: string; items: QA[] }[] = [
   {
     title: 'Getting Started',
     items: [
-      {
-        q: 'How do I create an account on AbiaConnect?',
-        a: 'Click "Join Free" in the top navigation bar. You will be asked for your name, email address, a username, and your LGA of origin. You will also complete a short Abia State verification quiz — this helps us maintain the authenticity of our community. After registration, check your email for a confirmation link.',
-      },
-      {
-        q: 'Is AbiaConnect free to join?',
-        a: 'Yes. Creating an account and participating in the forum is completely free. There are no hidden charges for standard membership.',
-      },
-      {
-        q: 'I did not receive my confirmation email. What should I do?',
-        a: 'Check your spam or junk folder first. If it is not there, go to the Login page and click "Resend confirmation email." If the problem persists, contact us at support@abiaconnect.com.',
-      },
+      { q: 'How do I create an AbiaConnect account?', a: 'Click "Join Free" in the top navigation bar. Complete the two-step registration: enter your personal details, then pass the quick Abia State verification quiz. After registration, verify your email to activate your account.' },
+      { q: 'Why do I need to verify I am from Abia State?', a: 'AbiaConnect is built for Abia State indigenes and friends of Abia. The verification step maintains the cultural identity and trust that make this community special. Non-indigenes who love Abia are welcome — select the non-indigene option during registration.' },
+      { q: 'I did not receive my verification email. What should I do?', a: 'Check your spam or junk folder first. If it is not there, go to the Login page and click "Resend verification email." If problems persist, contact support@abiaconnect.com.' },
     ],
   },
   {
-    title: 'Your Account',
+    title: 'Posting and Threads',
     items: [
-      {
-        q: 'How do I change my profile picture?',
-        a: 'Go to Dashboard → Settings. Scroll to the Profile Picture section and click the upload area. You can upload a JPG, PNG, or WebP image. Maximum file size is 2MB. Your new picture will appear immediately across the platform.',
-      },
-      {
-        q: 'How do I change my username or display name?',
-        a: 'Go to Dashboard → Settings → Profile Information. You can update your display name at any time. Username changes are limited to once every 30 days.',
-      },
-      {
-        q: 'How do I reset my password?',
-        a: 'On the Login page, click "Forgot Password?" and enter your email address. You will receive a password reset link within a few minutes. The link expires after 1 hour for security.',
-      },
-      {
-        q: 'How do I delete my account?',
-        a: 'Go to Dashboard → Settings → Danger Zone. Click "Delete Account" and type DELETE to confirm. This is permanent and cannot be undone. Your posts will be anonymised and remain on the forum.',
-      },
+      { q: 'How do I start a new discussion thread?', a: 'Click "Start a Discussion" on the homepage or navigate to any category and click "New Thread." You must be logged in to post. Select a category, write a clear title, and add your content. Tags help others find your thread.' },
+      { q: 'Can I edit or delete my post after publishing?', a: 'Yes. Click the three-dot menu on your post to edit or delete. Deleting a thread removes all replies — please consider this carefully before deleting.' },
+      { q: 'What are pinned threads?', a: 'Pinned threads are placed at the top of a category by our moderation team because they contain important or especially useful information. Only administrators and moderators can pin threads.' },
     ],
   },
   {
-    title: 'Posting & Forums',
+    title: 'Account and Profile',
     items: [
-      {
-        q: 'How do I start a new thread?',
-        a: 'Click "Start a Discussion" on the homepage or "New Thread" in any category. Choose the correct category, write your title and content, add tags, and submit. You must be logged in to post.',
-      },
-      {
-        q: 'Can I edit or delete my post after publishing?',
-        a: 'Yes. You can edit or delete your own threads and replies from the post menu (three-dot icon). Note that moderators may lock threads to prevent further edits in some cases.',
-      },
-      {
-        q: 'Why was my post removed?',
-        a: 'Posts are removed when they violate our Forum Guidelines. You will receive a notification explaining the reason. If you believe the removal was an error, contact moderation@abiaconnect.com.',
-      },
+      { q: 'How do I change my profile picture?', a: 'Go to Dashboard then Settings then Profile Picture. Click the upload area and select an image from your device. We recommend a square image at least 200x200 pixels in JPG, PNG, or WebP format.' },
+      { q: 'Can I change my username?', a: 'Usernames can be changed once every 30 days. Go to Dashboard then Settings and update the username field. Your old username is released for others after 7 days.' },
+      { q: 'How do I delete my account?', a: 'Go to Dashboard then Settings then Danger Zone. Click "Delete Account" and type DELETE to confirm. This is permanent. Contact support@abiaconnect.com within 14 days if you change your mind.' },
     ],
   },
   {
-    title: 'Subgroups & Messages',
+    title: 'Safety and Reporting',
     items: [
-      {
-        q: 'How do I join a subgroup?',
-        a: 'Go to the Subgroups page and click "Join" on any public subgroup. Private subgroups require approval from the group moderator.',
-      },
-      {
-        q: 'How do I send a private message?',
-        a: 'Go to Messages (in the navigation menu after logging in). Click "New Message", search for the member by name or username, and start typing.',
-      },
-    ],
-  },
-  {
-    title: 'Technical Issues',
-    items: [
-      {
-        q: 'The site is not loading properly. What should I do?',
-        a: 'Try a hard refresh (Ctrl+Shift+R on Windows, Cmd+Shift+R on Mac). If the problem persists, clear your browser cache or try a different browser. For ongoing issues, report them at /report-issue.',
-      },
-      {
-        q: 'I found a bug or security issue. Who do I contact?',
-        a: 'Report bugs at /report-issue. For security vulnerabilities, please email security@abiaconnect.com directly rather than posting publicly.',
-      },
+      { q: 'How do I report a post or user?', a: "Click the three-dot menu on any post or the flag icon on a user's profile. Select a reason and add details. Our team reviews every report within 24 hours." },
+      { q: 'What happens after I report someone?', a: 'Our moderation team reviews the report. If a violation is confirmed, action is taken ranging from a warning to a permanent ban. Reports are confidential.' },
+      { q: 'I am being harassed by another member. What should I do?', a: 'Report the posts using the Report button. You can also block the user from your profile settings. For severe harassment, email moderation@abiaconnect.com with screenshots.' },
     ],
   },
 ]
 
 export default function Help() {
+  const [query, setQuery] = useState('')
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return SECTIONS
+    const q = query.toLowerCase()
+    return SECTIONS
+      .map((s) => ({ ...s, items: s.items.filter((i) => i.q.toLowerCase().includes(q) || i.a.toLowerCase().includes(q)) }))
+      .filter((s) => s.items.length > 0)
+  }, [query])
+
   return (
     <StaticPage
       badge="Support"
       title="Help Center"
-      subtitle="Find answers to common questions about using AbiaConnect."
+      subtitle="Answers to the most common questions about AbiaConnect."
     >
-      {SECTIONS.map((s) => (
+      <div className="not-prose relative mb-8">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search the help center..."
+          className="pl-10 h-12"
+        />
+      </div>
+
+      {filtered.map((s) => (
         <section key={s.title} className="not-prose mb-8">
           <h2 className="text-xl font-semibold text-foreground mb-3">{s.title}</h2>
           <Accordion type="single" collapsible className="border border-border rounded-lg bg-card divide-y divide-border">
             {s.items.map((it, i) => (
               <AccordionItem key={i} value={`${s.title}-${i}`} className="border-b-0 px-4">
                 <AccordionTrigger className="text-left text-foreground">{it.q}</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground leading-relaxed">
-                  {it.a}
-                </AccordionContent>
+                <AccordionContent className="text-muted-foreground leading-relaxed">{it.a}</AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
         </section>
       ))}
+
+      {filtered.length === 0 && (
+        <p className="not-prose text-center text-muted-foreground py-8">
+          No results for “{query}”. Try a different search term.
+        </p>
+      )}
 
       <div className="not-prose rounded-xl border border-border bg-muted/30 p-6 text-center mt-8">
         <h3 className="font-semibold text-foreground mb-2">Still need help?</h3>
@@ -125,9 +102,14 @@ export default function Help() {
             support@abiaconnect.com
           </a>
         </p>
-        <Button asChild>
-          <Link to="/report-issue">Report an Issue</Link>
-        </Button>
+        <div className="flex justify-center gap-3 flex-wrap">
+          <Button asChild variant="outline">
+            <a href="mailto:support@abiaconnect.com">Email Support</a>
+          </Button>
+          <Button asChild>
+            <Link to="/report-issue">Report an Issue</Link>
+          </Button>
+        </div>
       </div>
     </StaticPage>
   )
