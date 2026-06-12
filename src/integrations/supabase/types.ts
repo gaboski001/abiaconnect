@@ -969,6 +969,30 @@ export type Database = {
           id: string
         }[]
       }
+      admin_list_users: {
+        Args: {
+          _ids?: string[]
+          _limit?: number
+          _offset?: number
+          _search?: string
+        }
+        Returns: {
+          avatar_url: string
+          bio: string
+          created_at: string
+          display_name: string
+          dob: string
+          email: string
+          id: string
+          is_banned: boolean
+          is_deleted: boolean
+          lga: string
+          reputation: number
+          role: string
+          total_count: number
+          username: string
+        }[]
+      }
       admin_search_user_ids_by_email: {
         Args: { _term: string }
         Returns: {
