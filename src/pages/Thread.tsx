@@ -608,13 +608,62 @@ export default function Thread() {
                       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(r.content) }}
                     />
                     <div className="flex items-center gap-1 mt-2">
-                      <Button size="sm" variant="ghost" disabled={!user}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={!user || voteReply.isPending || isOptimistic}
+                        onClick={() => voteReply.mutate({ replyId: r.id, value: 1 })}
+                      >
                         <ThumbsUp className="size-3.5" /> {r.upvotes ?? 0}
                       </Button>
-                      <Button size="sm" variant="ghost" disabled={!user}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={!user || voteReply.isPending || isOptimistic}
+                        onClick={() => voteReply.mutate({ replyId: r.id, value: -1 })}
+                      >
                         <ThumbsDown className="size-3.5" /> {r.downvotes ?? 0}
                       </Button>
+                      {user && commentingEnabled && !isOptimistic && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setReplyingTo(replyingTo === r.id ? null : r.id)
+                            setNestedDraft('')
+                          }}
+                        >
+                          {replyingTo === r.id ? 'Cancel' : 'Reply'}
+                        </Button>
+                      )}
                     </div>
+                    {replyingTo === r.id && (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault()
+                          if (!nestedDraft.trim()) return
+                          submitReply.mutate({ content: nestedDraft, parentId: r.id })
+                        }}
+                        className="mt-3 space-y-2"
+                      >
+                        <Textarea
+                          value={nestedDraft}
+                          onChange={(e) => setNestedDraft(e.target.value)}
+                          placeholder={`Reply to ${name}…`}
+                          rows={3}
+                          maxLength={5000}
+                          autoFocus
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button type="button" size="sm" variant="ghost" onClick={() => setReplyingTo(null)}>
+                            Cancel
+                          </Button>
+                          <Button type="submit" size="sm" disabled={submitReply.isPending || !nestedDraft.trim()}>
+                            {submitReply.isPending ? 'Posting…' : 'Post'}
+                          </Button>
+                        </div>
+                      </form>
+                    )}
                   </li>
                 )
               })}
