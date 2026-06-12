@@ -347,48 +347,92 @@ export default function Thread() {
 
       <section className="space-y-4">
         <h2 className="text-xl font-bold">
-          {replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}
+          {totalReplies} {totalReplies === 1 ? 'Reply' : 'Replies'}
         </h2>
 
         {repliesQ.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading replies…</p>
+          <ul className="space-y-3" aria-busy="true">
+            {[0, 1, 2].map((i) => (
+              <li
+                key={i}
+                className="rounded-2xl border border-border bg-card p-4 space-y-2 animate-pulse"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="size-8 rounded-full bg-muted" />
+                  <div className="h-3 w-24 rounded bg-muted" />
+                  <div className="h-3 w-16 rounded bg-muted" />
+                </div>
+                <div className="h-3 w-11/12 rounded bg-muted" />
+                <div className="h-3 w-9/12 rounded bg-muted" />
+              </li>
+            ))}
+          </ul>
+        ) : repliesQ.isError ? (
+          <div className="text-sm space-y-2">
+            <p className="text-muted-foreground">Failed to load replies.</p>
+            <Button size="sm" variant="outline" onClick={() => repliesQ.refetch()}>
+              Retry
+            </Button>
+          </div>
         ) : replies.length === 0 ? (
           <p className="text-sm text-muted-foreground">No replies yet.</p>
         ) : (
-          <ul className="space-y-3">
-            {replies.map((r) => {
-              const name = r.profiles?.display_name ?? 'Member'
-              return (
-                <li
-                  key={r.id}
-                  className={`rounded-2xl border border-border bg-card p-4 ${
-                    r.parent_reply_id ? 'ml-8' : ''
-                  }`}
+          <>
+            <ul className="space-y-3">
+              {replies.map((r) => {
+                const name = r.profiles?.display_name ?? 'Member'
+                return (
+                  <li
+                    key={r.id}
+                    className={`rounded-2xl border border-border bg-card p-4 ${
+                      r.parent_reply_id ? 'ml-8' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Avatar name={name} url={r.profiles?.avatar_url} />
+                      <span className="font-medium text-sm">{name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <div
+                      className="prose prose-sm dark:prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(r.content) }}
+                    />
+                    <div className="flex items-center gap-1 mt-2">
+                      <Button size="sm" variant="ghost" disabled={!user}>
+                        <ThumbsUp className="size-3.5" /> {r.upvotes ?? 0}
+                      </Button>
+                      <Button size="sm" variant="ghost" disabled={!user}>
+                        <ThumbsDown className="size-3.5" /> {r.downvotes ?? 0}
+                      </Button>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+
+            {repliesQ.hasNextPage && (
+              <div className="flex justify-center pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => repliesQ.fetchNextPage()}
+                  disabled={repliesQ.isFetchingNextPage}
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Avatar name={name} url={r.profiles?.avatar_url} />
-                    <span className="font-medium text-sm">{name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
-                    </span>
-                  </div>
-                  <div
-                    className="prose prose-sm dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(r.content) }}
-                  />
-                  <div className="flex items-center gap-1 mt-2">
-                    <Button size="sm" variant="ghost" disabled={!user}>
-                      <ThumbsUp className="size-3.5" /> {r.upvotes ?? 0}
-                    </Button>
-                    <Button size="sm" variant="ghost" disabled={!user}>
-                      <ThumbsDown className="size-3.5" /> {r.downvotes ?? 0}
-                    </Button>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+                  {repliesQ.isFetchingNextPage ? (
+                    <>
+                      <Loader2 className="size-3.5 mr-1 animate-spin" /> Loading…
+                    </>
+                  ) : (
+                    `Load more replies (${Math.max(0, totalReplies - replies.length)} left)`
+                  )}
+                </Button>
+              </div>
+            )}
+          </>
         )}
+
 
         {user ? (
           commentingEnabled ? (
