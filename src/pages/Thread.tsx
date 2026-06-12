@@ -438,10 +438,22 @@ export default function Thread() {
         />
 
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
-          <Button size="sm" variant="outline" onClick={() => vote.mutate(1)} disabled={!user}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => !vote.isPending && vote.mutate(1)}
+            disabled={!user || vote.isPending}
+            aria-busy={vote.isPending}
+          >
             <ThumbsUp /> {thread.upvotes ?? 0}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => vote.mutate(-1)} disabled={!user}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => !vote.isPending && vote.mutate(-1)}
+            disabled={!user || vote.isPending}
+            aria-busy={vote.isPending}
+          >
             <ThumbsDown /> {thread.downvotes ?? 0}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => bookmark.mutate()} disabled={!user}>
