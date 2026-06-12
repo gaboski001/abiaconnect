@@ -40,13 +40,15 @@ export function useSignedUrl(
   bucket: 'avatars' | 'site-assets' | string = 'avatars',
   expiresIn = 60 * 60,
 ): string | null {
-  const isPublicUrl = (v: string) =>
-    /^https?:\/\//.test(v) &&
-    (!v.includes('/storage/v1/object/') || v.includes('/storage/v1/object/public/'))
+  // Only short-circuit for external (non-Supabase-storage) URLs. Public-looking
+  // storage URLs (`/storage/v1/object/public/...`) still 403 when the bucket is
+  // private, so we always re-sign anything that points at Supabase storage.
+  const isExternalUrl = (v: string) =>
+    /^https?:\/\//.test(v) && !v.includes('/storage/v1/object/')
 
   const [url, setUrl] = useState<string | null>(() => {
     if (!pathOrUrl) return null
-    if (isPublicUrl(pathOrUrl)) return pathOrUrl
+    if (isExternalUrl(pathOrUrl)) return pathOrUrl
     return null
   })
 
@@ -56,7 +58,7 @@ export function useSignedUrl(
       setUrl(null)
       return
     }
-    if (isPublicUrl(pathOrUrl)) {
+    if (isExternalUrl(pathOrUrl)) {
       setUrl(pathOrUrl)
       return
     }
