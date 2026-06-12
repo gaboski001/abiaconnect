@@ -197,20 +197,18 @@ export default function CreateThread() {
       return
     }
     const finalTags = values.flair && !tags.includes(values.flair) ? [values.flair, ...tags] : tags
-    const insertPayload: Record<string, unknown> = {
-      user_id: user.id,
-      title: values.title.trim(),
-      content: values.content,
-      tags: finalTags,
-      allow_replies: values.allow_replies,
-      is_anonymous: values.is_anonymous,
-    }
-    if (values.subgroup_id) insertPayload.subgroup_id = values.subgroup_id
-    if (values.category_id) insertPayload.category_id = values.category_id
-
     const { data, error } = await supabase
       .from('threads')
-      .insert(insertPayload)
+      .insert({
+        user_id: user.id,
+        title: values.title.trim(),
+        content: values.content,
+        tags: finalTags,
+        allow_replies: values.allow_replies,
+        is_anonymous: values.is_anonymous,
+        subgroup_id: values.subgroup_id || null,
+        category_id: values.category_id || null,
+      })
       .select('id')
       .single()
 
