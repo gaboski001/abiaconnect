@@ -1065,6 +1065,10 @@ function SiteSettingsSection() {
 function SeedDatabaseCard() {
   const { user } = useAuth()
   const [running, setRunning] = useState(false)
+  const [seedingArticles, setSeedingArticles] = useState(false)
+  const [articlesDone, setArticlesDone] = useState(
+    () => typeof window !== 'undefined' && localStorage.getItem('abiaconnect_articles_seeded') === 'true',
+  )
 
   const run = async () => {
     if (!user) {
@@ -1085,21 +1089,56 @@ function SeedDatabaseCard() {
     }
   }
 
+  const runArticles = async () => {
+    if (!user) {
+      toast.error('You must be signed in as an admin')
+      return
+    }
+    setSeedingArticles(true)
+    try {
+      await seedArticles(user.id)
+      localStorage.setItem('abiaconnect_articles_seeded', 'true')
+      setArticlesDone(true)
+      toast.success('14 professional articles seeded successfully across all categories')
+    } catch (e: any) {
+      toast.error(e.message || 'Article seeding failed')
+    } finally {
+      setSeedingArticles(false)
+    }
+  }
+
   return (
-    <div className="rounded-2xl border-2 border-orange-400/70 bg-orange-50/60 dark:bg-orange-950/20 p-4 space-y-3">
+    <div className="rounded-2xl border-2 border-orange-400/70 bg-orange-50/60 dark:bg-orange-950/20 p-4 space-y-4">
       <div>
         <h3 className="font-semibold text-orange-900 dark:text-orange-200">
-          ⚠️ Seed Initial Content
+          ⚠️ Content Seeding
         </h3>
         <p className="text-sm text-orange-900/80 dark:text-orange-200/80 mt-1">
-          This will populate the forum with starter categories, sample threads, and subgroups. Run
-          once only.
+          Each button can only be used once. Seed categories before articles.
         </p>
       </div>
-      <Button onClick={run} disabled={running} variant="default">
-        {running ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-        Seed Database Now
-      </Button>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Starter content</p>
+        <p className="text-xs text-muted-foreground">
+          Populates categories, sample threads, and subgroups.
+        </p>
+        <Button onClick={run} disabled={running} variant="default">
+          {running ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+          Seed Database Now
+        </Button>
+      </div>
+
+      <div className="space-y-2 border-t border-orange-400/30 pt-3">
+        <p className="text-sm font-medium">Long-form articles</p>
+        <p className="text-xs text-muted-foreground">
+          Inserts one pinned, professionally written article into each of the 14 categories.
+        </p>
+        <Button onClick={runArticles} disabled={seedingArticles || articlesDone} variant="secondary">
+          {seedingArticles ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+          {articlesDone ? 'Articles Already Seeded' : 'Seed Articles (14 pinned threads)'}
+        </Button>
+      </div>
     </div>
   )
 }
