@@ -614,6 +614,38 @@ export type Database = {
           },
         ]
       }
+      subgroup_membership_audit: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          subgroup_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          subgroup_id: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          subgroup_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subgroup_membership_audit_subgroup_id_fkey"
+            columns: ["subgroup_id"]
+            isOneToOne: false
+            referencedRelation: "subgroups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subgroups: {
         Row: {
           category: string | null
