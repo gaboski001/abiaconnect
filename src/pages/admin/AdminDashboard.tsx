@@ -58,6 +58,10 @@ import { cn } from '@/lib/utils'
 import { SafeImage } from '@/components/ui/SafeImage'
 
 import CategoriesSection from '@/components/admin/CategoriesSection'
+import HeroSlidesSection, {
+  HeroSlidesExpiryAlert,
+} from '@/components/admin/HeroSlidesSection'
+import { Image as ImageIcon } from 'lucide-react'
 
 type SectionId =
   | 'overview'
@@ -67,6 +71,7 @@ type SectionId =
   | 'polls'
   | 'subgroups'
   | 'settings'
+  | 'slides'
   | 'email'
 
 const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
@@ -77,6 +82,7 @@ const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'polls', label: 'Polls Management', Icon: Vote },
   { id: 'subgroups', label: 'Subgroups', Icon: Shield },
   { id: 'settings', label: 'Site Settings', Icon: Settings },
+  { id: 'slides', label: 'Hero Slider', Icon: ImageIcon },
   { id: 'email', label: 'Email Settings', Icon: Mail },
 ]
 
