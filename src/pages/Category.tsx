@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { ArrowBigUp, ChevronRight, Eye, Flame, MessageSquare, Pin, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -42,6 +42,31 @@ interface Thread {
 export default function CategoryPage() {
   const { categoryId } = useParams<{ categoryId: string }>()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!categoryId) return
+    const channel = supabase
+      .channel(`threads-category:${categoryId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'threads', filter: `category_id=eq.${categoryId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['threads', categoryId] })
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'replies' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['threads', categoryId] })
+        },
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [categoryId, queryClient])
 
   const categoryQ = useQuery({
     queryKey: ['category', categoryId],
