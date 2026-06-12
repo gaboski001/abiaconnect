@@ -1,10 +1,7 @@
-import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { CategoryList } from '@/components/forum/CategoryList'
 import { SEO } from '@/components/SEO'
 import { SidebarWidgets } from '@/components/forum/SidebarWidgets'
+import { HeroSlider } from '@/components/forum/HeroSlider'
 
 const AVATAR_COLORS = [
   'from-emerald-400 to-emerald-700',
