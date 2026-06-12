@@ -82,27 +82,41 @@ export default function CategoryPage() {
     },
   })
 
+  const PAGE_SIZE = 20
+  const [page, setPage] = useState(0)
+
   const threadsQ = useQuery({
-    queryKey: ['threads', categoryId],
+    queryKey: ['threads', categoryId, page],
     enabled: !!categoryId,
+    staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = page * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
+      const { data, error, count } = await supabase
         .from('threads')
-        .select('id, category_id, subgroup_id, user_id, title, content, tags, allow_replies, is_anonymous, is_deleted, created_at, updated_at, is_pinned, upvotes, view_count, profiles(display_name, avatar_url), replies(count)')
+        .select(
+          'id, category_id, user_id, author_id, title, tags, is_pinned, upvotes, view_count, created_at, profiles:author_id(display_name, avatar_url), replies(count)',
+          { count: 'exact' },
+        )
         .eq('category_id', categoryId!)
+        .eq('is_deleted', false)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
+        .range(from, to)
       if (error) throw error
-      return ((data ?? []) as Array<Thread & { replies?: { count: number }[] }>).map((t) => ({
+      const rows = ((data ?? []) as Array<Thread & { replies?: { count: number }[] }>).map((t) => ({
         ...t,
         reply_count: t.replies?.[0]?.count ?? 0,
       })) as Thread[]
+      return { rows, total: count ?? rows.length }
     },
   })
 
   const category = categoryQ.data
-  const rawThreads = threadsQ.data ?? []
+  const rawThreads = threadsQ.data?.rows ?? []
+  const totalThreads = threadsQ.data?.total ?? 0
   const [sort, setSort] = useState<SortKey>('latest')
+
 
   const threads = useMemo(() => {
     const arr = [...rawThreads]
