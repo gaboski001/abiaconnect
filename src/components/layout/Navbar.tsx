@@ -24,6 +24,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { RealtimeStatus } from '@/components/RealtimeStatus'
+import { MessagesBell } from '@/components/messages/MessagesBell'
 
 export function Navbar() {
   const navigate = useNavigate()
@@ -184,6 +185,7 @@ export function Navbar() {
 
           <RealtimeStatus className="hidden md:inline-flex" />
 
+          {user && <MessagesBell />}
           {user && <NotificationBell />}
 
           {user ? (
