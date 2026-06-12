@@ -190,11 +190,12 @@ export function Navbar() {
 
           <RealtimeStatus className="hidden md:inline-flex" />
 
-          {user && <MessagesBell />}
-          {user && <NotificationBell />}
-
-          {user ? (
+          {authLoading ? (
+            <div className="h-9 w-24" aria-hidden="true" />
+          ) : user ? (
             <>
+              <MessagesBell />
+              <NotificationBell />
               <Link to="/profile" aria-label="Profile" className="flex">
                 <UserAvatar
                   avatarUrl={profile?.avatar_url}
