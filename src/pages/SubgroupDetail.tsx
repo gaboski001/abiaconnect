@@ -431,9 +431,9 @@ export default function SubgroupDetail() {
                     className="rounded-xl border bg-card p-3 flex items-center gap-3"
                   >
                     <UserAvatar
-                      src={m.avatar_url}
-                      name={m.display_name}
-                      className="h-10 w-10"
+                      avatarUrl={m.avatar_url}
+                      displayName={m.display_name}
+                      size="md"
                     />
                     <div className="min-w-0 flex-1">
                       <p className="font-medium truncate">{m.display_name}</p>
