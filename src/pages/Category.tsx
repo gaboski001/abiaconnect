@@ -95,7 +95,7 @@ export default function CategoryPage() {
       const { data, error, count } = await supabase
         .from('threads')
         .select(
-          'id, category_id, user_id, author_id, title, tags, is_pinned, upvotes, view_count, created_at, profiles:author_id(display_name, avatar_url), replies(count)',
+          'id, category_id, user_id, author_id, title, tags, is_pinned, is_anonymous, upvotes, view_count, created_at, replies(count)',
           { count: 'exact' },
         )
         .eq('category_id', categoryId!)
@@ -104,9 +104,24 @@ export default function CategoryPage() {
         .order('created_at', { ascending: false })
         .range(from, to)
       if (error) throw error
-      const rows = ((data ?? []) as Array<Thread & { replies?: { count: number }[] }>).map((t) => ({
+      const baseRows = (data ?? []) as Array<Thread & { replies?: { count: number }[]; is_anonymous?: boolean | null }>
+      const authorIds = Array.from(
+        new Set(baseRows.map((t) => t.author_id).filter((v): v is string => !!v)),
+      )
+      let profMap = new Map<string, { display_name: string | null; avatar_url: string | null }>()
+      if (authorIds.length > 0) {
+        const { data: profs } = await supabase.rpc('get_public_profiles', { _ids: authorIds })
+        profMap = new Map(
+          ((profs ?? []) as Array<{ id: string; display_name: string | null; avatar_url: string | null }>).map((p) => [
+            p.id,
+            { display_name: p.display_name, avatar_url: p.avatar_url },
+          ]),
+        )
+      }
+      const rows = baseRows.map((t) => ({
         ...t,
         reply_count: t.replies?.[0]?.count ?? 0,
+        profiles: t.author_id ? profMap.get(t.author_id) ?? null : null,
       })) as Thread[]
       return { rows, total: count ?? rows.length }
     },
