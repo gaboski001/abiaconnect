@@ -86,9 +86,6 @@ export default function SubgroupDetail() {
         .select('subgroup_id')
       if (error) throw error
       const action = data && data.length > 0 ? 'joined' : 'duplicate_ignored'
-      await supabase
-        .from('subgroup_membership_audit')
-        .insert({ subgroup_id: subgroupId!, user_id: user.id, action })
       return action
     },
     onSuccess: (action) => {
@@ -107,9 +104,6 @@ export default function SubgroupDetail() {
         .eq('subgroup_id', subgroupId!)
         .eq('user_id', user.id)
       if (error) throw error
-      await supabase
-        .from('subgroup_membership_audit')
-        .insert({ subgroup_id: subgroupId!, user_id: user.id, action: 'left' })
     },
     onSuccess: () => {
       toast.success('Left subgroup')

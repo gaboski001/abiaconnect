@@ -40,13 +40,10 @@ export default function Profile() {
     queryKey: ['profile', user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user!.id)
-        .maybeSingle()
+      const { data, error } = await supabase.rpc('get_my_profile')
       if (error) throw error
-      return (data ?? {}) as Profile
+      const row = Array.isArray(data) ? data[0] : data
+      return (row ?? {}) as Profile
     },
   })
 
