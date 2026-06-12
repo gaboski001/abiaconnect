@@ -112,7 +112,7 @@ export default function Subgroups() {
       if (!user) throw new Error('Sign in required')
       const { error } = await supabase
         .from('subgroup_members')
-        .insert({ subgroup_id: subgroupId, user_id: user.id })
+        .upsert({ subgroup_id: subgroupId, user_id: user.id }, { onConflict: 'subgroup_id,user_id', ignoreDuplicates: true })
       if (error) throw error
     },
     onSuccess: () => {
