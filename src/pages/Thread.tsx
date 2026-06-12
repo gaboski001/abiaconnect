@@ -60,10 +60,127 @@ interface Reply {
   profiles?: { display_name?: string | null; avatar_url?: string | null } | null
 }
 
-function Avatar({ name, url, size = 8 }: { name: string; url?: string | null; size?: number }) {
+const Avatar = memo(function Avatar({
+  name,
+  url,
+  size = 8,
+}: {
+  name: string
+  url?: string | null
+  size?: number
+}) {
   const avatarSize = size >= 10 ? 'md' : 'sm'
   return <UserAvatar avatarUrl={url} displayName={name} size={avatarSize} />
+})
+
+interface ReplyItemProps {
+  reply: Reply
+  canVote: boolean
+  canReply: boolean
+  voting: boolean
+  replyingTo: string | null
+  nestedDraft: string
+  submitting: boolean
+  onVote: (replyId: string, value: 1 | -1) => void
+  onToggleReply: (replyId: string) => void
+  onNestedDraftChange: (v: string) => void
+  onSubmitNested: (replyId: string) => void
+  onCancelNested: () => void
 }
+
+const ReplyItem = memo(function ReplyItem({
+  reply: r,
+  canVote,
+  canReply,
+  voting,
+  replyingTo,
+  nestedDraft,
+  submitting,
+  onVote,
+  onToggleReply,
+  onNestedDraftChange,
+  onSubmitNested,
+  onCancelNested,
+}: ReplyItemProps) {
+  const name = r.profiles?.display_name ?? 'Member'
+  const isOptimistic = (r as Reply & { _optimistic?: boolean })._optimistic
+  const safeHtml = useMemo(() => DOMPurify.sanitize(r.content), [r.content])
+  const isOpen = replyingTo === r.id
+  return (
+    <li
+      className={`rounded-2xl border border-border bg-card p-4 transition-opacity ${
+        r.parent_reply_id ? 'ml-8' : ''
+      } ${isOptimistic ? 'opacity-60' : ''}`}
+      aria-busy={isOptimistic ? 'true' : undefined}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <Avatar name={name} url={r.profiles?.avatar_url} />
+        <span className="font-medium text-sm">{name}</span>
+        <span className="text-xs text-muted-foreground">
+          {isOptimistic
+            ? 'Sending…'
+            : formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
+        </span>
+      </div>
+      <div
+        className="prose prose-sm dark:prose-invert max-w-none"
+        dangerouslySetInnerHTML={{ __html: safeHtml }}
+      />
+      <div className="flex items-center gap-1 mt-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={!canVote || voting || isOptimistic}
+          onClick={() => onVote(r.id, 1)}
+        >
+          <ThumbsUp className="size-3.5" /> {r.upvotes ?? 0}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={!canVote || voting || isOptimistic}
+          onClick={() => onVote(r.id, -1)}
+        >
+          <ThumbsDown className="size-3.5" /> {r.downvotes ?? 0}
+        </Button>
+        {canReply && !isOptimistic && (
+          <Button size="sm" variant="ghost" onClick={() => onToggleReply(r.id)}>
+            {isOpen ? 'Cancel' : 'Reply'}
+          </Button>
+        )}
+      </div>
+      {isOpen && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!nestedDraft.trim()) return
+            onSubmitNested(r.id)
+          }}
+          className="mt-3 space-y-2"
+        >
+          <Suspense fallback={<div className="h-20 rounded-md bg-muted animate-pulse" />}>
+            <Textarea
+              value={nestedDraft}
+              onChange={(e) => onNestedDraftChange(e.target.value)}
+              placeholder={`Reply to ${name}…`}
+              rows={3}
+              maxLength={5000}
+              autoFocus
+            />
+          </Suspense>
+          <div className="flex justify-end gap-2">
+            <Button type="button" size="sm" variant="ghost" onClick={onCancelNested}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" disabled={submitting || !nestedDraft.trim()}>
+              {submitting ? 'Posting…' : 'Post'}
+            </Button>
+          </div>
+        </form>
+      )}
+    </li>
+  )
+})
 
 export default function Thread() {
   const { threadId } = useParams<{ threadId: string }>()
