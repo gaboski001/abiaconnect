@@ -67,6 +67,8 @@ export default function Thread() {
   const { settings } = useSiteSettings()
   const qc = useQueryClient()
   const [reply, setReply] = useState('')
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [nestedDraft, setNestedDraft] = useState('')
   const commentingEnabled = settings.global_commenting_enabled !== 'false'
 
   const threadQ = useQuery({
