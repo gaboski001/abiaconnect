@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Navbar } from './Navbar'
 import { Footer } from './Footer'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
+
+const InstallPrompt = lazy(() => import('@/components/pwa/InstallPrompt'))
 
 export function MainLayout() {
   const location = useLocation()
@@ -51,6 +53,10 @@ export function MainLayout() {
       </main>
 
       <Footer />
+
+      <Suspense fallback={null}>
+        <InstallPrompt />
+      </Suspense>
     </div>
   )
 }
