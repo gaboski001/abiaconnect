@@ -81,7 +81,7 @@ export default function SubgroupDetail() {
         .from('subgroup_members')
         .upsert(
           { subgroup_id: subgroupId!, user_id: user.id },
-          { onConflict: 'subgroup_id,user_id', ignoreDuplicates: true },
+          SUBGROUP_MEMBERS_UPSERT_OPTIONS,
         )
         .select('subgroup_id')
       if (error) throw error
