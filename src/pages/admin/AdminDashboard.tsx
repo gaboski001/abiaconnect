@@ -1066,28 +1066,11 @@ function SeedDatabaseCard() {
   const { user } = useAuth()
   const [running, setRunning] = useState(false)
   const [seedingArticles, setSeedingArticles] = useState(false)
+  const [articleProgress, setArticleProgress] = useState(0)
+  const [articleStatus, setArticleStatus] = useState<string>('')
   const [articlesDone, setArticlesDone] = useState(
     () => typeof window !== 'undefined' && localStorage.getItem('abiaconnect_articles_seeded') === 'true',
   )
-
-  const run = async () => {
-    if (!user) {
-      toast.error('You must be signed in as an admin')
-      return
-    }
-    setRunning(true)
-    try {
-      const result = await seedDatabase(user.id)
-      localStorage.setItem('abiaconnect_seeded', 'true')
-      toast.success(
-        `✅ Database seeded successfully! ${result.counts.categories} categories, ${result.counts.threads} threads, ${result.counts.subgroups} subgroups are ready.`,
-      )
-    } catch (e: any) {
-      toast.error(e.message || 'Seeding failed')
-    } finally {
-      setRunning(false)
-    }
-  }
 
   const runArticles = async () => {
     if (!user) {
@@ -1095,12 +1078,29 @@ function SeedDatabaseCard() {
       return
     }
     setSeedingArticles(true)
+    setArticleProgress(5)
+    setArticleStatus('Fetching categories…')
+
+    // Smooth fake progress while the single insert call runs.
+    const tick = setInterval(() => {
+      setArticleProgress((p) => (p < 90 ? p + 5 : p))
+      setArticleStatus('Inserting articles…')
+    }, 400)
+
     try {
-      await seedArticles(user.id)
+      const result = await seedArticles(user.id)
+      clearInterval(tick)
+      setArticleProgress(100)
+      setArticleStatus(`Inserted ${result.count}, skipped ${result.skipped}`)
       localStorage.setItem('abiaconnect_articles_seeded', 'true')
       setArticlesDone(true)
-      toast.success('14 professional articles seeded successfully across all categories')
+      toast.success(
+        `✅ Articles seeded — inserted ${result.count}, skipped ${result.skipped} (already existed) of ${result.count + result.skipped}.`,
+      )
     } catch (e: any) {
+      clearInterval(tick)
+      setArticleProgress(0)
+      setArticleStatus('')
       toast.error(e.message || 'Article seeding failed')
     } finally {
       setSeedingArticles(false)
@@ -1136,8 +1136,25 @@ function SeedDatabaseCard() {
         </p>
         <Button onClick={runArticles} disabled={seedingArticles || articlesDone} variant="secondary">
           {seedingArticles ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-          {articlesDone ? 'Articles Already Seeded' : 'Seed Articles (14 pinned threads)'}
+          {seedingArticles
+            ? 'Seeding articles…'
+            : articlesDone
+              ? 'Articles Already Seeded'
+              : 'Seed Articles (14 pinned threads)'}
         </Button>
+        {(seedingArticles || articleProgress > 0) && (
+          <div className="space-y-1 pt-1" role="status" aria-live="polite">
+            <div className="h-2 w-full rounded-full bg-orange-200/60 dark:bg-orange-900/40 overflow-hidden">
+              <div
+                className="h-full bg-orange-500 transition-all duration-300"
+                style={{ width: `${articleProgress}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {articleStatus} {articleProgress > 0 ? `(${articleProgress}%)` : ''}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
