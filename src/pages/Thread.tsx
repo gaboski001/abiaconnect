@@ -203,19 +203,28 @@ export default function Thread() {
       const { data, error } = await supabase
         .from('replies')
         .insert({ thread_id: threadId, user_id: user.id, content: trimmed })
-        .select('*, profiles(display_name, avatar_url)')
+        .select('*, profiles:user_id(display_name, avatar_url)')
         .single()
       if (error) throw error
       return data as Reply
     },
     onSuccess: (newReply) => {
-      qc.setQueryData<Reply[]>(['replies', threadId], (prev = []) =>
-        prev.some((r) => r.id === newReply.id) ? prev : [...prev, newReply],
-      )
+      qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
+        if (!prev) return prev
+        const exists = prev.pages.some((p) => p.rows.some((r) => r.id === newReply.id))
+        if (exists) return prev
+        const pages = prev.pages.map((p, i) =>
+          i === prev.pages.length - 1
+            ? { ...p, rows: [...p.rows, newReply], total: p.total + 1 }
+            : { ...p, total: p.total + 1 },
+        )
+        return { ...prev, pages }
+      })
       setReply('')
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Reply failed'),
   })
+
 
   if (threadQ.isLoading) {
     return (
