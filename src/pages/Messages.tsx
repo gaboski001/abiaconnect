@@ -489,7 +489,7 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
     queryFn: async () => {
       const term = `%${q.trim()}%`
       const { data, error } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('id, display_name, username, avatar_url')
         .or(`display_name.ilike.${term},username.ilike.${term}`)
         .neq('id', user?.id || '')
