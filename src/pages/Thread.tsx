@@ -245,13 +245,10 @@ export default function Thread() {
       )
       let profilesMap = new Map<string, { display_name: string | null; avatar_url: string | null }>()
       if (userIds.length > 0) {
-        const { data: profs } = await supabase
-          .from('profiles')
-          .select('id, display_name, avatar_url')
-          .in('id', userIds)
+        const { data: profs } = await supabase.rpc('get_public_profiles', { _ids: userIds })
         profilesMap = new Map(
-          (profs ?? []).map((p) => [
-            p.id as string,
+          ((profs ?? []) as Array<{ id: string; display_name: string | null; avatar_url: string | null }>).map((p) => [
+            p.id,
             { display_name: p.display_name ?? null, avatar_url: p.avatar_url ?? null },
           ]),
         )
