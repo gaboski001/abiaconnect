@@ -29,12 +29,19 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
 const schema = z.object({
-  category_id: z.string().min(1, 'Choose a category'),
+  category_id: z.string().optional(),
+  subgroup_id: z.string().optional(),
   title: z.string().trim().min(10, 'At least 10 characters').max(200, 'Max 200 characters'),
   content: z.string().min(30, 'At least 30 characters'),
+  flair: z.string().optional(),
   allow_replies: z.boolean(),
   is_anonymous: z.boolean(),
+}).refine((v) => !!v.category_id || !!v.subgroup_id, {
+  message: 'Choose a category',
+  path: ['category_id'],
 })
+
+const FLAIRS = ['Question', 'Discussion', 'Announcement'] as const
 
 type FormValues = z.infer<typeof schema>
 
@@ -67,6 +74,7 @@ export default function CreateThread() {
   const { user } = useAuth()
   const [params] = useSearchParams()
   const presetCategory = params.get('category') ?? ''
+  const presetSubgroup = params.get('subgroup') ?? ''
 
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
@@ -74,6 +82,7 @@ export default function CreateThread() {
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', 'list'],
+    enabled: !presetSubgroup,
     queryFn: async () => {
       const { data, error } = await supabase.from('categories').select('id, name').order('name')
       if (error) throw error
@@ -81,12 +90,51 @@ export default function CreateThread() {
     },
   })
 
+  const subgroupQ = useQuery({
+    queryKey: ['subgroup-mini', presetSubgroup],
+    enabled: !!presetSubgroup,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subgroups')
+        .select('id, name')
+        .eq('id', presetSubgroup)
+        .single()
+      if (error) throw error
+      return data
+    },
+  })
+
+  const membershipQ = useQuery({
+    queryKey: ['subgroup-membership', presetSubgroup, user?.id],
+    enabled: !!presetSubgroup && !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subgroup_members')
+        .select('user_id')
+        .eq('subgroup_id', presetSubgroup)
+        .eq('user_id', user!.id)
+        .maybeSingle()
+      if (error) throw error
+      return !!data
+    },
+    staleTime: Infinity,
+  })
+
+  useEffect(() => {
+    if (presetSubgroup && membershipQ.isFetched && membershipQ.data === false) {
+      toast.error('Join this subgroup to post')
+      navigate(`/subgroups/${presetSubgroup}`)
+    }
+  }, [presetSubgroup, membershipQ.isFetched, membershipQ.data, navigate])
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       category_id: presetCategory,
+      subgroup_id: presetSubgroup,
       title: '',
       content: '',
+      flair: undefined,
       allow_replies: true,
       is_anonymous: false,
     },
@@ -148,16 +196,18 @@ export default function CreateThread() {
       toast.error('Your post was flagged for review and not published. Please revise and try again.')
       return
     }
+    const finalTags = values.flair && !tags.includes(values.flair) ? [values.flair, ...tags] : tags
     const { data, error } = await supabase
       .from('threads')
       .insert({
-        category_id: values.category_id,
         user_id: user.id,
         title: values.title.trim(),
         content: values.content,
-        tags,
+        tags: finalTags,
         allow_replies: values.allow_replies,
         is_anonymous: values.is_anonymous,
+        subgroup_id: values.subgroup_id || null,
+        category_id: values.category_id || null,
       })
       .select('id')
       .single()
@@ -177,26 +227,51 @@ export default function CreateThread() {
       <form onSubmit={onSubmit} className="lg:col-span-2 space-y-6">
         <h1 className="text-2xl font-bold">Create a Thread</h1>
 
-        {/* Category */}
-        <div className="space-y-1.5">
-          <Label>Category</Label>
-          <Select
-            value={form.watch('category_id')}
-            onValueChange={(v) => form.setValue('category_id', v, { shouldValidate: true })}
-          >
-            <SelectTrigger className="focus:border-primary focus:ring-primary/30">
-              <SelectValue placeholder="Choose a category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.category_id && (
-            <p className="text-xs text-destructive">{form.formState.errors.category_id.message}</p>
-          )}
-        </div>
+        {presetSubgroup ? (
+          <div className="rounded-xl border border-border bg-card p-3 text-sm">
+            Posting in subgroup{' '}
+            <span className="font-semibold">{subgroupQ.data?.name ?? '…'}</span>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <Label>Category</Label>
+            <Select
+              value={form.watch('category_id')}
+              onValueChange={(v) => form.setValue('category_id', v, { shouldValidate: true })}
+            >
+              <SelectTrigger className="focus:border-primary focus:ring-primary/30">
+                <SelectValue placeholder="Choose a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.category_id && (
+              <p className="text-xs text-destructive">{form.formState.errors.category_id.message}</p>
+            )}
+          </div>
+        )}
+
+        {presetSubgroup && (
+          <div className="space-y-1.5">
+            <Label>Flair (optional)</Label>
+            <Select
+              value={form.watch('flair') ?? ''}
+              onValueChange={(v) => form.setValue('flair', v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Question, Discussion, Announcement…" />
+              </SelectTrigger>
+              <SelectContent>
+                {FLAIRS.map((f) => (
+                  <SelectItem key={f} value={f}>{f}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Title */}
         <div className="space-y-1.5">
