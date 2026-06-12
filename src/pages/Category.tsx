@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { ArrowBigUp, ChevronRight, Eye, Flame, MessageSquare, Pin, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
