@@ -182,6 +182,8 @@ export function Navbar() {
 
           <ThemeToggle />
 
+          <RealtimeStatus className="hidden md:inline-flex" />
+
           {user && <NotificationBell />}
 
           {user ? (
