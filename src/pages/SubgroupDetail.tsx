@@ -142,6 +142,30 @@ export default function SubgroupDetail() {
     }
   }, [subgroupId, user])
 
+  // Realtime: prepend newly inserted threads for THIS subgroup only (scoped filter, page 0 only)
+  useEffect(() => {
+    if (!subgroupId || page !== 0) return
+    const ch = supabase
+      .channel(`subgroup-threads:${subgroupId}`)
+      .on(
+        'postgres_changes' as never,
+        { event: 'INSERT', schema: 'public', table: 'threads', filter: `subgroup_id=eq.${subgroupId}` },
+        (payload: any) => {
+          const row = payload.new
+          if (!row) return
+          qc.setQueryData(['subgroup-threads', subgroupId, 0], (old: any[] | undefined) => {
+            const list = old ?? []
+            if (list.some((t) => t.id === row.id)) return list
+            return [row, ...list].slice(0, PAGE_SIZE)
+          })
+        },
+      )
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(ch)
+    }
+  }, [subgroupId, page, qc])
+
   // 5f: Reply counts for visible threads
   const threadIds = (threadsQ.data ?? []).map((t: any) => t.id)
   const replyCountsQ = useQuery({
