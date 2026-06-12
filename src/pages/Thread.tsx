@@ -198,11 +198,25 @@ export default function Thread() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('threads')
-        .select('id, category_id, subgroup_id, user_id, title, content, tags, allow_replies, is_anonymous, is_deleted, created_at, updated_at, is_pinned, upvotes, view_count, categories(id, name), profiles(display_name, avatar_url, bio, role, created_at)')
+        .select('id, category_id, subgroup_id, user_id, author_id, title, content, tags, allow_replies, is_anonymous, is_deleted, created_at, updated_at, is_pinned, upvotes, view_count, categories(id, name)')
         .eq('id', threadId!)
         .maybeSingle()
       if (error) throw error
-      return data as ThreadRow | null
+      const row = data as (ThreadRow & { author_id?: string | null }) | null
+      if (row?.author_id) {
+        const { data: profs } = await supabase.rpc('get_public_profiles', { _ids: [row.author_id] })
+        const prof = ((profs ?? []) as Array<{ display_name: string | null; avatar_url: string | null; bio: string | null; role: string | null; created_at: string | null }>)[0]
+        if (prof) {
+          row.profiles = {
+            display_name: prof.display_name,
+            avatar_url: prof.avatar_url,
+            bio: prof.bio,
+            role: prof.role,
+            created_at: prof.created_at,
+          }
+        }
+      }
+      return row
     },
   })
 
