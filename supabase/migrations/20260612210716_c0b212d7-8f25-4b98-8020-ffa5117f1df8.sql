@@ -1,0 +1,1 @@
+REVOKE SELECT (private_author_id), INSERT (private_author_id), UPDATE (private_author_id) ON public.threads FROM anon, authenticated;
