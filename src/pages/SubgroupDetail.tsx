@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { formatDistanceToNow } from 'date-fns'
-import { Users, MessageSquare, ArrowLeft, Plus, Lock, Pin } from 'lucide-react'
+import { format, formatDistanceToNow } from 'date-fns'
+import { Users, MessageSquare, ArrowLeft, Plus, Lock, Pin, PinOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { SUBGROUP_MEMBERS_UPSERT_OPTIONS } from '@/lib/subgroupMembers'
@@ -11,8 +11,11 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { UserAvatar } from '@/components/ui/UserAvatar'
 
 const PAGE_SIZE = 15
+const MEMBERS_PAGE_SIZE = 20
 
 const gradientFor = (name: string) => {
   const palettes = [
@@ -87,9 +90,10 @@ export default function SubgroupDetail() {
       const to = from + PAGE_SIZE - 1
       const { data, error } = await supabase
         .from('threads')
-        .select('id, subgroup_id, author_id, title, tags, is_anonymous, created_at, is_pinned, upvotes, view_count, profiles:author_id(display_name, avatar_url)')
+        .select('id, subgroup_id, author_id, title, tags, is_anonymous, created_at, is_pinned, pinned_at, upvotes, view_count, profiles:author_id(display_name, avatar_url)')
         .eq('subgroup_id', subgroupId!)
         .order('is_pinned', { ascending: false })
+        .order('pinned_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .range(from, to)
       if (error) throw error
@@ -100,6 +104,64 @@ export default function SubgroupDetail() {
 
   const isMember = membershipQ.data === true
   const memberCount = memberCountQ.data ?? 0
+  const isSubgroupAdmin = !!user && !!groupQ.data && groupQ.data.created_by === user.id
+
+  const pinMut = useMutation({
+    mutationFn: async ({ threadId, pinned }: { threadId: string; pinned: boolean }) => {
+      const { error } = await supabase.rpc('pin_subgroup_thread', {
+        _thread_id: threadId,
+        _pinned: pinned,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['subgroup-threads', subgroupId] })
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to update pin'),
+  })
+
+  const [membersPage, setMembersPage] = useState(0)
+  const membersDirectoryQ = useQuery({
+    queryKey: ['subgroup-member-directory', subgroupId, membersPage],
+    enabled: !!subgroupId,
+    queryFn: async () => {
+      const from = membersPage * MEMBERS_PAGE_SIZE
+      const to = from + MEMBERS_PAGE_SIZE - 1
+      const { data: rows, error } = await supabase
+        .from('subgroup_members')
+        .select('user_id, created_at')
+        .eq('subgroup_id', subgroupId!)
+        .order('created_at', { ascending: false })
+        .range(from, to)
+      if (error) throw error
+      const list = (rows ?? []) as Array<{ user_id: string; created_at: string }>
+      if (!list.length) return [] as any[]
+      const ids = list.map((r) => r.user_id)
+      const [{ data: profs }, { data: threadsByUser }] = await Promise.all([
+        supabase.rpc('get_public_profiles', { _ids: ids }),
+        supabase
+          .from('threads')
+          .select('author_id')
+          .eq('subgroup_id', subgroupId!)
+          .in('author_id', ids),
+      ])
+      const profMap = new Map<string, any>()
+      ;(profs ?? []).forEach((p: any) => profMap.set(p.id, p))
+      const threadCounts: Record<string, number> = {}
+      ;(threadsByUser ?? []).forEach((r: any) => {
+        if (!r.author_id) return
+        threadCounts[r.author_id] = (threadCounts[r.author_id] || 0) + 1
+      })
+      return list.map((r) => ({
+        user_id: r.user_id,
+        joined_at: r.created_at,
+        display_name: profMap.get(r.user_id)?.display_name ?? 'Member',
+        avatar_url: profMap.get(r.user_id)?.avatar_url ?? null,
+        thread_count: threadCounts[r.user_id] || 0,
+      }))
+    },
+    placeholderData: (prev) => prev,
+  })
 
   const joinMut = useMutation({
     mutationFn: async () => {
@@ -269,62 +331,141 @@ export default function SubgroupDetail() {
         </div>
       </div>
 
-      <div className="mt-6">
-        <h2 className="text-xl font-semibold mb-3">Threads</h2>
-        {threadsQ.isLoading && page === 0 ? (
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
-            ))}
-          </div>
-        ) : (threadsQ.data ?? []).length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground rounded-xl border border-dashed">
-            No threads yet in this subgroup.
-          </div>
-        ) : (
-          <>
+      <Tabs defaultValue="threads" className="mt-6">
+        <TabsList>
+          <TabsTrigger value="threads">Threads</TabsTrigger>
+          <TabsTrigger value="members">
+            Members
+            <Badge variant="secondary" className="ml-2">{memberCount}</Badge>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="threads" className="mt-4">
+          {threadsQ.isLoading && page === 0 ? (
             <div className="space-y-2">
-              {threadsQ.data!.map((t: any) => (
-                <Link
-                  key={t.id}
-                  to={`/thread/${t.id}`}
-                  className="block rounded-xl border bg-card p-4 hover:border-secondary/40 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 rounded-xl" />
+              ))}
+            </div>
+          ) : (threadsQ.data ?? []).length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground rounded-xl border border-dashed">
+              No threads yet in this subgroup.
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {threadsQ.data!.map((t: any) => (
+                  <div
+                    key={t.id}
+                    className="rounded-xl border bg-card p-4 hover:border-secondary/40 transition-colors flex items-start justify-between gap-3"
+                  >
+                    <Link to={`/thread/${t.id}`} className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        {t.is_pinned && <Pin className="h-4 w-4 text-secondary" />}
+                        {t.is_pinned && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Pin className="h-3 w-3" /> Pinned
+                          </Badge>
+                        )}
                         <h3 className="font-semibold truncate">{t.title}</h3>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         by {t.is_anonymous ? 'Anonymous' : (t.profiles?.display_name || 'Member')} ·{' '}
                         {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
                       </p>
-                    </div>
+                    </Link>
+                    {isSubgroupAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={pinMut.isPending}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          pinMut.mutate({ threadId: t.id, pinned: !t.is_pinned })
+                        }}
+                        title={t.is_pinned ? 'Unpin' : 'Pin to top'}
+                      >
+                        {t.is_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                      </Button>
+                    )}
                   </div>
-                </Link>
+                ))}
+              </div>
+              <div className="flex justify-center mt-4 gap-2">
+                {page > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                    Previous
+                  </Button>
+                )}
+                {(threadsQ.data?.length ?? 0) === PAGE_SIZE && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={threadsQ.isFetching}
+                  >
+                    {threadsQ.isFetching ? 'Loading…' : 'Load more'}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="members" className="mt-4">
+          {membersDirectoryQ.isLoading && membersPage === 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 rounded-xl" />
               ))}
             </div>
-            <div className="flex justify-center mt-4 gap-2">
-              {page > 0 && (
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))}>
-                  Previous
-                </Button>
-              )}
-              {(threadsQ.data?.length ?? 0) === PAGE_SIZE && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => p + 1)}
-                  disabled={threadsQ.isFetching}
-                >
-                  {threadsQ.isFetching ? 'Loading…' : 'Load more'}
-                </Button>
-              )}
+          ) : (membersDirectoryQ.data ?? []).length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground rounded-xl border border-dashed">
+              No members yet.
             </div>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {membersDirectoryQ.data!.map((m: any) => (
+                  <div
+                    key={m.user_id}
+                    className="rounded-xl border bg-card p-3 flex items-center gap-3"
+                  >
+                    <UserAvatar
+                      avatarUrl={m.avatar_url}
+                      displayName={m.display_name}
+                      size="md"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{m.display_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Joined {format(new Date(m.joined_at), 'MMM d, yyyy')} ·{' '}
+                        {m.thread_count} thread{m.thread_count === 1 ? '' : 's'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-center mt-4 gap-2">
+                {membersPage > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => setMembersPage((p) => Math.max(0, p - 1))}>
+                    Previous
+                  </Button>
+                )}
+                {(membersDirectoryQ.data?.length ?? 0) === MEMBERS_PAGE_SIZE && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMembersPage((p) => p + 1)}
+                    disabled={membersDirectoryQ.isFetching}
+                  >
+                    {membersDirectoryQ.isFetching ? 'Loading…' : 'Load more'}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

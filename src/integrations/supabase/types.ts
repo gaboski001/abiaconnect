@@ -882,6 +882,7 @@ export type Database = {
           is_anonymous: boolean
           is_deleted: boolean
           is_pinned: boolean
+          pinned_at: string | null
           private_author_id: string | null
           subgroup_id: string | null
           tags: string[] | null
@@ -901,6 +902,7 @@ export type Database = {
           is_anonymous?: boolean
           is_deleted?: boolean
           is_pinned?: boolean
+          pinned_at?: string | null
           private_author_id?: string | null
           subgroup_id?: string | null
           tags?: string[] | null
@@ -920,6 +922,7 @@ export type Database = {
           is_anonymous?: boolean
           is_deleted?: boolean
           is_pinned?: boolean
+          pinned_at?: string | null
           private_author_id?: string | null
           subgroup_id?: string | null
           tags?: string[] | null
@@ -1146,6 +1149,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_subgroup_admin: {
+        Args: { _subgroup_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_subgroup_member: {
         Args: { _subgroup_id: string; _user_id: string }
         Returns: boolean
@@ -1165,6 +1172,10 @@ export type Database = {
         Returns: {
           id: string
         }[]
+      }
+      pin_subgroup_thread: {
+        Args: { _pinned: boolean; _thread_id: string }
+        Returns: undefined
       }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
