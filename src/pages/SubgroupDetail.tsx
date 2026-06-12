@@ -138,6 +138,7 @@ export default function SubgroupDetail() {
     return () => {
       channel.untrack().catch(() => {})
       supabase.removeChannel(channel)
+      setActiveCount(0)
     }
   }, [subgroupId, user])
 
