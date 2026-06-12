@@ -226,6 +226,77 @@ export type Database = {
         }
         Relationships: []
       }
+      hero_slides: {
+        Row: {
+          badge_text: string | null
+          bg_color_from: string | null
+          bg_color_to: string | null
+          body: string | null
+          created_at: string
+          created_by: string | null
+          cta_label: string | null
+          cta_label_2: string | null
+          cta_url: string | null
+          cta_url_2: string | null
+          expires_at: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          order: number
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          badge_text?: string | null
+          bg_color_from?: string | null
+          bg_color_to?: string | null
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_label_2?: string | null
+          cta_url?: string | null
+          cta_url_2?: string | null
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          order?: number
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          badge_text?: string | null
+          bg_color_from?: string | null
+          bg_color_to?: string | null
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_label_2?: string | null
+          cta_url?: string | null
+          cta_url_2?: string | null
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          order?: number
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hero_slides_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       issue_reports: {
         Row: {
           contact_email: string | null
