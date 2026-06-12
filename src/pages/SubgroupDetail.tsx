@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { Users, MessageSquare, ArrowLeft, Plus, Lock, Pin } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { SUBGROUP_MEMBERS_UPSERT_OPTIONS } from '@/lib/subgroupMembers'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -80,7 +81,7 @@ export default function SubgroupDetail() {
         .from('subgroup_members')
         .upsert(
           { subgroup_id: subgroupId!, user_id: user.id },
-          { onConflict: 'subgroup_id,user_id', ignoreDuplicates: true },
+          SUBGROUP_MEMBERS_UPSERT_OPTIONS,
         )
         .select('subgroup_id')
       if (error) throw error

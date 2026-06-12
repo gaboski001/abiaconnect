@@ -5,6 +5,7 @@ import { Users, Plus, Search, MessageSquare, Lock } from 'lucide-react'
 import { SEO } from '@/components/SEO'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { SUBGROUP_MEMBERS_UPSERT_OPTIONS } from '@/lib/subgroupMembers'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -114,7 +115,7 @@ export default function Subgroups() {
         .from('subgroup_members')
         .upsert(
           { subgroup_id: subgroupId, user_id: user.id },
-          { onConflict: 'subgroup_id,user_id', ignoreDuplicates: true },
+          SUBGROUP_MEMBERS_UPSERT_OPTIONS,
         )
         .select('subgroup_id')
       if (error) throw error
@@ -340,7 +341,7 @@ function CreateSubgroupDialog({
       if (data?.id) {
         await supabase
           .from('subgroup_members')
-          .upsert({ subgroup_id: data.id, user_id: user.id }, { onConflict: 'subgroup_id,user_id', ignoreDuplicates: true })
+          .upsert({ subgroup_id: data.id, user_id: user.id }, SUBGROUP_MEMBERS_UPSERT_OPTIONS)
       }
       toast.success('Subgroup created')
       onCreated()
