@@ -128,12 +128,6 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://abiaconnect.com/thread/f0d7f1b7-824b-496d-9bf7-9f67b4b7b21e</loc>
-    <lastmod>2026-05-20</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://abiaconnect.com/thread/fbad888f-4a84-4078-b818-130c0c19f933</loc>
     <lastmod>2026-06-11</lastmod>
     <changefreq>weekly</changefreq>
@@ -202,6 +196,12 @@
   <url>
     <loc>https://abiaconnect.com/thread/ff2a5a17-52b8-4e53-9a52-70f9b6b12c7f</loc>
     <lastmod>2026-06-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://abiaconnect.com/thread/f0d7f1b7-824b-496d-9bf7-9f67b4b7b21e</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -298,6 +298,12 @@
   <url>
     <loc>https://abiaconnect.com/subgroups/4658911b-adae-44ab-b89b-5f6c6d692d4c</loc>
     <lastmod>2026-06-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://abiaconnect.com/subgroups/9b2b47a6-a296-491e-a718-dab83a103db3</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
