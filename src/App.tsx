@@ -16,6 +16,7 @@ import SubgroupDetail from '@/pages/SubgroupDetail'
 import Notifications from '@/pages/Notifications'
 import Messages from '@/pages/Messages'
 import AdminDashboard from '@/pages/admin/AdminDashboard'
+import EmailDns from '@/pages/admin/EmailDns'
 import LgasGuide from '@/pages/LgasGuide'
 import KnownFor from '@/pages/KnownFor'
 import AbsuGuide from '@/pages/AbsuGuide'
@@ -84,6 +85,7 @@ export default function App() {
 
           <Route element={<AdminRoute />}>
             <Route path="admin/dashboard" element={<AdminDashboard />} />
+            <Route path="admin/email-dns" element={<EmailDns />} />
           </Route>
         </Route>
 
