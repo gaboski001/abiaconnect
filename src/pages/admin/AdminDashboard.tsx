@@ -333,8 +333,8 @@ function UsersSection() {
         if (ids.length === 0) return { rows: [], total: 0 }
       }
       const { data, error } = await supabase.rpc('admin_list_users', {
-        _search: search.trim() && !search.includes('@') ? search.trim() : null,
-        _ids: ids,
+        _search: search.trim() && !search.includes('@') ? search.trim() : undefined,
+        _ids: ids ?? undefined,
         _limit: pageSize,
         _offset: page * pageSize,
       })
