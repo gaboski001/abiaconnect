@@ -1,46 +1,54 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute'
 import Home from '@/pages/Home'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
-import ForgotPassword from '@/pages/ForgotPassword'
-import CategoryPage from '@/pages/Category'
-import Thread from '@/pages/Thread'
-import CreateThread from '@/pages/CreateThread'
-import Dashboard from '@/pages/Dashboard'
-import Profile from '@/pages/Profile'
-import Polls from '@/pages/Polls'
-import Subgroups from '@/pages/Subgroups'
-import SubgroupDetail from '@/pages/SubgroupDetail'
-import SubgroupInvite from '@/pages/SubgroupInvite'
-import Notifications from '@/pages/Notifications'
-import Messages from '@/pages/Messages'
-import AdminDashboard from '@/pages/admin/AdminDashboard'
-import EmailDns from '@/pages/admin/EmailDns'
-import LgasGuide from '@/pages/LgasGuide'
-import KnownFor from '@/pages/KnownFor'
-import AbsuGuide from '@/pages/AbsuGuide'
-import About from '@/pages/static/About'
-import Mission from '@/pages/static/Mission'
-import Team from '@/pages/static/Team'
-import Careers from '@/pages/static/Careers'
-import ForumGuidelines from '@/pages/static/ForumGuidelines'
-import Events from '@/pages/static/Events'
-import SuccessStories from '@/pages/static/SuccessStories'
-import MemberSpotlight from '@/pages/static/MemberSpotlight'
-import Help from '@/pages/static/Help'
-import ReportIssue from '@/pages/static/ReportIssue'
-import PrivacyPolicy from '@/pages/static/PrivacyPolicy'
-import TermsOfService from '@/pages/static/TermsOfService'
-import CookiePolicy from '@/pages/static/CookiePolicy'
-import CommunityStandards from '@/pages/static/CommunityStandards'
 
+// Lazy-load every non-critical route. Home + auth load eagerly because they're the
+// most common landing destinations; everything else streams in on navigation.
+const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'))
+const CategoryPage = lazy(() => import('@/pages/Category'))
+const Thread = lazy(() => import('@/pages/Thread'))
+const CreateThread = lazy(() => import('@/pages/CreateThread'))
+const Dashboard = lazy(() => import('@/pages/Dashboard'))
+const Profile = lazy(() => import('@/pages/Profile'))
+const Polls = lazy(() => import('@/pages/Polls'))
+const Subgroups = lazy(() => import('@/pages/Subgroups'))
+const SubgroupDetail = lazy(() => import('@/pages/SubgroupDetail'))
+const SubgroupInvite = lazy(() => import('@/pages/SubgroupInvite'))
+const Notifications = lazy(() => import('@/pages/Notifications'))
+const Messages = lazy(() => import('@/pages/Messages'))
+const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'))
+const EmailDns = lazy(() => import('@/pages/admin/EmailDns'))
+const LgasGuide = lazy(() => import('@/pages/LgasGuide'))
+const KnownFor = lazy(() => import('@/pages/KnownFor'))
+const AbsuGuide = lazy(() => import('@/pages/AbsuGuide'))
+const About = lazy(() => import('@/pages/static/About'))
+const Mission = lazy(() => import('@/pages/static/Mission'))
+const Team = lazy(() => import('@/pages/static/Team'))
+const Careers = lazy(() => import('@/pages/static/Careers'))
+const ForumGuidelines = lazy(() => import('@/pages/static/ForumGuidelines'))
+const Events = lazy(() => import('@/pages/static/Events'))
+const SuccessStories = lazy(() => import('@/pages/static/SuccessStories'))
+const MemberSpotlight = lazy(() => import('@/pages/static/MemberSpotlight'))
+const Help = lazy(() => import('@/pages/static/Help'))
+const ReportIssue = lazy(() => import('@/pages/static/ReportIssue'))
+const PrivacyPolicy = lazy(() => import('@/pages/static/PrivacyPolicy'))
+const TermsOfService = lazy(() => import('@/pages/static/TermsOfService'))
+const CookiePolicy = lazy(() => import('@/pages/static/CookiePolicy'))
+const CommunityStandards = lazy(() => import('@/pages/static/CommunityStandards'))
 
+const RouteFallback = () => (
+  <div className="flex items-center justify-center min-h-[40vh]">
+    <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+  </div>
+)
 
-const Page = ({ name }: { name: string }) => (
+const NotFound = () => (
   <div className="p-8">
-    <h1 className="text-2xl font-semibold">{name}</h1>
+    <h1 className="text-2xl font-semibold">404 Not Found</h1>
   </div>
 )
 
@@ -51,47 +59,56 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
-        <Route path="forgot-password" element={<ForgotPassword />} />
-        <Route path="category/:categoryId" element={<CategoryPage />} />
-        <Route path="thread/:threadId" element={<Thread />} />
-        <Route path="about/lgas" element={<LgasGuide />} />
-        <Route path="about/known-for" element={<KnownFor />} />
-        <Route path="about/absu" element={<AbsuGuide />} />
 
-        <Route path="about" element={<About />} />
-        <Route path="mission" element={<Mission />} />
-        <Route path="team" element={<Team />} />
-        <Route path="careers" element={<Careers />} />
-        <Route path="forum-guidelines" element={<ForumGuidelines />} />
-        <Route path="events" element={<Events />} />
-        <Route path="success-stories" element={<SuccessStories />} />
-        <Route path="member-spotlight" element={<MemberSpotlight />} />
-        <Route path="help" element={<Help />} />
-        <Route path="report-issue" element={<ReportIssue />} />
-        <Route path="privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="terms-of-service" element={<TermsOfService />} />
-        <Route path="cookie-policy" element={<CookiePolicy />} />
-        <Route path="community-standards" element={<CommunityStandards />} />
+        <Route
+          path="*"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <Routes>
+                <Route path="forgot-password" element={<ForgotPassword />} />
+                <Route path="category/:categoryId" element={<CategoryPage />} />
+                <Route path="thread/:threadId" element={<Thread />} />
+                <Route path="about/lgas" element={<LgasGuide />} />
+                <Route path="about/known-for" element={<KnownFor />} />
+                <Route path="about/absu" element={<AbsuGuide />} />
+                <Route path="about" element={<About />} />
+                <Route path="mission" element={<Mission />} />
+                <Route path="team" element={<Team />} />
+                <Route path="careers" element={<Careers />} />
+                <Route path="forum-guidelines" element={<ForumGuidelines />} />
+                <Route path="events" element={<Events />} />
+                <Route path="success-stories" element={<SuccessStories />} />
+                <Route path="member-spotlight" element={<MemberSpotlight />} />
+                <Route path="help" element={<Help />} />
+                <Route path="report-issue" element={<ReportIssue />} />
+                <Route path="privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="terms-of-service" element={<TermsOfService />} />
+                <Route path="cookie-policy" element={<CookiePolicy />} />
+                <Route path="community-standards" element={<CommunityStandards />} />
 
-        <Route element={<ProtectedRoute />}>
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="profile" element={<Profile />} />
-          <Route path="polls" element={<Polls />} />
-          <Route path="subgroups" element={<Subgroups />} />
-          <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
-          <Route path="subgroups/invite/:token" element={<SubgroupInvite />} />
-          <Route path="notifications" element={<Notifications />} />
-          <Route path="create-thread" element={<CreateThread />} />
-          <Route path="messages" element={<Messages />} />
-          <Route path="messages/:conversationId" element={<Messages />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="profile" element={<Profile />} />
+                  <Route path="polls" element={<Polls />} />
+                  <Route path="subgroups" element={<Subgroups />} />
+                  <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
+                  <Route path="subgroups/invite/:token" element={<SubgroupInvite />} />
+                  <Route path="notifications" element={<Notifications />} />
+                  <Route path="create-thread" element={<CreateThread />} />
+                  <Route path="messages" element={<Messages />} />
+                  <Route path="messages/:conversationId" element={<Messages />} />
 
-          <Route element={<AdminRoute />}>
-            <Route path="admin/dashboard" element={<AdminDashboard />} />
-            <Route path="admin/email-dns" element={<EmailDns />} />
-          </Route>
-        </Route>
+                  <Route element={<AdminRoute />}>
+                    <Route path="admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="admin/email-dns" element={<EmailDns />} />
+                  </Route>
+                </Route>
 
-        <Route path="*" element={<Page name="404 Not Found" />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          }
+        />
       </Route>
     </Routes>
   )
