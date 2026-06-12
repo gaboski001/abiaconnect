@@ -121,13 +121,19 @@ export default function AdminDashboard() {
 
         <main className="flex-1 min-w-0 space-y-4">
           <SeedDatabaseCard />
-          {section === 'overview' && <OverviewSection />}
+          {section === 'overview' && (
+            <>
+              <HeroSlidesExpiryAlert />
+              <OverviewSection />
+            </>
+          )}
           {section === 'users' && <UsersSection />}
           {section === 'categories' && <CategoriesSection />}
           {section === 'moderation' && <ModerationSection />}
           {section === 'polls' && <PollsSection />}
           {section === 'subgroups' && <SubgroupsSection />}
           {section === 'settings' && <SiteSettingsSection />}
+          {section === 'slides' && <HeroSlidesSection />}
           {section === 'email' && <EmailSettingsSection />}
         </main>
       </div>
