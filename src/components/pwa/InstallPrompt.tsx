@@ -108,6 +108,61 @@ export default function InstallPrompt() {
     }
   }
 
+  // Escape dismisses the banner (when iOS modal isn't open).
+  useEffect(() => {
+    if (!visible || showIOS) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        dismiss()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [visible, showIOS])
+
+  // iOS modal: focus trap, Escape to close, restore focus on close.
+  useEffect(() => {
+    if (!showIOS) return
+    iosReturnFocus.current = document.activeElement as HTMLElement | null
+    const root = iosDialogRef.current
+    const focusables = () =>
+      root
+        ? Array.from(
+            root.querySelectorAll<HTMLElement>(
+              'a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])',
+            ),
+          )
+        : []
+    focusables()[0]?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        setShowIOS(false)
+        return
+      }
+      if (e.key === 'Tab') {
+        const items = focusables()
+        if (items.length === 0) return
+        const first = items[0]
+        const last = items[items.length - 1]
+        const active = document.activeElement as HTMLElement | null
+        if (e.shiftKey && active === first) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      iosReturnFocus.current?.focus?.()
+    }
+  }, [showIOS])
+
   if (!visible) return null
 
   return (
@@ -119,41 +174,56 @@ export default function InstallPrompt() {
         .ac-card { animation: ac-up .4s ease-out both }
         .ac-card.ac-closing { animation: ac-down .3s ease-in both }
         .ac-dot { animation: ac-pulse 1.6s ease-in-out infinite }
+        @media (prefers-reduced-motion: reduce) {
+          .ac-card, .ac-card.ac-closing, .ac-dot { animation: none !important }
+        }
+        .ac-btn:focus-visible { outline: 2px solid #1a4f3a; outline-offset: 2px }
       `}</style>
       <div
-        role="dialog"
-        aria-label="Install AbiaConnect"
+        ref={cardRef}
+        role="region"
+        aria-labelledby="ac-install-title"
+        aria-describedby="ac-install-desc"
         className={`ac-card ${closing ? 'ac-closing' : ''} fixed z-[60] left-3 right-3 bottom-3 sm:left-auto sm:right-6 sm:bottom-6 sm:w-[360px] rounded-2xl bg-white text-neutral-900 shadow-2xl border border-neutral-200 p-4`}
         style={{ borderRadius: 16 }}
       >
         <button
+          type="button"
           onClick={dismiss}
-          aria-label="Close"
-          className="absolute top-2 right-2 h-7 w-7 grid place-items-center rounded-full text-neutral-500 hover:bg-neutral-100"
+          aria-label="Dismiss install prompt"
+          className="ac-btn absolute top-2 right-2 h-7 w-7 grid place-items-center rounded-full text-neutral-500 hover:bg-neutral-100"
         >
-          ✕
+          <span aria-hidden="true">✕</span>
         </button>
         <div className="flex items-start gap-3">
           <div className="relative shrink-0">
             <img src={ICON} alt="" width={48} height={48} className="rounded-xl" />
-            <span className="ac-dot absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full" style={{ background: '#1a4f3a' }} />
+            <span
+              aria-hidden="true"
+              className="ac-dot absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full"
+              style={{ background: '#1a4f3a' }}
+            />
           </div>
           <div className="flex-1 min-w-0 pr-6">
-            <div className="font-semibold text-[15px] leading-tight">Install AbiaConnect</div>
-            <p className="text-[13px] text-neutral-600 mt-1 leading-snug">
+            <h2 id="ac-install-title" className="font-semibold text-[15px] leading-tight m-0">
+              Install AbiaConnect
+            </h2>
+            <p id="ac-install-desc" className="text-[13px] text-neutral-600 mt-1 leading-snug">
               Get the full community experience — faster, offline-ready, and always at hand.
             </p>
             <div className="mt-3 flex items-center gap-2">
               <button
+                type="button"
                 onClick={install}
-                className="px-3.5 py-2 text-sm font-medium text-white rounded-lg hover:opacity-95 transition"
+                className="ac-btn px-3.5 py-2 text-sm font-medium text-white rounded-lg hover:opacity-95 transition"
                 style={{ background: '#1a4f3a' }}
               >
                 Install App
               </button>
               <button
+                type="button"
                 onClick={dismiss}
-                className="px-3 py-2 text-sm font-medium text-neutral-500 hover:text-neutral-700"
+                className="ac-btn px-3 py-2 text-sm font-medium text-neutral-500 hover:text-neutral-700"
               >
                 Not Now
               </button>
@@ -168,24 +238,31 @@ export default function InstallPrompt() {
           onClick={() => setShowIOS(false)}
         >
           <div
+            ref={iosDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ac-ios-title"
             className="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl"
             onClick={(e) => e.stopPropagation()}
             style={{ borderRadius: 16 }}
           >
-            <div className="font-semibold text-base mb-2 text-neutral-900">Install AbiaConnect</div>
+            <h2 id="ac-ios-title" className="font-semibold text-base mb-2 text-neutral-900 m-0">
+              Install AbiaConnect
+            </h2>
             <ol className="text-sm text-neutral-700 space-y-2 list-decimal pl-5">
               <li>Tap the <strong>Share</strong> button (□↑) in your browser</li>
               <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
               <li>Tap <strong>Add</strong> — and you're in!</li>
             </ol>
-            <div className="mt-3 flex justify-center">
+            <div className="mt-3 flex justify-center" aria-hidden="true">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1a4f3a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 5v14M5 12l7 7 7-7" />
               </svg>
             </div>
             <button
+              type="button"
               onClick={() => setShowIOS(false)}
-              className="mt-3 w-full px-3 py-2 text-sm font-medium text-white rounded-lg"
+              className="ac-btn mt-3 w-full px-3 py-2 text-sm font-medium text-white rounded-lg"
               style={{ background: '#1a4f3a' }}
             >
               Got it
@@ -196,3 +273,4 @@ export default function InstallPrompt() {
     </>
   )
 }
+
