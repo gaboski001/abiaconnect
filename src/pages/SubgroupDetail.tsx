@@ -3,7 +3,10 @@ import { Link, useParams } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
-import { Users, MessageSquare, ArrowLeft, Plus, Lock, Pin, PinOff } from 'lucide-react'
+import {
+  Users, MessageSquare, ArrowLeft, Plus, Lock, Pin, PinOff,
+  ChevronDown, ChevronUp, ShieldCheck, Copy, Trash2, Check, X,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { SUBGROUP_MEMBERS_UPSERT_OPTIONS } from '@/lib/subgroupMembers'
@@ -12,10 +15,14 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 
 const PAGE_SIZE = 15
 const MEMBERS_PAGE_SIZE = 20
+const sb = supabase as any
 
 const gradientFor = (name: string) => {
   const palettes = [
@@ -36,14 +43,18 @@ export default function SubgroupDetail() {
   const { user } = useAuth()
   const qc = useQueryClient()
   const [page, setPage] = useState(0)
+  const [rulesOpen, setRulesOpen] = useState(true)
+  const [rulesDraft, setRulesDraft] = useState<string | null>(null)
+  const [inviteExpiryHours, setInviteExpiryHours] = useState<number>(24)
+  const [inviteSingleUse, setInviteSingleUse] = useState<boolean>(true)
 
   const groupQ = useQuery({
     queryKey: ['subgroup', subgroupId],
     enabled: !!subgroupId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('subgroups')
-        .select('id, name, description, category, cover_image_url, is_private, is_active, created_by, created_at')
+        .select('id, name, description, category, cover_image_url, is_private, is_active, created_by, created_at, rules')
         .eq('id', subgroupId!)
         .single()
       if (error) throw error
@@ -106,17 +117,67 @@ export default function SubgroupDetail() {
   const memberCount = memberCountQ.data ?? 0
   const isSubgroupAdmin = !!user && !!groupQ.data && groupQ.data.created_by === user.id
 
+  // My pending join request (for private subgroups)
+  const myRequestQ = useQuery({
+    queryKey: ['subgroup-my-request', subgroupId, user?.id],
+    enabled: !!subgroupId && !!user && !!groupQ.data?.is_private && !isMember,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('subgroup_join_requests')
+        .select('id, status, created_at')
+        .eq('subgroup_id', subgroupId!)
+        .eq('user_id', user!.id)
+        .eq('status', 'pending')
+        .maybeSingle()
+      if (error) throw error
+      return data as any
+    },
+  })
+
+  // Admin: pending join requests
+  const joinRequestsQ = useQuery({
+    queryKey: ['subgroup-join-requests', subgroupId],
+    enabled: !!subgroupId && isSubgroupAdmin,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('subgroup_join_requests')
+        .select('id, user_id, status, message, created_at')
+        .eq('subgroup_id', subgroupId!)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      const rows = (data ?? []) as any[]
+      if (!rows.length) return [] as any[]
+      const { data: profs } = await supabase.rpc('get_public_profiles', { _ids: rows.map((r) => r.user_id) })
+      const m = new Map<string, any>()
+      ;(profs ?? []).forEach((p: any) => m.set(p.id, p))
+      return rows.map((r) => ({ ...r, profile: m.get(r.user_id) }))
+    },
+  })
+
+  // Admin: invites
+  const invitesQ = useQuery({
+    queryKey: ['subgroup-invites', subgroupId],
+    enabled: !!subgroupId && isSubgroupAdmin,
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('subgroup_invites')
+        .select('id, token, expires_at, used, single_use, created_at')
+        .eq('subgroup_id', subgroupId!)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as any[]
+    },
+  })
+
   const pinMut = useMutation({
     mutationFn: async ({ threadId, pinned }: { threadId: string; pinned: boolean }) => {
-      const { error } = await supabase.rpc('pin_subgroup_thread', {
-        _thread_id: threadId,
-        _pinned: pinned,
-      })
+      const { error } = await supabase.rpc('pin_subgroup_thread' as any, {
+        _thread_id: threadId, _pinned: pinned,
+      } as any)
       if (error) throw error
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['subgroup-threads', subgroupId] })
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['subgroup-threads', subgroupId] }),
     onError: (e: any) => toast.error(e.message || 'Failed to update pin'),
   })
 
@@ -139,11 +200,7 @@ export default function SubgroupDetail() {
       const ids = list.map((r) => r.user_id)
       const [{ data: profs }, { data: threadsByUser }] = await Promise.all([
         supabase.rpc('get_public_profiles', { _ids: ids }),
-        supabase
-          .from('threads')
-          .select('author_id')
-          .eq('subgroup_id', subgroupId!)
-          .in('author_id', ids),
+        supabase.from('threads').select('author_id').eq('subgroup_id', subgroupId!).in('author_id', ids),
       ])
       const profMap = new Map<string, any>()
       ;(profs ?? []).forEach((p: any) => profMap.set(p.id, p))
@@ -168,14 +225,10 @@ export default function SubgroupDetail() {
       if (!user) throw new Error('Sign in required')
       const { data, error } = await supabase
         .from('subgroup_members')
-        .upsert(
-          { subgroup_id: subgroupId!, user_id: user.id },
-          SUBGROUP_MEMBERS_UPSERT_OPTIONS,
-        )
+        .upsert({ subgroup_id: subgroupId!, user_id: user.id }, SUBGROUP_MEMBERS_UPSERT_OPTIONS)
         .select('subgroup_id')
       if (error) throw error
-      const action = data && data.length > 0 ? 'joined' : 'duplicate_ignored'
-      return action
+      return data && data.length > 0 ? 'joined' : 'duplicate_ignored'
     },
     onSuccess: (action) => {
       toast.success(action === 'joined' ? 'Joined subgroup' : 'Already a member')
@@ -189,10 +242,8 @@ export default function SubgroupDetail() {
     mutationFn: async () => {
       if (!user) throw new Error('Sign in required')
       const { error } = await supabase
-        .from('subgroup_members')
-        .delete()
-        .eq('subgroup_id', subgroupId!)
-        .eq('user_id', user.id)
+        .from('subgroup_members').delete()
+        .eq('subgroup_id', subgroupId!).eq('user_id', user.id)
       if (error) throw error
     },
     onSuccess: () => {
@@ -203,15 +254,81 @@ export default function SubgroupDetail() {
     onError: (e: any) => toast.error(e.message || 'Failed to leave'),
   })
 
+  const requestJoinMut = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error('Sign in required')
+      const { error } = await sb
+        .from('subgroup_join_requests')
+        .insert({ subgroup_id: subgroupId!, user_id: user.id, status: 'pending' })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      toast.success('Request sent. An admin will review it.')
+      qc.invalidateQueries({ queryKey: ['subgroup-my-request', subgroupId] })
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to request'),
+  })
+
+  const decideMut = useMutation({
+    mutationFn: async ({ id, approve }: { id: string; approve: boolean }) => {
+      const { error } = await sb.rpc('decide_join_request', { _request_id: id, _approve: approve })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['subgroup-join-requests', subgroupId] })
+      qc.invalidateQueries({ queryKey: ['subgroup-member-count', subgroupId] })
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed'),
+  })
+
+  const saveRulesMut = useMutation({
+    mutationFn: async (rules: string[]) => {
+      const { error } = await sb.from('subgroups').update({ rules }).eq('id', subgroupId!)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      toast.success('Rules updated')
+      setRulesDraft(null)
+      qc.invalidateQueries({ queryKey: ['subgroup', subgroupId] })
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to save'),
+  })
+
+  const createInviteMut = useMutation({
+    mutationFn: async () => {
+      const expires = inviteExpiryHours > 0
+        ? new Date(Date.now() + inviteExpiryHours * 3600 * 1000).toISOString()
+        : null
+      const { error } = await sb.from('subgroup_invites').insert({
+        subgroup_id: subgroupId!,
+        created_by: user!.id,
+        expires_at: expires,
+        single_use: inviteSingleUse,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      toast.success('Invite created')
+      qc.invalidateQueries({ queryKey: ['subgroup-invites', subgroupId] })
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to create invite'),
+  })
+
+  const deleteInviteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sb.from('subgroup_invites').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['subgroup-invites', subgroupId] }),
+  })
+
   if (groupQ.isLoading) {
     return (
       <div className="container mx-auto px-4 py-8 space-y-4">
         <Skeleton className="h-48 rounded-2xl" />
         <Skeleton className="h-6 w-32" />
         <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 rounded-xl" />
-          ))}
+          {Array.from({ length: 5 }).map((_, i) => (<Skeleton key={i} className="h-20 rounded-xl" />))}
         </div>
       </div>
     )
@@ -220,14 +337,51 @@ export default function SubgroupDetail() {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <p className="text-muted-foreground">Subgroup not found.</p>
-        <Button asChild variant="outline" className="mt-4">
-          <Link to="/subgroups">Back to subgroups</Link>
-        </Button>
+        <Button asChild variant="outline" className="mt-4"><Link to="/subgroups">Back to subgroups</Link></Button>
       </div>
     )
   }
 
   const s = groupQ.data
+  const rules: string[] = Array.isArray(s.rules) ? s.rules : []
+  const hasPendingRequest = !!myRequestQ.data
+
+  const renderJoinButton = () => {
+    if (!user) {
+      return <Button asChild variant="secondary"><Link to="/login">Sign in to join</Link></Button>
+    }
+    if (isMember) {
+      return (
+        <>
+          <Button asChild>
+            <Link to={`/create-thread?subgroup=${s.id}`}>
+              <Plus className="h-4 w-4 mr-1" /> Post in this group
+            </Link>
+          </Button>
+          <Button variant="outline" onClick={() => leaveMut.mutate()} disabled={leaveMut.isPending}
+            className="bg-transparent border-white/40 text-white hover:bg-white/10">Leave</Button>
+        </>
+      )
+    }
+    if (s.is_private) {
+      return hasPendingRequest ? (
+        <Button disabled variant="secondary">Request pending</Button>
+      ) : (
+        <Button onClick={() => requestJoinMut.mutate()} disabled={requestJoinMut.isPending}>
+          Request to Join
+        </Button>
+      )
+    }
+    return <Button onClick={() => joinMut.mutate()} disabled={joinMut.isPending}>Join</Button>
+  }
+
+  const copyInvite = (token: string) => {
+    const url = `${window.location.origin}/subgroups/invite/${token}`
+    navigator.clipboard.writeText(url).then(
+      () => toast.success('Invite link copied'),
+      () => toast.error('Copy failed'),
+    )
+  }
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -235,42 +389,17 @@ export default function SubgroupDetail() {
         title={s?.name ? `${s.name} | AbiaConnect` : 'Subgroup'}
         description={s?.description || 'Join this subgroup on AbiaConnect.'}
         path={`/subgroups/${subgroupId ?? ''}`}
-        jsonLd={[
-          {
-            '@context': 'https://schema.org',
-            '@type': 'CollectionPage',
-            name: s?.name || 'Subgroup',
-            description: s?.description || 'Join this subgroup on AbiaConnect.',
-            url: `https://abiaconnect.com/subgroups/${subgroupId}`,
-          },
-          {
-            '@context': 'https://schema.org',
-            '@type': 'BreadcrumbList',
-            itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://abiaconnect.com/' },
-              { '@type': 'ListItem', position: 2, name: 'Subgroups', item: 'https://abiaconnect.com/subgroups' },
-              { '@type': 'ListItem', position: 3, name: s?.name || 'Subgroup', item: `https://abiaconnect.com/subgroups/${subgroupId}` },
-            ],
-          },
-        ]}
       />
       <Button asChild variant="ghost" size="sm" className="mb-4">
-        <Link to="/subgroups">
-          <ArrowLeft className="h-4 w-4 mr-1" /> All subgroups
-        </Link>
+        <Link to="/subgroups"><ArrowLeft className="h-4 w-4 mr-1" /> All subgroups</Link>
       </Button>
 
       <div
         className={`rounded-2xl overflow-hidden border bg-gradient-to-br ${gradientFor(s.name)} relative`}
-        style={
-          s.cover_image_url
-            ? {
-                backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.2)), url(${s.cover_image_url})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }
-            : undefined
-        }
+        style={s.cover_image_url ? {
+          backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.2)), url(${s.cover_image_url})`,
+          backgroundSize: 'cover', backgroundPosition: 'center',
+        } : undefined}
       >
         <div className="p-6 md:p-8 text-white">
           <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -283,189 +412,262 @@ export default function SubgroupDetail() {
                   </Badge>
                 )}
                 {s.category && (
-                  <Badge variant="outline" className="border-white/30 text-white">
-                    {s.category}
-                  </Badge>
+                  <Badge variant="outline" className="border-white/30 text-white">{s.category}</Badge>
                 )}
               </div>
-              <p className="text-white/80 max-w-2xl">
-                {s.description || 'No description provided.'}
-              </p>
+              <p className="text-white/80 max-w-2xl">{s.description || 'No description provided.'}</p>
               <div className="flex items-center gap-4 text-sm text-white/80">
-                <span className="flex items-center gap-1">
-                  <Users className="h-4 w-4" /> {memberCount} members
-                </span>
-                <span className="flex items-center gap-1">
-                  <MessageSquare className="h-4 w-4" /> {threadsQ.data?.length ?? 0} threads
-                </span>
+                <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {memberCount} members</span>
+                <span className="flex items-center gap-1"><MessageSquare className="h-4 w-4" /> {threadsQ.data?.length ?? 0} threads</span>
               </div>
             </div>
-            <div className="flex gap-2">
-              {!user ? (
-                <Button asChild variant="secondary">
-                  <Link to="/login">Sign in to join</Link>
-                </Button>
-              ) : isMember ? (
-                <>
-                  <Button asChild>
-                    <Link to={`/create-thread?subgroup=${s.id}`}>
-                      <Plus className="h-4 w-4 mr-1" /> Post in this group
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => leaveMut.mutate()}
-                    disabled={leaveMut.isPending}
-                    className="bg-transparent border-white/40 text-white hover:bg-white/10"
-                  >
-                    Leave
-                  </Button>
-                </>
-              ) : (
-                <Button onClick={() => joinMut.mutate()} disabled={joinMut.isPending}>
-                  Join
-                </Button>
-              )}
-            </div>
+            <div className="flex gap-2">{renderJoinButton()}</div>
           </div>
         </div>
       </div>
 
-      <Tabs defaultValue="threads" className="mt-6">
-        <TabsList>
-          <TabsTrigger value="threads">Threads</TabsTrigger>
-          <TabsTrigger value="members">
-            Members
-            <Badge variant="secondary" className="ml-2">{memberCount}</Badge>
-          </TabsTrigger>
-        </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 mt-6">
+        <div className="min-w-0">
+          <Tabs defaultValue="threads">
+            <TabsList>
+              <TabsTrigger value="threads">Threads</TabsTrigger>
+              <TabsTrigger value="members">
+                Members <Badge variant="secondary" className="ml-2">{memberCount}</Badge>
+              </TabsTrigger>
+              {isSubgroupAdmin && (
+                <TabsTrigger value="manage">
+                  <ShieldCheck className="h-4 w-4 mr-1" /> Manage
+                  {(joinRequestsQ.data?.length ?? 0) > 0 && (
+                    <Badge variant="destructive" className="ml-2">{joinRequestsQ.data!.length}</Badge>
+                  )}
+                </TabsTrigger>
+              )}
+            </TabsList>
 
-        <TabsContent value="threads" className="mt-4">
-          {threadsQ.isLoading && page === 0 ? (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-20 rounded-xl" />
-              ))}
-            </div>
-          ) : (threadsQ.data ?? []).length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground rounded-xl border border-dashed">
-              No threads yet in this subgroup.
-            </div>
-          ) : (
-            <>
-              <div className="space-y-2">
-                {threadsQ.data!.map((t: any) => (
-                  <div
-                    key={t.id}
-                    className="rounded-xl border bg-card p-4 hover:border-secondary/40 transition-colors flex items-start justify-between gap-3"
-                  >
-                    <Link to={`/thread/${t.id}`} className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        {t.is_pinned && (
-                          <Badge variant="secondary" className="gap-1">
-                            <Pin className="h-3 w-3" /> Pinned
-                          </Badge>
+            <TabsContent value="threads" className="mt-4">
+              {threadsQ.isLoading && page === 0 ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => (<Skeleton key={i} className="h-20 rounded-xl" />))}
+                </div>
+              ) : (threadsQ.data ?? []).length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground rounded-xl border border-dashed">
+                  No threads yet in this subgroup.
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    {threadsQ.data!.map((t: any) => (
+                      <div key={t.id} className="rounded-xl border bg-card p-4 hover:border-secondary/40 transition-colors flex items-start justify-between gap-3">
+                        <Link to={`/thread/${t.id}`} className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            {t.is_pinned && (
+                              <Badge variant="secondary" className="gap-1"><Pin className="h-3 w-3" /> Pinned</Badge>
+                            )}
+                            <h3 className="font-semibold truncate">{t.title}</h3>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            by {t.is_anonymous ? 'Anonymous' : (t.profiles?.display_name || 'Member')} ·{' '}
+                            {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
+                          </p>
+                        </Link>
+                        {isSubgroupAdmin && (
+                          <Button variant="ghost" size="sm" disabled={pinMut.isPending}
+                            onClick={(e) => { e.preventDefault(); pinMut.mutate({ threadId: t.id, pinned: !t.is_pinned }) }}
+                            title={t.is_pinned ? 'Unpin' : 'Pin to top'}>
+                            {t.is_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                          </Button>
                         )}
-                        <h3 className="font-semibold truncate">{t.title}</h3>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        by {t.is_anonymous ? 'Anonymous' : (t.profiles?.display_name || 'Member')} ·{' '}
-                        {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
-                      </p>
-                    </Link>
-                    {isSubgroupAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={pinMut.isPending}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          pinMut.mutate({ threadId: t.id, pinned: !t.is_pinned })
-                        }}
-                        title={t.is_pinned ? 'Unpin' : 'Pin to top'}
-                      >
-                        {t.is_pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                    ))}
+                  </div>
+                  <div className="flex justify-center mt-4 gap-2">
+                    {page > 0 && (
+                      <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))}>Previous</Button>
+                    )}
+                    {(threadsQ.data?.length ?? 0) === PAGE_SIZE && (
+                      <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={threadsQ.isFetching}>
+                        {threadsQ.isFetching ? 'Loading…' : 'Load more'}
                       </Button>
                     )}
                   </div>
-                ))}
-              </div>
-              <div className="flex justify-center mt-4 gap-2">
-                {page > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))}>
-                    Previous
-                  </Button>
-                )}
-                {(threadsQ.data?.length ?? 0) === PAGE_SIZE && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => p + 1)}
-                    disabled={threadsQ.isFetching}
-                  >
-                    {threadsQ.isFetching ? 'Loading…' : 'Load more'}
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
-        </TabsContent>
+                </>
+              )}
+            </TabsContent>
 
-        <TabsContent value="members" className="mt-4">
-          {membersDirectoryQ.isLoading && membersPage === 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 rounded-xl" />
-              ))}
-            </div>
-          ) : (membersDirectoryQ.data ?? []).length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground rounded-xl border border-dashed">
-              No members yet.
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {membersDirectoryQ.data!.map((m: any) => (
-                  <div
-                    key={m.user_id}
-                    className="rounded-xl border bg-card p-3 flex items-center gap-3"
-                  >
-                    <UserAvatar
-                      avatarUrl={m.avatar_url}
-                      displayName={m.display_name}
-                      size="md"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">{m.display_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Joined {format(new Date(m.joined_at), 'MMM d, yyyy')} ·{' '}
-                        {m.thread_count} thread{m.thread_count === 1 ? '' : 's'}
-                      </p>
-                    </div>
+            <TabsContent value="members" className="mt-4">
+              {membersDirectoryQ.isLoading && membersPage === 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {Array.from({ length: 6 }).map((_, i) => (<Skeleton key={i} className="h-16 rounded-xl" />))}
+                </div>
+              ) : (membersDirectoryQ.data ?? []).length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground rounded-xl border border-dashed">No members yet.</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {membersDirectoryQ.data!.map((m: any) => (
+                      <div key={m.user_id} className="rounded-xl border bg-card p-3 flex items-center gap-3">
+                        <UserAvatar avatarUrl={m.avatar_url} displayName={m.display_name} size="md" />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{m.display_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Joined {format(new Date(m.joined_at), 'MMM d, yyyy')} ·{' '}
+                            {m.thread_count} thread{m.thread_count === 1 ? '' : 's'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="flex justify-center mt-4 gap-2">
-                {membersPage > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => setMembersPage((p) => Math.max(0, p - 1))}>
-                    Previous
-                  </Button>
+                  <div className="flex justify-center mt-4 gap-2">
+                    {membersPage > 0 && (
+                      <Button variant="outline" size="sm" onClick={() => setMembersPage((p) => Math.max(0, p - 1))}>Previous</Button>
+                    )}
+                    {(membersDirectoryQ.data?.length ?? 0) === MEMBERS_PAGE_SIZE && (
+                      <Button variant="outline" size="sm" onClick={() => setMembersPage((p) => p + 1)} disabled={membersDirectoryQ.isFetching}>
+                        {membersDirectoryQ.isFetching ? 'Loading…' : 'Load more'}
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
+            </TabsContent>
+
+            {isSubgroupAdmin && (
+              <TabsContent value="manage" className="mt-4 space-y-6">
+                {/* Rules editor */}
+                <section className="rounded-xl border bg-card p-4">
+                  <h3 className="font-semibold mb-2">Edit rules</h3>
+                  <p className="text-xs text-muted-foreground mb-2">One rule per line.</p>
+                  <Textarea
+                    rows={6}
+                    value={rulesDraft ?? rules.join('\n')}
+                    onChange={(e) => setRulesDraft(e.target.value)}
+                    placeholder="1. Be respectful&#10;2. No spam"
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <Button size="sm" disabled={saveRulesMut.isPending}
+                      onClick={() => {
+                        const lines = (rulesDraft ?? rules.join('\n'))
+                          .split('\n').map((l) => l.trim()).filter(Boolean)
+                        saveRulesMut.mutate(lines)
+                      }}>
+                      Save rules
+                    </Button>
+                    {rulesDraft !== null && (
+                      <Button size="sm" variant="ghost" onClick={() => setRulesDraft(null)}>Cancel</Button>
+                    )}
+                  </div>
+                </section>
+
+                {/* Join requests */}
+                {s.is_private && (
+                  <section className="rounded-xl border bg-card p-4">
+                    <h3 className="font-semibold mb-3">Join requests</h3>
+                    {joinRequestsQ.isLoading ? (
+                      <Skeleton className="h-16 w-full" />
+                    ) : (joinRequestsQ.data ?? []).length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No pending requests.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {joinRequestsQ.data!.map((r: any) => (
+                          <div key={r.id} className="flex items-center gap-3 rounded-lg border p-2">
+                            <UserAvatar
+                              avatarUrl={r.profile?.avatar_url}
+                              displayName={r.profile?.display_name || 'Member'}
+                              size="sm"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{r.profile?.display_name || 'Member'}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
+                              </p>
+                            </div>
+                            <Button size="sm" variant="outline"
+                              onClick={() => decideMut.mutate({ id: r.id, approve: true })}
+                              disabled={decideMut.isPending}>
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost"
+                              onClick={() => decideMut.mutate({ id: r.id, approve: false })}
+                              disabled={decideMut.isPending}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
                 )}
-                {(membersDirectoryQ.data?.length ?? 0) === MEMBERS_PAGE_SIZE && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setMembersPage((p) => p + 1)}
-                    disabled={membersDirectoryQ.isFetching}
-                  >
-                    {membersDirectoryQ.isFetching ? 'Loading…' : 'Load more'}
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
+
+                {/* Invite links */}
+                <section className="rounded-xl border bg-card p-4">
+                  <h3 className="font-semibold mb-3">Invite links</h3>
+                  <div className="flex flex-wrap items-end gap-2 mb-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Expires in (hours)</label>
+                      <Input type="number" min={0} value={inviteExpiryHours}
+                        onChange={(e) => setInviteExpiryHours(Number(e.target.value) || 0)}
+                        className="w-32" />
+                    </div>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={inviteSingleUse}
+                        onChange={(e) => setInviteSingleUse(e.target.checked)} />
+                      Single-use
+                    </label>
+                    <Button size="sm" onClick={() => createInviteMut.mutate()} disabled={createInviteMut.isPending}>
+                      Generate link
+                    </Button>
+                  </div>
+                  {invitesQ.isLoading ? (
+                    <Skeleton className="h-12 w-full" />
+                  ) : (invitesQ.data ?? []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No active invites.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {invitesQ.data!.map((inv: any) => {
+                        const expired = inv.expires_at && new Date(inv.expires_at) < new Date()
+                        const dead = inv.used && inv.single_use
+                        return (
+                          <div key={inv.id} className="flex items-center gap-2 rounded-lg border p-2 text-sm">
+                            <code className="truncate flex-1 text-xs">…/invite/{inv.token.slice(0, 12)}…</code>
+                            {expired && <Badge variant="outline">Expired</Badge>}
+                            {dead && <Badge variant="outline">Used</Badge>}
+                            {!dead && !expired && inv.single_use && <Badge variant="secondary">Single-use</Badge>}
+                            <Button size="sm" variant="ghost" onClick={() => copyInvite(inv.token)}>
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => deleteInviteMut.mutate(inv.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </section>
+              </TabsContent>
+            )}
+          </Tabs>
+        </div>
+
+        {/* Rules sidebar */}
+        <aside className="space-y-4">
+          <Collapsible open={rulesOpen} onOpenChange={setRulesOpen} className="rounded-xl border bg-card">
+            <CollapsibleTrigger className="w-full flex items-center justify-between p-4 font-semibold">
+              <span>Subgroup Rules</span>
+              {rulesOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="px-4 pb-4">
+              {rules.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No rules set yet.</p>
+              ) : (
+                <ol className="list-decimal pl-5 space-y-1 text-sm">
+                  {rules.map((r, i) => (<li key={i}>{r}</li>))}
+                </ol>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        </aside>
+      </div>
     </div>
   )
 }
