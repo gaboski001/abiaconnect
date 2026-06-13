@@ -172,7 +172,7 @@ export function Footer() {
             <p>© {new Date().getFullYear()} AbiaConnect. All rights reserved.</p>
             <div className="flex items-center gap-3">
               <a
-                href="https://wa.me/2348103488888"
+                href="https://wa.me/2348103428888"
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Contact Project Manager"
