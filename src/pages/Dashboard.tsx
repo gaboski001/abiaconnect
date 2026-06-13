@@ -1,18 +1,11 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { toWebP } from '@/lib/image'
 import { Link, useNavigate } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow, startOfDay, subDays, format } from 'date-fns'
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+
+const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
 import {
   Bell,
   Bookmark,
