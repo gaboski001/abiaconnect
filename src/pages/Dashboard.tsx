@@ -1,18 +1,11 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { toWebP } from '@/lib/image'
 import { Link, useNavigate } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow, startOfDay, subDays, format } from 'date-fns'
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+
+const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
 import {
   Bell,
   Bookmark,
@@ -172,10 +165,13 @@ export default function Dashboard() {
 /* ----------------- Overview ----------------- */
 function Overview({ displayName }: { displayName: string }) {
   const { user } = useAuth()
+  const qc = useQueryClient()
 
   const stats = useQuery({
     queryKey: ['dash-stats', user?.id],
     enabled: !!user,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const uid = user!.id
       const [posts, replies, bookmarks, profile] = await Promise.all([
@@ -196,6 +192,7 @@ function Overview({ displayName }: { displayName: string }) {
   const activity = useQuery({
     queryKey: ['dash-activity', user?.id],
     enabled: !!user,
+    staleTime: 30_000,
     queryFn: async () => {
       const since = startOfDay(subDays(new Date(), 6)).toISOString()
       const { data, error } = await supabase
@@ -224,6 +221,7 @@ function Overview({ displayName }: { displayName: string }) {
   const recent = useQuery({
     queryKey: ['my-recent-threads', user?.id],
     enabled: !!user,
+    staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('threads')
@@ -235,6 +233,27 @@ function Overview({ displayName }: { displayName: string }) {
       return (data ?? []) as Array<{ id: string; title: string; created_at: string }>
     },
   })
+
+  // Realtime: refresh stats/activity/recent when the user's data changes
+  useEffect(() => {
+    if (!user) return
+    const uid = user.id
+    const invalidate = () => {
+      qc.invalidateQueries({ queryKey: ['dash-stats', uid] })
+      qc.invalidateQueries({ queryKey: ['dash-activity', uid] })
+      qc.invalidateQueries({ queryKey: ['my-recent-threads', uid] })
+    }
+    const channel = supabase
+      .channel(`dash-overview:${uid}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: `user_id=eq.${uid}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'replies', filter: `user_id=eq.${uid}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmarks', filter: `user_id=eq.${uid}` }, invalidate)
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [user, qc])
+
 
   const cards = [
     { label: 'My Posts', value: stats.data?.posts ?? 0 },
@@ -259,28 +278,11 @@ function Overview({ displayName }: { displayName: string }) {
       <div className="rounded-2xl border border-border bg-card p-5">
         <h2 className="font-bold mb-4">Recent Activity</h2>
         <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="dashFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(145 60% 35%)" stopOpacity={0.6} />
-                  <stop offset="100%" stopColor="hsl(45 90% 55%)" stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="label" fontSize={12} />
-              <YAxis allowDecimals={false} fontSize={12} />
-              <Tooltip />
-              <Area
-                type="monotone"
-                dataKey="posts"
-                stroke="hsl(145 60% 35%)"
-                fill="url(#dashFill)"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <Suspense fallback={<div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />}>
+            <ActivityChart data={chartData} />
+          </Suspense>
         </div>
+
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-5">
