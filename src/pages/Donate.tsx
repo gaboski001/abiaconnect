@@ -198,21 +198,31 @@ export default function Donate() {
           <div className="space-y-4">
             <h2 className="text-2xl md:text-3xl font-bold">Why Your Support Matters</h2>
             <p className="text-muted-foreground leading-relaxed">
-              AbiaConnect was not built for profit. It was built for people — for the Abian mother in London who wants to
-              stay connected to home, for the young graduate in Umuahia looking for opportunities, for the elder in the
-              diaspora who wants to pass culture down to the next generation.
+              AbiaConnect was not built for profit. It was built for purpose.
             </p>
             <p className="text-muted-foreground leading-relaxed">
-              This platform runs on dedication, community love — and the generous support of members like you.
+              This platform exists for every Abian — those who wake up to the sounds of home, and those who carry home
+              only in their hearts. For the student striving to build a future. For the professional determined to give
+              back. For the elder preserving what must not be forgotten. For the young person searching for identity,
+              community, and belonging. For every Abian, wherever life has placed them, who still feels the pull of
+              where they come from.
             </p>
             <p className="text-muted-foreground leading-relaxed">
-              There are no shareholders here. No advertisers. No hidden agenda. Just a community platform, run for the
-              people, sustained by the people.
+              We built AbiaConnect because our people deserve a space that is entirely their own — a platform where
+              Abian voices are heard, Abian stories are told, and Abian connections are made and strengthened across
+              every distance.
             </p>
-            <p className="font-medium">
-              If AbiaConnect has ever connected you, informed you, or made you feel closer to home — this is your chance
-              to give back.
+            <p className="text-muted-foreground leading-relaxed">
+              This platform runs on dedication, community love — and the generous support of members like you. There are
+              no shareholders here. No advertisers. No hidden agenda. No gatekeepers. Just a community platform —
+              conceived by an Abian, built for Abians, and sustained by Abians.
             </p>
+            <p className="text-muted-foreground leading-relaxed">
+              When you donate to AbiaConnect, you are not paying for a service. You are investing in your people. You
+              are saying that this community matters, that these connections matter, and that every Abian — regardless
+              of where they are in the world — deserves a home online that reflects who we are and what we stand for.
+            </p>
+            <p className="font-medium">Your support keeps that home standing.</p>
           </div>
           <div className="grid gap-3">
             {[
