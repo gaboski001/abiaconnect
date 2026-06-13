@@ -55,7 +55,9 @@ const NotFound = () => (
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       <Route element={<MainLayout />}>
         <Route index element={<Home />} />
         <Route path="login" element={<Login />} />
