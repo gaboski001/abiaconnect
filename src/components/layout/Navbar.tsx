@@ -29,7 +29,6 @@ export function Navbar() {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [logoFailed, setLogoFailed] = useState(false)
-  const [logoLoaded, setLogoLoaded] = useState(false)
 
   const siteName = settings.site_name || 'AbiaConnect'
   const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
@@ -39,8 +38,8 @@ export function Navbar() {
 
   useEffect(() => {
     setLogoFailed(false)
-    setLogoLoaded(false)
   }, [settings.site_logo, settings.logo_url, logoUrl])
+
 
   const navLinks = (
     <>
