@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import StaticPage from '@/components/layout/StaticPage'
+import SafeImage from '@/components/ui/SafeImage'
+import { useSignedUrl } from '@/hooks/useSignedUrl'
+import { getAvatarFallback } from '@/lib/images'
 import {
   MessagesSquare,
   BarChart3,
@@ -8,6 +11,12 @@ import {
   Mail,
   Bell,
   Trophy,
+  Globe,
+  MapPin,
+  Landmark,
+  Code2,
+  Wrench,
+  Rocket,
 } from 'lucide-react'
 
 const FEATURES = [
@@ -25,6 +34,149 @@ const STATS = [
   { number: '100+', label: 'Active Subgroups' },
   { number: '17', label: 'LGAs Represented' },
 ]
+
+const STANDS = [
+  { title: 'Identity', body: 'Celebrating and preserving Abian culture, language, and heritage.' },
+  { title: 'Community', body: 'Building genuine connections between Abians at home and abroad.' },
+  { title: 'Knowledge', body: 'Sharing information on education, business, health, governance, and opportunity.' },
+  { title: 'Progress', body: 'Driving development conversations that lead to real change in Abia State.' },
+]
+
+const CREDENTIALS = [
+  { icon: Code2, label: 'Full-Stack Developer' },
+  { icon: Wrench, label: 'Software Engineer' },
+  { icon: Users, label: 'Community Builder' },
+  { icon: Rocket, label: 'Tech Entrepreneur' },
+  { icon: MapPin, label: 'Bende LGA, Abia State' },
+]
+
+function FounderSection() {
+  const photoUrl = useSignedUrl('about/ceo-photo.webp', 'site-assets', 60 * 60 * 24)
+
+  return (
+    <section
+      id="founder"
+      className="not-prose -mx-6 my-12 px-6 py-12 md:py-16 rounded-2xl"
+      style={{ background: '#f2f8f5' }}
+    >
+      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[380px_1fr] gap-8 md:gap-12 items-start">
+        <div className="w-full">
+          <div
+            className="overflow-hidden mx-auto md:mx-0"
+            style={{
+              borderRadius: 16,
+              border: '3px solid #1a4f3a',
+              width: '100%',
+              maxWidth: 380,
+            }}
+          >
+            <SafeImage
+              src={photoUrl}
+              fallback={getAvatarFallback('Okechukwu Gabriel')}
+              alt="Okechukwu Gabriel E. — Founder & CEO, AbiaConnect"
+              width={380}
+              height={460}
+              className="w-full h-auto block"
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#1a4f3a' }}>
+            Meet the Founder &amp; CEO
+          </p>
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-1 mt-0">
+            Okechukwu Gabriel E.
+          </h2>
+          <p className="text-base md:text-lg text-muted-foreground mb-4">
+            Founder &amp; Chief Executive Officer, AbiaConnect
+          </p>
+
+          <div className="flex flex-wrap gap-2 mb-6">
+            <span className="inline-flex items-center gap-1 text-xs font-medium bg-secondary/15 text-secondary border border-secondary/30 px-3 py-1 rounded-full">
+              <MapPin className="size-3" /> Eluama Lodu-Imenyi
+            </span>
+            <span className="inline-flex items-center gap-1 text-xs font-medium bg-secondary/15 text-secondary border border-secondary/30 px-3 py-1 rounded-full">
+              <Landmark className="size-3" /> Bende LGA
+            </span>
+            <span className="inline-flex items-center gap-1 text-xs font-medium bg-secondary/15 text-secondary border border-secondary/30 px-3 py-1 rounded-full">
+              <Globe className="size-3" /> Abia State, Nigeria
+            </span>
+          </div>
+
+          <div className="space-y-4 text-muted-foreground leading-relaxed">
+            <p>
+              Okechukwu Gabriel E. is a passionate technology entrepreneur, professional full-stack
+              developer, and software engineer with a deep commitment to using technology as a tool
+              for community empowerment and cultural preservation.
+            </p>
+            <p>
+              Born into the family of the late Sup Ap Okechukwu W. Obialor, and hailing from
+              Eluama Lodu-Imenyi in Bende Local Government Area of Abia State, Okechukwu carries
+              the values of his heritage — resilience, community, and purpose — into everything
+              he builds.
+            </p>
+            <p>
+              It was this same sense of identity and belonging that inspired the creation of
+              AbiaConnect — a platform conceived not just as a forum, but as a digital homeland
+              for every Abian, wherever in the world they may be. What began as a vision to
+              reconnect Abia's scattered sons and daughters has grown into one of the most
+              vibrant community platforms serving the Abian people today.
+            </p>
+            <p>
+              As a full-stack developer and software architect, Okechukwu personally designed and
+              engineered the AbiaConnect platform — from its database architecture and real-time
+              infrastructure to its user experience and community features. His technical
+              expertise is matched only by his dedication to the people the platform serves.
+            </p>
+          </div>
+
+          <blockquote
+            className="my-6 italic px-5 py-4 rounded-r-lg"
+            style={{ borderLeft: '4px solid #1a4f3a', background: 'rgba(26,79,58,0.06)' }}
+          >
+            <p className="text-foreground m-0">
+              "AbiaConnect is more than a website. It is a statement — that our people matter,
+              our voices matter, and our culture deserves a permanent, powerful home in the
+              digital world."
+            </p>
+            <footer className="text-sm text-muted-foreground mt-2 not-italic">
+              — Okechukwu Gabriel E., Founder &amp; CEO
+            </footer>
+          </blockquote>
+
+          <div className="flex flex-wrap gap-2 mb-4">
+            {CREDENTIALS.map(({ icon: Icon, label }) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-1.5 text-xs font-medium bg-card border border-border px-3 py-1.5 rounded-full text-foreground"
+              >
+                <Icon className="size-3.5" style={{ color: '#1a4f3a' }} /> {label}
+              </span>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <a
+              href="https://abiaconnect.com"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-secondary hover:underline"
+            >
+              <Globe className="size-4" /> abiaconnect.com
+            </a>
+            <a
+              href="mailto:support@abiaconnect.com"
+              className="inline-flex items-center gap-1.5 text-secondary hover:underline"
+            >
+              <Mail className="size-4" /> support@abiaconnect.com
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
 
 export default function About() {
   return (
@@ -47,19 +199,31 @@ export default function About() {
         one unified digital home.
       </p>
 
-      <h2>Our Story</h2>
+      <h2>Our Mission</h2>
       <p>
-        The idea for AbiaConnect was born from a familiar frustration: Abia State has always
-        produced brilliant, industrious, and deeply connected people — yet there was no single
-        trusted online space where that energy could gather. Facebook groups fragmented the
-        conversation. WhatsApp chats were private and temporary. Important announcements, business
-        opportunities, and cultural discussions were scattered across platforms with no continuity.
+        AbiaConnect was founded on a single, powerful belief — that geography should never separate
+        a people from their identity, their community, or their voice. We are the digital home of
+        indigenous people of Abia State, built to bridge the distance between those at home and
+        those in the diaspora, and to create a space where Abian culture, knowledge, commerce, and
+        community thrive together.
       </p>
+
+      <h2>Our Vision</h2>
       <p>
-        AbiaConnect was created to change that. We built a platform that respects the intelligence
-        of our people, protects their privacy, and gives every Abian — whether in Umuahia or in
-        Toronto — a dignified space to speak, connect, trade, and thrive.
+        To become the most trusted and most active community platform for Abians worldwide — a
+        living, breathing forum where every Abian, regardless of where life has taken them, can
+        speak, connect, contribute, and belong.
       </p>
+
+      <h2>What We Stand For</h2>
+      <div className="not-prose grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
+        {STANDS.map((s) => (
+          <div key={s.title} className="bg-card border border-border rounded-2xl p-6">
+            <h3 className="font-semibold text-foreground mb-1">{s.title}</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">{s.body}</p>
+          </div>
+        ))}
+      </div>
 
       <h2>What AbiaConnect Offers</h2>
       <div className="not-prose grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
@@ -76,7 +240,10 @@ export default function About() {
         ))}
       </div>
 
-      <h2>AbiaConnect by the Numbers</h2>
+      <h2>Our Community</h2>
+      <p>
+        AbiaConnect by the numbers — a snapshot of the community we are building together.
+      </p>
       <div className="not-prose grid grid-cols-2 md:grid-cols-4 gap-4 my-6">
         {STATS.map((s) => (
           <div key={s.label} className="bg-card border border-border rounded-2xl p-6 text-center">
@@ -85,6 +252,8 @@ export default function About() {
           </div>
         ))}
       </div>
+
+      <FounderSection />
 
       <h2>Built by Abians, for Abians</h2>
       <p>
