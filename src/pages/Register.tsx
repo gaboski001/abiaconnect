@@ -18,6 +18,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { supabase } from '@/lib/supabase'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { useSignedUrl } from '@/hooks/useSignedUrl'
 
 const ABIA_LGAS = [
   'Aba North', 'Aba South', 'Arochukwu', 'Bende', 'Ikwuano',
@@ -80,6 +82,8 @@ function StepDots({ step }: { step: number }) {
 
 export default function Register() {
   const navigate = useNavigate()
+  const { settings } = useSiteSettings()
+  const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [direction, setDirection] = useState(1)
   const [quiz, setQuiz] = useState(makeQuiz)
@@ -147,6 +151,15 @@ export default function Register() {
       <SEO title="Create your AbiaConnect account" description="Join AbiaConnect — the community forum connecting Abians worldwide. Register in seconds." path="/register" />
     <div className="min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 rounded-3xl p-6">
       <div className="w-full max-w-lg rounded-3xl border border-border bg-card shadow-xl p-8 overflow-hidden">
+        <div className="flex justify-center mb-4">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground overflow-hidden">
+            {logoUrl ? (
+              <img src={logoUrl} alt={settings.site_name || 'AbiaConnect'} className="h-full w-full object-contain" />
+            ) : (
+              <span className="text-lg font-bold">{(settings.site_name || 'A').charAt(0)}</span>
+            )}
+          </span>
+        </div>
         <StepDots step={step} />
 
         <AnimatePresence mode="wait" custom={direction}>
