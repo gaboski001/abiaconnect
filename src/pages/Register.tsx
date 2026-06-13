@@ -82,6 +82,8 @@ function StepDots({ step }: { step: number }) {
 
 export default function Register() {
   const navigate = useNavigate()
+  const { settings } = useSiteSettings()
+  const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [direction, setDirection] = useState(1)
   const [quiz, setQuiz] = useState(makeQuiz)
