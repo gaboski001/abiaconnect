@@ -46,7 +46,7 @@ export default function Team() {
       </div>
 
       <div className="not-prose bg-card border-2 border-secondary rounded-2xl p-8 text-center my-8">
-        <h3 className="text-xl font-bold text-foreground mb-2">Want to Contribute?</h3>
+        <h2 className="text-xl font-bold text-foreground mb-2">Want to Contribute?</h2>
         <p className="text-muted-foreground mb-4 max-w-xl mx-auto">
           AbiaConnect welcomes volunteers who share our mission. Whether you are a developer,
           writer, moderator, or connector — there is a role for you here.
