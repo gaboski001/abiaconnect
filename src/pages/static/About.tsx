@@ -60,14 +60,14 @@ function FounderSection() {
     >
       <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[220px_1fr] gap-8 md:gap-10 items-start">
         <div className="w-full flex justify-center md:justify-start">
-          <div className="overflow-hidden rounded-2xl border-2 border-secondary/40 ring-4 ring-primary/10 shadow-lg w-[180px] h-[180px] md:w-[220px] md:h-[220px]">
+          <div className="overflow-hidden rounded-2xl border-2 border-secondary/40 ring-4 ring-primary/10 shadow-lg w-[180px] h-[220px] md:w-[220px] md:h-[260px]">
             <SafeImage
               src={photoUrl}
               fallback={getAvatarFallback('Okechukwu Gabriel')}
               alt="Okechukwu Gabriel E. — Founder & CEO, AbiaConnect"
               width={220}
-              height={220}
-              className="w-full h-full object-cover object-center"
+              height={260}
+              className="w-full h-full object-cover object-top"
             />
           </div>
         </div>
@@ -189,6 +189,8 @@ export default function About() {
         </div>
       </section>
 
+      <FounderSection />
+
       <div className="not-prose grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
         <div className="bg-card border border-border rounded-2xl p-6">
           <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">02 — Our Mission</p>
@@ -252,7 +254,7 @@ export default function About() {
         </div>
       </section>
 
-      <FounderSection />
+      
 
       <section className="not-prose mb-8 text-center max-w-2xl mx-auto">
         <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">08 — Join Us</p>
