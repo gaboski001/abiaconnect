@@ -37,27 +37,9 @@
         } catch (e) {}
       })();
     </script>
-    <style>
-      #ac-splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;z-index:9999;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-      #ac-splash .bar{position:absolute;top:0;left:0;height:3px;width:30%;background:#1a4f3a;border-radius:0 3px 3px 0;animation:ac-bar 1.2s ease-in-out infinite}
-      #ac-splash .logo{width:96px;height:96px;color:#1a4f3a}
-      #ac-splash .tag{margin-top:14px;color:#1a4f3a;font-size:13px;font-weight:300;letter-spacing:.02em;opacity:.85}
-      @keyframes ac-bar{0%{transform:translateX(-100%);width:30%}50%{width:55%}100%{transform:translateX(360%);width:30%}}
-      .ac-hide{opacity:0;transition:opacity .25s ease;pointer-events:none}
-    </style>
   </head>
   <body>
-    <div id="root">
-      <div id="ac-splash" role="status" aria-label="Loading AbiaConnect">
-        <div class="bar"></div>
-        <svg class="logo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="3"/>
-          <path d="M20 42 L32 18 L44 42 Z" stroke="currentColor" stroke-width="3" stroke-linejoin="round" fill="none"/>
-          <path d="M25 36 H39" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-        </svg>
-        <div class="tag">Connecting Abians Worldwide</div>
-      </div>
-    </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

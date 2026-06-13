@@ -68,9 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return
       await applySession(data.session)
       setLoading(false)
-      // Signal the inline splash that it's safe to unmount — auth is resolved,
-      // so the navbar will render with the correct (logged-in or guest) state.
-      ;(window as unknown as { __acRemoveSplash?: () => void }).__acRemoveSplash?.()
     })
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {

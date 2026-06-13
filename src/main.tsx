@@ -21,18 +21,6 @@ if (typeof window !== 'undefined') {
   window.addEventListener('load', () => onIdle(() => registerSW()), { once: true })
 }
 
-// Remove the inline splash once React has rendered AND auth is resolved.
-const removeSplash = () => {
-  const el = document.getElementById('ac-splash')
-  if (!el || el.dataset.removing === '1') return
-  el.dataset.removing = '1'
-  el.classList.add('ac-hide')
-  window.setTimeout(() => el.remove(), 260)
-}
-// Exposed so AuthProvider can signal "session resolved → safe to unmount splash".
-;(window as unknown as { __acRemoveSplash?: () => void }).__acRemoveSplash = removeSplash
-// Safety net: never leave the splash up longer than 1.5s, even if auth stalls.
-window.setTimeout(removeSplash, 1500)
 
 const queryClient = new QueryClient()
 
