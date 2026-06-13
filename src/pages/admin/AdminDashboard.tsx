@@ -392,6 +392,21 @@ function UsersSection() {
     onError: (e: any) => toast.error(e.message || 'Failed'),
   })
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-users-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        qc.invalidateQueries({ queryKey: ['admin-users'] })
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_roles' }, () => {
+        qc.invalidateQueries({ queryKey: ['admin-users'] })
+      })
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [qc])
+
   const total = usersQ.data?.total ?? 0
   const pages = Math.max(1, Math.ceil(total / pageSize))
 
