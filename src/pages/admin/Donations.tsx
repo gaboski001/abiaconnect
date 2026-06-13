@@ -144,14 +144,15 @@ export default function AdminDonations() {
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: Donation['status'] }) => {
-      const payload: Record<string, unknown> = { status }
+      let confirmed_by: string | null = null
       if (status === 'confirmed') {
-        payload.confirmed_at = new Date().toISOString()
         const { data: u } = await supabase.auth.getUser()
-        payload.confirmed_by = u.user?.id ?? null
-      } else {
-        payload.confirmed_at = null
-        payload.confirmed_by = null
+        confirmed_by = u.user?.id ?? null
+      }
+      const payload = {
+        status,
+        confirmed_at: status === 'confirmed' ? new Date().toISOString() : null,
+        confirmed_by,
       }
       const { error } = await supabase.from('donations').update(payload).eq('id', id)
       if (error) throw error
