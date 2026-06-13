@@ -93,6 +93,7 @@ export default function App() {
                 <Route path="cookie-policy" element={<CookiePolicy />} />
                 <Route path="community-standards" element={<CommunityStandards />} />
                 <Route path="donate" element={<Donate />} />
+                <Route path="unsubscribe" element={<Unsubscribe />} />
 
                 <Route element={<ProtectedRoute />}>
                   <Route path="dashboard" element={<Dashboard />} />
