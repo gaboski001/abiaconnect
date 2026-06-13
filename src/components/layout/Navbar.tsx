@@ -52,6 +52,9 @@ export function Navbar() {
       <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">
         About Us
       </Link>
+      <Link to="/donate" className="text-sm font-medium text-rose-600 hover:text-rose-700 transition-colors">
+        Donate ❤️
+      </Link>
       {subgroupsEnabled && (
         <Link to="/subgroups" className="text-sm font-medium hover:text-primary transition-colors">
           Subgroups
