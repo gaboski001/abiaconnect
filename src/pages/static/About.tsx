@@ -181,10 +181,14 @@ export default function About() {
             people, and their shared future.
           </p>
           <p>
-            Founded with a simple belief — that Abians are stronger together — AbiaConnect brings
-            together traders from Ariaria, professionals in London and Houston, farmers from Bende and
-            Ikwuano, students at ABSU and FUTO, and leaders across all 17 local government areas into
-            one unified digital home.
+            Founded on one unshakeable belief — that Abians are stronger together — AbiaConnect was
+            built to close the distance between every Abian, wherever life has taken them. Whether
+            rooted at home or scattered across the world, every Abian carries a shared heritage, a
+            common identity, and an unbreakable bond to their people. This platform exists to honour
+            that bond and give it a permanent, powerful home in the digital age. From the market
+            trader to the corporate executive, from the student to the seasoned professional, from
+            the village elder to the young entrepreneur just finding their footing — AbiaConnect was
+            built for all of them. Built for all of us.
           </p>
         </div>
       </section>
