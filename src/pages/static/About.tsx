@@ -252,7 +252,7 @@ export default function About() {
         </div>
       </section>
 
-      <FounderSection />
+      
 
       <section className="not-prose mb-8 text-center max-w-2xl mx-auto">
         <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">08 — Join Us</p>
