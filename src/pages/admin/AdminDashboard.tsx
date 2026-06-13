@@ -514,7 +514,7 @@ function UsersSection() {
                       size="sm"
                       className="text-destructive"
                       onClick={() => {
-                        if (confirm('Soft delete this user?')) deleteMut.mutate(u.id)
+                        if (confirm('Permanently delete this user and ALL their content? This cannot be undone.')) deleteMut.mutate(u.id)
                       }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
