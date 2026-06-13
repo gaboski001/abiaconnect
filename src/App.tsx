@@ -22,6 +22,8 @@ const SubgroupInvite = lazy(() => import('@/pages/SubgroupInvite'))
 const Notifications = lazy(() => import('@/pages/Notifications'))
 const Messages = lazy(() => import('@/pages/Messages'))
 const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'))
+const AdminDonations = lazy(() => import('@/pages/admin/Donations'))
+const Donate = lazy(() => import('@/pages/Donate'))
 const EmailDns = lazy(() => import('@/pages/admin/EmailDns'))
 const LgasGuide = lazy(() => import('@/pages/LgasGuide'))
 const KnownFor = lazy(() => import('@/pages/KnownFor'))
@@ -75,6 +77,7 @@ export default function App() {
                 <Route path="about/known-for" element={<KnownFor />} />
                 <Route path="about/absu" element={<AbsuGuide />} />
                 <Route path="about" element={<About />} />
+                <Route path="donate" element={<Donate />} />
                 <Route path="mission" element={<Mission />} />
                 <Route path="team" element={<Team />} />
                 <Route path="careers" element={<Careers />} />
@@ -103,6 +106,7 @@ export default function App() {
 
                   <Route element={<AdminRoute />}>
                     <Route path="admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="admin/donations" element={<AdminDonations />} />
                     <Route path="admin/email-dns" element={<EmailDns />} />
                   </Route>
                 </Route>
