@@ -1102,6 +1102,33 @@ export type Database = {
           },
         ]
       }
+      user_known_devices: {
+        Row: {
+          fingerprint: string
+          first_seen: string
+          id: string
+          last_seen: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          fingerprint: string
+          first_seen?: string
+          id?: string
+          last_seen?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          fingerprint?: string
+          first_seen?: string
+          id?: string
+          last_seen?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
