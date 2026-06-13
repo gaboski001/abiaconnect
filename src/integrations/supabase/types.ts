@@ -139,6 +139,54 @@ export type Database = {
         }
         Relationships: []
       }
+      donation_accounts: {
+        Row: {
+          account_name: string
+          account_number: string | null
+          account_type: string
+          bank_name: string | null
+          created_at: string
+          crypto_currency: string | null
+          crypto_network: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          order_index: number
+          updated_at: string
+          wallet_address: string | null
+        }
+        Insert: {
+          account_name: string
+          account_number?: string | null
+          account_type: string
+          bank_name?: string | null
+          created_at?: string
+          crypto_currency?: string | null
+          crypto_network?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Update: {
+          account_name?: string
+          account_number?: string | null
+          account_type?: string
+          bank_name?: string | null
+          created_at?: string
+          crypto_currency?: string | null
+          crypto_network?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string

@@ -40,6 +40,7 @@ const LINK_GROUPS: Array<{ title: string; links: Array<{ label: string; href: st
       { label: 'Events Calendar', href: '/events' },
       { label: 'Success Stories', href: '/success-stories' },
       { label: 'Member Spotlight', href: '/member-spotlight' },
+      { label: 'Support the Platform ❤️', href: '/donate' },
     ],
   },
   {
@@ -169,7 +170,22 @@ export function Footer() {
 
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 border-t border-border pt-6 text-sm text-muted-foreground">
             <p>© {new Date().getFullYear()} AbiaConnect. All rights reserved.</p>
-            <p>Made with ❤️ for Abia State</p>
+            <div className="flex items-center gap-3">
+              <a
+                href="https://wa.me/2348103488888"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Contact Project Manager"
+                aria-label="Contact Project Manager on WhatsApp"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white hover:opacity-90 transition"
+                style={{ backgroundColor: '#25D366' }}
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="size-4" aria-hidden="true">
+                  <path d="M20.52 3.48A11.93 11.93 0 0 0 12.04 0C5.5 0 .2 5.3.2 11.84c0 2.08.54 4.1 1.57 5.89L0 24l6.42-1.68a11.83 11.83 0 0 0 5.62 1.43h.01c6.54 0 11.84-5.3 11.84-11.84 0-3.16-1.23-6.13-3.37-8.43Zm-8.48 18.02h-.01a9.65 9.65 0 0 1-4.92-1.35l-.35-.21-3.81 1 1.02-3.71-.23-.38a9.66 9.66 0 1 1 17.93-5.01c0 5.33-4.34 9.66-9.63 9.66Z" />
+                </svg>
+              </a>
+              <p>Made with ❤️ for Abia State</p>
+            </div>
           </div>
         </div>
       </footer>
