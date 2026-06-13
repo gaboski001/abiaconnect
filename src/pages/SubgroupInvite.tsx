@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SEO } from '@/components/SEO'
 
 export default function SubgroupInvite() {
   const { token } = useParams<{ token: string }>()
