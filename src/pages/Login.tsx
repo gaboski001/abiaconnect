@@ -32,7 +32,7 @@ export default function Login() {
         return
       }
       toast.success('Welcome back!')
-      navigate(isAdmin ? '/admin/dashboard' : '/dashboard')
+      navigate('/')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Sign in failed')
     } finally {
