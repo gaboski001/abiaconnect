@@ -105,7 +105,7 @@ export default function CategoriesSection() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Category | null>(null)
   const [deleting, setDeleting] = useState<Category | null>(null)
-  const [seeding, setSeeding] = useState(false)
+  
 
   const catsQ = useQuery({
     queryKey: ['admin-categories'],
