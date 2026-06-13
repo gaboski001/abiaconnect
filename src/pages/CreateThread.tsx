@@ -224,6 +224,11 @@ export default function CreateThread() {
 
   return (
     <div className="grid lg:grid-cols-3 gap-6">
+      <SEO
+        title="Start a New Discussion"
+        description="Share your thoughts, ask a question, or open a new conversation with the AbiaConnect community. Post in a forum category or your subgroup."
+        path="/create-thread"
+      />
       <form onSubmit={onSubmit} className="lg:col-span-2 space-y-6">
         <h1 className="text-2xl font-bold">Create a Thread</h1>
 
