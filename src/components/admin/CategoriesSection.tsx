@@ -261,9 +261,6 @@ export default function CategoriesSection() {
     reorderMut.mutate(next)
   }
 
-  // ---------- seed banner ----------
-  const showSeedBanner = !catsQ.isLoading && all.length < 3
-
   const openCreate = () => {
     setEditing(null)
     setDialogOpen(true)
@@ -296,38 +293,6 @@ export default function CategoriesSection() {
         </Button>
       </div>
 
-      {showSeedBanner && (
-        <div className="rounded-2xl border border-secondary/40 bg-secondary/10 p-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <Sprout className="h-6 w-6 text-secondary shrink-0" />
-            <div className="min-w-0">
-              <p className="font-semibold text-foreground">No categories yet</p>
-              <p className="text-sm text-muted-foreground">
-                Seed the 14 starter categories to get your forum running.
-              </p>
-            </div>
-          </div>
-          <Button
-            disabled={seeding}
-            onClick={async () => {
-              try {
-                setSeeding(true)
-                const r = await seedCategories()
-                toast.success(`Seeded ${r.count} categories`)
-                qc.invalidateQueries({ queryKey: ['admin-categories'] })
-                qc.invalidateQueries({ queryKey: ['categories'] })
-              } catch (e: any) {
-                toast.error(e.message || 'Seed failed')
-              } finally {
-                setSeeding(false)
-              }
-            }}
-          >
-            {seeding ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-            Seed Default Categories
-          </Button>
-        </div>
-      )}
 
       {/* search + filters */}
       <div className="flex flex-wrap items-center gap-2">
