@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import LegalRegistration from '@/components/LegalRegistration'
 import StaticPage from '@/components/layout/StaticPage'
 import SafeImage from '@/components/ui/SafeImage'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
@@ -258,7 +259,10 @@ export default function About() {
         </div>
       </section>
 
-      
+      <LegalRegistration
+        leadIn="AbiaConnect is not just a community — it is a formally registered and tax-compliant platform, built to stand the test of time."
+      />
+
 
       <section className="not-prose mb-8 text-center max-w-2xl mx-auto">
         <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">08 — Join Us</p>

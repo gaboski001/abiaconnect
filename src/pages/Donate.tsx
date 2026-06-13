@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { SEO } from '@/components/SEO'
+import LegalRegistration from '@/components/LegalRegistration'
 
 type DonationAccount = {
   id: string
@@ -258,6 +259,11 @@ export default function Donate() {
             <p>When in doubt, verify directly with the Project Manager via the official WhatsApp contact below.</p>
           </div>
         </section>
+
+        <LegalRegistration
+          leadIn="Your donation goes to a legitimate, officially registered platform. AbiaConnect is fully registered under Nigerian law — transparent, accountable, and committed to this community."
+          footnote="Registration details can be independently verified through the Corporate Affairs Commission (CAC) of Nigeria using RC Number 3386638."
+        />
 
         {/* Accounts */}
         <section className="space-y-6">
