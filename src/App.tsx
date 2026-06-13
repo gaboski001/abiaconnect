@@ -42,6 +42,7 @@ const PrivacyPolicy = lazy(() => import('@/pages/static/PrivacyPolicy'))
 const TermsOfService = lazy(() => import('@/pages/static/TermsOfService'))
 const CookiePolicy = lazy(() => import('@/pages/static/CookiePolicy'))
 const CommunityStandards = lazy(() => import('@/pages/static/CommunityStandards'))
+const Unsubscribe = lazy(() => import('@/pages/Unsubscribe'))
 
 const RouteFallback = () => (
   <div className="flex items-center justify-center min-h-[40vh]">
@@ -92,6 +93,7 @@ export default function App() {
                 <Route path="cookie-policy" element={<CookiePolicy />} />
                 <Route path="community-standards" element={<CommunityStandards />} />
                 <Route path="donate" element={<Donate />} />
+                <Route path="unsubscribe" element={<Unsubscribe />} />
 
                 <Route element={<ProtectedRoute />}>
                   <Route path="dashboard" element={<Dashboard />} />
