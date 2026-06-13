@@ -52,9 +52,6 @@ export function Navbar() {
       <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">
         About Us
       </Link>
-      <Link to="/donate" className="text-sm font-medium hover:text-primary transition-colors">
-        Donate
-      </Link>
       {subgroupsEnabled && (
         <Link to="/subgroups" className="text-sm font-medium hover:text-primary transition-colors">
           Subgroups
@@ -76,20 +73,12 @@ export function Navbar() {
         </Link>
       )}
       {isAdmin && (
-        <>
-          <Link
-            to="/admin/dashboard"
-            className="text-sm font-medium hover:text-primary transition-colors"
-          >
-            Admin Portal
-          </Link>
-          <Link
-            to="/admin/donations"
-            className="text-sm font-medium hover:text-primary transition-colors"
-          >
-            Donations
-          </Link>
-        </>
+        <Link
+          to="/admin/dashboard"
+          className="text-sm font-medium hover:text-primary transition-colors"
+        >
+          Admin Portal
+        </Link>
       )}
     </>
   )

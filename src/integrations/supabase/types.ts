@@ -139,111 +139,6 @@ export type Database = {
         }
         Relationships: []
       }
-      donation_accounts: {
-        Row: {
-          account_name: string
-          account_number: string | null
-          account_type: string
-          bank_name: string | null
-          created_at: string
-          crypto_currency: string | null
-          crypto_network: string | null
-          description: string | null
-          id: string
-          is_active: boolean
-          order_index: number
-          updated_at: string
-          wallet_address: string | null
-        }
-        Insert: {
-          account_name: string
-          account_number?: string | null
-          account_type: string
-          bank_name?: string | null
-          created_at?: string
-          crypto_currency?: string | null
-          crypto_network?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          order_index?: number
-          updated_at?: string
-          wallet_address?: string | null
-        }
-        Update: {
-          account_name?: string
-          account_number?: string | null
-          account_type?: string
-          bank_name?: string | null
-          created_at?: string
-          crypto_currency?: string | null
-          crypto_network?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          order_index?: number
-          updated_at?: string
-          wallet_address?: string | null
-        }
-        Relationships: []
-      }
-      donations: {
-        Row: {
-          admin_notes: string | null
-          amount: number
-          confirmed_at: string | null
-          confirmed_by: string | null
-          created_at: string
-          created_by: string | null
-          currency: string
-          donor_email: string | null
-          donor_name: string
-          id: string
-          is_anonymous: boolean
-          message: string | null
-          payment_method: string
-          reference: string | null
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          admin_notes?: string | null
-          amount: number
-          confirmed_at?: string | null
-          confirmed_by?: string | null
-          created_at?: string
-          created_by?: string | null
-          currency?: string
-          donor_email?: string | null
-          donor_name: string
-          id?: string
-          is_anonymous?: boolean
-          message?: string | null
-          payment_method?: string
-          reference?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          admin_notes?: string | null
-          amount?: number
-          confirmed_at?: string | null
-          confirmed_by?: string | null
-          created_at?: string
-          created_by?: string | null
-          currency?: string
-          donor_email?: string | null
-          donor_name?: string
-          id?: string
-          is_anonymous?: boolean
-          message?: string | null
-          payment_method?: string
-          reference?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       email_send_log: {
         Row: {
           created_at: string
@@ -1275,14 +1170,6 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
-      get_donation_totals: {
-        Args: never
-        Returns: {
-          currency: string
-          donor_count: number
-          total: number
-        }[]
-      }
       get_my_profile: {
         Args: never
         Returns: {
@@ -1314,18 +1201,6 @@ export type Database = {
           poll_id: string
           poll_option_id: string
           vote_count: number
-        }[]
-      }
-      get_public_donations: {
-        Args: { _limit?: number }
-        Returns: {
-          amount: number
-          created_at: string
-          currency: string
-          donor_name: string
-          id: string
-          is_anonymous: boolean
-          message: string
         }[]
       }
       get_public_profiles: {
