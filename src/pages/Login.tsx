@@ -50,8 +50,12 @@ export default function Login() {
     <div className="min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 rounded-3xl p-6">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card shadow-xl p-8">
         <div className="flex flex-col items-center gap-3 mb-6">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground">
-            <Zap className="size-6" />
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground overflow-hidden">
+            {logoUrl ? (
+              <img src={logoUrl} alt={settings.site_name || 'AbiaConnect'} className="h-full w-full object-contain" />
+            ) : (
+              <span className="text-lg font-bold">{(settings.site_name || 'A').charAt(0)}</span>
+            )}
           </span>
           <h1 className="text-2xl font-bold">Sign in to AbiaConnect</h1>
           <p className="text-sm text-muted-foreground text-center">
