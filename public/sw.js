@@ -1,5 +1,5 @@
 // AbiaConnect minimal service worker — app-shell only, network-first for everything else.
-const CACHE = 'abiaconnect-shell-v1';
+const CACHE = 'abiaconnect-shell-v2';
 const SHELL = ['/', '/index.html', '/manifest.json', '/icons/icon-192x192.png', '/icons/icon-512x512.png'];
 
 self.addEventListener('install', (e) => {
