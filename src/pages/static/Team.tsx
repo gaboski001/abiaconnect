@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import StaticPage from '@/components/layout/StaticPage'
 
 const TEAM = [
-  { name: 'Chukwuemeka Okonkwo', role: 'Founder and Platform Lead', lga: 'Umuahia North', bio: 'Emeka has spent 12 years in software product development across Lagos and London. He returned his skills to his roots by founding AbiaConnect in 2024.' },
+  { name: 'Okechukwu Gabriel E.', role: 'Founder and Platform Lead', lga: 'Bende', bio: 'Gabriel has spent 12 years in software product development across Lagos and London. He returned his skills to his roots by founding AbiaConnect in 2024.' },
   { name: 'Adaeze Nwosu', role: 'Community Manager', lga: 'Aba South', bio: 'Ada oversees community health, member support, and moderation policy. She previously managed online communities for two Nigerian media companies.' },
   { name: 'Ikechukwu Eze', role: 'Lead Developer', lga: 'Bende', bio: 'Ike architected the AbiaConnect platform infrastructure. He is a full-stack engineer with experience at startups in Lagos and Nairobi.' },
   { name: 'Ngozi Obi', role: 'Content and Communications', lga: 'Ohafia', bio: "Ngozi leads editorial strategy, ensuring AbiaConnect's voice is warm, credible, and authentically Abian." },
