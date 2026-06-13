@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/select'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { SEO } from '@/components/SEO'
 
 const schema = z.object({
   category_id: z.string().optional(),
