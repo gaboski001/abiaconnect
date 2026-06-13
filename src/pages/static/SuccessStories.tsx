@@ -39,7 +39,7 @@ export default function SuccessStories() {
             <span className="inline-block text-xs font-semibold uppercase tracking-wider bg-secondary/15 text-secondary border border-secondary/30 px-2 py-0.5 rounded-full mb-3">
               {s.tag}
             </span>
-            <h3 className="text-xl font-bold text-foreground mb-2 leading-tight">{s.headline}</h3>
+            <h2 className="text-xl font-bold text-foreground mb-2 leading-tight">{s.headline}</h2>
             <p className="text-muted-foreground leading-relaxed mb-4">{s.body}</p>
             <Button variant="outline" size="sm">Read Full Story</Button>
           </article>

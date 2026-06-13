@@ -33,7 +33,7 @@ export default function Team() {
                 {m.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
               </div>
               <div>
-                <h3 className="font-semibold text-foreground leading-tight">{m.name}</h3>
+                <h2 className="font-semibold text-foreground leading-tight">{m.name}</h2>
                 <p className="text-sm text-muted-foreground">{m.role}</p>
               </div>
             </div>
