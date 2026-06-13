@@ -379,15 +379,14 @@ function UsersSection() {
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_deleted: true })
-        .eq('id', id)
+      const { error } = await supabase.rpc('admin_delete_user', { _user_id: id })
       if (error) throw error
     },
     onSuccess: () => {
-      toast.success('User deleted')
+      toast.success('User permanently deleted')
       qc.invalidateQueries({ queryKey: ['admin-users'] })
+      qc.invalidateQueries({ queryKey: ['admin-overview-stats'] })
+      qc.invalidateQueries({ queryKey: ['admin-recent-users'] })
     },
     onError: (e: any) => toast.error(e.message || 'Failed'),
   })
