@@ -70,8 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
     })
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
       void applySession(newSession)
+      if (event === 'SIGNED_IN' && newSession?.user) {
+        void checkAndNotifyNewDevice(newSession.user.id, newSession.user.email)
+      }
     })
 
     return () => {
