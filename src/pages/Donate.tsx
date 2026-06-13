@@ -260,6 +260,11 @@ export default function Donate() {
           </div>
         </section>
 
+        <LegalRegistration
+          leadIn="Your donation goes to a legitimate, officially registered platform. AbiaConnect is fully registered under Nigerian law — transparent, accountable, and committed to this community."
+          footnote="Registration details can be independently verified through the Corporate Affairs Commission (CAC) of Nigeria using RC Number 3386638."
+        />
+
         {/* Accounts */}
         <section className="space-y-6">
           <h2 className="text-2xl md:text-3xl font-bold">Authorised Donation Channels</h2>
