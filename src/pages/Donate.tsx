@@ -173,6 +173,7 @@ export default function Donate() {
   return (
     <div className="min-h-screen">
       <SEO
+        path="/donate"
         title="Support AbiaConnect — Donate to Keep Our Community Alive"
         description="AbiaConnect is a free, non-profit platform built by an Abian, for Abians everywhere. Your donation keeps the platform running and growing."
       />
