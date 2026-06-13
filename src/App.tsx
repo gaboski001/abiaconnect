@@ -106,6 +106,7 @@ export default function App() {
 
                   <Route element={<AdminRoute />}>
                     <Route path="admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="admin/donations" element={<AdminDonations />} />
                     <Route path="admin/email-dns" element={<EmailDns />} />
                   </Route>
                 </Route>
