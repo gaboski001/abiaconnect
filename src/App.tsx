@@ -91,6 +91,7 @@ export default function App() {
                 <Route path="terms-of-service" element={<TermsOfService />} />
                 <Route path="cookie-policy" element={<CookiePolicy />} />
                 <Route path="community-standards" element={<CommunityStandards />} />
+                <Route path="donate" element={<Donate />} />
 
                 <Route element={<ProtectedRoute />}>
                   <Route path="dashboard" element={<Dashboard />} />
