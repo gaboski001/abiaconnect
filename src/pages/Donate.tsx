@@ -23,7 +23,7 @@ type DonationAccount = {
   order_index: number
 }
 
-const WHATSAPP_URL = 'https://wa.me/2348103488888'
+const WHATSAPP_URL = 'https://wa.me/2348103428888'
 
 const GROUP_META: Record<DonationAccount['account_type'], { title: string; icon: typeof Banknote }> = {
   bank: { title: '🏦 Bank Transfer', icon: Banknote },
@@ -294,7 +294,7 @@ export default function Donate() {
           >
             <WhatsAppIcon className="size-5" /> Chat on WhatsApp
           </a>
-          <p className="text-sm text-muted-foreground">+234 810 348 8888 — Official AbiaConnect Project Manager</p>
+          <p className="text-sm text-muted-foreground">08103428888 — Official AbiaConnect Project Manager</p>
           <p className="text-xs text-muted-foreground">
             This is the only authorised WhatsApp contact for AbiaConnect. Do not send donations to any other number.
           </p>
