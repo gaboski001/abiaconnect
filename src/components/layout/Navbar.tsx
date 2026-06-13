@@ -49,6 +49,9 @@ export function Navbar() {
       <Link to="/polls" className="text-sm font-medium hover:text-primary transition-colors">
         Polls
       </Link>
+      <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">
+        About Us
+      </Link>
       {subgroupsEnabled && (
         <Link to="/subgroups" className="text-sm font-medium hover:text-primary transition-colors">
           Subgroups
