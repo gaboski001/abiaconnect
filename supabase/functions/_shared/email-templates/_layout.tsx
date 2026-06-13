@@ -15,7 +15,7 @@ import {
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
-const LOGO_URL = 'https://abiaconnect.com/icons/icon-512x512.png'
+const LOGO_URL = 'https://abiaconnect.com/email-logo.png'
 
 interface BrandLayoutProps {
   preview: string
