@@ -170,88 +170,101 @@ export default function About() {
       title="About AbiaConnect"
       subtitle="The story behind Nigeria's most dedicated community platform for Abia State indigenes."
     >
-      <h2>Who We Are</h2>
-      <p>
-        AbiaConnect is a digital community platform built exclusively for the sons and daughters of
-        Abia State, Nigeria — at home and across the world. We are more than a forum. We are a
-        living, breathing extension of the bonds that tie every Abia indigene to their roots, their
-        people, and their shared future.
-      </p>
-      <p>
-        Founded with a simple belief — that Abians are stronger together — AbiaConnect brings
-        together traders from Ariaria, professionals in London and Houston, farmers from Bende and
-        Ikwuano, students at ABSU and FUTO, and leaders across all 17 local government areas into
-        one unified digital home.
-      </p>
+      <section className="not-prose mb-12">
+        <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">01 — Introduction</p>
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">Who We Are</h2>
+        <div className="space-y-4 text-muted-foreground leading-relaxed">
+          <p>
+            AbiaConnect is a digital community platform built exclusively for the sons and daughters of
+            Abia State, Nigeria — at home and across the world. We are more than a forum. We are a
+            living, breathing extension of the bonds that tie every Abia indigene to their roots, their
+            people, and their shared future.
+          </p>
+          <p>
+            Founded with a simple belief — that Abians are stronger together — AbiaConnect brings
+            together traders from Ariaria, professionals in London and Houston, farmers from Bende and
+            Ikwuano, students at ABSU and FUTO, and leaders across all 17 local government areas into
+            one unified digital home.
+          </p>
+        </div>
+      </section>
 
-      <h2>Our Mission</h2>
-      <p>
-        AbiaConnect was founded on a single, powerful belief — that geography should never separate
-        a people from their identity, their community, or their voice. We are the digital home of
-        indigenous people of Abia State, built to bridge the distance between those at home and
-        those in the diaspora, and to create a space where Abian culture, knowledge, commerce, and
-        community thrive together.
-      </p>
-
-      <h2>Our Vision</h2>
-      <p>
-        To become the most trusted and most active community platform for Abians worldwide — a
-        living, breathing forum where every Abian, regardless of where life has taken them, can
-        speak, connect, contribute, and belong.
-      </p>
-
-      <h2>What We Stand For</h2>
-      <div className="not-prose grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
-        {STANDS.map((s) => (
-          <div key={s.title} className="bg-card border border-border rounded-2xl p-6">
-            <h3 className="font-semibold text-foreground mb-1">{s.title}</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">{s.body}</p>
-          </div>
-        ))}
+      <div className="not-prose grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">02 — Our Mission</p>
+          <p className="text-muted-foreground leading-relaxed text-sm">
+            Geography should never separate a people from their identity, community, or voice. AbiaConnect is
+            the digital home of indigenous Abians — bridging home and diaspora so culture, knowledge, commerce,
+            and community thrive together.
+          </p>
+        </div>
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">03 — Our Vision</p>
+          <p className="text-muted-foreground leading-relaxed text-sm">
+            To become the most trusted and most active community platform for Abians worldwide — a living forum
+            where every Abian, regardless of where life has taken them, can speak, connect, contribute, and belong.
+          </p>
+        </div>
       </div>
 
-      <h2>What AbiaConnect Offers</h2>
-      <div className="not-prose grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
-        {FEATURES.map(({ icon: Icon, title, body }) => (
-          <div key={title} className="bg-card border border-border rounded-2xl p-6 hover:border-secondary/40 transition-colors">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground">
-                <Icon className="size-5" />
-              </span>
-              <h3 className="font-semibold text-foreground">{title}</h3>
+      <section className="not-prose mb-12">
+        <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">04 — Our Values</p>
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6">What We Stand For</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {STANDS.map((s) => (
+            <div key={s.title} className="bg-card border border-border rounded-2xl p-6 hover:border-secondary/40 transition-colors">
+              <h3 className="font-semibold text-foreground mb-1">{s.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{s.body}</p>
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </section>
 
-      <h2>Our Community</h2>
-      <p>
-        AbiaConnect by the numbers — a snapshot of the community we are building together.
-      </p>
-      <div className="not-prose grid grid-cols-2 md:grid-cols-4 gap-4 my-6">
-        {STATS.map((s) => (
-          <div key={s.label} className="bg-card border border-border rounded-2xl p-6 text-center">
-            <div className="text-4xl font-bold text-secondary">{s.number}</div>
-            <div className="text-muted-foreground text-sm mt-1">{s.label}</div>
-          </div>
-        ))}
-      </div>
+      <section className="not-prose mb-12">
+        <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">05 — Platform</p>
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6">What AbiaConnect Offers</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {FEATURES.map(({ icon: Icon, title, body }) => (
+            <div key={title} className="bg-card border border-border rounded-2xl p-6 hover:border-secondary/40 transition-colors">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shrink-0">
+                  <Icon className="size-5" />
+                </span>
+                <h3 className="font-semibold text-foreground">{title}</h3>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="not-prose mb-12">
+        <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">06 — Our Community</p>
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">By the Numbers</h2>
+        <p className="text-muted-foreground mb-6">A snapshot of the community we are building together.</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {STATS.map((s) => (
+            <div key={s.label} className="bg-card border border-border rounded-2xl p-6 text-center hover:border-secondary/40 transition-colors">
+              <div className="text-3xl md:text-4xl font-bold text-secondary">{s.number}</div>
+              <div className="text-muted-foreground text-sm mt-1">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <FounderSection />
 
-      <h2>Built by Abians, for Abians</h2>
-      <p>
-        AbiaConnect is not owned by a corporation. It was built by Abians, for Abians. Every
-        feature, every policy, and every decision is guided by one question: Does this serve our
-        people? We invite you to join us, contribute, and help shape the future of this community.
-      </p>
-
-      <div className="not-prose flex justify-center pt-6">
+      <section className="not-prose mb-8 text-center max-w-2xl mx-auto">
+        <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">08 — Join Us</p>
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">Built by Abians, for Abians</h2>
+        <p className="text-muted-foreground leading-relaxed mb-6">
+          AbiaConnect is not owned by a corporation. It was built by Abians, for Abians. Every feature, every
+          policy, and every decision is guided by one question: Does this serve our people?
+        </p>
         <Button asChild size="lg">
           <Link to="/register">Join AbiaConnect Free</Link>
         </Button>
-      </div>
+      </section>
     </StaticPage>
   )
 }
