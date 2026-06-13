@@ -29,18 +29,19 @@ Deno.serve(async (req) => {
     if (!thread_id || !title) return json({ error: 'thread_id and title required' }, 400)
     if (is_anonymous) return json({ skipped: 'anonymous thread' }, 200)
 
+    const targetPageId = await resolvePageId(pageId, pageToken)
     const link = `${SITE_URL}/thread/${thread_id}`
     const message = `${title}\n\nJoin the conversation on AbiaConnect:\n${link}`
 
-    const res = await fetch(`${FB_GRAPH}/${pageId}/feed`, {
+    const res = await fetch(`${FB_GRAPH}/${targetPageId}/feed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, link, access_token: pageToken }),
     })
     const data = await res.json()
     if (!res.ok) {
-      console.error('Facebook API error', data)
-      return json({ error: 'Facebook API error', details: data }, 502)
+      console.error('Facebook API error', safeFacebookError(data))
+      return json({ error: 'Facebook API error', details: safeFacebookError(data) }, 502)
     }
     return json({ ok: true, fb: data })
   } catch (err) {
@@ -54,4 +55,35 @@ function json(payload: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+async function resolvePageId(configuredPageId: string, pageToken: string) {
+  const res = await fetch(
+    `${FB_GRAPH}/me?fields=id,name&access_token=${encodeURIComponent(pageToken)}`,
+  )
+  const data = await res.json().catch(() => ({})) as { id?: string; name?: string; error?: unknown }
+
+  if (!res.ok || !data.id) {
+    console.error('Unable to resolve Facebook Page from token', safeFacebookError(data))
+    return configuredPageId
+  }
+
+  if (data.id !== configuredPageId) {
+    console.log('Using Facebook Page ID resolved from page token')
+  }
+
+  return data.id
+}
+
+function safeFacebookError(data: unknown) {
+  const error = (data as { error?: { message?: string; type?: string; code?: number; fbtrace_id?: string } })?.error
+  if (!error) return data
+  return {
+    error: {
+      message: error.message,
+      type: error.type,
+      code: error.code,
+      fbtrace_id: error.fbtrace_id,
+    },
+  }
 }
