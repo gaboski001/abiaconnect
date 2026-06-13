@@ -14,6 +14,8 @@ import { useSignedUrl } from '@/hooks/useSignedUrl'
 export default function Login() {
   const navigate = useNavigate()
   const { isAdmin } = useAuth()
+  const { settings } = useSiteSettings()
+  const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
