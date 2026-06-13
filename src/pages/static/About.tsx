@@ -189,6 +189,8 @@ export default function About() {
         </div>
       </section>
 
+      <FounderSection />
+
       <div className="not-prose grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
         <div className="bg-card border border-border rounded-2xl p-6">
           <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">02 — Our Mission</p>
