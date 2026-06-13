@@ -56,33 +56,24 @@ function FounderSection() {
   return (
     <section
       id="founder"
-      className="not-prose -mx-6 my-12 px-6 py-12 md:py-16 rounded-2xl"
-      style={{ background: '#f2f8f5' }}
+      className="not-prose -mx-6 my-12 px-6 py-10 md:py-14 rounded-2xl bg-gradient-to-br from-primary/5 via-card to-secondary/5 border border-border"
     >
-      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[380px_1fr] gap-8 md:gap-12 items-start">
-        <div className="w-full">
-          <div
-            className="overflow-hidden mx-auto md:mx-0"
-            style={{
-              borderRadius: 16,
-              border: '3px solid #1a4f3a',
-              width: '100%',
-              maxWidth: 380,
-            }}
-          >
+      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[220px_1fr] gap-8 md:gap-10 items-start">
+        <div className="w-full flex justify-center md:justify-start">
+          <div className="overflow-hidden rounded-2xl border-2 border-secondary/40 ring-4 ring-primary/10 shadow-lg w-[180px] h-[180px] md:w-[220px] md:h-[220px]">
             <SafeImage
               src={photoUrl}
               fallback={getAvatarFallback('Okechukwu Gabriel')}
               alt="Okechukwu Gabriel E. — Founder & CEO, AbiaConnect"
-              width={380}
-              height={460}
-              className="w-full h-auto block"
+              width={220}
+              height={220}
+              className="w-full h-full object-cover object-center"
             />
           </div>
         </div>
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#1a4f3a' }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-2 text-secondary">
             Meet the Founder &amp; CEO
           </p>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-1 mt-0">
@@ -119,22 +110,16 @@ function FounderSection() {
             <p>
               It was this same sense of identity and belonging that inspired the creation of
               AbiaConnect — a platform conceived not just as a forum, but as a digital homeland
-              for every Abian, wherever in the world they may be. What began as a vision to
-              reconnect Abia's scattered sons and daughters has grown into one of the most
-              vibrant community platforms serving the Abian people today.
+              for every Abian, wherever in the world they may be.
             </p>
             <p>
               As a full-stack developer and software architect, Okechukwu personally designed and
               engineered the AbiaConnect platform — from its database architecture and real-time
-              infrastructure to its user experience and community features. His technical
-              expertise is matched only by his dedication to the people the platform serves.
+              infrastructure to its user experience and community features.
             </p>
           </div>
 
-          <blockquote
-            className="my-6 italic px-5 py-4 rounded-r-lg"
-            style={{ borderLeft: '4px solid #1a4f3a', background: 'rgba(26,79,58,0.06)' }}
-          >
+          <blockquote className="my-6 italic px-5 py-4 rounded-r-lg border-l-4 border-secondary bg-secondary/10">
             <p className="text-foreground m-0">
               "AbiaConnect is more than a website. It is a statement — that our people matter,
               our voices matter, and our culture deserves a permanent, powerful home in the
@@ -151,7 +136,7 @@ function FounderSection() {
                 key={label}
                 className="inline-flex items-center gap-1.5 text-xs font-medium bg-card border border-border px-3 py-1.5 rounded-full text-foreground"
               >
-                <Icon className="size-3.5" style={{ color: '#1a4f3a' }} /> {label}
+                <Icon className="size-3.5 text-secondary" /> {label}
               </span>
             ))}
           </div>
