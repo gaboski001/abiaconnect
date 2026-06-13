@@ -40,6 +40,7 @@ const LINK_GROUPS: Array<{ title: string; links: Array<{ label: string; href: st
       { label: 'Events Calendar', href: '/events' },
       { label: 'Success Stories', href: '/success-stories' },
       { label: 'Member Spotlight', href: '/member-spotlight' },
+      { label: 'Support the Platform ❤️', href: '/donate' },
     ],
   },
   {
