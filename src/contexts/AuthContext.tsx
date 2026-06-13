@@ -16,6 +16,80 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 const CACHE_KEY = 'abia_cached_user'
 
+async function computeDeviceFingerprint(): Promise<string> {
+  const parts = [
+    navigator.userAgent,
+    navigator.language,
+    `${screen.width}x${screen.height}`,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    String(navigator.hardwareConcurrency || ''),
+  ].join('|')
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(parts))
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function describeDevice(): string {
+  const ua = navigator.userAgent
+  const browser = /Edg\//.test(ua) ? 'Edge'
+    : /Chrome\//.test(ua) ? 'Chrome'
+    : /Firefox\//.test(ua) ? 'Firefox'
+    : /Safari\//.test(ua) ? 'Safari'
+    : 'Browser'
+  const os = /Windows/.test(ua) ? 'Windows'
+    : /Mac OS X/.test(ua) ? 'macOS'
+    : /Android/.test(ua) ? 'Android'
+    : /iPhone|iPad|iOS/.test(ua) ? 'iOS'
+    : /Linux/.test(ua) ? 'Linux'
+    : 'Unknown OS'
+  return `${browser} on ${os}`
+}
+
+async function checkAndNotifyNewDevice(userId: string, email: string | undefined) {
+  if (!email) return
+  try {
+    const fingerprint = await computeDeviceFingerprint()
+    const sessionKey = `abia_dev_notified_${userId}_${fingerprint}`
+    if (sessionStorage.getItem(sessionKey)) return
+    sessionStorage.setItem(sessionKey, '1')
+
+    const { data: existing } = await supabase
+      .from('user_known_devices')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('fingerprint', fingerprint)
+      .maybeSingle()
+
+    if (existing) {
+      await supabase
+        .from('user_known_devices')
+        .update({ last_seen: new Date().toISOString() })
+        .eq('id', existing.id)
+      return
+    }
+
+    const { error: insertError } = await supabase
+      .from('user_known_devices')
+      .insert({ user_id: userId, fingerprint, user_agent: navigator.userAgent })
+    if (insertError) return
+
+    await supabase.functions.invoke('send-transactional-email', {
+      body: {
+        templateName: 'new-device-login',
+        recipientEmail: email,
+        idempotencyKey: `new-device-${userId}-${fingerprint}`,
+        templateData: {
+          device: describeDevice(),
+          when: new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' }),
+        },
+      },
+    })
+  } catch {
+    // best-effort — never block sign-in
+  }
+}
+
 function resolveRole(names: string[]): Role {
   if (names.includes('Super Admin')) return 'Super Admin'
   if (names.includes('Admin')) return 'Admin'
