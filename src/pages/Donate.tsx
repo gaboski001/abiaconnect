@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { SEO } from '@/components/SEO'
+import LegalRegistration from '@/components/LegalRegistration'
 
 type DonationAccount = {
   id: string
