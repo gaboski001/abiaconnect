@@ -214,7 +214,7 @@ export default function Donate() {
             </p>
             <p className="text-muted-foreground leading-relaxed">
               This platform runs on dedication, community love — and the generous support of members like you. There are
-              no shareholders here. No advertisers. No hidden agenda. No gatekeepers. Just a community platform —
+              no shareholders here. No hidden agenda. No gatekeepers. Just a community platform —
               conceived by an Abian, built for Abians, and sustained by Abians.
             </p>
             <p className="text-muted-foreground leading-relaxed">
