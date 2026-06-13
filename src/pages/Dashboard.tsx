@@ -165,10 +165,13 @@ export default function Dashboard() {
 /* ----------------- Overview ----------------- */
 function Overview({ displayName }: { displayName: string }) {
   const { user } = useAuth()
+  const qc = useQueryClient()
 
   const stats = useQuery({
     queryKey: ['dash-stats', user?.id],
     enabled: !!user,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const uid = user!.id
       const [posts, replies, bookmarks, profile] = await Promise.all([
@@ -189,6 +192,7 @@ function Overview({ displayName }: { displayName: string }) {
   const activity = useQuery({
     queryKey: ['dash-activity', user?.id],
     enabled: !!user,
+    staleTime: 30_000,
     queryFn: async () => {
       const since = startOfDay(subDays(new Date(), 6)).toISOString()
       const { data, error } = await supabase
@@ -217,6 +221,7 @@ function Overview({ displayName }: { displayName: string }) {
   const recent = useQuery({
     queryKey: ['my-recent-threads', user?.id],
     enabled: !!user,
+    staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('threads')
@@ -228,6 +233,27 @@ function Overview({ displayName }: { displayName: string }) {
       return (data ?? []) as Array<{ id: string; title: string; created_at: string }>
     },
   })
+
+  // Realtime: refresh stats/activity/recent when the user's data changes
+  useEffect(() => {
+    if (!user) return
+    const uid = user.id
+    const invalidate = () => {
+      qc.invalidateQueries({ queryKey: ['dash-stats', uid] })
+      qc.invalidateQueries({ queryKey: ['dash-activity', uid] })
+      qc.invalidateQueries({ queryKey: ['my-recent-threads', uid] })
+    }
+    const channel = supabase
+      .channel(`dash-overview:${uid}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: `user_id=eq.${uid}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'replies', filter: `user_id=eq.${uid}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmarks', filter: `user_id=eq.${uid}` }, invalidate)
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [user, qc])
+
 
   const cards = [
     { label: 'My Posts', value: stats.data?.posts ?? 0 },
