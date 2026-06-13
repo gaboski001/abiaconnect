@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { MainLayout } from '@/components/layout/MainLayout'
+import { ScrollToTop } from '@/components/ScrollToTop'
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute'
 import Home from '@/pages/Home'
 import Login from '@/pages/Login'
