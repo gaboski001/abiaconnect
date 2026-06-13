@@ -84,7 +84,7 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
           </div>
         )}
 
-        <h1 className="text-3xl md:text-5xl font-bold leading-tight">
+        <h2 className="text-3xl md:text-5xl font-bold leading-tight">
           {slide.isDefault ? (
             <>
               <span className="text-white">{slide.title}</span>
@@ -100,7 +100,7 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
           ) : (
             <span className="text-white">{slide.title}</span>
           )}
-        </h1>
+        </h2>
 
         {slide.body && (
           <p className="text-white/80 text-base md:text-lg max-w-xl mx-auto leading-relaxed">
