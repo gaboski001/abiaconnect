@@ -76,12 +76,20 @@ export function Navbar() {
         </Link>
       )}
       {isAdmin && (
-        <Link
-          to="/admin/dashboard"
-          className="text-sm font-medium hover:text-primary transition-colors"
-        >
-          Admin Portal
-        </Link>
+        <>
+          <Link
+            to="/admin/dashboard"
+            className="text-sm font-medium hover:text-primary transition-colors"
+          >
+            Admin Portal
+          </Link>
+          <Link
+            to="/admin/donations"
+            className="text-sm font-medium hover:text-primary transition-colors"
+          >
+            Donations
+          </Link>
+        </>
       )}
     </>
   )
