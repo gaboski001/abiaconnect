@@ -156,11 +156,8 @@ export function Navbar() {
               <img
                 src={logoUrl as string}
                 alt={siteName}
-                onLoad={() => setLogoLoaded(true)}
                 onError={() => setLogoFailed(true)}
-                className={`h-10 w-auto max-w-[180px] object-contain transition-opacity duration-150 ${
-                  logoLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
+                className="h-10 w-auto max-w-[180px] object-contain"
               />
             )}
           </Link>
