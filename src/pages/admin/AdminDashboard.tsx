@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toWebP } from '@/lib/image'
-import { seedDatabase, seedArticles } from '@/lib/seed'
 import { useAuth } from '@/contexts/AuthContext'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
