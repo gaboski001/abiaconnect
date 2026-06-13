@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import LegalRegistration from '@/components/LegalRegistration'
 import StaticPage from '@/components/layout/StaticPage'
 import SafeImage from '@/components/ui/SafeImage'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
