@@ -37,7 +37,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 
 // Configuration
 const SITE_NAME = "Abiaconnect"
-const SENDER_DOMAIN = "notify.abiaconnect.com"
+const SENDER_DOMAIN = "mail.abiaconnect.com"
 const ROOT_DOMAIN = "abiaconnect.com"
 const FROM_DOMAIN = "abiaconnect.com" // Domain shown in From address (may be root or sender subdomain)
 
