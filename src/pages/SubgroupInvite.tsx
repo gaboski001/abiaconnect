@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SEO } from '@/components/SEO'
 
 export default function SubgroupInvite() {
   const { token } = useParams<{ token: string }>()
@@ -33,6 +34,11 @@ export default function SubgroupInvite() {
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-md text-center space-y-4">
+      <SEO
+        title="Accept Subgroup Invitation"
+        description="Redeeming your AbiaConnect subgroup invite. Once verified you'll join the subgroup and gain access to its discussions and members."
+        path="/subgroups/invite"
+      />
       <h1 className="text-xl font-semibold">Redeeming invite…</h1>
       <Skeleton className="h-8 w-full" />
       <Button asChild variant="ghost"><Link to="/subgroups">Cancel</Link></Button>
