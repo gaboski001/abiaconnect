@@ -77,6 +77,7 @@ export default function App() {
                 <Route path="about/known-for" element={<KnownFor />} />
                 <Route path="about/absu" element={<AbsuGuide />} />
                 <Route path="about" element={<About />} />
+                <Route path="donate" element={<Donate />} />
                 <Route path="mission" element={<Mission />} />
                 <Route path="team" element={<Team />} />
                 <Route path="careers" element={<Careers />} />
