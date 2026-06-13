@@ -1196,6 +1196,7 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_user: { Args: { _user_id: string }; Returns: undefined }
       admin_get_user_emails: {
         Args: { _ids: string[] }
         Returns: {
