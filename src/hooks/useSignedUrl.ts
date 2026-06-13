@@ -35,18 +35,8 @@ function extractStoragePath(pathOrUrl: string, bucket: string): string | null {
  * Returns a usable image URL for a stored path. If the value is already a full URL,
  * it's returned as-is. Otherwise a signed URL is requested from the given private bucket.
  */
-export function useSignedUrl(
-  pathOrUrl: string | null | undefined,
-  bucket: 'avatars' | 'site-assets' | string = 'avatars',
-  expiresIn = 60 * 60,
-): string | null {
-  // Only short-circuit for external (non-Supabase-storage) URLs. Public-looking
-  // storage URLs (`/storage/v1/object/public/...`) still 403 when the bucket is
-  // private, so we always re-sign anything that points at Supabase storage.
-  const isExternalUrl = (v: string) =>
-    /^https?:\/\//.test(v) && !v.includes('/storage/v1/object/')
-
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>()
+
 
 export function useSignedUrl(
   pathOrUrl: string | null | undefined,
