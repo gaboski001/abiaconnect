@@ -46,10 +46,24 @@ export function useSignedUrl(
   const isExternalUrl = (v: string) =>
     /^https?:\/\//.test(v) && !v.includes('/storage/v1/object/')
 
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>()
+
+export function useSignedUrl(
+  pathOrUrl: string | null | undefined,
+  bucket: 'avatars' | 'site-assets' | string = 'avatars',
+  expiresIn = 60 * 60,
+): string | null {
+  const isExternalUrl = (v: string) =>
+    /^https?:\/\//.test(v) && !v.includes('/storage/v1/object/')
+
+  const cacheKey = pathOrUrl ? `${bucket}::${pathOrUrl}` : null
+  const cached = cacheKey ? signedUrlCache.get(cacheKey) : null
+  const cachedValid = cached && cached.expiresAt > Date.now() ? cached.url : null
+
   const [url, setUrl] = useState<string | null>(() => {
     if (!pathOrUrl) return null
     if (isExternalUrl(pathOrUrl)) return pathOrUrl
-    return null
+    return cachedValid
   })
 
   useEffect(() => {
@@ -62,6 +76,12 @@ export function useSignedUrl(
       setUrl(pathOrUrl)
       return
     }
+    const key = `${bucket}::${pathOrUrl}`
+    const hit = signedUrlCache.get(key)
+    if (hit && hit.expiresAt > Date.now()) {
+      setUrl(hit.url)
+      return
+    }
     const cleanPath = extractStoragePath(pathOrUrl, bucket)
     if (!cleanPath) {
       setUrl(pathOrUrl)
@@ -71,7 +91,15 @@ export function useSignedUrl(
       .from(bucket)
       .createSignedUrl(cleanPath, expiresIn)
       .then(({ data }) => {
-        if (!cancelled) setUrl(data?.signedUrl ?? null)
+        if (cancelled) return
+        const signed = data?.signedUrl ?? null
+        if (signed) {
+          signedUrlCache.set(key, {
+            url: signed,
+            expiresAt: Date.now() + (expiresIn - 60) * 1000,
+          })
+        }
+        setUrl(signed)
       })
       .catch(() => {
         if (!cancelled) setUrl(null)
