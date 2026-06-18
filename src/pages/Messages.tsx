@@ -39,6 +39,9 @@ import {
 } from '@/lib/chatAttachments'
 import { cn } from '@/lib/utils'
 
+import { uploadQueue } from '@/lib/uploadQueue'
+import { useUploadQueue } from '@/hooks/useUploadQueue'
+
 const EmojiPicker = lazy(() => import('emoji-picker-react'))
 
 
@@ -380,84 +383,14 @@ function ConversationView({
   }, [messagesQ.data, user, conversationId, qc, queryKey])
 
 
-  const sendMut = useMutation({
-    mutationFn: async ({ content, file }: { content: string; file: File | null }) => {
-      if (!user) throw new Error('Not signed in')
+  const queueItems = useUploadQueue(conversationId)
 
-      let attachment_url: string | null = null
-      let attachment_path: string | null = null
-      let attachment_type: string | null = null
-      let attachment_name: string | null = null
-      let attachment_size: number | null = null
-      let attachment_expires_at: string | null = null
-
-      if (file) {
-        const ext = file.name.split('.').pop() || 'bin'
-        const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-        const path = `${conversationId}/${safeName}`
-        setUploadPct(10)
-        const { error: upErr } = await supabase.storage
-          .from('chat-attachments')
-          .upload(path, file, { contentType: file.type, upsert: false })
-        if (upErr) throw upErr
-        setUploadPct(80)
-        const { data: signed, error: signErr } = await supabase.storage
-          .from('chat-attachments')
-          .createSignedUrl(path, 60 * 60 * 48)
-        if (signErr) throw signErr
-        attachment_url = signed.signedUrl
-        attachment_path = path
-        attachment_type = file.type
-        attachment_name = file.name
-        attachment_size = file.size
-        attachment_expires_at = new Date(
-          Date.now() + ATTACHMENT_TTL_HOURS * 60 * 60 * 1000,
-        ).toISOString()
-      }
-
-      const { error } = await supabase.from('messages').insert({
-        conversation_id: conversationId,
-        sender_id: user.id,
-        content: content || null,
-        attachment_url,
-        attachment_path,
-        attachment_type,
-        attachment_name,
-        attachment_size,
-        attachment_expires_at,
-      })
-      if (error) throw error
-      await supabase
-        .from('conversations')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', conversationId)
-      setUploadPct(null)
-    },
-    onMutate: async ({ content, file }) => {
-      await qc.cancelQueries({ queryKey })
-      const prev = qc.getQueryData<Message[]>(queryKey) ?? []
-      const optimistic: Message = {
-        id: `tmp-${Date.now()}`,
-        conversation_id: conversationId,
-        sender_id: user!.id,
-        content: content || null,
-        created_at: new Date().toISOString(),
-        attachment_url: file && isImage(file) ? URL.createObjectURL(file) : null,
-        attachment_type: file?.type || null,
-        attachment_name: file?.name || null,
-        attachment_size: file?.size || null,
-        _optimistic: true,
-      }
-      qc.setQueryData<Message[]>(queryKey, [...prev, optimistic])
-      return { prev }
-    },
-    onError: (e: any, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(queryKey, ctx.prev)
-      setUploadPct(null)
-      toast.error(e.message || 'Failed to send')
-    },
-    onSettled: () => qc.invalidateQueries({ queryKey }),
-  })
+  // Refresh inbox list when any queued upload completes
+  useEffect(() => {
+    if (queueItems.some((q) => q.status === 'done')) {
+      qc.invalidateQueries({ queryKey: ['conversations', user?.id] })
+    }
+  }, [queueItems, qc, user?.id])
 
   const handleFilePick = async (raw: File | null) => {
     if (!raw) return
@@ -476,13 +409,19 @@ function ConversationView({
   const handleSend = (e?: FormEvent) => {
     e?.preventDefault()
     const text = draft.trim()
-    if ((!text && !pendingFile) || sendMut.isPending) return
+    if ((!text && !pendingFile) || !user) return
     const file = pendingFile
     setDraft('')
     setPendingFile(null)
     if (fileRef.current) fileRef.current.value = ''
-    sendMut.mutate({ content: text, file })
+    uploadQueue.enqueue({
+      conversationId,
+      senderId: user.id,
+      content: text,
+      file,
+    })
   }
+
 
   const insertEmoji = (emoji: string) => {
     const el = textareaRef.current
@@ -514,7 +453,7 @@ function ConversationView({
     return groups
   }, [messagesQ.data])
 
-  const canSend = (!!draft.trim() || !!pendingFile) && !sendMut.isPending
+  const canSend = !!draft.trim() || !!pendingFile
 
   return (
     <>
@@ -619,7 +558,71 @@ function ConversationView({
             </div>
           ))
         )}
+
+        {queueItems.length > 0 && (
+          <div className="space-y-2">
+            {queueItems.map((q) => (
+              <div key={q.id} className="flex justify-end">
+                <div className="max-w-[75%] rounded-2xl rounded-br-sm px-3 py-2 text-sm space-y-2 bg-secondary/60 text-secondary-foreground">
+                  {q.previewUrl && (
+                    <img
+                      src={q.previewUrl}
+                      alt="uploading"
+                      className="rounded-lg max-h-48 w-auto object-cover opacity-80"
+                    />
+                  )}
+                  {!q.previewUrl && q.file && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <FileText className="h-4 w-4" />
+                      <span className="truncate">{q.file.name}</span>
+                    </div>
+                  )}
+                  {q.content && (
+                    <p className="whitespace-pre-wrap break-words opacity-80">{q.content}</p>
+                  )}
+                  <div className="h-1 w-full bg-background/40 overflow-hidden rounded">
+                    <div
+                      className={cn(
+                        'h-full transition-all',
+                        q.status === 'error' ? 'bg-destructive' : 'bg-secondary-foreground/70',
+                      )}
+                      style={{ width: `${q.status === 'error' ? 100 : q.progress}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 text-[10px] opacity-80">
+                    <span>
+                      {q.status === 'uploading' && `Uploading… ${q.progress}%`}
+                      {q.status === 'sending' && 'Sending…'}
+                      {q.status === 'queued' && (q.error || 'Queued')}
+                      {q.status === 'done' && 'Sent'}
+                      {q.status === 'error' && (q.error || 'Failed')}
+                    </span>
+                    {q.status === 'error' && (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          className="underline"
+                          onClick={() => uploadQueue.retry(q.id)}
+                        >
+                          Retry
+                        </button>
+                        <button
+                          type="button"
+                          className="underline opacity-70"
+                          onClick={() => uploadQueue.remove(q.id)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
 
       <form onSubmit={handleSend} className="p-3 border-t space-y-2">
         {pendingFile && (
@@ -723,11 +726,7 @@ function ConversationView({
             className="resize-none min-h-[40px] max-h-32"
           />
           <Button type="submit" size="icon" disabled={!canSend}>
-            {sendMut.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+            <Send className="h-4 w-4" />
           </Button>
         </div>
       </form>
