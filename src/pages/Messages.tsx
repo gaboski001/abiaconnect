@@ -662,11 +662,7 @@ function ConversationView({
             className="resize-none min-h-[40px] max-h-32"
           />
           <Button type="submit" size="icon" disabled={!canSend}>
-            {sendMut.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+            <Send className="h-4 w-4" />
           </Button>
         </div>
       </form>
