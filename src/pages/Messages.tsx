@@ -1,8 +1,19 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
-import { ArrowLeft, MessageSquarePlus, Search, Send, Loader2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  MessageSquarePlus,
+  Search,
+  Send,
+  Loader2,
+  Paperclip,
+  Smile,
+  X,
+  FileText,
+  Download,
+} from 'lucide-react'
 import { SEO } from '@/components/SEO'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -19,7 +30,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  compressImageToWebp,
+  isImage,
+  MAX_ATTACHMENT_BYTES,
+  ATTACHMENT_TTL_HOURS,
+} from '@/lib/chatAttachments'
 import { cn } from '@/lib/utils'
+
+const EmojiPicker = lazy(() => import('emoji-picker-react'))
+
 
 interface Profile {
   id: string
