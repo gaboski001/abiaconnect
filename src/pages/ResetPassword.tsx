@@ -109,8 +109,11 @@ export default function ResetPassword() {
     })
     setResending(false)
     if (error) {
+      void logResetEvent('resend_failed', email)
       toast.error(error.message)
       return
+    }
+    void logResetEvent('resent', email)
     }
     setStatus('resent')
     toast.success('A new reset link has been sent to your email.')
@@ -133,6 +136,7 @@ export default function ResetPassword() {
       setStatus('ready')
       return
     }
+    void logResetEvent('updated', recoveryEmail)
     await supabase.auth.signOut()
     setStatus('done')
     toast.success('Password updated. Please sign in.')
