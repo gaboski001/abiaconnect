@@ -114,7 +114,6 @@ export default function ResetPassword() {
       return
     }
     void logResetEvent('resent', email)
-    }
     setStatus('resent')
     toast.success('A new reset link has been sent to your email.')
   }
