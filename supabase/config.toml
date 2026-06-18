@@ -17,3 +17,5 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = false
   [functions.log-reset-token-event]
     verify_jwt = false
+  [functions.cleanup-chat-attachments]
+    verify_jwt = false

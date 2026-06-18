@@ -1,8 +1,19 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
-import { ArrowLeft, MessageSquarePlus, Search, Send, Loader2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  MessageSquarePlus,
+  Search,
+  Send,
+  Loader2,
+  Paperclip,
+  Smile,
+  X,
+  FileText,
+  Download,
+} from 'lucide-react'
 import { SEO } from '@/components/SEO'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -19,7 +30,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  compressImageToWebp,
+  isImage,
+  MAX_ATTACHMENT_BYTES,
+  ATTACHMENT_TTL_HOURS,
+} from '@/lib/chatAttachments'
 import { cn } from '@/lib/utils'
+
+const EmojiPicker = lazy(() => import('emoji-picker-react'))
+
 
 interface Profile {
   id: string
@@ -43,11 +64,17 @@ interface Message {
   id: string
   conversation_id: string
   sender_id: string
-  content: string
+  content: string | null
   created_at: string
   is_read?: boolean
+  attachment_url?: string | null
+  attachment_type?: string | null
+  attachment_name?: string | null
+  attachment_size?: number | null
+  attachment_expires_at?: string | null
   _optimistic?: boolean
 }
+
 
 function Avatar({ profile, size = 'md' }: { profile?: Profile | null; size?: 'sm' | 'md' | 'lg' }) {
   const avatarSize = size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'
@@ -97,7 +124,10 @@ export default function Messages() {
       const unreadMap: Record<string, number> = {}
       ;(msgs ?? []).forEach((m: any) => {
         if (!lastMap[m.conversation_id]) {
-          lastMap[m.conversation_id] = { content: m.content, created_at: m.created_at }
+          lastMap[m.conversation_id] = {
+            content: m.content || '📎 Attachment',
+            created_at: m.created_at,
+          }
         }
         if (!m.is_read && m.sender_id !== user!.id) {
           unreadMap[m.conversation_id] = (unreadMap[m.conversation_id] || 0) + 1
@@ -272,6 +302,25 @@ function ConversationView({
   const queryKey = ['messages', conversationId]
   const scrollRef = useRef<HTMLDivElement>(null)
   const [draft, setDraft] = useState('')
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState<string | null>(null)
+  const [emojiOpen, setEmojiOpen] = useState(false)
+  const [uploadPct, setUploadPct] = useState<number | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (!pendingFile) {
+      setFilePreview(null)
+      return
+    }
+    if (isImage(pendingFile)) {
+      const url = URL.createObjectURL(pendingFile)
+      setFilePreview(url)
+      return () => URL.revokeObjectURL(url)
+    }
+    setFilePreview(null)
+  }, [pendingFile])
 
   const messagesQ = useQuery({
     queryKey,
@@ -295,7 +344,7 @@ function ConversationView({
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`,
@@ -332,28 +381,71 @@ function ConversationView({
 
 
   const sendMut = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, file }: { content: string; file: File | null }) => {
       if (!user) throw new Error('Not signed in')
+
+      let attachment_url: string | null = null
+      let attachment_path: string | null = null
+      let attachment_type: string | null = null
+      let attachment_name: string | null = null
+      let attachment_size: number | null = null
+      let attachment_expires_at: string | null = null
+
+      if (file) {
+        const ext = file.name.split('.').pop() || 'bin'
+        const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+        const path = `${conversationId}/${safeName}`
+        setUploadPct(10)
+        const { error: upErr } = await supabase.storage
+          .from('chat-attachments')
+          .upload(path, file, { contentType: file.type, upsert: false })
+        if (upErr) throw upErr
+        setUploadPct(80)
+        const { data: signed, error: signErr } = await supabase.storage
+          .from('chat-attachments')
+          .createSignedUrl(path, 60 * 60 * 48)
+        if (signErr) throw signErr
+        attachment_url = signed.signedUrl
+        attachment_path = path
+        attachment_type = file.type
+        attachment_name = file.name
+        attachment_size = file.size
+        attachment_expires_at = new Date(
+          Date.now() + ATTACHMENT_TTL_HOURS * 60 * 60 * 1000,
+        ).toISOString()
+      }
+
       const { error } = await supabase.from('messages').insert({
         conversation_id: conversationId,
         sender_id: user.id,
-        content,
+        content: content || null,
+        attachment_url,
+        attachment_path,
+        attachment_type,
+        attachment_name,
+        attachment_size,
+        attachment_expires_at,
       })
       if (error) throw error
       await supabase
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', conversationId)
+      setUploadPct(null)
     },
-    onMutate: async (content) => {
+    onMutate: async ({ content, file }) => {
       await qc.cancelQueries({ queryKey })
       const prev = qc.getQueryData<Message[]>(queryKey) ?? []
       const optimistic: Message = {
         id: `tmp-${Date.now()}`,
         conversation_id: conversationId,
         sender_id: user!.id,
-        content,
+        content: content || null,
         created_at: new Date().toISOString(),
+        attachment_url: file && isImage(file) ? URL.createObjectURL(file) : null,
+        attachment_type: file?.type || null,
+        attachment_name: file?.name || null,
+        attachment_size: file?.size || null,
         _optimistic: true,
       }
       qc.setQueryData<Message[]>(queryKey, [...prev, optimistic])
@@ -361,17 +453,52 @@ function ConversationView({
     },
     onError: (e: any, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(queryKey, ctx.prev)
+      setUploadPct(null)
       toast.error(e.message || 'Failed to send')
     },
     onSettled: () => qc.invalidateQueries({ queryKey }),
   })
 
+  const handleFilePick = async (raw: File | null) => {
+    if (!raw) return
+    try {
+      const processed = isImage(raw) ? await compressImageToWebp(raw) : raw
+      if (processed.size > MAX_ATTACHMENT_BYTES) {
+        toast.error('File too large. Maximum 2MB after compression.')
+        return
+      }
+      setPendingFile(processed)
+    } catch (e: any) {
+      toast.error(e.message || 'Could not process file')
+    }
+  }
+
   const handleSend = (e?: FormEvent) => {
     e?.preventDefault()
     const text = draft.trim()
-    if (!text || sendMut.isPending) return
+    if ((!text && !pendingFile) || sendMut.isPending) return
+    const file = pendingFile
     setDraft('')
-    sendMut.mutate(text)
+    setPendingFile(null)
+    if (fileRef.current) fileRef.current.value = ''
+    sendMut.mutate({ content: text, file })
+  }
+
+  const insertEmoji = (emoji: string) => {
+    const el = textareaRef.current
+    if (!el) {
+      setDraft((d) => d + emoji)
+      return
+    }
+    const start = el.selectionStart ?? draft.length
+    const end = el.selectionEnd ?? draft.length
+    const next = draft.slice(0, start) + emoji + draft.slice(end)
+    setDraft(next)
+    requestAnimationFrame(() => {
+      el.focus()
+      const pos = start + emoji.length
+      el.setSelectionRange(pos, pos)
+    })
   }
 
   // Group messages by day
@@ -386,6 +513,8 @@ function ConversationView({
     })
     return groups
   }, [messagesQ.data])
+
+  const canSend = (!!draft.trim() || !!pendingFile) && !sendMut.isPending
 
   return (
     <>
@@ -419,6 +548,9 @@ function ConversationView({
               </div>
               {g.items.map((m) => {
                 const mine = m.sender_id === user?.id
+                const hasImage =
+                  m.attachment_url && (m.attachment_type?.startsWith('image/') ?? false)
+                const hasFile = m.attachment_url && !hasImage
                 return (
                   <div
                     key={m.id}
@@ -426,21 +558,59 @@ function ConversationView({
                   >
                     <div
                       className={cn(
-                        'max-w-[75%] rounded-2xl px-3 py-2 text-sm',
+                        'max-w-[75%] rounded-2xl px-3 py-2 text-sm space-y-2',
                         mine
                           ? 'bg-secondary text-secondary-foreground rounded-br-sm'
                           : 'bg-muted text-foreground rounded-bl-sm',
                         m._optimistic && 'opacity-70',
                       )}
                     >
-                      <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                      {hasImage && (
+                        <a
+                          href={m.attachment_url!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          <img
+                            src={m.attachment_url!}
+                            alt={m.attachment_name || 'attachment'}
+                            loading="lazy"
+                            className="rounded-lg max-h-64 w-auto object-cover"
+                          />
+                        </a>
+                      )}
+                      {hasFile && (
+                        <a
+                          href={m.attachment_url!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download={m.attachment_name || undefined}
+                          className={cn(
+                            'flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs',
+                            mine ? 'bg-secondary-foreground/10' : 'bg-background/60',
+                          )}
+                        >
+                          <FileText className="h-4 w-4 shrink-0" />
+                          <span className="truncate flex-1">
+                            {m.attachment_name || 'Attachment'}
+                          </span>
+                          <Download className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                        </a>
+                      )}
+                      {m.content && (
+                        <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                      )}
                       <p
                         className={cn(
-                          'text-[10px] mt-1 opacity-70',
+                          'text-[10px] opacity-70',
                           mine ? 'text-right' : 'text-left',
                         )}
                       >
                         {format(new Date(m.created_at), 'p')}
+                        {m.attachment_expires_at && (
+                          <span className="ml-1">· expires in 48h</span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -451,31 +621,120 @@ function ConversationView({
         )}
       </div>
 
-      <form onSubmit={handleSend} className="p-3 border-t flex items-end gap-2">
-        <Textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              handleSend()
-            }
-          }}
-          placeholder="Write a message..."
-          rows={1}
-          className="resize-none min-h-[40px] max-h-32"
-        />
-        <Button type="submit" size="icon" disabled={!draft.trim() || sendMut.isPending}>
-          {sendMut.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-        </Button>
+      <form onSubmit={handleSend} className="p-3 border-t space-y-2">
+        {pendingFile && (
+          <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-2">
+            {filePreview ? (
+              <img
+                src={filePreview}
+                alt="preview"
+                className="h-12 w-12 rounded object-cover"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded bg-background flex items-center justify-center">
+                <FileText className="h-5 w-5 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium truncate">{pendingFile.name}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {(pendingFile.size / 1024).toFixed(0)} KB · auto-deletes in 48h
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setPendingFile(null)}
+              aria-label="Remove attachment"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        {uploadPct !== null && (
+          <div className="h-1 w-full bg-muted overflow-hidden rounded">
+            <div
+              className="h-full bg-secondary transition-all"
+              style={{ width: `${uploadPct}%` }}
+            />
+          </div>
+        )}
+        <div className="flex items-end gap-1.5">
+          <input
+            ref={fileRef}
+            type="file"
+            className="hidden"
+            accept="image/*,application/pdf,.doc,.docx,.txt,.zip"
+            onChange={(e) => handleFilePick(e.target.files?.[0] ?? null)}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => fileRef.current?.click()}
+            aria-label="Attach file"
+          >
+            <Paperclip className="h-5 w-5" />
+          </Button>
+          <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="ghost" size="icon" aria-label="Add emoji">
+                <Smile className="h-5 w-5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="start"
+              side="top"
+              className="p-0 border-0 w-auto bg-transparent shadow-none"
+            >
+              <Suspense
+                fallback={
+                  <div className="h-80 w-72 flex items-center justify-center rounded-lg border bg-popover">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                }
+              >
+                <EmojiPicker
+                  lazyLoadEmojis
+                  width={300}
+                  height={360}
+                  onEmojiClick={(d) => {
+                    insertEmoji(d.emoji)
+                    setEmojiOpen(false)
+                  }}
+                />
+              </Suspense>
+            </PopoverContent>
+          </Popover>
+          <Textarea
+            ref={textareaRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+              }
+            }}
+            placeholder="Write a message..."
+            rows={1}
+            className="resize-none min-h-[40px] max-h-32"
+          />
+          <Button type="submit" size="icon" disabled={!canSend}>
+            {sendMut.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </form>
     </>
   )
 }
+
 
 function NewMessageDialog({ onClose }: { onClose: () => void }) {
   const { user } = useAuth()
