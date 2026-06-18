@@ -22,6 +22,21 @@ function getEmailFromHash(): string | null {
   }
 }
 
+// Fire-and-forget audit log. Never throws, never blocks the UI, never exposes
+// details to the user. The edge function always returns 204.
+async function logResetEvent(
+  event: 'verified' | 'invalid' | 'updated' | 'resent' | 'resend_failed',
+  email: string | null,
+) {
+  try {
+    await supabase.functions.invoke('log-reset-token-event', {
+      body: { event, email: email ?? undefined },
+    })
+  } catch {
+    // swallow — auditing must never surface to the user
+  }
+}
+
 export default function ResetPassword() {
   const navigate = useNavigate()
   const [status, setStatus] = useState<Status>('verifying')
@@ -38,21 +53,24 @@ export default function ResetPassword() {
   useEffect(() => {
     let resolved = false
 
-    const finish = (ok: boolean, msg?: string) => {
+    const finish = (ok: boolean, email: string | null, msg?: string) => {
       if (resolved) return
       resolved = true
       if (ok) {
         setStatus('ready')
+        void logResetEvent('verified', email)
       } else {
         setErrorMsg(msg ?? 'This password reset link is invalid or has expired.')
         setStatus('invalid')
+        void logResetEvent('invalid', email)
       }
     }
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' && session) {
-        setRecoveryEmail(session.user.email ?? getEmailFromHash())
-        finish(true)
+        const email = session.user.email ?? getEmailFromHash()
+        setRecoveryEmail(email)
+        finish(true, email)
       }
     })
 
@@ -60,15 +78,16 @@ export default function ResetPassword() {
     const t = setTimeout(async () => {
       const { data } = await supabase.auth.getSession()
       const hash = window.location.hash || ''
+      const email = data.session?.user.email ?? getEmailFromHash()
       if (data.session && hash.includes('type=recovery')) {
-        setRecoveryEmail(data.session.user.email ?? getEmailFromHash())
-        finish(true)
+        setRecoveryEmail(email)
+        finish(true, email)
       } else if (data.session && !hash) {
-        setRecoveryEmail(data.session.user.email ?? getEmailFromHash())
-        finish(true)
+        setRecoveryEmail(email)
+        finish(true, email)
       } else {
-        setRecoveryEmail(getEmailFromHash())
-        finish(false)
+        setRecoveryEmail(email)
+        finish(false, email)
       }
     }, 1200)
 
@@ -90,9 +109,11 @@ export default function ResetPassword() {
     })
     setResending(false)
     if (error) {
+      void logResetEvent('resend_failed', email)
       toast.error(error.message)
       return
     }
+    void logResetEvent('resent', email)
     setStatus('resent')
     toast.success('A new reset link has been sent to your email.')
   }
@@ -114,6 +135,7 @@ export default function ResetPassword() {
       setStatus('ready')
       return
     }
+    void logResetEvent('updated', recoveryEmail)
     await supabase.auth.signOut()
     setStatus('done')
     toast.success('Password updated. Please sign in.')

@@ -15,3 +15,5 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = false
   [functions.post-thread-to-facebook]
     verify_jwt = false
+  [functions.log-reset-token-event]
+    verify_jwt = false
