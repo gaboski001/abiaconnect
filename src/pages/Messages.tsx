@@ -64,11 +64,17 @@ interface Message {
   id: string
   conversation_id: string
   sender_id: string
-  content: string
+  content: string | null
   created_at: string
   is_read?: boolean
+  attachment_url?: string | null
+  attachment_type?: string | null
+  attachment_name?: string | null
+  attachment_size?: number | null
+  attachment_expires_at?: string | null
   _optimistic?: boolean
 }
+
 
 function Avatar({ profile, size = 'md' }: { profile?: Profile | null; size?: 'sm' | 'md' | 'lg' }) {
   const avatarSize = size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'
