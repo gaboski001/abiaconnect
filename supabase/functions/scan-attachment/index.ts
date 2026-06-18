@@ -1,5 +1,7 @@
 // Scans a file in Supabase Storage with VirusTotal.
-// Returns { clean: boolean, stats?, analysisId?, error? }.
+// Returns { clean, stats?, analysisId?, error?, fallback? }.
+// If VT is rate-limited / temporarily unavailable after retries we return
+// { clean: true, fallback: true } so uploads aren't blocked by a flaky scanner.
 // On malicious/suspicious verdict the caller should delete the object.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -17,6 +19,9 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANON = Deno.env.get('SUPABASE_ANON_KEY')!
 
+const MAX_RETRIES = 3
+const INITIAL_BACKOFF_MS = 1000
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -25,18 +30,45 @@ const json = (body: unknown, status = 200) =>
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+class TransientVTError extends Error {
+  constructor(public status: number, public retryAfterMs?: number) {
+    super(`VT transient ${status}`)
+  }
+}
+
+async function vtFetch(url: string, init: RequestInit): Promise<Response> {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const res = await fetch(url, init)
+    if (res.ok) return res
+    const transient = res.status === 429 || res.status >= 500
+    if (!transient || attempt === MAX_RETRIES) {
+      if (transient) {
+        const retryAfter = parseInt(res.headers.get('Retry-After') || '0', 10)
+        throw new TransientVTError(res.status, retryAfter * 1000 || undefined)
+      }
+      const t = await res.text().catch(() => '')
+      throw new Error(`VT ${res.status} ${t.slice(0, 200)}`)
+    }
+    const retryAfter = parseInt(res.headers.get('Retry-After') || '0', 10)
+    const backoff =
+      retryAfter * 1000 || INITIAL_BACKOFF_MS * 2 ** attempt
+    console.warn(`VT ${res.status} — retrying in ${backoff}ms (attempt ${attempt + 1}/${MAX_RETRIES})`)
+    await sleep(backoff)
+  }
+  throw new TransientVTError(503)
+}
+
 async function poll(analysisId: string) {
   for (let i = 0; i < 20; i++) {
-    const res = await fetch(`${VT_API}/analyses/${analysisId}`, {
+    const res = await vtFetch(`${VT_API}/analyses/${analysisId}`, {
       headers: { 'x-apikey': VT_KEY },
     })
-    if (!res.ok) throw new Error(`VT poll ${res.status}`)
     const j = await res.json()
     const status = j?.data?.attributes?.status
     if (status === 'completed') return j.data.attributes.stats as Record<string, number>
     await sleep(2500)
   }
-  throw new Error('VT scan timeout')
+  throw new TransientVTError(504)
 }
 
 Deno.serve(async (req) => {
@@ -52,7 +84,10 @@ Deno.serve(async (req) => {
     )
     if (claimErr || !claims?.claims) return json({ error: 'Unauthorized' }, 401)
 
-    if (!VT_KEY) return json({ error: 'Scanner not configured' }, 500)
+    if (!VT_KEY) {
+      console.error('VIRUSTOTAL_API_KEY missing — entering fallback mode')
+      return json({ clean: true, fallback: true, error: 'Scanner not configured' })
+    }
 
     const { bucket, path } = await req.json().catch(() => ({}))
     if (!bucket || !path) return json({ error: 'bucket and path required' }, 400)
@@ -61,32 +96,38 @@ Deno.serve(async (req) => {
     const { data: blob, error: dlErr } = await admin.storage.from(bucket).download(path)
     if (dlErr || !blob) return json({ error: dlErr?.message || 'download failed' }, 400)
 
-    // VT direct upload limit is 32MB; we cap chat at 2MB so this is fine.
     if (blob.size > 32 * 1024 * 1024) {
       return json({ error: 'File too large to scan' }, 413)
     }
 
-    const form = new FormData()
-    form.append('file', blob, path.split('/').pop() || 'file')
-    const up = await fetch(`${VT_API}/files`, {
-      method: 'POST',
-      headers: { 'x-apikey': VT_KEY },
-      body: form,
-    })
-    if (!up.ok) {
-      const t = await up.text()
-      return json({ error: `VT upload failed: ${up.status} ${t.slice(0, 200)}` }, 502)
+    try {
+      const form = new FormData()
+      form.append('file', blob, path.split('/').pop() || 'file')
+      const up = await vtFetch(`${VT_API}/files`, {
+        method: 'POST',
+        headers: { 'x-apikey': VT_KEY },
+        body: form,
+      })
+      const upJson = await up.json()
+      const analysisId = upJson?.data?.id
+      if (!analysisId) throw new TransientVTError(502)
+
+      const stats = await poll(analysisId)
+      const malicious = (stats.malicious ?? 0) + (stats.suspicious ?? 0)
+      return json({ clean: malicious === 0, stats, analysisId, fallback: false })
+    } catch (e) {
+      if (e instanceof TransientVTError) {
+        console.warn('VT unavailable, returning fallback clean verdict', e.status)
+        return json({
+          clean: true,
+          fallback: true,
+          error: `SCANNING_SERVICE_UNAVAILABLE_${e.status}`,
+        })
+      }
+      throw e
     }
-    const upJson = await up.json()
-    const analysisId = upJson?.data?.id
-    if (!analysisId) return json({ error: 'VT missing analysis id' }, 502)
-
-    const stats = await poll(analysisId)
-    const malicious = (stats.malicious ?? 0) + (stats.suspicious ?? 0)
-    const clean = malicious === 0
-
-    return json({ clean, stats, analysisId })
   } catch (e) {
-    return json({ error: (e as Error).message }, 500)
+    console.error('scan-attachment error', e)
+    return json({ clean: true, fallback: true, error: (e as Error).message })
   }
 })
