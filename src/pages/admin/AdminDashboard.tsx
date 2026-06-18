@@ -950,11 +950,12 @@ function SiteSettingsSection() {
     try {
       const webp = await toWebP(file)
       const path = `logos/${Date.now()}-${webp.name}`
-      const { error } = await supabase.storage.from('site-assets').upload(path, webp, {
-        upsert: true,
+      const { uploadAndScan } = await import('@/lib/scanAttachment')
+      const res = await uploadAndScan('site-assets', path, webp, {
         contentType: webp.type,
+        upsert: true,
       })
-      if (error) throw error
+      if (!res.uploaded) throw new Error(res.error || 'Logo blocked by security scan')
       await updateSetting.mutateAsync({ key: 'site_logo', value: path })
       setKey('site_logo', path)
       window.dispatchEvent(new Event('siteSettingsUpdated'))

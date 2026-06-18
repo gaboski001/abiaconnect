@@ -460,12 +460,14 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
     const webp = await toWebP(file)
     const ext = webp.name.split('.').pop() || 'webp'
     const path = `${user.id}/${Date.now()}.${ext}`
-    const { error: upErr } = await supabase.storage
-      .from('avatars')
-      .upload(path, webp, { upsert: true, contentType: webp.type })
-    if (upErr) {
+    const { uploadAndScan } = await import('@/lib/scanAttachment')
+    const res = await uploadAndScan('avatars', path, webp, {
+      contentType: webp.type,
+      upsert: true,
+    })
+    if (!res.uploaded) {
       setUploading(false)
-      return toast.error(upErr.message)
+      return toast.error(res.error || 'Avatar blocked by security scan')
     }
     const { error } = await supabase.from('profiles').update({ avatar_url: path }).eq('id', user.id)
     setUploading(false)

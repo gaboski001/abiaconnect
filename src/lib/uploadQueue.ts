@@ -6,8 +6,9 @@
 
 import { supabase } from '@/lib/supabase'
 import { ATTACHMENT_TTL_HOURS, isImage } from '@/lib/chatAttachments'
+import { scanStorageObject } from '@/lib/scanAttachment'
 
-export type QueueStatus = 'queued' | 'uploading' | 'sending' | 'done' | 'error'
+export type QueueStatus = 'queued' | 'uploading' | 'scanning' | 'sending' | 'done' | 'error' | 'blocked'
 
 export interface QueueItem {
   id: string
@@ -68,7 +69,7 @@ class UploadQueue {
 
   retry(id: string) {
     const item = this.items.find((i) => i.id === id)
-    if (!item || item.status !== 'error') return
+    if (!item || (item.status !== 'error')) return
     item.status = 'queued'
     item.error = undefined
     item.attempt = 0
@@ -132,7 +133,19 @@ class UploadQueue {
           .from('chat-attachments')
           .upload(path, item.file, { contentType: item.file.type, upsert: false })
         if (upErr) throw upErr
-        this.update(item.id, { progress: 70 })
+        this.update(item.id, { status: 'scanning', progress: 55 })
+        const scan = await scanStorageObject('chat-attachments', path)
+        if (!scan.clean) {
+          await supabase.storage.from('chat-attachments').remove([path])
+          this.update(item.id, {
+            status: 'blocked',
+            error:
+              scan.error ||
+              'Attachment blocked: our security scan flagged this file as unsafe.',
+          })
+          return
+        }
+        this.update(item.id, { progress: 75 })
         const { data: signed, error: signErr } = await supabase.storage
           .from('chat-attachments')
           .createSignedUrl(path, 60 * 60 * ATTACHMENT_TTL_HOURS)
