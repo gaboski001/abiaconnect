@@ -39,6 +39,9 @@ import {
 } from '@/lib/chatAttachments'
 import { cn } from '@/lib/utils'
 
+import { uploadQueue } from '@/lib/uploadQueue'
+import { useUploadQueue } from '@/hooks/useUploadQueue'
+
 const EmojiPicker = lazy(() => import('emoji-picker-react'))
 
 
