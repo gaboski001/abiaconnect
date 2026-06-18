@@ -450,6 +450,33 @@ export type Database = {
         }
         Relationships: []
       }
+      password_reset_audit: {
+        Row: {
+          created_at: string
+          email_hash: string | null
+          event: string
+          id: string
+          ip: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_hash?: string | null
+          event: string
+          id?: string
+          ip?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_hash?: string | null
+          event?: string
+          id?: string
+          ip?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       poll_options: {
         Row: {
           created_at: string
