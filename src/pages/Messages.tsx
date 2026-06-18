@@ -299,6 +299,25 @@ function ConversationView({
   const queryKey = ['messages', conversationId]
   const scrollRef = useRef<HTMLDivElement>(null)
   const [draft, setDraft] = useState('')
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState<string | null>(null)
+  const [emojiOpen, setEmojiOpen] = useState(false)
+  const [uploadPct, setUploadPct] = useState<number | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (!pendingFile) {
+      setFilePreview(null)
+      return
+    }
+    if (isImage(pendingFile)) {
+      const url = URL.createObjectURL(pendingFile)
+      setFilePreview(url)
+      return () => URL.revokeObjectURL(url)
+    }
+    setFilePreview(null)
+  }, [pendingFile])
 
   const messagesQ = useQuery({
     queryKey,
