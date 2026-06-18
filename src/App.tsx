@@ -10,6 +10,7 @@ import Register from '@/pages/Register'
 // Lazy-load every non-critical route. Home + auth load eagerly because they're the
 // most common landing destinations; everything else streams in on navigation.
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'))
 const CategoryPage = lazy(() => import('@/pages/Category'))
 const Thread = lazy(() => import('@/pages/Thread'))
 const CreateThread = lazy(() => import('@/pages/CreateThread'))
@@ -72,6 +73,7 @@ export default function App() {
             <Suspense fallback={<RouteFallback />}>
               <Routes>
                 <Route path="forgot-password" element={<ForgotPassword />} />
+                <Route path="reset-password" element={<ResetPassword />} />
                 <Route path="category/:categoryId" element={<CategoryPage />} />
                 <Route path="thread/:threadId" element={<Thread />} />
                 <Route path="about/lgas" element={<LgasGuide />} />
