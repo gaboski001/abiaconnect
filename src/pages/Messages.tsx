@@ -584,38 +584,47 @@ function ConversationView({
                     <div
                       className={cn(
                         'h-full transition-all',
-                        q.status === 'error' ? 'bg-destructive' : 'bg-secondary-foreground/70',
+                        q.status === 'error' || q.status === 'blocked'
+                          ? 'bg-destructive'
+                          : 'bg-secondary-foreground/70',
                       )}
-                      style={{ width: `${q.status === 'error' ? 100 : q.progress}%` }}
+                      style={{
+                        width: `${q.status === 'error' || q.status === 'blocked' ? 100 : q.progress}%`,
+                      }}
                     />
                   </div>
                   <div className="flex items-center justify-between gap-2 text-[10px] opacity-80">
                     <span>
                       {q.status === 'uploading' && `Uploading… ${q.progress}%`}
+                      {q.status === 'scanning' && 'Scanning for malware…'}
                       {q.status === 'sending' && 'Sending…'}
                       {q.status === 'queued' && (q.error || 'Queued')}
                       {q.status === 'done' && 'Sent'}
                       {q.status === 'error' && (q.error || 'Failed')}
+                      {q.status === 'blocked' && (q.error || 'Blocked by security scan')}
                     </span>
-                    {q.status === 'error' && (
+                    {(q.status === 'error' || q.status === 'blocked') && (
                       <div className="flex gap-2">
-                        <button
-                          type="button"
-                          className="underline"
-                          onClick={() => uploadQueue.retry(q.id)}
-                        >
-                          Retry
-                        </button>
+                        {q.status === 'error' && (
+                          <button
+                            type="button"
+                            className="underline"
+                            onClick={() => uploadQueue.retry(q.id)}
+                          >
+                            Retry
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="underline opacity-70"
                           onClick={() => uploadQueue.remove(q.id)}
                         >
-                          Cancel
+                          {q.status === 'blocked' ? 'Dismiss' : 'Cancel'}
                         </button>
                       </div>
                     )}
                   </div>
+
                 </div>
               </div>
             ))}
