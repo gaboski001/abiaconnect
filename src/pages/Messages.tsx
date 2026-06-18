@@ -558,7 +558,71 @@ function ConversationView({
             </div>
           ))
         )}
+
+        {queueItems.length > 0 && (
+          <div className="space-y-2">
+            {queueItems.map((q) => (
+              <div key={q.id} className="flex justify-end">
+                <div className="max-w-[75%] rounded-2xl rounded-br-sm px-3 py-2 text-sm space-y-2 bg-secondary/60 text-secondary-foreground">
+                  {q.previewUrl && (
+                    <img
+                      src={q.previewUrl}
+                      alt="uploading"
+                      className="rounded-lg max-h-48 w-auto object-cover opacity-80"
+                    />
+                  )}
+                  {!q.previewUrl && q.file && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <FileText className="h-4 w-4" />
+                      <span className="truncate">{q.file.name}</span>
+                    </div>
+                  )}
+                  {q.content && (
+                    <p className="whitespace-pre-wrap break-words opacity-80">{q.content}</p>
+                  )}
+                  <div className="h-1 w-full bg-background/40 overflow-hidden rounded">
+                    <div
+                      className={cn(
+                        'h-full transition-all',
+                        q.status === 'error' ? 'bg-destructive' : 'bg-secondary-foreground/70',
+                      )}
+                      style={{ width: `${q.status === 'error' ? 100 : q.progress}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 text-[10px] opacity-80">
+                    <span>
+                      {q.status === 'uploading' && `Uploading… ${q.progress}%`}
+                      {q.status === 'sending' && 'Sending…'}
+                      {q.status === 'queued' && (q.error || 'Queued')}
+                      {q.status === 'done' && 'Sent'}
+                      {q.status === 'error' && (q.error || 'Failed')}
+                    </span>
+                    {q.status === 'error' && (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          className="underline"
+                          onClick={() => uploadQueue.retry(q.id)}
+                        >
+                          Retry
+                        </button>
+                        <button
+                          type="button"
+                          className="underline opacity-70"
+                          onClick={() => uploadQueue.remove(q.id)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
 
       <form onSubmit={handleSend} className="p-3 border-t space-y-2">
         {pendingFile && (
