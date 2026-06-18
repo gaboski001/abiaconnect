@@ -453,7 +453,7 @@ function ConversationView({
     return groups
   }, [messagesQ.data])
 
-  const canSend = (!!draft.trim() || !!pendingFile) && !sendMut.isPending
+  const canSend = !!draft.trim() || !!pendingFile
 
   return (
     <>
