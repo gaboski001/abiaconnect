@@ -124,7 +124,10 @@ export default function Messages() {
       const unreadMap: Record<string, number> = {}
       ;(msgs ?? []).forEach((m: any) => {
         if (!lastMap[m.conversation_id]) {
-          lastMap[m.conversation_id] = { content: m.content, created_at: m.created_at }
+          lastMap[m.conversation_id] = {
+            content: m.content || '📎 Attachment',
+            created_at: m.created_at,
+          }
         }
         if (!m.is_read && m.sender_id !== user!.id) {
           unreadMap[m.conversation_id] = (unreadMap[m.conversation_id] || 0) + 1
