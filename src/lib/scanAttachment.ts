@@ -4,11 +4,14 @@ export interface ScanResult {
   clean: boolean
   stats?: Record<string, number>
   error?: string
+  /** True when VirusTotal was unavailable and we allowed the file through. */
+  fallback?: boolean
 }
 
 /**
  * Scans a file already uploaded to a Supabase Storage bucket using VirusTotal.
  * If the verdict is not clean, the caller MUST delete the object from storage.
+ * If `fallback` is true, the scan service was unavailable but the file is allowed.
  */
 export async function scanStorageObject(
   bucket: string,
@@ -17,7 +20,10 @@ export async function scanStorageObject(
   const { data, error } = await supabase.functions.invoke('scan-attachment', {
     body: { bucket, path },
   })
-  if (error) return { clean: false, error: error.message }
+  if (error) {
+    console.warn('scan-attachment invoke failed, falling back', error)
+    return { clean: true, fallback: true, error: error.message }
+  }
   return data as ScanResult
 }
 
