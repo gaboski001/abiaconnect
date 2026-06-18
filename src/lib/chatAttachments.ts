@@ -21,31 +21,30 @@ export async function compressImageToWebp(file: File, quality = 0.82): Promise<F
   const w = Math.round(bitmap.width * scale)
   const h = Math.round(bitmap.height * scale)
 
-  const canvas =
-    typeof OffscreenCanvas !== 'undefined'
-      ? new OffscreenCanvas(w, h)
-      : Object.assign(document.createElement('canvas'), { width: w, height: h })
+  let blob: Blob
+  if (typeof OffscreenCanvas !== 'undefined') {
+    const canvas = new OffscreenCanvas(w, h)
+    const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D | null
+    if (!ctx) return file
+    ctx.drawImage(bitmap, 0, 0, w, h)
+    blob = await canvas.convertToBlob({ type: 'image/webp', quality })
+  } else {
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(bitmap, 0, 0, w, h)
+    blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error('encode failed'))),
+        'image/webp',
+        quality,
+      )
+    })
+  }
 
-  // @ts-expect-error - dynamic canvas type
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return file
-  // @ts-expect-error - both canvases support drawImage
-  ctx.drawImage(bitmap, 0, 0, w, h)
   bitmap.close?.()
-
-  const blob: Blob =
-    'convertToBlob' in canvas
-      ? // @ts-expect-error - OffscreenCanvas
-        await canvas.convertToBlob({ type: 'image/webp', quality })
-      : await new Promise<Blob>((resolve, reject) => {
-          // @ts-expect-error - HTMLCanvasElement
-          canvas.toBlob(
-            (b: Blob | null) => (b ? resolve(b) : reject(new Error('encode failed'))),
-            'image/webp',
-            quality,
-          )
-        })
-
   const name = file.name.replace(/\.[^.]+$/, '') + '.webp'
   return new File([blob], name, { type: 'image/webp' })
 }
