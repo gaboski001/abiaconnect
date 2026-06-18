@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { CheckCircle2, Eye, EyeOff, Lock, ShieldCheck, Zap } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Eye, EyeOff, Lock, Mail, ShieldCheck, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +8,19 @@ import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
 import { SEO } from '@/components/SEO'
 
-type Status = 'verifying' | 'ready' | 'invalid' | 'updating' | 'done'
+type Status = 'verifying' | 'ready' | 'invalid' | 'updating' | 'done' | 'resent'
+
+function getEmailFromHash(): string | null {
+  try {
+    const hash = window.location.hash || ''
+    const m = hash.match(/access_token=([^&]+)/)
+    if (!m) return null
+    const payload = JSON.parse(atob(m[1].split('.')[1]))
+    return payload?.email || null
+  } catch {
+    return null
+  }
+}
 
 export default function ResetPassword() {
   const navigate = useNavigate()
@@ -17,6 +29,8 @@ export default function ResetPassword() {
   const [confirm, setConfirm] = useState('')
   const [show, setShow] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [recoveryEmail, setRecoveryEmail] = useState<string | null>(null)
+  const [resending, setResending] = useState(false)
 
   // Verify the recovery link. Supabase JS auto-parses the URL hash on load
   // and fires a PASSWORD_RECOVERY event. We also fall back to checking for an
@@ -36,16 +50,26 @@ export default function ResetPassword() {
     }
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' && session) finish(true)
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        setRecoveryEmail(session.user.email ?? getEmailFromHash())
+        finish(true)
+      }
     })
 
     // Fallback: maybe the hash was already consumed before the listener mounted.
     const t = setTimeout(async () => {
       const { data } = await supabase.auth.getSession()
       const hash = window.location.hash || ''
-      if (data.session && hash.includes('type=recovery')) finish(true)
-      else if (data.session && !hash) finish(true) // already verified, refresh
-      else finish(false)
+      if (data.session && hash.includes('type=recovery')) {
+        setRecoveryEmail(data.session.user.email ?? getEmailFromHash())
+        finish(true)
+      } else if (data.session && !hash) {
+        setRecoveryEmail(data.session.user.email ?? getEmailFromHash())
+        finish(true)
+      } else {
+        setRecoveryEmail(getEmailFromHash())
+        finish(false)
+      }
     }, 1200)
 
     return () => {
@@ -53,6 +77,25 @@ export default function ResetPassword() {
       clearTimeout(t)
     }
   }, [])
+
+  async function handleResend() {
+    const email = recoveryEmail?.trim()
+    if (!email) {
+      toast.error('Unable to determine your email. Please request a new link.')
+      return
+    }
+    setResending(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password',
+    })
+    setResending(false)
+    if (error) {
+      toast.error(error.message)
+      return
+    }
+    setStatus('resent')
+    toast.success('A new reset link has been sent to your email.')
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -104,12 +147,47 @@ export default function ResetPassword() {
           )}
 
           {status === 'invalid' && (
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-5 text-center">
+                <AlertTriangle className="size-10 mx-auto text-destructive mb-3" />
+                <h2 className="text-base font-semibold text-foreground mb-1">
+                  Link invalid or expired
+                </h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {errorMsg ?? 'This password reset link is invalid or has expired.'}
+                </p>
+              </div>
+              <div className="space-y-3">
+                {recoveryEmail ? (
+                  <Button
+                    className="w-full gap-2"
+                    onClick={handleResend}
+                    disabled={resending}
+                  >
+                    <Mail className="size-4" />
+                    {resending ? 'Sending…' : 'Resend reset email'}
+                  </Button>
+                ) : (
+                  <Button asChild className="w-full">
+                    <Link to="/forgot-password">Request a new link</Link>
+                  </Button>
+                )}
+                <Button asChild variant="ghost" className="w-full">
+                  <Link to="/login">Back to Sign In</Link>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {status === 'resent' && (
             <div className="text-center space-y-4">
-              <p className="text-sm text-destructive">{errorMsg}</p>
-              <Button asChild className="w-full">
-                <Link to="/forgot-password">Request a new link</Link>
-              </Button>
-              <Button asChild variant="ghost" className="w-full">
+              <CheckCircle2 className="size-12 mx-auto text-primary" />
+              <p className="text-sm leading-relaxed">
+                A new reset link has been sent to{' '}
+                <strong>{recoveryEmail}</strong>. Please check your inbox (and spam folder)
+                and follow the link to continue.
+              </p>
+              <Button asChild variant="secondary" className="w-full">
                 <Link to="/login">Back to Sign In</Link>
               </Button>
             </div>
