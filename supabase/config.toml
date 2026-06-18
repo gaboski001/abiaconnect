@@ -19,3 +19,5 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = false
   [functions.cleanup-chat-attachments]
     verify_jwt = false
+  [functions.scan-attachment]
+    verify_jwt = true
