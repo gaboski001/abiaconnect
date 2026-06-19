@@ -39,6 +39,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
 import { PWAInstallButton } from '@/components/pwa/PWAInstallButton'
+import { PWAPromptToggle } from '@/components/pwa/PWAPromptToggle'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
 
