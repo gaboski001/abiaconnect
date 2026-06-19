@@ -34,7 +34,7 @@ export async function saveProfile(userId: string, raw: ProfileEditInput) {
   }
   const { data, error } = await supabase
     .from('profiles')
-    .update(payload)
+    .update(payload as ProfileEditInput)
     .eq('id', userId)
     .select()
     .maybeSingle()
