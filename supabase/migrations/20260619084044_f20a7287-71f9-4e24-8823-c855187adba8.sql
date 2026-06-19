@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS notification_mode text NOT NULL DEFAULT 'sound' CHECK (notification_mode IN ('sound','vibrate','muted'));

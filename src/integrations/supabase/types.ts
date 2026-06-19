@@ -620,6 +620,7 @@ export type Database = {
           is_banned: boolean
           is_deleted: boolean
           lga: string | null
+          notification_mode: string
           reputation: number
           role: string | null
           updated_at: string
@@ -636,6 +637,7 @@ export type Database = {
           is_banned?: boolean
           is_deleted?: boolean
           lga?: string | null
+          notification_mode?: string
           reputation?: number
           role?: string | null
           updated_at?: string
@@ -652,6 +654,7 @@ export type Database = {
           is_banned?: boolean
           is_deleted?: boolean
           lga?: string | null
+          notification_mode?: string
           reputation?: number
           role?: string | null
           updated_at?: string
@@ -1307,6 +1310,7 @@ export type Database = {
           is_banned: boolean
           is_deleted: boolean
           lga: string | null
+          notification_mode: string
           reputation: number
           role: string | null
           updated_at: string
