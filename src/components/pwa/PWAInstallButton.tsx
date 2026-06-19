@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Download, Smartphone } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { IOSInstallHelpModal } from './IOSInstallHelpModal'
 import {
   getDeferredPrompt,
   setDeferredPrompt,
