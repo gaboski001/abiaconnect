@@ -623,6 +623,11 @@ function ConversationView({
                         {m.attachment_expires_at && (
                           <span className="ml-1">· expires in 48h</span>
                         )}
+                        {mine && (m._status || m.is_read) && (
+                          <span className="ml-1" aria-label={m.is_read ? 'read' : m._status === 'delivered' ? 'delivered' : 'sent'}>
+                            {m.is_read || m._status === 'delivered' ? '✓✓' : '✓'}
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
