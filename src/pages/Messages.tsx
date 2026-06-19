@@ -461,6 +461,7 @@ function ConversationView({
         created_at: new Date().toISOString(),
         is_read: false,
         _optimistic: true,
+        _status: 'sent',
       }
       qc.setQueryData<Message[]>(queryKey, (prev) => [...(prev ?? []), optimistic])
       ;(async () => {
