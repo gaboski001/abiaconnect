@@ -159,12 +159,10 @@ export default function Profile() {
                       onChange={(e) => setForm({ ...form, username: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label>Bio</Label>
-                    <Textarea
+                  <div className="sm:col-span-2">
+                    <BioField
                       value={form.bio ?? ''}
-                      onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                      maxLength={500}
+                      onChange={(v: string) => setForm({ ...form, bio: v })}
                     />
                   </div>
                   <div className="space-y-1.5">
