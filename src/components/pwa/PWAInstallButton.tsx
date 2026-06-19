@@ -25,6 +25,7 @@ export function PWAInstallButton({
   label = 'Install App',
 }: PWAInstallButtonProps) {
   const [canInstall, setCanInstall] = useState(false)
+  const [showIOSHelp, setShowIOSHelp] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
