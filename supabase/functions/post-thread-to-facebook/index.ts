@@ -1,5 +1,6 @@
 // Posts a newly created thread to the configured Facebook Page.
 // Triggered by a Postgres AFTER INSERT trigger on public.threads via pg_net.
+import { requireServiceRole } from "../_shared/service-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +13,11 @@ const FB_GRAPH = 'https://graph.facebook.com/v21.0'
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
+  const denied = requireServiceRole(req)
+  if (denied) return denied
+
   try {
+
     const pageId = Deno.env.get('FACEBOOK_PAGE_ID')
     const pageToken = Deno.env.get('FACEBOOK_PAGE_ACCESS_TOKEN')
     if (!pageId || !pageToken) {
