@@ -40,6 +40,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
 import { PWAInstallButton } from '@/components/pwa/PWAInstallButton'
 import { PWAPromptToggle } from '@/components/pwa/PWAPromptToggle'
+import { PushNotificationsToggle } from '@/components/pwa/PushNotificationsToggle'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
 
@@ -559,6 +560,7 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
           <PWAInstallButton />
         </div>
         <PWAPromptToggle />
+        <PushNotificationsToggle />
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
