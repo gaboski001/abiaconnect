@@ -37,6 +37,7 @@ export function PWAInstallButton() {
   }, [])
 
   const handleInstall = async () => {
+    void logPwaEvent('manual_click')
     const deferred = getDeferredPrompt()
     if (deferred) {
       try {
