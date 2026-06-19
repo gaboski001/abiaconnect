@@ -3,6 +3,12 @@ import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
+import { getBearerToken, parseJwtClaims } from '../_shared/service-auth.ts'
+
+// Templates that authenticated end-users may trigger for themselves only.
+// Any other template requires a service_role caller (cron / trigger / server code).
+const USER_SELF_SEND_TEMPLATES = new Set(['new-device-login'])
+
 
 // Configuration baked in at scaffold time — do NOT change these manually.
 // To update, re-run the email domain setup flow.
@@ -117,8 +123,28 @@ Deno.serve(async (req) => {
     )
   }
 
+  // Authorization: service_role callers may send anything. Authenticated end
+  // users may only trigger USER_SELF_SEND_TEMPLATES and only to their own
+  // email address. Anon / unauthenticated callers are rejected.
+  const token = getBearerToken(req)
+  const claims = token ? parseJwtClaims(token) : null
+  const callerRole = (claims?.role as string | undefined) ?? null
+  if (callerRole !== 'service_role') {
+    const callerEmail = ((claims?.email as string | undefined) ?? '').toLowerCase()
+    const isAuthedUser = callerRole === 'authenticated' && !!callerEmail
+    const templateAllowed = USER_SELF_SEND_TEMPLATES.has(templateName)
+    const recipientMatches = effectiveRecipient.toLowerCase() === callerEmail
+    if (!isAuthedUser || !templateAllowed || !recipientMatches) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+  }
+
   // Create Supabase client with service role (bypasses RLS)
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
 
   // 2. Check suppression list (fail-closed: if we can't verify, don't send)
   const { data: suppressed, error: suppressionError } = await supabase
