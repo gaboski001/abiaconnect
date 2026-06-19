@@ -13,7 +13,7 @@ const FB_GRAPH = 'https://graph.facebook.com/v21.0'
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
-  const denied = requireServiceRole(req)
+  const denied = await requireServiceRole(req)
   if (denied) return denied
 
   try {
