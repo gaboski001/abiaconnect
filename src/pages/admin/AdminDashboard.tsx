@@ -60,7 +60,8 @@ import CategoriesSection from '@/components/admin/CategoriesSection'
 import HeroSlidesSection, {
   HeroSlidesExpiryAlert,
 } from '@/components/admin/HeroSlidesSection'
-import { Image as ImageIcon } from 'lucide-react'
+import { Image as ImageIcon, Smartphone } from 'lucide-react'
+import PWAReportSection from '@/components/admin/PWAReportSection'
 
 type SectionId =
   | 'overview'
@@ -72,6 +73,7 @@ type SectionId =
   | 'settings'
   | 'slides'
   | 'email'
+  | 'pwa'
 
 const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'overview', label: 'Overview', Icon: BarChart3 },
@@ -83,6 +85,7 @@ const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'settings', label: 'Site Settings', Icon: Settings },
   { id: 'slides', label: 'Hero Slider', Icon: ImageIcon },
   { id: 'email', label: 'Email Settings', Icon: Mail },
+  { id: 'pwa', label: 'PWA Report', Icon: Smartphone },
 ]
 
 export default function AdminDashboard() {
@@ -134,6 +137,7 @@ export default function AdminDashboard() {
           {section === 'settings' && <SiteSettingsSection />}
           {section === 'slides' && <HeroSlidesSection />}
           {section === 'email' && <EmailSettingsSection />}
+          {section === 'pwa' && <PWAReportSection />}
         </main>
       </div>
     </div>

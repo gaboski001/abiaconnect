@@ -7,6 +7,8 @@ import {
   setDeferredPrompt,
   getDeferredPrompt,
   setIOSFlag,
+  getPromptEnabled,
+  logPwaEvent,
 } from '@/lib/pwaInstall'
 
 const IOS_KEY = 'abiaconnect_install_ios_state'
@@ -46,6 +48,7 @@ export default function InstallPrompt() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (isStandalone()) return
+    if (!getPromptEnabled()) return
 
     const ios = isIOS()
     setIOSFlag(ios)
@@ -59,13 +62,17 @@ export default function InstallPrompt() {
     const onInstalled = () => {
       writeState(platformKey.current, 'accepted')
       setVisible(false)
+      void logPwaEvent('installed')
       toast.success('🎉 AbiaConnect installed! Welcome to the community.', { duration: 3000 })
     }
     window.addEventListener('beforeinstallprompt', onBIP)
     window.addEventListener('appinstalled', onInstalled)
 
     const t = window.setTimeout(() => {
-      if (getDeferredPrompt() || ios) setVisible(true)
+      if (getDeferredPrompt() || ios) {
+        setVisible(true)
+        void logPwaEvent('prompt_shown')
+      }
     }, 8000)
 
     return () => {
@@ -78,10 +85,12 @@ export default function InstallPrompt() {
   const dismiss = () => {
     setClosing(true)
     writeState(platformKey.current, 'dismissed')
+    void logPwaEvent('dismissed')
     window.setTimeout(() => setVisible(false), 300)
   }
 
   const install = async () => {
+    void logPwaEvent('manual_click')
     const deferred = getDeferredPrompt()
     if (deferred) {
       try {
@@ -89,7 +98,10 @@ export default function InstallPrompt() {
         const { outcome } = await deferred.userChoice
         if (outcome === 'accepted') {
           writeState(ANDROID_KEY, 'accepted')
+          void logPwaEvent('accepted')
           setVisible(false)
+        } else {
+          void logPwaEvent('dismissed')
         }
       } catch {
         /* ignore */

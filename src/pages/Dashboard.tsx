@@ -39,6 +39,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
 import { PWAInstallButton } from '@/components/pwa/PWAInstallButton'
+import { PWAPromptToggle } from '@/components/pwa/PWAPromptToggle'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
 
@@ -557,6 +558,7 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
           </div>
           <PWAInstallButton />
         </div>
+        <PWAPromptToggle />
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">

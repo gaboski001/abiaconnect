@@ -7,6 +7,8 @@ import {
   setDeferredPrompt,
   isIOS,
   isStandalone,
+  getPromptEnabled,
+  logPwaEvent,
   type BIPEvent,
 } from '@/lib/pwaInstall'
 
@@ -16,6 +18,8 @@ export function PWAInstallButton() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (isStandalone()) return
+    if (!getPromptEnabled()) return
+
 
     // Show if iOS or if we already captured a deferred prompt.
     const ios = isIOS()
@@ -35,13 +39,17 @@ export function PWAInstallButton() {
   }, [])
 
   const handleInstall = async () => {
+    void logPwaEvent('manual_click')
     const deferred = getDeferredPrompt()
     if (deferred) {
       try {
         await deferred.prompt()
         const { outcome } = await deferred.userChoice
         if (outcome === 'accepted') {
+          void logPwaEvent('accepted')
           toast.success('AbiaConnect installed successfully!', { duration: 3000 })
+        } else {
+          void logPwaEvent('dismissed')
         }
       } catch {
         toast.error('Install prompt failed. Please try again.')
