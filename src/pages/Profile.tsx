@@ -91,7 +91,12 @@ export default function Profile() {
 
   const save = async () => {
     if (!user) return
-    const { error } = await saveProfile(user.id, form)
+    const { error } = await saveProfile(user.id, {
+      display_name: form.display_name ?? undefined,
+      username: form.username ?? undefined,
+      bio: form.bio ?? undefined,
+      lga: form.lga ?? undefined,
+    })
     if (error) return toast.error(error.message)
     toast.success('Profile updated')
     setEditing(false)
