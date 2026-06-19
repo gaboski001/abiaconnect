@@ -15,6 +15,11 @@ export const profileEditSchema = z.object({
 
 export type ProfileEditInput = z.infer<typeof profileEditSchema>
 
+const editableProfileFields = ['display_name', 'username', 'bio', 'lga'] as const
+
+type EditableProfileField = (typeof editableProfileFields)[number]
+type ProfileUpdatePayload = Partial<Record<EditableProfileField, string | null>>
+
 /**
  * Updates the profile row for `userId`, sending ONLY the fields that have a
  * value. Prevents PostgREST's "Empty or invalid json object" error which fires
@@ -25,16 +30,24 @@ export async function saveProfile(userId: string, raw: ProfileEditInput) {
   if (!parsed.success) {
     return { error: { message: parsed.error.issues[0]?.message ?? 'Invalid input' } }
   }
-  const payload: Record<string, string> = {}
-  for (const [k, v] of Object.entries(parsed.data)) {
-    if (typeof v === 'string' && v.length > 0) payload[k] = v
+
+  const payload: ProfileUpdatePayload = {}
+  for (const field of editableProfileFields) {
+    if (!Object.prototype.hasOwnProperty.call(parsed.data, field)) continue
+
+    const value = parsed.data[field]
+    if (typeof value === 'string') {
+      payload[field] = value.length > 0 ? value : null
+    }
   }
+
   if (Object.keys(payload).length === 0) {
-    return { error: { message: 'Nothing to update — fill in at least one field.' } }
+    return { error: { message: 'Nothing to update — change at least one profile field first.' } }
   }
+
   const { data, error } = await supabase
     .from('profiles')
-    .update(payload as ProfileEditInput)
+    .update(payload)
     .eq('id', userId)
     .select()
     .maybeSingle()
