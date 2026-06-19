@@ -123,8 +123,28 @@ Deno.serve(async (req) => {
     )
   }
 
+  // Authorization: service_role callers may send anything. Authenticated end
+  // users may only trigger USER_SELF_SEND_TEMPLATES and only to their own
+  // email address. Anon / unauthenticated callers are rejected.
+  const token = getBearerToken(req)
+  const claims = token ? parseJwtClaims(token) : null
+  const callerRole = (claims?.role as string | undefined) ?? null
+  if (callerRole !== 'service_role') {
+    const callerEmail = ((claims?.email as string | undefined) ?? '').toLowerCase()
+    const isAuthedUser = callerRole === 'authenticated' && !!callerEmail
+    const templateAllowed = USER_SELF_SEND_TEMPLATES.has(templateName)
+    const recipientMatches = effectiveRecipient.toLowerCase() === callerEmail
+    if (!isAuthedUser || !templateAllowed || !recipientMatches) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+  }
+
   // Create Supabase client with service role (bypasses RLS)
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
 
   // 2. Check suppression list (fail-closed: if we can't verify, don't send)
   const { data: suppressed, error: suppressionError } = await supabase
