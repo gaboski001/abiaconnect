@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { Share, PlusSquare, CheckCircle2, Smartphone, X } from 'lucide-react'
+import { Share, PlusSquare, CheckCircle2, Smartphone } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -12,10 +11,11 @@ import { Button } from '@/components/ui/button'
 
 interface IOSInstallHelpModalProps {
   trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function IOSInstallHelpModal({ trigger }: IOSInstallHelpModalProps) {
-  const [open, setOpen] = useState(false)
+export function IOSInstallHelpModal({ trigger, open, onOpenChange }: IOSInstallHelpModalProps) {
 
   const steps = [
     {
