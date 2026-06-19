@@ -661,6 +661,10 @@ function ConversationView({
                             {m.is_read || m._status === 'delivered' ? '✓✓' : '✓'}
                           </span>
                         )}
+                        {mine && m.is_read && m.read_at && (
+                          <span className="ml-1 opacity-80">· read {format(new Date(m.read_at), 'p')}</span>
+                        )}
+                        )}
                       </p>
                     </div>
                   </div>
