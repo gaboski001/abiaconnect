@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Smartphone } from 'lucide-react'
+import { Download, Smartphone } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,14 +12,23 @@ import {
   type BIPEvent,
 } from '@/lib/pwaInstall'
 
-export function PWAInstallButton() {
+interface PWAInstallButtonProps {
+  showAlways?: boolean
+  variant?: 'default' | 'outline'
+  label?: string
+}
+
+export function PWAInstallButton({
+  showAlways = false,
+  variant = 'outline',
+  label = 'Install App',
+}: PWAInstallButtonProps) {
   const [canInstall, setCanInstall] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (isStandalone()) return
     if (!getPromptEnabled()) return
-
 
     // Show if iOS or if we already captured a deferred prompt.
     const ios = isIOS()
@@ -72,12 +81,14 @@ export function PWAInstallButton() {
     )
   }
 
-  if (!canInstall) return null
+  if (!canInstall && !showAlways) return null
+
+  const Icon = label.toLowerCase().includes('download') ? Download : Smartphone
 
   return (
-    <Button variant="outline" size="sm" onClick={handleInstall}>
-      <Smartphone className="size-4 mr-2" />
-      Install App
+    <Button variant={variant} size="sm" onClick={handleInstall}>
+      <Icon className="size-4 mr-2" />
+      {label}
     </Button>
   )
 }
