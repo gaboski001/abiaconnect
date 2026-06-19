@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Download, Smartphone } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { IOSInstallHelpModal } from './IOSInstallHelpModal'
 import {
   getDeferredPrompt,
   setDeferredPrompt,
@@ -24,6 +25,7 @@ export function PWAInstallButton({
   label = 'Install App',
 }: PWAInstallButtonProps) {
   const [canInstall, setCanInstall] = useState(false)
+  const [showIOSHelp, setShowIOSHelp] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -68,10 +70,7 @@ export function PWAInstallButton({
     }
 
     if (isIOS()) {
-      toast.info(
-        'Tap the Share button in Safari, then select "Add to Home Screen".',
-        { duration: 6000 }
-      )
+      setShowIOSHelp(true)
       return
     }
 
@@ -86,9 +85,12 @@ export function PWAInstallButton({
   const Icon = label.toLowerCase().includes('download') ? Download : Smartphone
 
   return (
-    <Button variant={variant} size="sm" onClick={handleInstall}>
-      <Icon className="size-4 mr-2" />
-      {label}
-    </Button>
+    <>
+      <Button variant={variant} size="sm" onClick={handleInstall}>
+        <Icon className="size-4 mr-2" />
+        {label}
+      </Button>
+      <IOSInstallHelpModal open={showIOSHelp} onOpenChange={setShowIOSHelp} />
+    </>
   )
 }
