@@ -447,7 +447,7 @@ function ConversationView({
     }
     return () => observer.disconnect()
   }, [messagesQ.data, user, qc, queryKey])
-  }, [messagesQ.data, user, conversationId, qc, queryKey])
+  
 
 
   const queueItems = useUploadQueue(conversationId)
