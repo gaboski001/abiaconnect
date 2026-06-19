@@ -35,6 +35,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
 
