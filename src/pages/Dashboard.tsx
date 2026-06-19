@@ -40,6 +40,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
 import { PWAInstallButton } from '@/components/pwa/PWAInstallButton'
 import { PWAPromptToggle } from '@/components/pwa/PWAPromptToggle'
+import { PushNotificationsToggle } from '@/components/pwa/PushNotificationsToggle'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
 
