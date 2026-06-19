@@ -1,33 +1,52 @@
-// Lightweight notification chime + mute preference (no audio asset, ~1KB).
-// Uses Web Audio API to synthesise a soft two-note tone on demand.
+// Lightweight notification chime + vibration + mode preference (~1KB).
+// Modes: 'sound' | 'vibrate' | 'muted'. Backwards-compatible with old boolean mute key.
 
-const STORAGE_KEY = 'abia:notification-sound-muted'
-const SOUND_EVENT = 'abia:notification-sound-changed'
+const MODE_KEY = 'abia:notification-mode'
+const LEGACY_MUTE_KEY = 'abia:notification-sound-muted'
+const MODE_EVENT = 'abia:notification-mode-changed'
 
-export function isNotificationSoundMuted(): boolean {
-  if (typeof window === 'undefined') return false
+export type NotificationMode = 'sound' | 'vibrate' | 'muted'
+
+export function getNotificationMode(): NotificationMode {
+  if (typeof window === 'undefined') return 'sound'
   try {
-    return window.localStorage.getItem(STORAGE_KEY) === '1'
+    const v = window.localStorage.getItem(MODE_KEY)
+    if (v === 'sound' || v === 'vibrate' || v === 'muted') return v
+    // Legacy migration
+    if (window.localStorage.getItem(LEGACY_MUTE_KEY) === '1') return 'muted'
+    return 'sound'
   } catch {
-    return false
+    return 'sound'
   }
 }
 
-export function setNotificationSoundMuted(muted: boolean) {
+export function setNotificationMode(mode: NotificationMode) {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(STORAGE_KEY, muted ? '1' : '0')
-    window.dispatchEvent(new CustomEvent(SOUND_EVENT, { detail: { muted } }))
+    window.localStorage.setItem(MODE_KEY, mode)
+    window.localStorage.setItem(LEGACY_MUTE_KEY, mode === 'muted' ? '1' : '0')
+    window.dispatchEvent(new CustomEvent(MODE_EVENT, { detail: { mode } }))
   } catch {
     // ignore
   }
 }
 
-export function subscribeNotificationSoundChanges(cb: (muted: boolean) => void) {
+export function subscribeNotificationModeChanges(cb: (mode: NotificationMode) => void) {
   if (typeof window === 'undefined') return () => {}
-  const handler = (e: Event) => cb(!!(e as CustomEvent).detail?.muted)
-  window.addEventListener(SOUND_EVENT, handler)
-  return () => window.removeEventListener(SOUND_EVENT, handler)
+  const handler = (e: Event) => cb((e as CustomEvent).detail?.mode as NotificationMode)
+  window.addEventListener(MODE_EVENT, handler)
+  return () => window.removeEventListener(MODE_EVENT, handler)
+}
+
+// Legacy helpers (kept for any older imports)
+export function isNotificationSoundMuted(): boolean {
+  return getNotificationMode() !== 'sound'
+}
+export function setNotificationSoundMuted(muted: boolean) {
+  setNotificationMode(muted ? 'muted' : 'sound')
+}
+export function subscribeNotificationSoundChanges(cb: (muted: boolean) => void) {
+  return subscribeNotificationModeChanges((m) => cb(m !== 'sound'))
 }
 
 let ctx: AudioContext | null = null
@@ -43,8 +62,16 @@ function getCtx(): AudioContext | null {
   }
 }
 
-export function playNotificationChime() {
-  if (isNotificationSoundMuted()) return
+function vibrate(pattern: number | number[]) {
+  if (typeof navigator === 'undefined') return
+  try {
+    if (typeof navigator.vibrate === 'function') navigator.vibrate(pattern)
+  } catch {
+    // ignore
+  }
+}
+
+function playChime() {
   const ac = getCtx()
   if (!ac) return
   if (ac.state === 'suspended') ac.resume().catch(() => {})
@@ -69,6 +96,25 @@ export function playNotificationChime() {
     osc.stop(now + start + dur + 0.02)
   }
 
-  tone(880, 0, 0.18) // A5
-  tone(1318.5, 0.13, 0.22) // E6
+  tone(880, 0, 0.18)
+  tone(1318.5, 0.13, 0.22)
+}
+
+export function playNotificationChime() {
+  const mode = getNotificationMode()
+  if (mode === 'muted') return
+  if (mode === 'vibrate') {
+    vibrate([60, 40, 80])
+    return
+  }
+  playChime()
+}
+
+export function previewNotification(mode: NotificationMode) {
+  if (mode === 'muted') return
+  if (mode === 'vibrate') {
+    vibrate([60, 40, 80])
+    return
+  }
+  playChime()
 }
