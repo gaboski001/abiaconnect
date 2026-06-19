@@ -520,7 +520,7 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
           <div className="sm:col-span-2">
             <BioField
               value={form.bio}
-              onChange={(v) => setForm({ ...form, bio: v })}
+              onChange={(v: string) => setForm({ ...form, bio: v })}
             />
           </div>
           <div className="space-y-1.5">
