@@ -340,7 +340,7 @@ function ConversationView({
     },
   })
 
-  // Realtime
+  // Realtime: merge INSERT/UPDATE directly into cache (no refetch, no duplicates)
   useEffect(() => {
     if (!conversationId) return
     const channel = supabase
@@ -348,12 +348,47 @@ function ConversationView({
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        () => qc.invalidateQueries({ queryKey }),
+        (payload) => {
+          const incoming = payload.new as Message
+          qc.setQueryData<Message[]>(queryKey, (prev) => {
+            const list = prev ?? []
+            if (list.some((m) => m.id === incoming.id)) return list
+            // Reconcile: replace a matching optimistic temp row, else append.
+            const tempIdx = list.findIndex(
+              (m) =>
+                m._optimistic &&
+                m.sender_id === incoming.sender_id &&
+                (m.content ?? '') === (incoming.content ?? ''),
+            )
+            const next = { ...incoming, _status: 'delivered' as const }
+            if (tempIdx >= 0) {
+              const copy = list.slice()
+              copy[tempIdx] = next
+              return copy
+            }
+            return [...list, next]
+          })
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const updated = payload.new as Message
+          qc.setQueryData<Message[]>(queryKey, (prev) =>
+            (prev ?? []).map((m) => (m.id === updated.id ? { ...m, ...updated } : m)),
+          )
+        },
       )
       .subscribe()
     return () => {
