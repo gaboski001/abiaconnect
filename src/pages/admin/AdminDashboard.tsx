@@ -60,7 +60,8 @@ import CategoriesSection from '@/components/admin/CategoriesSection'
 import HeroSlidesSection, {
   HeroSlidesExpiryAlert,
 } from '@/components/admin/HeroSlidesSection'
-import { Image as ImageIcon } from 'lucide-react'
+import { Image as ImageIcon, Smartphone } from 'lucide-react'
+import PWAReportSection from '@/components/admin/PWAReportSection'
 
 type SectionId =
   | 'overview'
