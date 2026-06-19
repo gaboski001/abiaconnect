@@ -76,6 +76,7 @@ interface Message {
   attachment_size?: number | null
   attachment_expires_at?: string | null
   _optimistic?: boolean
+  _status?: 'sent' | 'delivered'
 }
 
 
