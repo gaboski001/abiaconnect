@@ -5,6 +5,7 @@ import { MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
+import { playNotificationChime } from '@/lib/notificationSound'
 
 export function MessagesBell() {
   const { user } = useAuth()
@@ -43,7 +44,13 @@ export function MessagesBell() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages' },
-        () => {
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const row = payload.new as { sender_id?: string } | null
+            if (row && row.sender_id && row.sender_id !== user.id) {
+              playNotificationChime()
+            }
+          }
           qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
         },
       )
