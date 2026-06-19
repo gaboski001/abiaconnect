@@ -76,6 +76,7 @@ interface Message {
   attachment_size?: number | null
   attachment_expires_at?: string | null
   _optimistic?: boolean
+  _status?: 'sent' | 'delivered'
 }
 
 
@@ -339,7 +340,7 @@ function ConversationView({
     },
   })
 
-  // Realtime
+  // Realtime: merge INSERT/UPDATE directly into cache (no refetch, no duplicates)
   useEffect(() => {
     if (!conversationId) return
     const channel = supabase
@@ -347,12 +348,47 @@ function ConversationView({
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        () => qc.invalidateQueries({ queryKey }),
+        (payload) => {
+          const incoming = payload.new as Message
+          qc.setQueryData<Message[]>(queryKey, (prev) => {
+            const list = prev ?? []
+            if (list.some((m) => m.id === incoming.id)) return list
+            // Reconcile: replace a matching optimistic temp row, else append.
+            const tempIdx = list.findIndex(
+              (m) =>
+                m._optimistic &&
+                m.sender_id === incoming.sender_id &&
+                (m.content ?? '') === (incoming.content ?? ''),
+            )
+            const next = { ...incoming, _status: 'delivered' as const }
+            if (tempIdx >= 0) {
+              const copy = list.slice()
+              copy[tempIdx] = next
+              return copy
+            }
+            return [...list, next]
+          })
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const updated = payload.new as Message
+          qc.setQueryData<Message[]>(queryKey, (prev) =>
+            (prev ?? []).map((m) => (m.id === updated.id ? { ...m, ...updated } : m)),
+          )
+        },
       )
       .subscribe()
     return () => {
@@ -425,6 +461,7 @@ function ConversationView({
         created_at: new Date().toISOString(),
         is_read: false,
         _optimistic: true,
+        _status: 'sent',
       }
       qc.setQueryData<Message[]>(queryKey, (prev) => [...(prev ?? []), optimistic])
       ;(async () => {
@@ -585,6 +622,11 @@ function ConversationView({
                         {format(new Date(m.created_at), 'p')}
                         {m.attachment_expires_at && (
                           <span className="ml-1">· expires in 48h</span>
+                        )}
+                        {mine && (m._status || m.is_read) && (
+                          <span className="ml-1" aria-label={m.is_read ? 'read' : m._status === 'delivered' ? 'delivered' : 'sent'}>
+                            {m.is_read || m._status === 'delivered' ? '✓✓' : '✓'}
+                          </span>
                         )}
                       </p>
                     </div>
