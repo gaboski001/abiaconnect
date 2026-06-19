@@ -1,6 +1,7 @@
 // Deletes chat attachments older than 48 hours from storage
 // and clears the attachment fields from the messages table.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireServiceRole } from "../_shared/service-auth.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -9,6 +10,11 @@ const cors = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+
+  const denied = requireServiceRole(req);
+  if (denied) return denied;
+
+
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
