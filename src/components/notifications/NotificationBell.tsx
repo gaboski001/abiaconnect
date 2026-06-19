@@ -88,7 +88,10 @@ export function NotificationBell() {
           table: 'notifications',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            playNotificationChime()
+          }
           qc.invalidateQueries({ queryKey: ['notifications-unread', user.id] })
           qc.invalidateQueries({ queryKey: ['notifications-recent', user.id] })
           qc.invalidateQueries({ queryKey: ['notifications-all', user.id] })
