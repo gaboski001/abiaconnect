@@ -597,6 +597,8 @@ function ConversationView({
                 return (
                   <div
                     key={m.id}
+                    ref={!mine && !m.is_read ? registerMessageRef(m.id) : undefined}
+                    data-mid={m.id}
                     className={cn('flex', mine ? 'justify-end' : 'justify-start')}
                   >
                     <div
