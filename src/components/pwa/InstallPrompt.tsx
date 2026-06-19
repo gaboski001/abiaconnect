@@ -38,25 +38,23 @@ export default function InstallPrompt() {
   const [visible, setVisible] = useState(false)
   const [closing, setClosing] = useState(false)
   const [showIOS, setShowIOS] = useState(false)
-  const deferred = useRef<BIPEvent | null>(null)
   const platformKey = useRef<string>(ANDROID_KEY)
   const cardRef = useRef<HTMLDivElement | null>(null)
   const iosDialogRef = useRef<HTMLDivElement | null>(null)
   const iosReturnFocus = useRef<HTMLElement | null>(null)
-
-
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (isStandalone()) return
 
     const ios = isIOS()
+    setIOSFlag(ios)
     platformKey.current = ios ? IOS_KEY : ANDROID_KEY
     if (readState(platformKey.current)) return
 
     const onBIP = (e: Event) => {
       e.preventDefault()
-      deferred.current = e as BIPEvent
+      setDeferredPrompt(e as BIPEvent)
     }
     const onInstalled = () => {
       writeState(platformKey.current, 'accepted')
@@ -67,7 +65,7 @@ export default function InstallPrompt() {
     window.addEventListener('appinstalled', onInstalled)
 
     const t = window.setTimeout(() => {
-      if (deferred.current || ios) setVisible(true)
+      if (getDeferredPrompt() || ios) setVisible(true)
     }, 8000)
 
     return () => {
@@ -84,10 +82,11 @@ export default function InstallPrompt() {
   }
 
   const install = async () => {
-    if (deferred.current) {
+    const deferred = getDeferredPrompt()
+    if (deferred) {
       try {
-        await deferred.current.prompt()
-        const { outcome } = await deferred.current.userChoice
+        await deferred.prompt()
+        const { outcome } = await deferred.userChoice
         if (outcome === 'accepted') {
           writeState(ANDROID_KEY, 'accepted')
           setVisible(false)
@@ -95,7 +94,7 @@ export default function InstallPrompt() {
       } catch {
         /* ignore */
       }
-      deferred.current = null
+      setDeferredPrompt(null)
     } else if (isIOS()) {
       setShowIOS(true)
     }
