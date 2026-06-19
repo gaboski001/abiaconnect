@@ -414,6 +414,42 @@ function ConversationView({
     setDraft('')
     setPendingFile(null)
     if (fileRef.current) fileRef.current.value = ''
+
+    // Text-only (incl. emoji): send instantly with optimistic update — no queue, no loading UI.
+    if (!file && text) {
+      const optimistic: Message = {
+        id: `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        conversation_id: conversationId,
+        sender_id: user.id,
+        content: text,
+        created_at: new Date().toISOString(),
+        is_read: false,
+        _optimistic: true,
+      }
+      qc.setQueryData<Message[]>(queryKey, (prev) => [...(prev ?? []), optimistic])
+      ;(async () => {
+        const { error } = await supabase.from('messages').insert({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          content: text,
+        })
+        if (error) {
+          qc.setQueryData<Message[]>(queryKey, (prev) =>
+            (prev ?? []).filter((m) => m.id !== optimistic.id),
+          )
+          toast.error(error.message || 'Failed to send')
+          setDraft((d) => d || text)
+          return
+        }
+        supabase
+          .from('conversations')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', conversationId)
+          .then(() => qc.invalidateQueries({ queryKey: ['conversations', user.id] }))
+      })()
+      return
+    }
+
     uploadQueue.enqueue({
       conversationId,
       senderId: user.id,
