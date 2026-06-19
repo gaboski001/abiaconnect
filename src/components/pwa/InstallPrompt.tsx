@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
+  type BIPEvent,
   isIOS,
   isStandalone,
   setDeferredPrompt,
