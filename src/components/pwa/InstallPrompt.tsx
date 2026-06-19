@@ -85,10 +85,12 @@ export default function InstallPrompt() {
   const dismiss = () => {
     setClosing(true)
     writeState(platformKey.current, 'dismissed')
+    void logPwaEvent('dismissed')
     window.setTimeout(() => setVisible(false), 300)
   }
 
   const install = async () => {
+    void logPwaEvent('manual_click')
     const deferred = getDeferredPrompt()
     if (deferred) {
       try {
@@ -96,7 +98,10 @@ export default function InstallPrompt() {
         const { outcome } = await deferred.userChoice
         if (outcome === 'accepted') {
           writeState(ANDROID_KEY, 'accepted')
+          void logPwaEvent('accepted')
           setVisible(false)
+        } else {
+          void logPwaEvent('dismissed')
         }
       } catch {
         /* ignore */
