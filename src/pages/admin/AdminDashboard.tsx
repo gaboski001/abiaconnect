@@ -73,6 +73,7 @@ type SectionId =
   | 'settings'
   | 'slides'
   | 'email'
+  | 'pwa'
 
 const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'overview', label: 'Overview', Icon: BarChart3 },
@@ -84,6 +85,7 @@ const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'settings', label: 'Site Settings', Icon: Settings },
   { id: 'slides', label: 'Hero Slider', Icon: ImageIcon },
   { id: 'email', label: 'Email Settings', Icon: Mail },
+  { id: 'pwa', label: 'PWA Report', Icon: Smartphone },
 ]
 
 export default function AdminDashboard() {
