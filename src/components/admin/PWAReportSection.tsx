@@ -1,8 +1,19 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Download, Smartphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts'
 
 type Row = {
   id: string
@@ -11,6 +22,21 @@ type Row = {
   platform: string | null
   user_agent: string | null
   created_at: string
+}
+
+type PlatformData = {
+  platform: string
+  attempts: number
+  accepted: number
+  dismissed: number
+  successRate: number
+}
+
+const PLATFORM_ORDER = ['android', 'ios', 'desktop']
+const PLATFORM_LABELS: Record<string, string> = {
+  android: 'Android',
+  ios: 'iOS Safari',
+  desktop: 'Desktop',
 }
 
 export default function PWAReportSection() {
@@ -39,6 +65,36 @@ export default function PWAReportSection() {
   const attempts = shown + clicks
   const successRate = attempts > 0 ? ((accepted / attempts) * 100).toFixed(1) : '0.0'
 
+  const platformData: PlatformData[] = useMemo(() => {
+    const perPlatform: Record<string, { attempts: number; accepted: number; dismissed: number }> =
+      {}
+    for (const r of rows) {
+      const p = r.platform ?? 'unknown'
+      if (!perPlatform[p]) perPlatform[p] = { attempts: 0, accepted: 0, dismissed: 0 }
+      if (r.event === 'prompt_shown' || r.event === 'manual_click') {
+        perPlatform[p].attempts += 1
+      }
+      if (r.event === 'accepted' || r.event === 'installed') {
+        perPlatform[p].accepted += 1
+      }
+      if (r.event === 'dismissed') {
+        perPlatform[p].dismissed += 1
+      }
+    }
+
+    return PLATFORM_ORDER.map((key) => {
+      const d = perPlatform[key] ?? { attempts: 0, accepted: 0, dismissed: 0 }
+      const rate = d.attempts > 0 ? Number(((d.accepted / d.attempts) * 100).toFixed(1)) : 0
+      return {
+        platform: PLATFORM_LABELS[key],
+        attempts: d.attempts,
+        accepted: d.accepted,
+        dismissed: d.dismissed,
+        successRate: rate,
+      }
+    })
+  }, [rows])
+
   const download = () => {
     if (rows.length === 0) {
       toast.info('No PWA install events recorded yet.')
@@ -63,6 +119,12 @@ export default function PWAReportSection() {
       `Accepted/Installed,${accepted},,,`,
       `Dismissed,${dismissed},,,`,
       `Success rate (%),${successRate},,,`,
+      '',
+      `Platform Breakdown,,,,`,
+      `Platform,Attempts,Accepted,Dismissed,Success Rate (%)`,
+      ...platformData.map(
+        (p) => `${p.platform},${p.attempts},${p.accepted},${p.dismissed},${p.successRate}`,
+      ),
     ].join('\n')
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -77,7 +139,7 @@ export default function PWAReportSection() {
   }
 
   return (
-    <section className="rounded-2xl border bg-card p-5 space-y-4">
+    <section className="rounded-2xl border bg-card p-5 space-y-5">
       <div className="flex items-center gap-2">
         <Smartphone className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold">PWA Install Report</h2>
@@ -89,6 +151,60 @@ export default function PWAReportSection() {
         <Stat label="Accepted" value={accepted} />
         <Stat label="Dismissed" value={dismissed} />
         <Stat label="Success rate" value={`${successRate}%`} />
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium text-muted-foreground">
+          Platform Breakdown — Attempts, Accepted &amp; Dismissed
+        </h3>
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={platformData} barCategoryGap="20%">
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="platform" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '0.5rem',
+                }}
+                labelStyle={{ color: 'var(--foreground)' }}
+                itemStyle={{ color: 'var(--foreground)' }}
+              />
+              <Legend wrapperStyle={{ fontSize: '12px' }} />
+              <Bar dataKey="attempts" name="Attempts" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="accepted" name="Accepted" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="dismissed" name="Dismissed" fill="var(--chart-5)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium text-muted-foreground">
+          Platform Breakdown — Success Rate (%)
+        </h3>
+        <div className="h-56 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={platformData} barCategoryGap="30%">
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="platform" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} unit="%" domain={[0, 100]} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '0.5rem',
+                }}
+                labelStyle={{ color: 'var(--foreground)' }}
+                itemStyle={{ color: 'var(--foreground)' }}
+                formatter={(value: number) => [`${value}%`, 'Success Rate']}
+              />
+              <Bar dataKey="successRate" name="Success Rate" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       <Button onClick={download} disabled={q.isLoading}>
