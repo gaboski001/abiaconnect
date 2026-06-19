@@ -7,6 +7,8 @@ import {
   setDeferredPrompt,
   isIOS,
   isStandalone,
+  getPromptEnabled,
+  logPwaEvent,
   type BIPEvent,
 } from '@/lib/pwaInstall'
 
