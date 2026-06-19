@@ -558,6 +558,7 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
           </div>
           <PWAInstallButton />
         </div>
+        <PWAPromptToggle />
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
