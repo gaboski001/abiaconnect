@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { supabase } from '@/lib/supabase'
+import { saveProfile } from '@/lib/profileUpdate'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 
@@ -90,7 +91,12 @@ export default function Profile() {
 
   const save = async () => {
     if (!user) return
-    const { error } = await supabase.from('profiles').update(form as never).eq('id', user.id)
+    const { error } = await saveProfile(user.id, {
+      display_name: form.display_name ?? undefined,
+      username: form.username ?? undefined,
+      bio: form.bio ?? undefined,
+      lga: form.lga ?? undefined,
+    })
     if (error) return toast.error(error.message)
     toast.success('Profile updated')
     setEditing(false)
