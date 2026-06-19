@@ -3,6 +3,12 @@ import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
+import { getBearerToken, parseJwtClaims } from '../_shared/service-auth.ts'
+
+// Templates that authenticated end-users may trigger for themselves only.
+// Any other template requires a service_role caller (cron / trigger / server code).
+const USER_SELF_SEND_TEMPLATES = new Set(['new-device-login'])
+
 
 // Configuration baked in at scaffold time — do NOT change these manually.
 // To update, re-run the email domain setup flow.
