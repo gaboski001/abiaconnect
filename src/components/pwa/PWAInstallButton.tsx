@@ -18,6 +18,8 @@ export function PWAInstallButton() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (isStandalone()) return
+    if (!getPromptEnabled()) return
+
 
     // Show if iOS or if we already captured a deferred prompt.
     const ios = isIOS()
