@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Share, PlusSquare, CheckCircle2, Smartphone } from 'lucide-react'
 import {
   Dialog,
@@ -15,7 +16,10 @@ interface IOSInstallHelpModalProps {
   onOpenChange?: (open: boolean) => void
 }
 
-export function IOSInstallHelpModal({ trigger, open, onOpenChange }: IOSInstallHelpModalProps) {
+export function IOSInstallHelpModal({ trigger, open: controlledOpen, onOpenChange }: IOSInstallHelpModalProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
 
   const steps = [
     {
