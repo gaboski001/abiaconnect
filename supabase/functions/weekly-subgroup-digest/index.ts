@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireServiceRole } from "../_shared/service-auth.ts";
 
 Deno.serve(async (req) => {
-  const denied = requireServiceRole(req);
+  const denied = await requireServiceRole(req);
   if (denied) return denied;
 
   try {

@@ -11,7 +11,7 @@ const cors = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
-  const denied = requireServiceRole(req);
+  const denied = await requireServiceRole(req);
   if (denied) return denied;
 
 
