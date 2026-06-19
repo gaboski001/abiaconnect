@@ -7,6 +7,8 @@ import {
   setDeferredPrompt,
   getDeferredPrompt,
   setIOSFlag,
+  getPromptEnabled,
+  logPwaEvent,
 } from '@/lib/pwaInstall'
 
 const IOS_KEY = 'abiaconnect_install_ios_state'
