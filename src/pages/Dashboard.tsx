@@ -441,6 +441,15 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
   const [confirm, setConfirm] = useState('')
   const [uploading, setUploading] = useState(false)
 
+  useEffect(() => {
+    setForm({
+      display_name: profile.display_name ?? '',
+      username: profile.username ?? '',
+      bio: profile.bio ?? '',
+      lga: profile.lga ?? '',
+    })
+  }, [profile.display_name, profile.username, profile.bio, profile.lga])
+
   const save = async () => {
     if (!user) return
     const { error } = await saveProfile(user.id, form)
@@ -528,7 +537,9 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
             <Input value={form.lga} onChange={(e) => setForm({ ...form, lga: e.target.value })} />
           </div>
         </div>
-        <Button onClick={save}>Save Changes</Button>
+        <Button onClick={save} disabled={!profile.id || profileQ.isLoading}>
+          Save Changes
+        </Button>
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
