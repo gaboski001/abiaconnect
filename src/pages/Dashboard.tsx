@@ -527,6 +527,13 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <h2 className="font-bold">Notifications</h2>
+        <NotificationSoundToggle />
+      </section>
+
+
+
+      <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
         <h2 className="font-bold">Change Password</h2>
         <Input
           type="password"
