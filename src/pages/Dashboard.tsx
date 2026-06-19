@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { supabase } from '@/lib/supabase'
 import { saveProfile } from '@/lib/profileUpdate'
+import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
