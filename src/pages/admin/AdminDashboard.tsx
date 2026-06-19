@@ -137,6 +137,7 @@ export default function AdminDashboard() {
           {section === 'settings' && <SiteSettingsSection />}
           {section === 'slides' && <HeroSlidesSection />}
           {section === 'email' && <EmailSettingsSection />}
+          {section === 'pwa' && <PWAReportSection />}
         </main>
       </div>
     </div>
