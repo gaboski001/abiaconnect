@@ -35,6 +35,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
 
@@ -525,6 +526,13 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
         </div>
         <Button onClick={save}>Save Changes</Button>
       </section>
+
+      <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <h2 className="font-bold">Notifications</h2>
+        <NotificationSoundToggle />
+      </section>
+
+
 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
         <h2 className="font-bold">Change Password</h2>

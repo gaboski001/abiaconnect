@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { playNotificationChime } from '@/lib/notificationSound'
 
 export interface NotificationRow {
   id: string
@@ -87,7 +88,10 @@ export function NotificationBell() {
           table: 'notifications',
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            playNotificationChime()
+          }
           qc.invalidateQueries({ queryKey: ['notifications-unread', user.id] })
           qc.invalidateQueries({ queryKey: ['notifications-recent', user.id] })
           qc.invalidateQueries({ queryKey: ['notifications-all', user.id] })
