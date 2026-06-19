@@ -405,23 +405,48 @@ function ConversationView({
     }
   }, [messagesQ.data?.length])
 
-  // Mark incoming messages as read
+  // Viewport-based read receipts: mark each incoming message read only when it scrolls into view.
+  const markedRef = useRef<Set<string>>(new Set())
+  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const registerMessageRef = (id: string) => (el: HTMLDivElement | null) => {
+    if (el) messageRefs.current.set(id, el)
+    else messageRefs.current.delete(id)
+  }
+
   useEffect(() => {
     if (!user || !messagesQ.data?.length) return
-    const hasUnread = messagesQ.data.some((m) => !m.is_read && m.sender_id !== user.id)
-    if (!hasUnread) return
-    supabase
-      .rpc('mark_conversation_read', { _conversation_id: conversationId })
-      .then(() => {
-        // Locally flip is_read for incoming messages — no refetch, no duplicate renders.
-        qc.setQueryData<Message[]>(queryKey, (prev) =>
-          (prev ?? []).map((m) =>
-            m.sender_id !== user.id && !m.is_read ? { ...m, is_read: true } : m,
-          ),
-        )
-        qc.invalidateQueries({ queryKey: ['conversations', user.id] })
-        qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
-      })
+    const root = scrollRef.current
+    if (!root) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue
+          const id = (entry.target as HTMLElement).dataset.mid
+          if (!id || markedRef.current.has(id)) continue
+          markedRef.current.add(id)
+          observer.unobserve(entry.target)
+          const nowIso = new Date().toISOString()
+          // Optimistic local patch — no refetch, no duplicate render.
+          qc.setQueryData<Message[]>(queryKey, (prev) =>
+            (prev ?? []).map((m) =>
+              m.id === id ? { ...m, is_read: true, read_at: m.read_at ?? nowIso } : m,
+            ),
+          )
+          supabase.rpc('mark_message_read', { _message_id: id }).then(() => {
+            qc.invalidateQueries({ queryKey: ['conversations', user.id] })
+            qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
+          })
+        }
+      },
+      { root, threshold: 0.6 },
+    )
+    for (const m of messagesQ.data) {
+      if (m.sender_id === user.id || m.is_read || markedRef.current.has(m.id)) continue
+      const el = messageRefs.current.get(m.id)
+      if (el) observer.observe(el)
+    }
+    return () => observer.disconnect()
+  }, [messagesQ.data, user, qc, queryKey])
   }, [messagesQ.data, user, conversationId, qc, queryKey])
 
 
