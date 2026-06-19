@@ -516,9 +516,11 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
             <Label>Username</Label>
             <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
           </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Bio</Label>
-            <Textarea value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} maxLength={500} />
+          <div className="sm:col-span-2">
+            <BioField
+              value={form.bio}
+              onChange={(v) => setForm({ ...form, bio: v })}
+            />
           </div>
           <div className="space-y-1.5">
             <Label>LGA</Label>
