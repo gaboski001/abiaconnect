@@ -537,7 +537,7 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
             <Input value={form.lga} onChange={(e) => setForm({ ...form, lga: e.target.value })} />
           </div>
         </div>
-        <Button onClick={save} disabled={!profile.id || profileQ.isLoading}>
+        <Button onClick={save} disabled={!profile.id}>
           Save Changes
         </Button>
       </section>
