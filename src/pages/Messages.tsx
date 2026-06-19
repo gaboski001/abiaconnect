@@ -412,9 +412,14 @@ function ConversationView({
     supabase
       .rpc('mark_conversation_read', { _conversation_id: conversationId })
       .then(() => {
+        // Locally flip is_read for incoming messages — no refetch, no duplicate renders.
+        qc.setQueryData<Message[]>(queryKey, (prev) =>
+          (prev ?? []).map((m) =>
+            m.sender_id !== user.id && !m.is_read ? { ...m, is_read: true } : m,
+          ),
+        )
         qc.invalidateQueries({ queryKey: ['conversations', user.id] })
         qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
-        qc.invalidateQueries({ queryKey: queryKey })
       })
   }, [messagesQ.data, user, conversationId, qc, queryKey])
 
