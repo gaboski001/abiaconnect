@@ -1,61 +1,82 @@
 import { useEffect, useState } from 'react'
-import { Bell, BellOff, Volume2 } from 'lucide-react'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
+import { Bell, BellOff, Vibrate, Volume2, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import {
-  isNotificationSoundMuted,
-  setNotificationSoundMuted,
-  subscribeNotificationSoundChanges,
-  playNotificationChime,
+  getNotificationMode,
+  setNotificationMode,
+  subscribeNotificationModeChanges,
+  previewNotification,
+  type NotificationMode,
 } from '@/lib/notificationSound'
 
+const OPTIONS: { value: NotificationMode; label: string; icon: typeof Bell }[] = [
+  { value: 'sound', label: 'Sound', icon: Volume2 },
+  { value: 'vibrate', label: 'Vibrate', icon: Vibrate },
+  { value: 'muted', label: 'Mute', icon: BellOff },
+]
+
 export function NotificationSoundToggle() {
-  const [muted, setMuted] = useState(false)
+  const [mode, setMode] = useState<NotificationMode>('sound')
 
   useEffect(() => {
-    setMuted(isNotificationSoundMuted())
-    return subscribeNotificationSoundChanges(setMuted)
+    setMode(getNotificationMode())
+    return subscribeNotificationModeChanges(setMode)
   }, [])
 
+  const ActiveIcon = mode === 'muted' ? BellOff : mode === 'vibrate' ? Vibrate : Bell
+
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+    <div className="flex items-center justify-between gap-4 rounded-lg border p-4 flex-wrap">
       <div className="flex items-start gap-3">
-        {muted ? (
-          <BellOff className="h-5 w-5 text-muted-foreground mt-0.5" />
-        ) : (
-          <Bell className="h-5 w-5 text-primary mt-0.5" />
-        )}
+        <ActiveIcon
+          className={`h-5 w-5 mt-0.5 ${mode === 'muted' ? 'text-muted-foreground' : 'text-primary'}`}
+        />
         <div>
-          <Label htmlFor="notif-sound" className="text-sm font-medium">
-            Notification sound
-          </Label>
+          <Label className="text-sm font-medium">Notification alerts</Label>
           <p className="text-xs text-muted-foreground">
-            Play a soft chime when a new notification arrives.
+            Choose how you're alerted to new notifications.
           </p>
         </div>
       </div>
       <div className="flex items-center gap-2">
+        <div
+          role="radiogroup"
+          aria-label="Notification alert mode"
+          className="inline-flex rounded-md border bg-muted/40 p-0.5"
+        >
+          {OPTIONS.map((opt) => {
+            const Icon = opt.icon
+            const active = mode === opt.value
+            return (
+              <button
+                key={opt.value}
+                role="radio"
+                aria-checked={active}
+                type="button"
+                onClick={() => setNotificationMode(opt.value)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-[5px] transition-colors ${
+                  active
+                    ? 'bg-background shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => {
-            // Temporarily unmute so the test always plays.
-            const wasMuted = isNotificationSoundMuted()
-            if (wasMuted) setNotificationSoundMuted(false)
-            playNotificationChime()
-            if (wasMuted) setNotificationSoundMuted(true)
-          }}
-          aria-label="Play sample notification sound"
+          onClick={() => previewNotification(mode)}
+          aria-label="Test notification alert"
+          disabled={mode === 'muted'}
         >
-          <Volume2 className="h-4 w-4" />
+          <Play className="h-4 w-4" />
         </Button>
-        <Switch
-          id="notif-sound"
-          checked={!muted}
-          onCheckedChange={(on) => setNotificationSoundMuted(!on)}
-        />
       </div>
     </div>
   )
