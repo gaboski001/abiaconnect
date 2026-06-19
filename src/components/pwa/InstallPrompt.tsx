@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-
-type BIPEvent = Event & {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
+import {
+  isIOS,
+  isStandalone,
+  setDeferredPrompt,
+  getDeferredPrompt,
+  setIOSFlag,
+} from '@/lib/pwaInstall'
 
 const IOS_KEY = 'abiaconnect_install_ios_state'
 const ANDROID_KEY = 'abiaconnect_install_android_state'
@@ -13,16 +15,6 @@ const LEGACY_KEY = 'abiaconnect_install_dismissed'
 const ICON = '/icons/icon-192x192.png'
 
 type InstallState = 'dismissed' | 'accepted'
-
-const isIOS = () =>
-  /iphone|ipad|ipod/i.test(navigator.userAgent) &&
-  // @ts-expect-error legacy iOS standalone
-  window.navigator.standalone !== true
-
-const isStandalone = () =>
-  window.matchMedia('(display-mode: standalone)').matches ||
-  // @ts-expect-error legacy iOS standalone
-  window.navigator.standalone === true
 
 const readState = (key: string): InstallState | null => {
   try {
