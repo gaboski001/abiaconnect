@@ -47,7 +47,7 @@ export default function BirthdayPreview() {
 
   return (
     <div className="container max-w-5xl py-8 space-y-6">
-      <SEO title="Birthday Preview · Admin · AbiaConnect" description="Preview the birthday email and dashboard message before sending." />
+      <SEO title="Birthday Preview · Admin · AbiaConnect" description="Preview the birthday email and dashboard message before sending." path="/admin/birthday-preview" />
 
       <div>
         <h1 className="text-2xl font-semibold">Birthday Greeting Preview</h1>
