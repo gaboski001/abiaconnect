@@ -1,5 +1,7 @@
 // Lightweight notification chime + vibration + mode preference (~1KB).
-// Modes: 'sound' | 'vibrate' | 'muted'. Backwards-compatible with old boolean mute key.
+// Modes: 'sound' | 'vibrate' | 'muted'. Persisted to user profile + localStorage cache.
+
+import { supabase } from '@/integrations/supabase/client'
 
 const MODE_KEY = 'abia:notification-mode'
 const LEGACY_MUTE_KEY = 'abia:notification-sound-muted'
@@ -7,12 +9,15 @@ const MODE_EVENT = 'abia:notification-mode-changed'
 
 export type NotificationMode = 'sound' | 'vibrate' | 'muted'
 
+function isMode(v: unknown): v is NotificationMode {
+  return v === 'sound' || v === 'vibrate' || v === 'muted'
+}
+
 export function getNotificationMode(): NotificationMode {
   if (typeof window === 'undefined') return 'sound'
   try {
     const v = window.localStorage.getItem(MODE_KEY)
-    if (v === 'sound' || v === 'vibrate' || v === 'muted') return v
-    // Legacy migration
+    if (isMode(v)) return v
     if (window.localStorage.getItem(LEGACY_MUTE_KEY) === '1') return 'muted'
     return 'sound'
   } catch {
@@ -20,8 +25,7 @@ export function getNotificationMode(): NotificationMode {
   }
 }
 
-export function setNotificationMode(mode: NotificationMode) {
-  if (typeof window === 'undefined') return
+function writeLocal(mode: NotificationMode) {
   try {
     window.localStorage.setItem(MODE_KEY, mode)
     window.localStorage.setItem(LEGACY_MUTE_KEY, mode === 'muted' ? '1' : '0')
@@ -29,6 +33,47 @@ export function setNotificationMode(mode: NotificationMode) {
   } catch {
     // ignore
   }
+}
+
+export function setNotificationMode(mode: NotificationMode) {
+  if (typeof window === 'undefined') return
+  writeLocal(mode)
+  // Best-effort sync to profile so it follows the user across devices.
+  void (async () => {
+    try {
+      const { data } = await supabase.auth.getUser()
+      const uid = data.user?.id
+      if (!uid) return
+      await supabase
+        .from('profiles')
+        .update({ notification_mode: mode })
+        .eq('id', uid)
+    } catch {
+      // ignore — local value still applied
+    }
+  })()
+}
+
+/** Fetch profile preference and apply it locally. Call after sign-in / on app boot. */
+export async function syncNotificationModeFromProfile(): Promise<NotificationMode> {
+  try {
+    const { data: u } = await supabase.auth.getUser()
+    const uid = u.user?.id
+    if (!uid) return getNotificationMode()
+    const { data } = await supabase
+      .from('profiles')
+      .select('notification_mode')
+      .eq('id', uid)
+      .maybeSingle()
+    const remote = (data as { notification_mode?: string } | null)?.notification_mode
+    if (isMode(remote) && remote !== getNotificationMode()) {
+      writeLocal(remote)
+      return remote
+    }
+  } catch {
+    // ignore
+  }
+  return getNotificationMode()
 }
 
 export function subscribeNotificationModeChanges(cb: (mode: NotificationMode) => void) {

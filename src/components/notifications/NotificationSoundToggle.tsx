@@ -6,6 +6,7 @@ import {
   getNotificationMode,
   setNotificationMode,
   subscribeNotificationModeChanges,
+  syncNotificationModeFromProfile,
   previewNotification,
   type NotificationMode,
 } from '@/lib/notificationSound'
@@ -21,7 +22,10 @@ export function NotificationSoundToggle() {
 
   useEffect(() => {
     setMode(getNotificationMode())
-    return subscribeNotificationModeChanges(setMode)
+    const unsub = subscribeNotificationModeChanges(setMode)
+    // Pull the latest saved preference from the user's profile.
+    syncNotificationModeFromProfile().then(setMode).catch(() => {})
+    return unsub
   }, [])
 
   const ActiveIcon = mode === 'muted' ? BellOff : mode === 'vibrate' ? Vibrate : Bell
