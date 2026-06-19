@@ -44,7 +44,10 @@ export function PWAInstallButton() {
         await deferred.prompt()
         const { outcome } = await deferred.userChoice
         if (outcome === 'accepted') {
+          void logPwaEvent('accepted')
           toast.success('AbiaConnect installed successfully!', { duration: 3000 })
+        } else {
+          void logPwaEvent('dismissed')
         }
       } catch {
         toast.error('Install prompt failed. Please try again.')
