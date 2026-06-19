@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { supabase } from '@/lib/supabase'
 import { saveProfile } from '@/lib/profileUpdate'
+import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
@@ -516,9 +517,11 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
             <Label>Username</Label>
             <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
           </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label>Bio</Label>
-            <Textarea value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} maxLength={500} />
+          <div className="sm:col-span-2">
+            <BioField
+              value={form.bio}
+              onChange={(v: string) => setForm({ ...form, bio: v })}
+            />
           </div>
           <div className="space-y-1.5">
             <Label>LGA</Label>
