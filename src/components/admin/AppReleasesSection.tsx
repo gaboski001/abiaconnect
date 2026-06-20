@@ -110,12 +110,17 @@ export default function AppReleasesSection() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Version</Label>
+            <Label>Version (semver)</Label>
             <Input placeholder="1.0.0" value={version} onChange={(e) => setVersion(e.target.value)} />
+            <p className="text-xs text-muted-foreground">Format: MAJOR.MINOR.PATCH (e.g. 1.2.3)</p>
           </div>
           <div className="sm:col-span-2 space-y-1.5">
-            <Label>Release notes (optional)</Label>
-            <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <Label>Changelog (shown to users)</Label>
+            <Textarea rows={4} placeholder="- Fixed login crash&#10;- New dashboard layout" value={changelog} onChange={(e) => setChangelog(e.target.value)} />
+          </div>
+          <div className="sm:col-span-2 space-y-1.5">
+            <Label>Internal notes (optional)</Label>
+            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
           <div className="sm:col-span-2 space-y-1.5">
             <Label>App file</Label>
