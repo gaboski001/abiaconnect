@@ -15,7 +15,8 @@
     "start": "npm run build:prod && node server.js",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "check:dark": "bun scripts/check-dark-mode.ts"
+    "check:dark": "bun scripts/check-dark-mode.ts",
+    "cap:reset": "rimraf android ios && npm run build && npx cap add android && npx cap sync android && echo \"\\n✅ Clean Android project ready. Open in Android Studio: npx cap open android\""
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
