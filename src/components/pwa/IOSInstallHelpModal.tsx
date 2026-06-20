@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Share, PlusSquare, CheckCircle2, Smartphone } from 'lucide-react'
+import { logPwaEvent } from '@/lib/pwaInstall'
 import {
   Dialog,
   DialogContent,
