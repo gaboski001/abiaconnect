@@ -75,9 +75,12 @@ export function PWAInstallButton({
       return
     }
 
+    const isAndroid = /android/i.test(navigator.userAgent)
     toast.info(
-      'Your browser will offer the install option when ready. Try visiting the site a few more times.',
-      { duration: 5000 }
+      isAndroid
+        ? 'Open your browser menu (⋮) and tap "Install app" or "Add to Home screen".'
+        : 'Your browser will offer the install option when ready. Try visiting the site a few more times.',
+      { duration: 6000 }
     )
   }
 
