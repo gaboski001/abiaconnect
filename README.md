@@ -48,3 +48,27 @@ A community forum for Abians worldwide — built with React, Vite, Tailwind, and
 - `npm run build:prod` — type-check and build for production
 - `npm run serve` — serve the prebuilt `dist/` via Express
 - `npm start` — build then serve in one step
+- `npm run cap:reset` — wipe `android/` & `ios/`, rebuild web, re-add Android, and sync Capacitor
+
+## Android (Capacitor) — Clean Rebuild
+
+Use this whenever the native Android project is out of sync or you hit Gradle / app-id errors.
+
+```bash
+# 1. Pull latest changes
+git pull
+
+# 2. Install JS deps
+npm install
+
+# 3. Nuke android/ios, build web, re-add Android, sync native plugins
+npm run cap:reset
+
+# 4. Open the freshly generated project in Android Studio
+npx cap open android
+```
+
+In Android Studio: **File → Sync Project with Gradle Files**, then **Build → Make Project**, then run on a device/emulator.
+
+> Requires Android Studio (with Android SDK + JDK 17) installed locally. iOS builds additionally require macOS + Xcode and `npx cap add ios`.
+
