@@ -70,6 +70,7 @@ export function PWAInstallButton({
     }
 
     if (isIOS()) {
+      void logPwaEvent('ios_help_shown')
       setShowIOSHelp(true)
       return
     }
