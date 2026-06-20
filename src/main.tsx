@@ -8,7 +8,22 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { Toaster } from '@/components/ui/sonner'
 import { registerSW } from './lib/registerSW'
+import { setDeferredPrompt, logPwaEvent, type BIPEvent } from './lib/pwaInstall'
 import './index.css'
+
+// Capture the install prompt as early as possible so the Download button
+// in the dashboard can trigger it even if React mounts after the event fires.
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e: Event) => {
+    e.preventDefault()
+    setDeferredPrompt(e as BIPEvent)
+    void logPwaEvent('prompt_shown')
+  })
+  window.addEventListener('appinstalled', () => {
+    setDeferredPrompt(null)
+    void logPwaEvent('installed')
+  })
+}
 
 // Defer non-critical work until after first paint.
 type IdleWindow = Window & { requestIdleCallback?: (cb: () => void) => void }
