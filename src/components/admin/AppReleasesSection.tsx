@@ -17,6 +17,7 @@ type Release = {
   file_path: string
   file_size: number | null
   notes: string | null
+  changelog: string | null
   is_active: boolean
   created_at: string
 }
@@ -26,6 +27,7 @@ export default function AppReleasesSection() {
   const [platform, setPlatform] = useState<'android' | 'ios'>('android')
   const [version, setVersion] = useState('')
   const [notes, setNotes] = useState('')
+  const [changelog, setChangelog] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
 
@@ -43,6 +45,9 @@ export default function AppReleasesSection() {
 
   const upload = async () => {
     if (!file || !version) return toast.error('Pick a file and version')
+    if (!/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(version)) {
+      return toast.error('Version must be semver (e.g. 1.2.3)')
+    }
     setUploading(true)
     try {
       const ext = file.name.split('.').pop() || (platform === 'android' ? 'apk' : 'ipa')
@@ -53,11 +58,11 @@ export default function AppReleasesSection() {
       })
       if (up.error) throw up.error
       const ins = await supabase.from('app_releases').insert({
-        platform, version, notes: notes || null, file_path: path, file_size: file.size,
+        platform, version, notes: notes || null, changelog: changelog || null, file_path: path, file_size: file.size,
       })
       if (ins.error) throw ins.error
       toast.success('Release uploaded')
-      setFile(null); setVersion(''); setNotes('')
+      setFile(null); setVersion(''); setNotes(''); setChangelog('')
       qc.invalidateQueries({ queryKey: ['app-releases'] })
       qc.invalidateQueries({ queryKey: ['app-releases-public'] })
     } catch (e) {
