@@ -28,13 +28,14 @@ export function PWAInstallButton({
   const [canInstall, setCanInstall] = useState(false)
   const [showIOSHelp, setShowIOSHelp] = useState(false)
   const [showAndroidHelp, setShowAndroidHelp] = useState(false)
+  const [waiting, setWaiting] = useState(false)
+  const attempts = useRef(0)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (isStandalone()) return
     if (!getPromptEnabled()) return
 
-    // Always allow click on Android/iOS (we have an in-app fallback modal).
     const ua = navigator.userAgent
     const isMobile = isIOS() || /android/i.test(ua)
     if (isMobile || getDeferredPrompt()) {
@@ -50,42 +51,79 @@ export function PWAInstallButton({
     return () => window.removeEventListener('beforeinstallprompt', onBIP)
   }, [])
 
-  const handleInstall = async () => {
-    void logPwaEvent('manual_click')
-    const deferred = getDeferredPrompt()
-    if (deferred) {
-      try {
-        await deferred.prompt()
-        const { outcome } = await deferred.userChoice
-        if (outcome === 'accepted') {
-          void logPwaEvent('accepted')
-          toast.success('AbiaConnect installed successfully!', { duration: 3000 })
-        } else {
-          void logPwaEvent('dismissed')
-        }
-      } catch {
-        toast.error('Install prompt failed. Please try again.')
+  const firePrompt = async (deferred: BIPEvent) => {
+    try {
+      await deferred.prompt()
+      const { outcome } = await deferred.userChoice
+      if (outcome === 'accepted') {
+        void logPwaEvent('accepted')
+        toast.success('AbiaConnect installed successfully!', { duration: 3000 })
+      } else {
+        void logPwaEvent('dismissed')
       }
-      setDeferredPrompt(null)
-      return
+    } catch {
+      toast.error('Install prompt failed. Please try again.')
     }
+    setDeferredPrompt(null)
+  }
 
+  const showFallback = () => {
     if (isIOS()) {
       void logPwaEvent('ios_help_shown')
       setShowIOSHelp(true)
-      return
-    }
-
-    if (/android/i.test(navigator.userAgent)) {
+    } else if (/android/i.test(navigator.userAgent)) {
       setShowAndroidHelp(true)
+    } else {
+      toast.info(
+        'Your browser will offer the install option when ready. Try visiting the site a few more times.',
+        { duration: 6000 }
+      )
+    }
+  }
+
+  const handleInstall = async () => {
+    void logPwaEvent('manual_click')
+    attempts.current += 1
+
+    const deferred = getDeferredPrompt()
+    if (deferred) {
+      await firePrompt(deferred)
+      attempts.current = 0
       return
     }
 
-    toast.info(
-      'Your browser will offer the install option when ready. Try visiting the site a few more times.',
-      { duration: 6000 }
-    )
+    // First tap with no prompt: wait briefly for one to arrive.
+    if (attempts.current === 1 && !isIOS()) {
+      setWaiting(true)
+      const t = toast.loading('Preparing install…', { duration: 2500 })
+      const got = await new Promise<BIPEvent | null>((resolve) => {
+        const onBIP = (e: Event) => {
+          e.preventDefault()
+          const ev = e as BIPEvent
+          setDeferredPrompt(ev)
+          resolve(ev)
+        }
+        window.addEventListener('beforeinstallprompt', onBIP, { once: true })
+        window.setTimeout(() => {
+          window.removeEventListener('beforeinstallprompt', onBIP)
+          resolve(getDeferredPrompt())
+        }, 2000)
+      })
+      toast.dismiss(t)
+      setWaiting(false)
+      if (got) {
+        await firePrompt(got)
+        attempts.current = 0
+        return
+      }
+      toast.message('Install prompt unavailable — tap again for manual steps.')
+      return
+    }
+
+    // Second tap (or iOS): show the best fallback.
+    showFallback()
   }
+
 
   if (!canInstall && !showAlways) return null
 
