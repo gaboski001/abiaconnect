@@ -3,6 +3,7 @@ import { Download, Smartphone } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { IOSInstallHelpModal } from './IOSInstallHelpModal'
+import { AndroidInstallHelpModal } from './AndroidInstallHelpModal'
 import {
   getDeferredPrompt,
   setDeferredPrompt,
