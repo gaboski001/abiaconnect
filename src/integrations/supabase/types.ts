@@ -41,6 +41,42 @@ export type Database = {
         }
         Relationships: []
       }
+      app_releases: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          file_path: string
+          file_size: number | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          platform: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          file_path: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          platform: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          platform?: string
+          version?: string
+        }
+        Relationships: []
+      }
       bookmarks: {
         Row: {
           created_at: string
