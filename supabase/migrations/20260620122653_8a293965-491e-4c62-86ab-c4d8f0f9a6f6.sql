@@ -1,0 +1,1 @@
+ALTER TABLE public.app_releases ADD COLUMN IF NOT EXISTS changelog text;

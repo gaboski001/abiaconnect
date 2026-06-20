@@ -21,3 +21,5 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = false
   [functions.scan-attachment]
     verify_jwt = true
+  [functions.upload-release]
+    verify_jwt = false

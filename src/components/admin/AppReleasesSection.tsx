@@ -17,6 +17,7 @@ type Release = {
   file_path: string
   file_size: number | null
   notes: string | null
+  changelog: string | null
   is_active: boolean
   created_at: string
 }
@@ -26,6 +27,7 @@ export default function AppReleasesSection() {
   const [platform, setPlatform] = useState<'android' | 'ios'>('android')
   const [version, setVersion] = useState('')
   const [notes, setNotes] = useState('')
+  const [changelog, setChangelog] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
 
@@ -43,6 +45,9 @@ export default function AppReleasesSection() {
 
   const upload = async () => {
     if (!file || !version) return toast.error('Pick a file and version')
+    if (!/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(version)) {
+      return toast.error('Version must be semver (e.g. 1.2.3)')
+    }
     setUploading(true)
     try {
       const ext = file.name.split('.').pop() || (platform === 'android' ? 'apk' : 'ipa')
@@ -53,11 +58,11 @@ export default function AppReleasesSection() {
       })
       if (up.error) throw up.error
       const ins = await supabase.from('app_releases').insert({
-        platform, version, notes: notes || null, file_path: path, file_size: file.size,
+        platform, version, notes: notes || null, changelog: changelog || null, file_path: path, file_size: file.size,
       })
       if (ins.error) throw ins.error
       toast.success('Release uploaded')
-      setFile(null); setVersion(''); setNotes('')
+      setFile(null); setVersion(''); setNotes(''); setChangelog('')
       qc.invalidateQueries({ queryKey: ['app-releases'] })
       qc.invalidateQueries({ queryKey: ['app-releases-public'] })
     } catch (e) {
@@ -105,12 +110,17 @@ export default function AppReleasesSection() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Version</Label>
+            <Label>Version (semver)</Label>
             <Input placeholder="1.0.0" value={version} onChange={(e) => setVersion(e.target.value)} />
+            <p className="text-xs text-muted-foreground">Format: MAJOR.MINOR.PATCH (e.g. 1.2.3)</p>
           </div>
           <div className="sm:col-span-2 space-y-1.5">
-            <Label>Release notes (optional)</Label>
-            <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <Label>Changelog (shown to users)</Label>
+            <Textarea rows={4} placeholder="- Fixed login crash&#10;- New dashboard layout" value={changelog} onChange={(e) => setChangelog(e.target.value)} />
+          </div>
+          <div className="sm:col-span-2 space-y-1.5">
+            <Label>Internal notes (optional)</Label>
+            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
           <div className="sm:col-span-2 space-y-1.5">
             <Label>App file</Label>
@@ -131,24 +141,29 @@ export default function AppReleasesSection() {
         ) : (
           <ul className="space-y-2">
             {q.data.map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
-                <div className="min-w-0 flex items-center gap-3">
-                  {r.platform === 'ios' ? <Apple className="size-5" /> : <Smartphone className="size-5" />}
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{r.platform.toUpperCase()} v{r.version} {!r.is_active && <span className="text-xs text-muted-foreground">(hidden)</span>}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {format(new Date(r.created_at), 'PP')} · {r.file_size ? `${(r.file_size / 1024 / 1024).toFixed(1)} MB` : ''}
+              <li key={r.id} className="rounded-lg border p-3 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex items-center gap-3">
+                    {r.platform === 'ios' ? <Apple className="size-5" /> : <Smartphone className="size-5" />}
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{r.platform.toUpperCase()} v{r.version} {!r.is_active && <span className="text-xs text-muted-foreground">(hidden)</span>}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(r.created_at), 'PP')} · {r.file_size ? `${(r.file_size / 1024 / 1024).toFixed(1)} MB` : ''}
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button size="sm" variant="outline" onClick={() => toggle.mutate(r)}>
+                      {r.is_active ? 'Hide' : 'Publish'}
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => del.mutate(r)} aria-label="Delete">
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => toggle.mutate(r)}>
-                    {r.is_active ? 'Hide' : 'Publish'}
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => del.mutate(r)} aria-label="Delete">
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
+                {r.changelog && (
+                  <pre className="text-xs whitespace-pre-wrap text-muted-foreground bg-muted/40 rounded p-2 max-h-32 overflow-auto">{r.changelog}</pre>
+                )}
               </li>
             ))}
           </ul>

@@ -43,6 +43,7 @@ export type Database = {
       }
       app_releases: {
         Row: {
+          changelog: string | null
           created_at: string
           created_by: string | null
           file_path: string
@@ -54,6 +55,7 @@ export type Database = {
           version: string
         }
         Insert: {
+          changelog?: string | null
           created_at?: string
           created_by?: string | null
           file_path: string
@@ -65,6 +67,7 @@ export type Database = {
           version: string
         }
         Update: {
+          changelog?: string | null
           created_at?: string
           created_by?: string | null
           file_path?: string
