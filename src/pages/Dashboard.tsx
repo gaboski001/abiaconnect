@@ -553,14 +553,14 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
         <h2 className="font-bold">App</h2>
-        <div className="flex items-center justify-between gap-4">
-          <div>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="space-y-1.5">
             <p className="text-sm font-medium">Download AbiaConnect</p>
             <p className="text-xs text-muted-foreground">Install on your device for quick, offline access</p>
+            <PWAInstallStatus />
           </div>
           <PWAInstallButton showAlways variant="default" label="Download App" />
         </div>
-        <PWAInstallStatus />
         <PWAPromptToggle />
         <PushNotificationsToggle />
       </section>
