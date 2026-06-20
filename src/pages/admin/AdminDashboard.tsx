@@ -63,6 +63,8 @@ import HeroSlidesSection, {
 import { Image as ImageIcon, Smartphone } from 'lucide-react'
 import PWAReportSection from '@/components/admin/PWAReportSection'
 import PWAStatsWidget from '@/components/admin/PWAStatsWidget'
+import AppReleasesSection from '@/components/admin/AppReleasesSection'
+import { Download as DownloadIcon } from 'lucide-react'
 
 type SectionId =
   | 'overview'
@@ -75,6 +77,7 @@ type SectionId =
   | 'slides'
   | 'email'
   | 'pwa'
+  | 'native-apps'
 
 const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'overview', label: 'Overview', Icon: BarChart3 },
@@ -87,6 +90,7 @@ const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'slides', label: 'Hero Slider', Icon: ImageIcon },
   { id: 'email', label: 'Email Settings', Icon: Mail },
   { id: 'pwa', label: 'PWA Report', Icon: Smartphone },
+  { id: 'native-apps', label: 'Native Apps', Icon: DownloadIcon },
 ]
 
 export default function AdminDashboard() {
@@ -140,6 +144,7 @@ export default function AdminDashboard() {
           {section === 'slides' && <HeroSlidesSection />}
           {section === 'email' && <EmailSettingsSection />}
           {section === 'pwa' && <PWAReportSection />}
+          {section === 'native-apps' && <AppReleasesSection />}
         </main>
       </div>
     </div>

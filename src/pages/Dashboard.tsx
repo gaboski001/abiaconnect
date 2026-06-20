@@ -42,6 +42,7 @@ import { PWAInstallButton } from '@/components/pwa/PWAInstallButton'
 import { PWAInstallStatus } from '@/components/pwa/PWAInstallStatus'
 import { PWAPromptToggle } from '@/components/pwa/PWAPromptToggle'
 import { PushNotificationsToggle } from '@/components/pwa/PushNotificationsToggle'
+import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
 
@@ -560,6 +561,9 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
             <PWAInstallStatus />
           </div>
           <PWAInstallButton showAlways variant="default" label="Download App" />
+        </div>
+        <div className="pt-2 border-t">
+          <NativeAppDownload />
         </div>
         <PWAPromptToggle />
         <PushNotificationsToggle />
