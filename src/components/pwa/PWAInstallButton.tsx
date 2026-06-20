@@ -27,20 +27,20 @@ export function PWAInstallButton({
 }: PWAInstallButtonProps) {
   const [canInstall, setCanInstall] = useState(false)
   const [showIOSHelp, setShowIOSHelp] = useState(false)
+  const [showAndroidHelp, setShowAndroidHelp] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (isStandalone()) return
     if (!getPromptEnabled()) return
 
-    // Show if iOS or if we already captured a deferred prompt.
-    const ios = isIOS()
-    if (ios || getDeferredPrompt()) {
+    // Always allow click on Android/iOS (we have an in-app fallback modal).
+    const ua = navigator.userAgent
+    const isMobile = isIOS() || /android/i.test(ua)
+    if (isMobile || getDeferredPrompt()) {
       setCanInstall(true)
-      return
     }
 
-    // Otherwise listen for the beforeinstallprompt event.
     const onBIP = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BIPEvent)
@@ -76,11 +76,13 @@ export function PWAInstallButton({
       return
     }
 
-    const isAndroid = /android/i.test(navigator.userAgent)
+    if (/android/i.test(navigator.userAgent)) {
+      setShowAndroidHelp(true)
+      return
+    }
+
     toast.info(
-      isAndroid
-        ? 'Open your browser menu (⋮) and tap "Install app" or "Add to Home screen".'
-        : 'Your browser will offer the install option when ready. Try visiting the site a few more times.',
+      'Your browser will offer the install option when ready. Try visiting the site a few more times.',
       { duration: 6000 }
     )
   }
@@ -96,6 +98,7 @@ export function PWAInstallButton({
         {label}
       </Button>
       <IOSInstallHelpModal open={showIOSHelp} onOpenChange={setShowIOSHelp} />
+      <AndroidInstallHelpModal open={showAndroidHelp} onOpenChange={setShowAndroidHelp} />
     </>
   )
 }
