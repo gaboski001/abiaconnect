@@ -131,9 +131,9 @@ export function PWAInstallButton({
 
   return (
     <>
-      <Button variant={variant} size="sm" onClick={handleInstall}>
+      <Button variant={variant} size="sm" onClick={handleInstall} disabled={waiting}>
         <Icon className="size-4 mr-2" />
-        {label}
+        {waiting ? 'Preparing…' : label}
       </Button>
       <IOSInstallHelpModal open={showIOSHelp} onOpenChange={setShowIOSHelp} />
       <AndroidInstallHelpModal open={showAndroidHelp} onOpenChange={setShowAndroidHelp} />
