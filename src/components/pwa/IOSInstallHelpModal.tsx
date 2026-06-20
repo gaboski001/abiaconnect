@@ -72,7 +72,7 @@ export function IOSInstallHelpModal({ trigger, open: controlledOpen, onOpenChang
         </div>
 
         <div className="mt-4 flex justify-center">
-          <Button size="sm" onClick={() => setOpen(false)}>
+          <Button size="sm" onClick={() => { void logPwaEvent('ios_help_completed'); setOpen(false) }}>
             Got it
           </Button>
         </div>
