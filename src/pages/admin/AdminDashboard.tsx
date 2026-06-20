@@ -62,6 +62,7 @@ import HeroSlidesSection, {
 } from '@/components/admin/HeroSlidesSection'
 import { Image as ImageIcon, Smartphone } from 'lucide-react'
 import PWAReportSection from '@/components/admin/PWAReportSection'
+import PWAStatsWidget from '@/components/admin/PWAStatsWidget'
 
 type SectionId =
   | 'overview'
@@ -126,6 +127,7 @@ export default function AdminDashboard() {
           {section === 'overview' && (
             <>
               <HeroSlidesExpiryAlert />
+              <PWAStatsWidget />
               <OverviewSection />
             </>
           )}
