@@ -58,6 +58,8 @@ export type PwaEvent =
   | 'dismissed'
   | 'manual_click'
   | 'installed'
+  | 'ios_help_shown'
+  | 'ios_help_completed'
 
 export async function logPwaEvent(event: PwaEvent) {
   try {
