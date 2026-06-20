@@ -126,6 +126,7 @@ export default function AdminDashboard() {
           {section === 'overview' && (
             <>
               <HeroSlidesExpiryAlert />
+              <PWAStatsWidget />
               <OverviewSection />
             </>
           )}
