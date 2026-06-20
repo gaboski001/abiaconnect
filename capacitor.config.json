@@ -1,0 +1,9 @@
+{
+  "appId": "app.lovable.8f5290f756d24204ab1ab2c9a2cde3d8",
+  "appName": "abiaconnect",
+  "webDir": "dist",
+  "server": {
+    "url": "https://8f5290f7-56d2-4204-ab1a-b2c9a2cde3d8.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  }
+}
