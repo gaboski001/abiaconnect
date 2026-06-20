@@ -141,24 +141,29 @@ export default function AppReleasesSection() {
         ) : (
           <ul className="space-y-2">
             {q.data.map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
-                <div className="min-w-0 flex items-center gap-3">
-                  {r.platform === 'ios' ? <Apple className="size-5" /> : <Smartphone className="size-5" />}
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{r.platform.toUpperCase()} v{r.version} {!r.is_active && <span className="text-xs text-muted-foreground">(hidden)</span>}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {format(new Date(r.created_at), 'PP')} · {r.file_size ? `${(r.file_size / 1024 / 1024).toFixed(1)} MB` : ''}
+              <li key={r.id} className="rounded-lg border p-3 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex items-center gap-3">
+                    {r.platform === 'ios' ? <Apple className="size-5" /> : <Smartphone className="size-5" />}
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{r.platform.toUpperCase()} v{r.version} {!r.is_active && <span className="text-xs text-muted-foreground">(hidden)</span>}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(r.created_at), 'PP')} · {r.file_size ? `${(r.file_size / 1024 / 1024).toFixed(1)} MB` : ''}
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button size="sm" variant="outline" onClick={() => toggle.mutate(r)}>
+                      {r.is_active ? 'Hide' : 'Publish'}
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => del.mutate(r)} aria-label="Delete">
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => toggle.mutate(r)}>
-                    {r.is_active ? 'Hide' : 'Publish'}
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => del.mutate(r)} aria-label="Delete">
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
+                {r.changelog && (
+                  <pre className="text-xs whitespace-pre-wrap text-muted-foreground bg-muted/40 rounded p-2 max-h-32 overflow-auto">{r.changelog}</pre>
+                )}
               </li>
             ))}
           </ul>
