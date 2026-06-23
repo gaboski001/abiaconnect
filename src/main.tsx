@@ -7,35 +7,16 @@ import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { Toaster } from '@/components/ui/sonner'
-import { registerSW } from './lib/registerSW'
-import { setDeferredPrompt, logPwaEvent, type BIPEvent } from './lib/pwaInstall'
 import './index.css'
 
-// Capture the install prompt as early as possible so the Download button
-// in the dashboard can trigger it even if React mounts after the event fires.
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeinstallprompt', (e: Event) => {
-    e.preventDefault()
-    setDeferredPrompt(e as BIPEvent)
-    void logPwaEvent('prompt_shown')
-  })
-  window.addEventListener('appinstalled', () => {
-    setDeferredPrompt(null)
-    void logPwaEvent('installed')
-  })
+// Best-effort: unregister any previously installed PWA service workers so
+// returning browsers don't keep serving a stale app shell after we removed PWA.
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .getRegistrations()
+    .then((rs) => rs.forEach((r) => r.unregister()))
+    .catch(() => {})
 }
-
-// Defer non-critical work until after first paint.
-type IdleWindow = Window & { requestIdleCallback?: (cb: () => void) => void }
-const onIdle = (cb: () => void) => {
-  const w = window as IdleWindow
-  if (w.requestIdleCallback) w.requestIdleCallback(cb)
-  else window.setTimeout(cb, 1)
-}
-if (typeof window !== 'undefined') {
-  window.addEventListener('load', () => onIdle(() => registerSW()), { once: true })
-}
-
 
 const queryClient = new QueryClient()
 
@@ -56,4 +37,3 @@ ReactDOM.createRoot(rootEl).render(
     </HelmetProvider>
   </React.StrictMode>,
 )
-
