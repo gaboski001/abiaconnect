@@ -21,6 +21,11 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
 
 const queryClient = new QueryClient()
 
+function PushBootstrap() {
+  usePushNotifications()
+  return null
+}
+
 const rootEl = document.getElementById('root')!
 ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
@@ -29,6 +34,7 @@ ReactDOM.createRoot(rootEl).render(
         <ThemeProvider>
           <AuthProvider>
             <BrowserRouter>
+              <PushBootstrap />
               <App />
               <Toaster richColors position="top-right" />
             </BrowserRouter>
