@@ -22,6 +22,29 @@ export function usePushNotifications() {
 
     ;(async () => {
       try {
+        // 1) Create the Android notification channel BEFORE asking for
+        //    permission. Channels are required on Android 8+ for any
+        //    notification to appear in the tray. No-op on iOS.
+        if (Capacitor.getPlatform() === 'android') {
+          try {
+            await PushNotifications.createChannel({
+              id: 'abia_default',
+              name: 'AbiaConnect alerts',
+              description: 'Messages, replies, mentions and system alerts',
+              importance: 5, // IMPORTANCE_HIGH — heads-up + sound
+              visibility: 1, // PUBLIC on lockscreen
+              sound: 'default',
+              vibration: true,
+              lights: true,
+            })
+          } catch {
+            // ignore — channel may already exist
+          }
+        }
+
+        // 2) Android 13+ requires runtime POST_NOTIFICATIONS permission.
+        //    requestPermissions() triggers the system dialog on Android 13+
+        //    and is a no-op on older Android versions.
         let perm = await PushNotifications.checkPermissions()
         if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') {
           perm = await PushNotifications.requestPermissions()
@@ -34,6 +57,8 @@ export function usePushNotifications() {
           Capacitor.getPlatform() === 'ios' ? 'ios'
           : Capacitor.getPlatform() === 'android' ? 'android'
           : 'web'
+
+
 
         const regSub = await PushNotifications.addListener('registration', async (t) => {
           try {
