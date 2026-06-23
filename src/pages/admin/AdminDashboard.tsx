@@ -142,6 +142,7 @@ export default function AdminDashboard() {
           {section === 'slides' && <HeroSlidesSection />}
           {section === 'email' && <EmailSettingsSection />}
           {section === 'native-apps' && <AppReleasesSection />}
+          {section === 'test-push' && <TestPushSection />}
         </main>
       </div>
     </div>
