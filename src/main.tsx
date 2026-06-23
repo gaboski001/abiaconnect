@@ -7,6 +7,7 @@ import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { Toaster } from '@/components/ui/sonner'
+import { usePushNotifications } from '@/hooks/usePushNotifications'
 import './index.css'
 
 // Best-effort: unregister any previously installed PWA service workers so
