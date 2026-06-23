@@ -38,7 +38,7 @@ import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
-import { PushNotificationsToggle } from '@/components/pwa/PushNotificationsToggle'
+
 import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
@@ -552,7 +552,7 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
         <h2 className="font-bold">App</h2>
         <NativeAppDownload />
-        <PushNotificationsToggle />
+        
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
