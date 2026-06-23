@@ -38,9 +38,6 @@ import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
-import { PWAInstallButton } from '@/components/pwa/PWAInstallButton'
-import { PWAInstallStatus } from '@/components/pwa/PWAInstallStatus'
-import { PWAPromptToggle } from '@/components/pwa/PWAPromptToggle'
 import { PushNotificationsToggle } from '@/components/pwa/PushNotificationsToggle'
 import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 
@@ -554,18 +551,7 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
         <h2 className="font-bold">App</h2>
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium">Download AbiaConnect</p>
-            <p className="text-xs text-muted-foreground">Install on your device for quick, offline access</p>
-            <PWAInstallStatus />
-          </div>
-          <PWAInstallButton showAlways variant="default" label="Download App" />
-        </div>
-        <div className="pt-2 border-t">
-          <NativeAppDownload />
-        </div>
-        <PWAPromptToggle />
+        <NativeAppDownload />
         <PushNotificationsToggle />
       </section>
 
