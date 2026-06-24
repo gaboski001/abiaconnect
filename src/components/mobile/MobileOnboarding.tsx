@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { Capacitor } from '@capacitor/core';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
-import { useSignedUrl } from '@/hooks/useSignedUrl';
+import useEmblaCarousel from 'embla-carousel-react';
 import {
   MessagesSquare,
   Users,
@@ -21,10 +20,21 @@ interface MobileOnboardingProps {
 }
 
 export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
-  const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
   const { settings } = useSiteSettings();
-  const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets');
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false });
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setCurrentSlide(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    emblaApi.on('select', onSelect);
+  }, [emblaApi, onSelect]);
 
   const slides = [
     {
@@ -61,8 +71,8 @@ export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
   ];
 
   const handleNext = () => {
-    if (currentSlide < slides.length - 1) {
-      setCurrentSlide(prev => prev + 1);
+    if (emblaApi?.canScrollNext()) {
+      emblaApi.scrollNext();
     } else {
       handleFinish();
     }
@@ -73,8 +83,6 @@ export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
     onFinish();
   };
 
-  const current = slides[currentSlide];
-
   return (
     <motion.div
       initial={{ opacity: 1 }}
@@ -82,14 +90,7 @@ export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
       transition={{ duration: 0.5 }}
       className="fixed inset-0 z-[100] bg-background flex flex-col overflow-hidden font-sans"
     >
-      {/* Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-secondary/10 pointer-events-none" />
-
-      {/* Animated Particles (CSS only for performance) */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/20 rounded-full blur-[100px] animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-secondary/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
-      </div>
 
       <div className="absolute top-safe-offset-4 right-4 z-10 p-4">
         <Button variant="ghost" onClick={handleFinish} className="text-muted-foreground font-medium">
@@ -97,125 +98,86 @@ export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
         </Button>
       </div>
 
-      <div className="flex-1 relative">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentSlide}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.4, ease: "circOut" }}
-            className="h-full w-full flex flex-col items-center justify-center p-8 text-center"
-          >
-            {current.type === "welcome" && (
-              <>
-                <motion.div
-                  animate={{
-                    rotateY: 360,
-                    scale: [0.95, 1.05, 0.95]
-                  }}
-                  transition={{
-                    rotateY: { duration: 15, repeat: Infinity, ease: "linear" },
-                    scale: { duration: 5, repeat: Infinity, ease: "easeInOut" }
-                  }}
-                  className="mb-10 relative"
-                >
-                  <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
-                  <div className="relative w-48 h-48 flex items-center justify-center bg-transparent backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
-                    {logoUrl ? (
-                      <img src={logoUrl as string} alt="Logo" className="w-32 h-32 object-contain" />
-                    ) : (
-                      <div className="w-32 h-32 bg-primary/20 rounded-2xl flex items-center justify-center">
-                        <Globe className="size-16 text-primary animate-spin-slow" />
-                      </div>
-                    )}
+      <div className="flex-1 overflow-hidden" ref={emblaRef}>
+        <div className="flex h-full">
+          {slides.map((slide) => (
+            <div key={slide.id} className="flex-[0_0_100%] h-full flex flex-col items-center justify-center p-8 text-center relative">
+              {slide.type === "welcome" && (
+                <>
+                  <motion.div
+                    animate={{ rotateY: 360 }}
+                    transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                    className="mb-10 relative"
+                  >
+                    <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
+                    <div className="relative w-48 h-48 flex items-center justify-center bg-transparent rounded-3xl overflow-hidden">
+                       <img src="/email-logo.png" alt="Logo" className="w-32 h-32 object-contain" />
+                    </div>
+                  </motion.div>
+                  <h1 className="text-4xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary leading-tight">
+                    {slide.tagline}
+                  </h1>
+                  <p className="text-lg text-muted-foreground max-w-xs mx-auto">
+                    {slide.subtitle}
+                  </p>
+                </>
+              )}
+
+              {slide.type === "about" && (
+                <div className="max-w-sm">
+                  <div className="mb-8 inline-flex p-4 rounded-2xl bg-secondary/10 text-secondary">
+                    <ShieldCheck className="size-12" />
                   </div>
-                </motion.div>
-                <motion.h1
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-4xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary leading-tight"
-                >
-                  {current.tagline}
-                </motion.h1>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="text-lg text-muted-foreground max-w-xs mx-auto"
-                >
-                  {current.subtitle}
-                </motion.p>
-              </>
-            )}
-
-            {current.type === "about" && (
-              <div className="max-w-sm">
-                <div className="mb-8 inline-flex p-4 rounded-2xl bg-secondary/10 text-secondary">
-                  <ShieldCheck className="size-12" />
+                  <h2 className="text-3xl font-bold mb-6">{slide.title}</h2>
+                  <div className="bg-card/50 backdrop-blur-sm p-6 rounded-3xl border shadow-xl text-left space-y-4">
+                    <p className="text-lg leading-relaxed text-foreground font-medium">{slide.content}</p>
+                    <p className="text-sm text-muted-foreground italic border-l-2 border-primary/30 pl-4">{slide.mission}</p>
+                  </div>
                 </div>
-                <h2 className="text-3xl font-bold mb-6">{current.title}</h2>
-                <div className="bg-card/50 backdrop-blur-sm p-6 rounded-3xl border shadow-xl text-left space-y-4">
-                  <p className="text-lg leading-relaxed text-foreground font-medium">{current.content}</p>
-                  <p className="text-sm text-muted-foreground italic border-l-2 border-primary/30 pl-4">{current.mission}</p>
-                </div>
-              </div>
-            )}
+              )}
 
-            {current.type === "features" && (
-              <div className="w-full max-w-md">
-                <h2 className="text-3xl font-bold mb-8">{current.title}</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {current.features?.map((f, i) => (
-                    <motion.div
-                      key={f.name}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="bg-card/40 backdrop-blur-sm p-5 rounded-3xl border border-white/5 flex flex-col items-center text-center hover:bg-card/60 transition-colors shadow-sm"
-                    >
-                      <div className="p-3 rounded-2xl bg-primary/10 text-primary mb-3">
-                        <f.icon className="size-6" />
+              {slide.type === "features" && (
+                <div className="w-full max-w-md">
+                  <h2 className="text-3xl font-bold mb-8">{slide.title}</h2>
+                  <div className="grid grid-cols-2 gap-4">
+                    {slide.features?.map((f, i) => (
+                      <div
+                        key={f.name}
+                        className="bg-card/40 backdrop-blur-sm p-5 rounded-3xl border border-white/5 flex flex-col items-center text-center shadow-sm"
+                      >
+                        <div className="p-3 rounded-2xl bg-primary/10 text-primary mb-3">
+                          <f.icon className="size-6" />
+                        </div>
+                        <h3 className="font-bold text-sm mb-1">{f.name}</h3>
+                        <p className="text-[10px] leading-tight text-muted-foreground uppercase tracking-wider">{f.desc}</p>
                       </div>
-                      <h3 className="font-bold text-sm mb-1">{f.name}</h3>
-                      <p className="text-[10px] leading-tight text-muted-foreground uppercase tracking-wider">{f.desc}</p>
-                    </motion.div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {current.type === "start" && (
-              <div className="w-full max-w-xs">
-                <motion.div
-                  initial={{ scale: 0, rotate: -45 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: "spring", damping: 12 }}
-                  className="w-24 h-24 bg-gradient-to-br from-primary to-secondary rounded-3xl shadow-lg shadow-primary/20 flex items-center justify-center mx-auto mb-8"
-                >
-                  <Rocket className="size-12 text-white" />
-                </motion.div>
-                <h2 className="text-4xl font-bold mb-4">{current.title}</h2>
-                <p className="text-lg text-muted-foreground mb-10">{current.subtitle}</p>
-                <div className="flex flex-col gap-4">
-                  <Button size="lg" className="h-14 rounded-2xl text-lg font-bold shadow-lg shadow-primary/20" onClick={() => { handleFinish(); navigate('/register'); }}>
-                    Create Account
-                  </Button>
-                  <Button size="lg" variant="outline" className="h-14 rounded-2xl text-lg font-bold bg-background/50 backdrop-blur-sm" onClick={() => { handleFinish(); navigate('/login'); }}>
-                    Sign In
-                  </Button>
-                  <Button variant="ghost" className="mt-2 text-muted-foreground" onClick={handleFinish}>
-                    Continue as Guest
-                  </Button>
+              {slide.type === "start" && (
+                <div className="w-full max-w-xs">
+                  <div className="w-24 h-24 bg-gradient-to-br from-primary to-secondary rounded-3xl shadow-lg shadow-primary/20 flex items-center justify-center mx-auto mb-8">
+                    <Rocket className="size-12 text-white" />
+                  </div>
+                  <h2 className="text-4xl font-bold mb-4">{slide.title}</h2>
+                  <p className="text-lg text-muted-foreground mb-10">{slide.subtitle}</p>
+                  <div className="flex flex-col gap-4">
+                    <Button size="lg" className="h-14 rounded-2xl text-lg font-bold shadow-lg shadow-primary/20" onClick={() => { handleFinish(); navigate('/register'); }}>
+                      Create Account
+                    </Button>
+                    <Button size="lg" variant="outline" className="h-14 rounded-2xl text-lg font-bold bg-background/50 backdrop-blur-sm" onClick={() => { handleFinish(); navigate('/login'); }}>
+                      Sign In
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Bottom Bar */}
       <div className="p-10 flex items-center justify-between bg-background/50 backdrop-blur-md border-t border-white/5">
         <div className="flex gap-2.5">
           {slides.map((_, i) => (

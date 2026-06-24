@@ -75,19 +75,20 @@ export default function App() {
   useEffect(() => {
     if (isSplashDone && !loading) {
       const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding') === 'true'
-      if (!user && !hasSeenOnboarding && Capacitor.isNativePlatform()) {
-        setShowOnboarding(true)
-      } else if (!user && (location.pathname === '/dashboard' || location.pathname === '/profile')) {
-        navigate('/login')
+
+      if (!user) {
+        if (!hasSeenOnboarding && Capacitor.isNativePlatform()) {
+          setShowOnboarding(true)
+        } else if (location.pathname !== '/login' && location.pathname !== '/register' && location.pathname !== '/forgot-password') {
+          navigate('/login', { replace: true })
+        }
       }
     }
   }, [isSplashDone, loading, user, navigate, location.pathname])
 
   const handleOnboardingFinish = () => {
     setShowOnboarding(false)
-    if (!user) {
-      navigate('/login')
-    }
+    if (!user) navigate('/login')
   }
 
   return (

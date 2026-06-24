@@ -1,20 +1,15 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { Capacitor } from '@capacitor/core'
 
 export function SplashScreen({ onFinish }: { onFinish: () => void }) {
-  const { settings } = useSiteSettings()
-  const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
   const [isVisible, setIsVisible] = useState(true)
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false)
-      setTimeout(onFinish, 500) // Delay for exit animation
+      setTimeout(onFinish, 500)
     }, 2500)
-
     return () => clearTimeout(timer)
   }, [onFinish])
 
@@ -28,16 +23,8 @@ export function SplashScreen({ onFinish }: { onFinish: () => void }) {
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center"
         >
-          {/* Animated Background */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <motion.div
-              animate={{
-                scale: [1, 1.2, 1],
-                opacity: [0.1, 0.2, 0.1]
-              }}
-              transition={{ duration: 5, repeat: Infinity }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary rounded-full blur-[120px]"
-            />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]" />
           </div>
 
           <motion.div
@@ -47,24 +34,17 @@ export function SplashScreen({ onFinish }: { onFinish: () => void }) {
             className="relative"
           >
             <motion.div
-              animate={{
-                rotateY: 360,
-                scale: [1, 1.1, 1]
-              }}
-              transition={{
-                rotateY: { duration: 3, repeat: Infinity, ease: "linear" },
-                scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-              }}
-              className="w-32 h-32 rounded-3xl bg-transparent border border-white/10 shadow-2xl flex items-center justify-center overflow-hidden"
+              animate={{ rotateY: 360 }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              className="w-32 h-32 flex items-center justify-center bg-transparent overflow-hidden"
             >
-              {logoUrl ? (
-                <img src={logoUrl as string} alt="Logo" className="w-20 h-20 object-contain" />
-              ) : (
-                <span className="text-4xl font-bold text-primary">A</span>
-              )}
+              <img
+                src="/logo.png"
+                alt="Logo"
+                className="w-24 h-24 object-contain"
+                onError={(e) => e.currentTarget.src = '/email-logo.png'}
+              />
             </motion.div>
-
-            {/* Logo Glow */}
             <div className="absolute inset-0 bg-primary/20 blur-2xl -z-10 rounded-full scale-150" />
           </motion.div>
 

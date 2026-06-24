@@ -13,8 +13,10 @@ export default function ActivityChart({
 }: {
   data: Array<{ label: string; posts: number }>
 }) {
+  if (!data?.length) return null
+
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height="100%" debounce={100}>
       <AreaChart data={data}>
         <defs>
           <linearGradient id="dashFill" x1="0" y1="0" x2="0" y2="1">

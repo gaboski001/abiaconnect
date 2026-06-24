@@ -36,6 +36,8 @@ export function Navbar() {
   const subgroupsEnabled = settings.global_subgroups_enabled !== 'false'
   const storeLink = settings.store_link
 
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/forgot-password'
+
   useEffect(() => {
     setLogoFailed(false)
   }, [settings.site_logo, settings.logo_url, logoUrl])
@@ -110,60 +112,62 @@ export function Navbar() {
       <div className="mx-auto h-full max-w-[1400px] px-6 flex items-center justify-between gap-4">
         {/* Left: Logo */}
         <div className="flex items-center gap-3">
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open menu">
-                <Menu />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-80">
-              <SheetHeader>
-                <SheetTitle asChild>
-                  <Link to="/" onClick={() => setOpen(false)} className="flex items-center" aria-label={siteName}>
-                    {showLogoImage && (
-                      <img
-                        src={logoUrl as string}
-                        alt={siteName}
-                        onError={() => setLogoFailed(true)}
-                        className="h-10 w-auto max-w-[180px] object-contain"
-                      />
-                    )}
-                  </Link>
-                </SheetTitle>
-              </SheetHeader>
-              <form onSubmit={onSearch} className="relative mt-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search…"
-                  className="pl-9 rounded-xl"
-                />
-              </form>
-              <nav className="mt-6 flex flex-col gap-4" onClick={() => setOpen(false)}>
-                {navLinks}
-              </nav>
-              <div className="mt-6 border-t border-border pt-4">
-                {user ? (
-                  <div className="flex flex-col gap-3">
-                    <div className="text-sm text-muted-foreground truncate">{user.email}</div>
-                    <Button variant="outline" onClick={handleSignOut}>
-                      <LogOut /> Sign Out
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    <Button variant="secondary" asChild onClick={() => setOpen(false)}>
-                      <Link to="/login">Sign In</Link>
-                    </Button>
-                    <Button asChild onClick={() => setOpen(false)}>
-                      <Link to="/register">Join Free</Link>
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </SheetContent>
-          </Sheet>
+          {!isAuthPage && (
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open menu">
+                  <Menu />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-80">
+                <SheetHeader>
+                  <SheetTitle asChild>
+                    <Link to="/" onClick={() => setOpen(false)} className="flex items-center" aria-label={siteName}>
+                      {showLogoImage && (
+                        <img
+                          src={logoUrl as string}
+                          alt={siteName}
+                          onError={() => setLogoFailed(true)}
+                          className="h-10 w-auto max-w-[180px] object-contain"
+                        />
+                      )}
+                    </Link>
+                  </SheetTitle>
+                </SheetHeader>
+                <form onSubmit={onSearch} className="relative mt-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search…"
+                    className="pl-9 rounded-xl"
+                  />
+                </form>
+                <nav className="mt-6 flex flex-col gap-4" onClick={() => setOpen(false)}>
+                  {navLinks}
+                </nav>
+                <div className="mt-6 border-t border-border pt-4">
+                  {user ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="text-sm text-muted-foreground truncate">{user.email}</div>
+                      <Button variant="outline" onClick={handleSignOut}>
+                        <LogOut /> Sign Out
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <Button variant="secondary" asChild onClick={() => setOpen(false)}>
+                        <Link to="/login">Sign In</Link>
+                      </Button>
+                      <Button asChild onClick={() => setOpen(false)}>
+                        <Link to="/register">Join Free</Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
 
           <Link to="/" className="flex items-center" aria-label={siteName}>
             {showLogoImage && (

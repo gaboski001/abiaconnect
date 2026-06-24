@@ -129,12 +129,8 @@ export default function Login() {
               className="relative w-20 h-20 mb-4"
             >
               <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-              <div className="relative h-full w-full flex items-center justify-center rounded-2xl bg-transparent border border-white/10 shadow-2xl overflow-hidden">
-                {logoUrl ? (
-                  <img src={logoUrl} alt="Logo" className="h-12 w-12 object-contain" />
-                ) : (
-                  <span className="text-3xl font-bold text-primary">A</span>
-                )}
+              <div className="relative h-full w-full flex items-center justify-center rounded-2xl bg-transparent overflow-hidden">
+                <img src="/logo.png" alt="Logo" className="h-12 w-12 object-contain" onError={(e) => e.currentTarget.src = '/email-logo.png'} />
               </div>
             </motion.div>
             <h1 className="text-3xl font-extrabold tracking-tight">AbiaConnect</h1>
