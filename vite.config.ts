@@ -9,6 +9,12 @@ const pkg = JSON.parse(readFileSync(path.resolve(__dirname, "package.json"), "ut
 
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version ?? "0.0.0"),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __BUILD_COMMIT__: JSON.stringify(process.env.GITHUB_SHA?.slice(0, 7) ?? process.env.COMMIT_SHA?.slice(0, 7) ?? "dev"),
+  },
+
   plugins: [
     react(),
     tailwindcss(),
