@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow, startOfDay, subDays, format } from 'date-fns'
 
 const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Bell,
   Bookmark,
@@ -267,16 +268,32 @@ function Overview({ displayName }: { displayName: string }) {
     { label: 'Bookmarks', value: stats.data?.bookmarks ?? 0 },
   ]
 
+import { motion } from 'framer-motion'
+
+/* ... rest of imports ... */
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Welcome back, {displayName}!</h1>
+      <motion.h1
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="text-2xl font-bold"
+      >
+        Welcome back, {displayName}!
+      </motion.h1>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {cards.map((c) => (
-          <div key={c.label} className="rounded-2xl border border-border bg-card p-4">
-            <div className="text-xs text-muted-foreground uppercase">{c.label}</div>
-            <div className="text-2xl font-bold mt-1">{c.value}</div>
-          </div>
+        {cards.map((c, i) => (
+          <motion.div
+            key={c.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="rounded-2xl border border-border bg-card p-4 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{c.label}</div>
+            <div className="text-3xl font-bold mt-1 text-primary">{c.value}</div>
+          </motion.div>
         ))}
       </div>
 

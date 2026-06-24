@@ -3,7 +3,9 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Navbar } from './Navbar'
 import { Footer } from './Footer'
+import { MobileBottomNav } from './MobileBottomNav'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { Capacitor } from '@capacitor/core'
 
 
 export function MainLayout() {
@@ -26,6 +28,14 @@ export function MainLayout() {
     }
   }, [])
 
+import { Navbar } from './Navbar'
+import { Footer } from './Footer'
+import { MobileBottomNav } from './MobileBottomNav'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { Capacitor } from '@capacitor/core'
+
+/* ... */
+
   return (
     <div data-site-theme={siteTheme} className="min-h-screen flex flex-col">
       <Navbar />
@@ -36,7 +46,7 @@ export function MainLayout() {
         </div>
       )}
 
-      <main className="flex-1">
+      <main className={`flex-1 ${Capacitor.isNativePlatform() ? 'pb-20' : ''}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -51,7 +61,8 @@ export function MainLayout() {
         </AnimatePresence>
       </main>
 
-      <Footer />
+      {!Capacitor.isNativePlatform() && <Footer />}
+      <MobileBottomNav />
     </div>
   )
 }

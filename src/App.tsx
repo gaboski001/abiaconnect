@@ -60,10 +60,13 @@ const NotFound = () => (
   </div>
 )
 
+import { MobileOnboarding } from '@/components/mobile/MobileOnboarding'
+
 export default function App() {
   return (
     <>
       <ScrollToTop />
+      <MobileOnboarding />
       <Routes>
       <Route element={<MainLayout />}>
         <Route index element={<Home />} />
