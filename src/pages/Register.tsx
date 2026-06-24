@@ -155,7 +155,7 @@ export default function Register() {
               transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
               className="w-16 h-16 bg-transparent"
             >
-              <img src="/email-logo.png" alt="Logo" className="w-full h-full object-contain" />
+              <img src="/Logo.png" alt="Logo" className="w-full h-full object-contain" onError={(e) => e.currentTarget.src = '/email-logo.png'} />
             </motion.div>
           </div>
 
@@ -172,43 +172,43 @@ export default function Register() {
                 exit="exit"
                 transition={{ duration: 0.3 }}
               >
-                <h1 className="text-2xl font-bold mb-1 text-center">Create your account</h1>
+                <h1 className="text-2xl font-bold mb-1 text-center font-sans tracking-tight">Create your account</h1>
                 <p className="text-sm text-muted-foreground text-center mb-8">
                   Tell us a bit about yourself to join AbiaConnect.
                 </p>
                 <form onSubmit={onStep1} className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label>Full Name</Label>
-                    <Input {...form.register('name')} placeholder="Enter full name" />
+                    <Label className="font-bold text-xs uppercase tracking-wider opacity-60">Full Name</Label>
+                    <Input {...form.register('name')} placeholder="Enter full name" className="h-11 rounded-xl bg-muted/20 border-transparent focus:bg-background" />
                     {form.formState.errors.name && <p className="text-[11px] text-destructive">{form.formState.errors.name.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Username</Label>
-                    <Input {...form.register('username')} placeholder="Choose username" />
+                    <Label className="font-bold text-xs uppercase tracking-wider opacity-60">Username</Label>
+                    <Input {...form.register('username')} placeholder="Choose username" className="h-11 rounded-xl bg-muted/20 border-transparent focus:bg-background" />
                     {form.formState.errors.username && <p className="text-[11px] text-destructive">{form.formState.errors.username.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Email</Label>
-                    <Input type="email" {...form.register('email')} placeholder="email@example.com" />
+                    <Label className="font-bold text-xs uppercase tracking-wider opacity-60">Email Address</Label>
+                    <Input type="email" {...form.register('email')} placeholder="email@example.com" className="h-11 rounded-xl bg-muted/20 border-transparent focus:bg-background" />
                     {form.formState.errors.email && <p className="text-[11px] text-destructive">{form.formState.errors.email.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Password</Label>
-                    <Input type="password" {...form.register('password')} placeholder="••••••••" />
+                    <Label className="font-bold text-xs uppercase tracking-wider opacity-60">Password</Label>
+                    <Input type="password" {...form.register('password')} placeholder="••••••••" className="h-11 rounded-xl bg-muted/20 border-transparent focus:bg-background" />
                     {form.formState.errors.password && <p className="text-[11px] text-destructive">{form.formState.errors.password.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Date of Birth</Label>
-                    <Input type="date" {...form.register('dob')} />
+                    <Label className="font-bold text-xs uppercase tracking-wider opacity-60">Date of Birth</Label>
+                    <Input type="date" {...form.register('dob')} className="h-11 rounded-xl bg-muted/20 border-transparent focus:bg-background" />
                     {form.formState.errors.dob && <p className="text-[11px] text-destructive">{form.formState.errors.dob.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label>LGA of Origin</Label>
+                    <Label className="font-bold text-xs uppercase tracking-wider opacity-60">LGA of Origin</Label>
                     <Select
                       value={form.watch('lga')}
                       onValueChange={(v) => form.setValue('lga', v as FormValues['lga'], { shouldValidate: true })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11 rounded-xl bg-muted/20 border-transparent focus:bg-background">
                         <SelectValue placeholder="Select your LGA" />
                       </SelectTrigger>
                       <SelectContent>
@@ -219,7 +219,7 @@ export default function Register() {
                     </Select>
                     {form.formState.errors.lga && <p className="text-[11px] text-destructive">{form.formState.errors.lga.message}</p>}
                   </div>
-                  <Button type="submit" className="w-full h-12 rounded-xl text-lg font-bold">
+                  <Button type="submit" className="w-full h-12 rounded-xl text-lg font-bold shadow-lg shadow-primary/20">
                     Continue to Verification →
                   </Button>
                   <p className="text-sm text-center text-muted-foreground pt-4">

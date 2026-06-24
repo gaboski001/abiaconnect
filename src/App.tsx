@@ -69,108 +69,103 @@ export default function App() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [isSplashDone, setIsSplashDone] = useState(!Capacitor.isNativePlatform())
-  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [appState, setAppState] = useState<'splash' | 'onboarding' | 'ready'>(
+    Capacitor.isNativePlatform() ? 'splash' : 'ready'
+  )
 
   useEffect(() => {
-    if (isSplashDone && !loading) {
+    if (appState === 'ready' && !loading) {
       const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding') === 'true'
-
-      if (!user) {
-        if (!hasSeenOnboarding && Capacitor.isNativePlatform()) {
-          setShowOnboarding(true)
-        } else if (location.pathname !== '/login' && location.pathname !== '/register' && location.pathname !== '/forgot-password') {
-          navigate('/login', { replace: true })
-        }
+      if (!user && !hasSeenOnboarding && Capacitor.isNativePlatform()) {
+        setAppState('onboarding')
+      } else if (!user && (location.pathname === '/dashboard' || location.pathname === '/profile')) {
+        navigate('/login', { replace: true })
       }
     }
-  }, [isSplashDone, loading, user, navigate, location.pathname])
+  }, [appState, loading, user, navigate, location.pathname])
 
+  const handleSplashFinish = () => setAppState('ready')
   const handleOnboardingFinish = () => {
-    setShowOnboarding(false)
+    setAppState('ready')
     if (!user) navigate('/login')
+  }
+
+  if (appState === 'splash') {
+    return <SplashScreen onFinish={handleSplashFinish} />
+  }
+
+  if (appState === 'onboarding') {
+    return <MobileOnboarding onFinish={handleOnboardingFinish} />
   }
 
   return (
     <>
       <ScrollToTop />
-      <SplashScreen onFinish={() => setIsSplashDone(true)} />
+      <Routes>
+        <Route element={<MainLayout />}>
+          <Route index element={<Home />} />
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
 
-      {isSplashDone && (
-        <>
-          <AnimatePresence>
-            {showOnboarding && (
-              <MobileOnboarding onFinish={handleOnboardingFinish} />
-            )}
-          </AnimatePresence>
+          <Route
+            path="*"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <Routes>
+                  <Route path="forgot-password" element={<ForgotPassword />} />
+                  <Route path="reset-password" element={<ResetPassword />} />
+                  <Route path="category/:categoryId" element={<CategoryPage />} />
+                  <Route path="thread/:threadId" element={<Thread />} />
+                  <Route path="about/lgas" element={<LgasGuide />} />
+                  <Route path="about/known-for" element={<KnownFor />} />
+                  <Route path="about/absu" element={<AbsuGuide />} />
+                  <Route path="about" element={<About />} />
 
-          <Routes>
-            <Route element={<MainLayout />}>
-              <Route index element={<Home />} />
-              <Route path="login" element={<Login />} />
-              <Route path="register" element={<Register />} />
+                  <Route path="mission" element={<Mission />} />
+                  <Route path="team" element={<Team />} />
+                  <Route path="careers" element={<Careers />} />
+                  <Route path="forum-guidelines" element={<ForumGuidelines />} />
+                  <Route path="events" element={<Events />} />
+                  <Route path="success-stories" element={<SuccessStories />} />
+                  <Route path="member-spotlight" element={<MemberSpotlight />} />
+                  <Route path="help" element={<Help />} />
+                  <Route path="report-issue" element={<ReportIssue />} />
+                  <Route path="privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="terms-of-service" element={<TermsOfService />} />
+                  <Route path="cookie-policy" element={<CookiePolicy />} />
+                  <Route path="community-standards" element={<CommunityStandards />} />
+                  <Route path="donate" element={<Donate />} />
+                  <Route path="unsubscribe" element={<Unsubscribe />} />
+                  <Route path="version" element={<Version />} />
 
-              <Route
-                path="*"
-                element={
-                  <Suspense fallback={<RouteFallback />}>
-                    <Routes>
-                      <Route path="forgot-password" element={<ForgotPassword />} />
-                      <Route path="reset-password" element={<ResetPassword />} />
-                      <Route path="category/:categoryId" element={<CategoryPage />} />
-                      <Route path="thread/:threadId" element={<Thread />} />
-                      <Route path="about/lgas" element={<LgasGuide />} />
-                      <Route path="about/known-for" element={<KnownFor />} />
-                      <Route path="about/absu" element={<AbsuGuide />} />
-                      <Route path="about" element={<About />} />
+                  <Route element={<ProtectedRoute />}>
+                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="profile" element={<Profile />} />
+                    <Route path="polls" element={<Polls />} />
+                    <Route path="subgroups" element={<Subgroups />} />
+                    <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
+                    <Route path="subgroups/invite/:token" element={<SubgroupInvite />} />
+                    <Route path="notifications" element={<Notifications />} />
+                    <Route path="create-thread" element={<CreateThread />} />
+                    <Route path="messages" element={<Messages />} />
+                    <Route path="messages/:conversationId" element={<Messages />} />
 
-                      <Route path="mission" element={<Mission />} />
-                      <Route path="team" element={<Team />} />
-                      <Route path="careers" element={<Careers />} />
-                      <Route path="forum-guidelines" element={<ForumGuidelines />} />
-                      <Route path="events" element={<Events />} />
-                      <Route path="success-stories" element={<SuccessStories />} />
-                      <Route path="member-spotlight" element={<MemberSpotlight />} />
-                      <Route path="help" element={<Help />} />
-                      <Route path="report-issue" element={<ReportIssue />} />
-                      <Route path="privacy-policy" element={<PrivacyPolicy />} />
-                      <Route path="terms-of-service" element={<TermsOfService />} />
-                      <Route path="cookie-policy" element={<CookiePolicy />} />
-                      <Route path="community-standards" element={<CommunityStandards />} />
-                      <Route path="donate" element={<Donate />} />
-                      <Route path="unsubscribe" element={<Unsubscribe />} />
-                      <Route path="version" element={<Version />} />
+                    <Route element={<AdminRoute />}>
+                      <Route path="admin/dashboard" element={<AdminDashboard />} />
 
-                      <Route element={<ProtectedRoute />}>
-                        <Route path="dashboard" element={<Dashboard />} />
-                        <Route path="profile" element={<Profile />} />
-                        <Route path="polls" element={<Polls />} />
-                        <Route path="subgroups" element={<Subgroups />} />
-                        <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
-                        <Route path="subgroups/invite/:token" element={<SubgroupInvite />} />
-                        <Route path="notifications" element={<Notifications />} />
-                        <Route path="create-thread" element={<CreateThread />} />
-                        <Route path="messages" element={<Messages />} />
-                        <Route path="messages/:conversationId" element={<Messages />} />
+                      <Route path="admin/email-dns" element={<EmailDns />} />
+                      <Route path="admin/donations" element={<AdminDonations />} />
+                      <Route path="admin/birthday-preview" element={<BirthdayPreview />} />
+                    </Route>
+                  </Route>
 
-                        <Route element={<AdminRoute />}>
-                          <Route path="admin/dashboard" element={<AdminDashboard />} />
-
-                          <Route path="admin/email-dns" element={<EmailDns />} />
-                          <Route path="admin/donations" element={<AdminDonations />} />
-                          <Route path="admin/birthday-preview" element={<BirthdayPreview />} />
-                        </Route>
-                      </Route>
-
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Suspense>
-                }
-              />
-            </Route>
-          </Routes>
-        </>
-      )}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            }
+          />
+        </Route>
+      </Routes>
     </>
   )
 }
