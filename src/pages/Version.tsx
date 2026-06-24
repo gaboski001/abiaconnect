@@ -16,14 +16,15 @@ export default function Version() {
 
   useEffect(() => {
     if (!isNative) return
-    // Dynamically import @capacitor/app so the web build doesn't require it.
-    import(/* @vite-ignore */ '@capacitor/app' as string)
+    // Dynamically import @capacitor/app at runtime so the web build doesn't need it bundled.
+    const modName = '@capacitor/app'
+    ;(0, eval)(`import(${JSON.stringify(modName)})`)
       .then(async (mod: any) => {
         const info = await mod.App.getInfo()
         setNative({ version: info.version, build: info.build, id: info.id, name: info.name })
       })
       .catch(() => {
-        /* @capacitor/app not installed — fall back to web version only */
+        /* @capacitor/app not available — fall back to web version only */
       })
   }, [isNative])
 
