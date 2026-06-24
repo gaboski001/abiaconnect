@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1074203530977",
+    "project_id": "abiaconnect-858c3",
+    "storage_bucket": "abiaconnect-858c3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1074203530977:android:f0c1036ad34cbc94f589a0",
+        "android_client_info": {
+          "package_name": "com.abiaconnect.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBoFVUIveYU1tGLtaPyMm6FHUGo9mPNa8o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -7,7 +7,6 @@ import { MobileBottomNav } from './MobileBottomNav'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { Capacitor } from '@capacitor/core'
 
-
 export function MainLayout() {
   const location = useLocation()
   const { settings } = useSiteSettings()
@@ -27,14 +26,6 @@ export function MainLayout() {
       window.removeEventListener('offline', off)
     }
   }, [])
-
-import { Navbar } from './Navbar'
-import { Footer } from './Footer'
-import { MobileBottomNav } from './MobileBottomNav'
-import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { Capacitor } from '@capacitor/core'
-
-/* ... */
 
   return (
     <div data-site-theme={siteTheme} className="min-h-screen flex flex-col">

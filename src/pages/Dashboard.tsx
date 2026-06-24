@@ -4,9 +4,9 @@ import { Link, useNavigate } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow, startOfDay, subDays, format } from 'date-fns'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   Bell,
   Bookmark,
@@ -267,10 +267,6 @@ function Overview({ displayName }: { displayName: string }) {
     { label: 'Reputation', value: stats.data?.reputation ?? 0 },
     { label: 'Bookmarks', value: stats.data?.bookmarks ?? 0 },
   ]
-
-import { motion } from 'framer-motion'
-
-/* ... rest of imports ... */
 
   return (
     <div className="space-y-6">

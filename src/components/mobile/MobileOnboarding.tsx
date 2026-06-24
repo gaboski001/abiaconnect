@@ -12,12 +12,16 @@ import {
   Globe,
   ChevronRight,
   ShieldCheck,
-  Zap
+  Zap,
+  Rocket
 } from 'lucide-react';
 
-export const MobileOnboarding = () => {
+interface MobileOnboardingProps {
+  onFinish: () => void;
+}
+
+export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
   const navigate = useNavigate();
   const { settings } = useSiteSettings();
   const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets');
@@ -56,14 +60,6 @@ export const MobileOnboarding = () => {
     }
   ];
 
-  useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-    // Only show on native platform and if not seen before
-    if (!hasSeenOnboarding && Capacitor.isNativePlatform()) {
-      setIsVisible(true);
-    }
-  }, []);
-
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(prev => prev + 1);
@@ -74,15 +70,18 @@ export const MobileOnboarding = () => {
 
   const handleFinish = () => {
     localStorage.setItem('hasSeenOnboarding', 'true');
-    setIsVisible(false);
+    onFinish();
   };
-
-  if (!isVisible) return null;
 
   const current = slides[currentSlide];
 
   return (
-    <div className="fixed inset-0 z-[100] bg-background flex flex-col overflow-hidden font-sans">
+    <motion.div
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.5 }}
+      className="fixed inset-0 z-[100] bg-background flex flex-col overflow-hidden font-sans"
+    >
       {/* Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-secondary/10 pointer-events-none" />
 
@@ -122,7 +121,7 @@ export const MobileOnboarding = () => {
                   className="mb-10 relative"
                 >
                   <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
-                  <div className="relative w-48 h-48 flex items-center justify-center bg-card/50 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
+                  <div className="relative w-48 h-48 flex items-center justify-center bg-transparent backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
                     {logoUrl ? (
                       <img src={logoUrl as string} alt="Logo" className="w-32 h-32 object-contain" />
                     ) : (
@@ -240,6 +239,6 @@ export const MobileOnboarding = () => {
           )}
         </Button>
       </div>
-    </div>
+    </motion.div>
   );
 };

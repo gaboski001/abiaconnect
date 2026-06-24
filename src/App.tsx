@@ -1,11 +1,14 @@
-import { lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { lazy, Suspense, useState, useEffect } from 'react'
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute'
 import Home from '@/pages/Home'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
+import { useAuth } from '@/contexts/AuthContext'
+import { Capacitor } from '@capacitor/core'
+import { AnimatePresence } from 'framer-motion'
 
 // Lazy-load every non-critical route. Home + auth load eagerly because they're the
 // most common landing destinations; everything else streams in on navigation.
@@ -47,6 +50,8 @@ const CommunityStandards = lazy(() => import('@/pages/static/CommunityStandards'
 const Unsubscribe = lazy(() => import('@/pages/Unsubscribe'))
 const Version = lazy(() => import('@/pages/Version'))
 
+import { MobileOnboarding } from '@/components/mobile/MobileOnboarding'
+import { SplashScreen } from '@/components/mobile/SplashScreen'
 
 const RouteFallback = () => (
   <div className="flex items-center justify-center min-h-[40vh]">
@@ -60,80 +65,111 @@ const NotFound = () => (
   </div>
 )
 
-import { MobileOnboarding } from '@/components/mobile/MobileOnboarding'
-
 export default function App() {
+  const { user, loading } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [isSplashDone, setIsSplashDone] = useState(!Capacitor.isNativePlatform())
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  useEffect(() => {
+    if (isSplashDone && !loading) {
+      const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding') === 'true'
+      if (!user && !hasSeenOnboarding && Capacitor.isNativePlatform()) {
+        setShowOnboarding(true)
+      } else if (!user && (location.pathname === '/dashboard' || location.pathname === '/profile')) {
+        navigate('/login')
+      }
+    }
+  }, [isSplashDone, loading, user, navigate, location.pathname])
+
+  const handleOnboardingFinish = () => {
+    setShowOnboarding(false)
+    if (!user) {
+      navigate('/login')
+    }
+  }
+
   return (
     <>
       <ScrollToTop />
-      <MobileOnboarding />
-      <Routes>
-      <Route element={<MainLayout />}>
-        <Route index element={<Home />} />
-        <Route path="login" element={<Login />} />
-        <Route path="register" element={<Register />} />
+      <SplashScreen onFinish={() => setIsSplashDone(true)} />
 
-        <Route
-          path="*"
-          element={
-            <Suspense fallback={<RouteFallback />}>
-              <Routes>
-                <Route path="forgot-password" element={<ForgotPassword />} />
-                <Route path="reset-password" element={<ResetPassword />} />
-                <Route path="category/:categoryId" element={<CategoryPage />} />
-                <Route path="thread/:threadId" element={<Thread />} />
-                <Route path="about/lgas" element={<LgasGuide />} />
-                <Route path="about/known-for" element={<KnownFor />} />
-                <Route path="about/absu" element={<AbsuGuide />} />
-                <Route path="about" element={<About />} />
-                
-                <Route path="mission" element={<Mission />} />
-                <Route path="team" element={<Team />} />
-                <Route path="careers" element={<Careers />} />
-                <Route path="forum-guidelines" element={<ForumGuidelines />} />
-                <Route path="events" element={<Events />} />
-                <Route path="success-stories" element={<SuccessStories />} />
-                <Route path="member-spotlight" element={<MemberSpotlight />} />
-                <Route path="help" element={<Help />} />
-                <Route path="report-issue" element={<ReportIssue />} />
-                <Route path="privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="terms-of-service" element={<TermsOfService />} />
-                <Route path="cookie-policy" element={<CookiePolicy />} />
-                <Route path="community-standards" element={<CommunityStandards />} />
-                <Route path="donate" element={<Donate />} />
-                <Route path="unsubscribe" element={<Unsubscribe />} />
-                <Route path="version" element={<Version />} />
+      {isSplashDone && (
+        <>
+          <AnimatePresence>
+            {showOnboarding && (
+              <MobileOnboarding onFinish={handleOnboardingFinish} />
+            )}
+          </AnimatePresence>
 
+          <Routes>
+            <Route element={<MainLayout />}>
+              <Route index element={<Home />} />
+              <Route path="login" element={<Login />} />
+              <Route path="register" element={<Register />} />
 
+              <Route
+                path="*"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <Routes>
+                      <Route path="forgot-password" element={<ForgotPassword />} />
+                      <Route path="reset-password" element={<ResetPassword />} />
+                      <Route path="category/:categoryId" element={<CategoryPage />} />
+                      <Route path="thread/:threadId" element={<Thread />} />
+                      <Route path="about/lgas" element={<LgasGuide />} />
+                      <Route path="about/known-for" element={<KnownFor />} />
+                      <Route path="about/absu" element={<AbsuGuide />} />
+                      <Route path="about" element={<About />} />
 
-                <Route element={<ProtectedRoute />}>
-                  <Route path="dashboard" element={<Dashboard />} />
-                  <Route path="profile" element={<Profile />} />
-                  <Route path="polls" element={<Polls />} />
-                  <Route path="subgroups" element={<Subgroups />} />
-                  <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
-                  <Route path="subgroups/invite/:token" element={<SubgroupInvite />} />
-                  <Route path="notifications" element={<Notifications />} />
-                  <Route path="create-thread" element={<CreateThread />} />
-                  <Route path="messages" element={<Messages />} />
-                  <Route path="messages/:conversationId" element={<Messages />} />
+                      <Route path="mission" element={<Mission />} />
+                      <Route path="team" element={<Team />} />
+                      <Route path="careers" element={<Careers />} />
+                      <Route path="forum-guidelines" element={<ForumGuidelines />} />
+                      <Route path="events" element={<Events />} />
+                      <Route path="success-stories" element={<SuccessStories />} />
+                      <Route path="member-spotlight" element={<MemberSpotlight />} />
+                      <Route path="help" element={<Help />} />
+                      <Route path="report-issue" element={<ReportIssue />} />
+                      <Route path="privacy-policy" element={<PrivacyPolicy />} />
+                      <Route path="terms-of-service" element={<TermsOfService />} />
+                      <Route path="cookie-policy" element={<CookiePolicy />} />
+                      <Route path="community-standards" element={<CommunityStandards />} />
+                      <Route path="donate" element={<Donate />} />
+                      <Route path="unsubscribe" element={<Unsubscribe />} />
+                      <Route path="version" element={<Version />} />
 
-                  <Route element={<AdminRoute />}>
-                    <Route path="admin/dashboard" element={<AdminDashboard />} />
-                    
-                    <Route path="admin/email-dns" element={<EmailDns />} />
-                    <Route path="admin/donations" element={<AdminDonations />} />
-                    <Route path="admin/birthday-preview" element={<BirthdayPreview />} />
-                  </Route>
-                </Route>
+                      <Route element={<ProtectedRoute />}>
+                        <Route path="dashboard" element={<Dashboard />} />
+                        <Route path="profile" element={<Profile />} />
+                        <Route path="polls" element={<Polls />} />
+                        <Route path="subgroups" element={<Subgroups />} />
+                        <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
+                        <Route path="subgroups/invite/:token" element={<SubgroupInvite />} />
+                        <Route path="notifications" element={<Notifications />} />
+                        <Route path="create-thread" element={<CreateThread />} />
+                        <Route path="messages" element={<Messages />} />
+                        <Route path="messages/:conversationId" element={<Messages />} />
 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          }
-        />
-      </Route>
-    </Routes>
+                        <Route element={<AdminRoute />}>
+                          <Route path="admin/dashboard" element={<AdminDashboard />} />
+
+                          <Route path="admin/email-dns" element={<EmailDns />} />
+                          <Route path="admin/donations" element={<AdminDonations />} />
+                          <Route path="admin/birthday-preview" element={<BirthdayPreview />} />
+                        </Route>
+                      </Route>
+
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                }
+              />
+            </Route>
+          </Routes>
+        </>
+      )}
     </>
   )
 }
