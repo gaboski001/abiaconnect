@@ -2,9 +2,26 @@
   "appId": "com.abiaconnect.app",
   "appName": "abiaconnect",
   "webDir": "dist",
+  "backgroundColor": "#0D0D0D",
+  "android": {
+    "backgroundColor": "#0D0D0D"
+  },
+  "ios": {
+    "backgroundColor": "#0D0D0D"
+  },
   "plugins": {
     "PushNotifications": {
       "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0D0D0D",
+      "overlaysWebView": false
+    },
+    "SplashScreen": {
+      "backgroundColor": "#0D0D0D",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false
     }
   }
 }
