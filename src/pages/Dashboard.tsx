@@ -70,19 +70,19 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8 w-full max-w-full min-w-0">
       <SEO title="User Dashboard | AbiaConnect" description="Manage your AbiaConnect profile and view community activity." path="/dashboard" />
 
       {/* Header Info */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border border-border p-6 rounded-3xl shadow-sm">
-        <div className="flex items-center gap-4">
-          <UserAvatar avatarUrl={profile.avatar_url} displayName={displayName} size="xl" className="h-16 w-16" />
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">Hello, {displayName}!</h1>
-            <p className="text-sm text-muted-foreground">@{profile.username || 'abia_member'}</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border border-border p-4 md:p-6 rounded-3xl shadow-sm min-w-0">
+        <div className="flex items-center gap-4 min-w-0">
+          <UserAvatar avatarUrl={profile.avatar_url} displayName={displayName} size="xl" className="h-16 w-16 shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold tracking-tight text-foreground truncate">Hello, {displayName}!</h1>
+            <p className="text-sm text-muted-foreground truncate">@{profile.username || 'abia_member'}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <span className="text-[10px] uppercase font-black tracking-widest bg-primary/10 text-primary px-3 py-1.5 rounded-full border border-primary/20">
             {role}
           </span>
@@ -93,10 +93,13 @@ export default function Dashboard() {
       </div>
 
       {/* Main Grid */}
-      <div className="grid lg:grid-cols-[16rem_1fr] gap-8 items-start">
-        {/* Navigation Sidebar */}
-        <aside className="bg-card border border-border rounded-3xl p-2 md:p-3 shadow-sm lg:sticky lg:top-24 mx-4 lg:mx-0">
-          <nav className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible py-2 px-2 lg:py-0 lg:px-0 scrollbar-none snap-x mask-fade-right">
+      <div className="grid lg:grid-cols-[16rem_1fr] gap-6 lg:gap-8 items-start min-w-0">
+        {/* Navigation: horizontal scroll on mobile, vertical sidebar on desktop */}
+        <aside className="bg-card border border-border rounded-3xl p-2 md:p-3 shadow-sm lg:sticky lg:top-24 min-w-0 max-w-full overflow-hidden">
+          <nav
+            className="flex lg:flex-col gap-2 lg:gap-1 overflow-x-auto lg:overflow-visible py-1 px-1 lg:py-0 lg:px-0 scrollbar-none snap-x snap-mandatory mask-fade-right"
+            style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}
+          >
             {NAV.map((n) => {
               const Icon = n.icon
               const active = tab === n.id
@@ -104,7 +107,7 @@ export default function Dashboard() {
                 <button
                   key={n.id}
                   onClick={() => setTab(n.id)}
-                  className={`flex items-center gap-2 md:gap-3 rounded-xl px-4 py-2.5 text-xs md:text-sm font-bold transition-all whitespace-nowrap snap-start border ${
+                  className={`flex items-center gap-2 md:gap-3 rounded-xl px-4 py-2.5 text-xs md:text-sm font-bold transition-all whitespace-nowrap snap-start border shrink-0 lg:w-full ${
                     active
                       ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 border-primary'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground border-transparent'
@@ -119,7 +122,7 @@ export default function Dashboard() {
         </aside>
 
         {/* Content Area */}
-        <section className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm mx-4 lg:mx-0">
+        <section className="bg-card border border-border rounded-3xl p-4 md:p-8 shadow-sm min-w-0 max-w-full overflow-hidden">
           {tab === 'overview' && <OverviewSection profile={profile} />}
           {tab === 'posts' && <MyPostsSection />}
           {tab === 'saved' && <SavedPostsSection />}
@@ -169,41 +172,41 @@ const OverviewSection = memo(function OverviewSection({ profile }: { profile: an
   ], [])
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300 pb-24">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-4 md:px-0">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-300 pb-8 min-w-0">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 min-w-0">
         {[
           { label: 'THREADS', val: stats.data?.posts },
           { label: 'REPLIES', val: stats.data?.replies },
           { label: 'REPUTATION', val: stats.data?.reputation },
           { label: 'SAVED', val: stats.data?.bookmarks },
         ].map(s => (
-          <div key={s.label} className="bg-card border border-border p-4 md:p-6 rounded-2xl shadow-sm hover:shadow-md transition-all w-full flex flex-col justify-between min-h-[110px] min-w-0 overflow-hidden">
-            <div className="text-[11px] uppercase font-bold text-[#8A7A3A] tracking-[0.1em] truncate">{s.label}</div>
-            <div className="text-3xl font-black mt-2 text-[#C8A951] truncate">{s.val ?? '0'}</div>
+          <div key={s.label} className="bg-card border border-border p-3 md:p-6 rounded-2xl shadow-sm hover:shadow-md transition-all w-full flex flex-col justify-between min-h-[100px] min-w-0 overflow-hidden">
+            <div className="text-[10px] md:text-[11px] uppercase font-bold text-[#8A7A3A] tracking-[0.08em] truncate">{s.label}</div>
+            <div className="text-2xl md:text-3xl font-black mt-2 text-[#C8A951] truncate">{s.val ?? '0'}</div>
           </div>
         ))}
       </div>
 
-      <div className="bg-card border border-border p-6 rounded-2xl h-80 space-y-4 mx-4 md:mx-0">
-        <h3 className="font-bold text-white text-base">Activity Insights</h3>
-        <div className="h-[200px] w-full overflow-hidden">
+      <div className="bg-card border border-border p-4 md:p-6 rounded-2xl space-y-4 min-w-0 overflow-hidden">
+        <h3 className="font-bold text-foreground text-base">Activity Insights</h3>
+        <div className="h-[200px] w-full min-w-0 overflow-hidden">
           <Suspense fallback={<div className="h-full flex items-center justify-center animate-pulse text-muted-foreground text-sm">Loading activity data...</div>}>
             <ActivityChart data={activityData} />
           </Suspense>
         </div>
       </div>
 
-      <div className="bg-card border border-border p-6 rounded-2xl space-y-4 mx-4 md:mx-0">
+      <div className="bg-card border border-border p-4 md:p-6 rounded-2xl space-y-3 min-w-0 overflow-hidden">
         <h3 className="font-bold text-foreground">Your Community Bio</h3>
         <p className="text-sm text-[#B0B0B0] leading-relaxed italic break-words whitespace-pre-wrap">
           {profile.bio || "You haven't added a bio yet. Head to Settings to tell the community about yourself!"}
         </p>
       </div>
 
-      <div className="bg-primary/5 border border-primary/10 p-6 rounded-2xl flex items-center justify-between gap-4 mx-4 md:mx-0 mb-8">
-        <div className="min-w-0">
+      <div className="bg-primary/5 border border-primary/10 p-4 md:p-6 rounded-2xl flex items-center justify-between gap-3 min-w-0 overflow-hidden">
+        <div className="min-w-0 flex-1">
           <h3 className="font-bold text-primary truncate">Ready to contribute?</h3>
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">Start a new discussion or share an update with Abians.</p>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">Start a new discussion or share an update with Abians.</p>
         </div>
         <Button asChild size="sm" className="rounded-full shrink-0 font-bold">
           <Link to="/create-thread">Post Now</Link>
