@@ -41,7 +41,9 @@ const NAV: Array<{ id: Tab; label: string; icon: any }> = [
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ]
 
-const EMPTY_OBJ = {}
+type ProfileRow = { display_name?: string | null; avatar_url?: string | null; username?: string | null }
+const EMPTY_OBJ: ProfileRow = {}
+
 
 export default function Dashboard() {
   const { user, role, signOut } = useAuth()
