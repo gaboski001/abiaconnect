@@ -28,7 +28,9 @@
     <script>
       (function () {
         try {
+          if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return;
           var host = window.location.hostname;
+          if (host === 'localhost' || host === '127.0.0.1') return;
           if (host.endsWith('.lovable.app') || host === 'www.abiaconnect.com') {
             var target = 'https://abiaconnect.com' + window.location.pathname + window.location.search + window.location.hash;
             window.location.replace(target);
