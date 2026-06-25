@@ -37,6 +37,28 @@
 
 :root {
   --radius: 0.75rem;
+  --background:         #0D0D0D;
+  --foreground:         #FFFFFF;
+  --card:               #1E1E1E;
+  --card-foreground:    #FFFFFF;
+  --popover:            #1A1A1A;
+  --popover-foreground: #FFFFFF;
+  --primary:            #C8A951;
+  --primary-foreground: #0D0D0D;
+  --secondary:          #1B3D1B;
+  --secondary-foreground: #FFFFFF;
+  --muted:              #141414;
+  --muted-foreground:   #707070;
+  --accent:             #C8A951;
+  --accent-foreground:  #0D0D0D;
+  --destructive:        #E74C3C;
+  --destructive-foreground: #FFFFFF;
+  --border:             #2A2A2A;
+  --input:              #2A2A2A;
+  --ring:               #C8A951;
+}
+
+.light {
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
@@ -63,38 +85,14 @@
   --chart-5: oklch(0.769 0.188 70.08);
 }
 
-.dark {
-  --background:         oklch(0.13 0.02 145);
-  --foreground:         oklch(0.97 0.01 145);
-  --card:               oklch(0.17 0.025 145);
-  --card-foreground:    oklch(0.97 0.01 145);
-  --popover:            oklch(0.17 0.025 145);
-  --popover-foreground: oklch(0.97 0.01 145);
-  --primary:            oklch(0.82 0.14 85);
-  --primary-foreground: oklch(0.10 0.03 145);
-  --secondary:          oklch(0.30 0.08 145);
-  --secondary-foreground: oklch(0.95 0.02 145);
-  --muted:              oklch(0.22 0.04 145);
-  --muted-foreground:   oklch(0.72 0.05 145);
-  --accent:             oklch(0.30 0.08 145);
-  --accent-foreground:  oklch(0.95 0.02 145);
-  --destructive:        oklch(0.55 0.22 27);
-  --destructive-foreground: oklch(0.98 0.01 0);
-  --border:             oklch(0.95 0.01 145 / 18%);
-  --input:              oklch(0.95 0.01 145 / 14%);
-  --ring:               oklch(0.82 0.14 85);
-  --chart-1:            oklch(0.82 0.14 85);
-  --chart-2:            oklch(0.65 0.15 145);
-  --chart-3:            oklch(0.55 0.12 200);
-  --chart-4:            oklch(0.75 0.18 70);
-  --chart-5:            oklch(0.60 0.20 30);
-}
-
 body {
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   background-color: var(--background);
   color: var(--foreground);
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
 }
 
 .glass-card {
@@ -109,6 +107,16 @@ body {
 }
 
 /* Dark-mode safety net for components that hardcoded light-only colors. */
+.mask-fade-right {
+  mask-image: linear-gradient(to right, black 85%, transparent 100%);
+}
+
+@media (min-width: 1024px) {
+  .mask-fade-right {
+    mask-image: none;
+  }
+}
+
 .dark input,
 .dark textarea,
 .dark select {

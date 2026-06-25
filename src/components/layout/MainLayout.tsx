@@ -41,7 +41,7 @@ export function MainLayout() {
       )}
 
       {/* Main Content: Flexible height but allowing body scroll */}
-      <main className={`flex-1 flex flex-col w-full ${isNative && !isAuthPage ? 'pb-24' : ''}`}>
+      <main className={`flex-1 flex flex-col w-full ${isNative && !isAuthPage ? 'pb-32' : ''}`}>
         {!isNative ? (
           <AnimatePresence mode="wait">
             <motion.div
@@ -60,10 +60,8 @@ export function MainLayout() {
             <Outlet />
           </div>
         )}
+        <Footer />
       </main>
-
-      {/* Footer should always be at the bottom of the content flow */}
-      <Footer />
 
       {!isAuthPage && <MobileBottomNav />}
     </div>

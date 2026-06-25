@@ -109,15 +109,15 @@ export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
                     transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
                     className="mb-10 relative"
                   >
-                    <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 animate-pulse" />
+                    <div className="absolute inset-0 bg-[#C8A951]/20 blur-3xl rounded-full scale-150 animate-pulse" />
                     <div className="relative w-48 h-48 flex items-center justify-center bg-transparent rounded-3xl overflow-hidden">
                        <img src="/email-logo.png" alt="Logo" className="w-32 h-32 object-contain" />
                     </div>
                   </motion.div>
-                  <h1 className="text-4xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary leading-tight">
+                  <h1 className="text-4xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-[#C8A951] to-[#8A7A3A] leading-tight">
                     {slide.tagline}
                   </h1>
-                  <p className="text-lg text-muted-foreground max-w-xs mx-auto">
+                  <p className="text-lg text-[#B0B0B0] max-w-xs mx-auto">
                     {slide.subtitle}
                   </p>
                 </>
@@ -125,31 +125,31 @@ export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
 
               {slide.type === "about" && (
                 <div className="max-w-sm">
-                  <div className="mb-8 inline-flex p-4 rounded-2xl bg-secondary/10 text-secondary">
+                  <div className="mb-8 inline-flex p-4 rounded-2xl bg-[#C8A951]/10 text-[#C8A951]">
                     <ShieldCheck className="size-12" />
                   </div>
-                  <h2 className="text-3xl font-bold mb-6">{slide.title}</h2>
-                  <div className="bg-card/50 backdrop-blur-sm p-6 rounded-3xl border shadow-xl text-left space-y-4">
-                    <p className="text-lg leading-relaxed text-foreground font-medium">{slide.content}</p>
-                    <p className="text-sm text-muted-foreground italic border-l-2 border-primary/30 pl-4">{slide.mission}</p>
+                  <h2 className="text-3xl font-bold mb-6 text-white">{slide.title}</h2>
+                  <div className="bg-[#1E1E1E]/50 backdrop-blur-sm p-6 rounded-3xl border border-[#2A2A2A] shadow-xl text-left space-y-4">
+                    <p className="text-lg leading-relaxed text-white font-medium">{slide.content}</p>
+                    <p className="text-sm text-[#707070] italic border-l-2 border-[#C8A951]/30 pl-4">{slide.mission}</p>
                   </div>
                 </div>
               )}
 
               {slide.type === "features" && (
-                <div className="w-full max-w-md">
-                  <h2 className="text-3xl font-bold mb-8">{slide.title}</h2>
+                <div className="w-full max-w-md px-4">
+                  <h2 className="text-3xl font-bold mb-8 text-white">{slide.title}</h2>
                   <div className="grid grid-cols-2 gap-4">
                     {slide.features?.map((f, i) => (
                       <div
                         key={f.name}
-                        className="bg-card/40 backdrop-blur-sm p-5 rounded-3xl border border-white/5 flex flex-col items-center text-center shadow-sm"
+                        className="bg-[#1E1E1E]/40 backdrop-blur-sm p-5 rounded-3xl border border-[#2A2A2A] flex flex-col items-center text-center shadow-sm"
                       >
-                        <div className="p-3 rounded-2xl bg-primary/10 text-primary mb-3">
+                        <div className="p-3 rounded-2xl bg-[#C8A951]/10 text-[#C8A951] mb-3">
                           <f.icon className="size-6" />
                         </div>
-                        <h3 className="font-bold text-sm mb-1">{f.name}</h3>
-                        <p className="text-[10px] leading-tight text-muted-foreground uppercase tracking-wider">{f.desc}</p>
+                        <h3 className="font-bold text-sm mb-1 text-white">{f.name}</h3>
+                        <p className="text-[10px] leading-tight text-[#707070] uppercase tracking-wider">{f.desc}</p>
                       </div>
                     ))}
                   </div>
@@ -157,17 +157,17 @@ export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
               )}
 
               {slide.type === "start" && (
-                <div className="w-full max-w-xs">
-                  <div className="w-24 h-24 bg-gradient-to-br from-primary to-secondary rounded-3xl shadow-lg shadow-primary/20 flex items-center justify-center mx-auto mb-8">
-                    <Rocket className="size-12 text-white" />
+                <div className="w-full max-w-xs px-4">
+                  <div className="w-24 h-24 bg-gradient-to-br from-[#C8A951] to-[#8A7A3A] rounded-3xl shadow-lg shadow-[#C8A951]/20 flex items-center justify-center mx-auto mb-8">
+                    <Rocket className="size-12 text-[#0D0D0D]" />
                   </div>
-                  <h2 className="text-4xl font-bold mb-4">{slide.title}</h2>
-                  <p className="text-lg text-muted-foreground mb-10">{slide.subtitle}</p>
+                  <h2 className="text-4xl font-bold mb-4 text-white">{slide.title}</h2>
+                  <p className="text-lg text-[#B0B0B0] mb-10">{slide.subtitle}</p>
                   <div className="flex flex-col gap-4">
-                    <Button size="lg" className="h-14 rounded-2xl text-lg font-bold shadow-lg shadow-primary/20" onClick={() => { handleFinish(); navigate('/register'); }}>
+                    <Button size="lg" className="h-14 rounded-2xl text-lg font-bold shadow-lg shadow-[#C8A951]/20 bg-[#C8A951] text-[#0D0D0D] hover:bg-[#C8A951]/90" onClick={() => { handleFinish(); navigate('/register'); }}>
                       Create Account
                     </Button>
-                    <Button size="lg" variant="outline" className="h-14 rounded-2xl text-lg font-bold bg-background/50 backdrop-blur-sm" onClick={() => { handleFinish(); navigate('/login'); }}>
+                    <Button size="lg" variant="outline" className="h-14 rounded-2xl text-lg font-bold bg-[#0D0D0D]/50 backdrop-blur-sm border-[#C8A951] text-[#C8A951] hover:bg-[#C8A951]/10" onClick={() => { handleFinish(); navigate('/login'); }}>
                       Sign In
                     </Button>
                   </div>
@@ -184,7 +184,7 @@ export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
             <div
               key={i}
               className={`h-1.5 rounded-full transition-all duration-500 ${
-                i === currentSlide ? "w-8 bg-primary" : "w-1.5 bg-primary/20"
+                i === currentSlide ? "w-8 bg-secondary" : "w-1.5 bg-muted-foreground"
               }`}
             />
           ))}
@@ -192,7 +192,7 @@ export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
         <Button
           size="icon"
           onClick={handleNext}
-          className="size-14 rounded-2xl shadow-xl shadow-primary/20 group"
+          className="size-14 rounded-2xl shadow-xl shadow-secondary/20 group bg-secondary text-background hover:bg-secondary/90"
         >
           {currentSlide === slides.length - 1 ? (
              <ShieldCheck className="size-6" />

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#013220</color>
+    <color name="colorPrimaryDark">#002210</color>
+    <color name="colorAccent">#DAA520</color>
+
+    <!-- Primary Dark Theme Colors -->
+    <color name="dark_background">#0D0D0D</color>
+    <color name="dark_surface">#1A1A1A</color>
+    <color name="dark_card_bg">#1E1E1E</color>
+    <color name="card_border_color">#2A2A2A</color>
+    <color name="gold_accent">#C8A951</color>
+    <color name="muted_gold">#8A7A3A</color>
+    <color name="dark_green_primary">#1B3D1B</color>
+    <color name="green_accent">#2ECC71</color>
+    <color name="white_text">#FFFFFF</color>
+    <color name="light_text">#B0B0B0</color>
+    <color name="muted_text">#707070</color>
+    <color name="red_accent">#E74C3C</color>
+    <color name="chip_selected_bg">#2A2A2A</color>
+    <color name="chip_unselected_bg">#141414</color>
+    <color name="bottom_nav_bg">#111111</color>
+    <color name="status_bar_color">#0D0D0D</color>
+</resources>

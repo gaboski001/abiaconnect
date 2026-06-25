@@ -16,7 +16,30 @@
     </style>
 
 
+    <style name="Theme.AbiaConnect" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/dark_green_primary</item>
+        <item name="colorSecondary">@color/gold_accent</item>
+        <item name="android:colorBackground">@color/dark_background</item>
+        <item name="colorSurface">@color/dark_surface</item>
+        <item name="colorOnPrimary">@color/white_text</item>
+        <item name="colorOnSecondary">@color/dark_background</item>
+        <item name="colorOnBackground">@color/white_text</item>
+        <item name="colorOnSurface">@color/white_text</item>
+        <item name="android:statusBarColor">@color/status_bar_color</item>
+        <item name="android:navigationBarColor">@color/bottom_nav_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowBackground">@color/dark_background</item>
+    </style>
+
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+    </style>
+
+    <style name="ResponsiveLayout">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:maxWidth">@dimen/max_webview_width</item>
+        <item name="android:layout_gravity">center_horizontal</item>
     </style>
 </resources>

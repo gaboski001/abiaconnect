@@ -57,7 +57,7 @@ export function MobileBottomNav() {
   ];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-xl border-t border-border z-50 px-2 pb-safe-offset-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#111111] backdrop-blur-xl border-t border-[#2A2A2A] z-50 px-2 pb-safe-offset-2 shadow-[0_-4px_20px_rgba(0,0,0,0.2)]">
       <div className="flex items-center justify-around h-16">
         {NAV_ITEMS.map((item) => {
           const active = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
@@ -67,13 +67,13 @@ export function MobileBottomNav() {
               key={item.path}
               to={item.path}
               className={`relative flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-300 ${
-                active ? 'text-primary scale-110' : 'text-muted-foreground'
+                active ? 'text-[#C8A951] scale-110' : 'text-[#707070]'
               }`}
             >
               <div className="relative">
-                <Icon className={`size-6 ${active ? 'fill-primary/10' : ''}`} />
+                <Icon className={`size-6 ${active ? 'fill-[#C8A951]/10' : ''}`} />
                 {item.badge && item.badge > 0 ? (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-red-600 text-white text-[9px] font-bold flex items-center justify-center border-2 border-background">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#E74C3C] text-white text-[9px] font-bold flex items-center justify-center border-2 border-[#111111]">
                     {item.badge > 9 ? '9+' : item.badge}
                   </span>
                 ) : null}
@@ -85,7 +85,7 @@ export function MobileBottomNav() {
               {active && (
                 <motion.div
                   layoutId="bottomNavIndicator"
-                  className="absolute -bottom-1 w-12 h-1 rounded-full bg-primary/20"
+                  className="absolute -bottom-1 w-12 h-1 rounded-full bg-[#C8A951]/20"
                 />
               )}
             </Link>

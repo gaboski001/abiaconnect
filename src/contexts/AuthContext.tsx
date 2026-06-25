@@ -106,7 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [role, setRole] = useState<Role>('guest')
   const [loading, setLoading] = useState(true)
-  const [lastActivity, setLastActivity] = useState(Date.now())
+
+  // Use a ref for last activity to avoid frequent re-renders during mouse moves
+  const lastActivityRef = import.meta.env.SSR ? { current: Date.now() } : { current: Date.now() }
 
   // Load initial user from cache for faster UI feedback
   useEffect(() => {
@@ -152,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setRole(await fetchRole(newUser.id))
-      setLastActivity(Date.now())
+      lastActivityRef.current = Date.now()
     } else {
       localStorage.removeItem(CACHE_KEY)
       if (Capacitor.isNativePlatform()) {
@@ -164,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Main Auth Initialization & Listener
   useEffect(() => {
     let mounted = true
 
@@ -180,28 +183,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })
 
-    // Session Timeout Handling
-    const activityHandler = () => setLastActivity(Date.now())
+    return () => {
+      mounted = false
+      sub.subscription.unsubscribe()
+    }
+  }, [applySession])
+
+  // Separate Session Timeout Handling
+  useEffect(() => {
+    if (!user) return
+
+    const activityHandler = () => {
+      lastActivityRef.current = Date.now()
+    }
+
     window.addEventListener('mousemove', activityHandler)
     window.addEventListener('keydown', activityHandler)
     window.addEventListener('touchstart', activityHandler)
 
     const timeoutCheck = setInterval(() => {
-      if (user && Date.now() - lastActivity > SESSION_TIMEOUT) {
+      if (user && Date.now() - lastActivityRef.current > SESSION_TIMEOUT) {
         console.log('Session timed out due to inactivity')
         void signOut()
       }
-    }, 60000) // Check every minute
+    }, 60000)
 
     return () => {
-      mounted = false
-      sub.subscription.unsubscribe()
       window.removeEventListener('mousemove', activityHandler)
       window.removeEventListener('keydown', activityHandler)
       window.removeEventListener('touchstart', activityHandler)
       clearInterval(timeoutCheck)
     }
-  }, [user, lastActivity, applySession])
+  }, [user])
 
   async function signOut() {
     await supabase.auth.signOut()

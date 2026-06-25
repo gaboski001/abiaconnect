@@ -76,10 +76,16 @@ export default function App() {
   useEffect(() => {
     if (appState === 'ready' && !loading) {
       const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding') === 'true'
+      const isAuthPath = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname)
+
       if (!user && !hasSeenOnboarding && Capacitor.isNativePlatform()) {
         setAppState('onboarding')
-      } else if (!user && (location.pathname === '/dashboard' || location.pathname === '/profile')) {
+      } else if (!user && !isAuthPath && location.pathname !== '/version') {
+        // Redirect any unauthenticated user to login as the default page
         navigate('/login', { replace: true })
+      } else if (user && isAuthPath) {
+        // Redirect authenticated users away from auth pages
+        navigate('/dashboard', { replace: true })
       }
     }
   }, [appState, loading, user, navigate, location.pathname])

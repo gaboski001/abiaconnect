@@ -104,12 +104,12 @@ export function Navbar() {
   const handleSignOut = async () => {
     await signOut()
     setOpen(false)
-    navigate('/')
+    navigate('/login')
   }
 
   return (
     <header className="sticky top-0 z-50 h-20 bg-background/80 backdrop-blur-2xl border-b border-border">
-      <div className="mx-auto h-full max-w-[1400px] px-6 flex items-center justify-between gap-4">
+      <div className="mx-auto h-full max-w-[1400px] px-3 md:px-6 flex items-center justify-between gap-2 md:gap-4">
         {/* Left: Logo */}
         <div className="flex items-center gap-3">
           {!isAuthPage && (
