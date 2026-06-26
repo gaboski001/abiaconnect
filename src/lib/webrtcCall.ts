@@ -241,13 +241,18 @@ class CallManager {
     if (this.remoteAudio) {
       this.remoteAudio.srcObject = null
     }
+    this.poorSince = null
+    this.currentJitterTargetMs = 80
     this.patch({
       status: 'ended',
       muted: false,
       error,
       quality: 'unknown',
       stats: { ...INITIAL_STATS },
+      degraded: false,
+      reconnecting: false,
     })
+
     window.setTimeout(() => {
       if (this.state.status === 'ended') {
         this.patch({
