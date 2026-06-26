@@ -84,7 +84,10 @@ class CallManager {
     error: null,
     quality: 'unknown',
     stats: { ...INITIAL_STATS },
+    degraded: false,
+    reconnecting: false,
   }
+
   private userId: string | null = null
   private selfPeer: CallPeer | null = null
   private userChannel: RealtimeChannel | null = null
