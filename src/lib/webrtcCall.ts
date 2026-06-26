@@ -383,11 +383,27 @@ class CallManager {
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState
       if (s === 'connected') {
-        this.patch({ status: 'connected', startedAt: Date.now() })
+        const wasConnecting = this.state.status !== 'connected'
+        this.patch({
+          status: 'connected',
+          startedAt: this.state.startedAt ?? Date.now(),
+          reconnecting: false,
+          timeline: wasConnecting
+            ? this.appendTimeline(this.state.timeline, 'unknown', 'Connected')
+            : this.state.timeline,
+        })
         this.startStatsLoop()
-      } else if (s === 'failed' || s === 'disconnected' || s === 'closed') {
+      } else if (s === 'failed') {
         if (this.state.status === 'connected' || this.state.status === 'connecting') {
-          void this.endCall(true, s === 'failed' ? 'Connection lost' : null)
+          this.scheduleAutoReconnect('ICE failed')
+        }
+      } else if (s === 'disconnected') {
+        if (this.state.status === 'connected') {
+          this.scheduleAutoReconnect('Disconnected')
+        }
+      } else if (s === 'closed') {
+        if (this.state.status === 'connected' || this.state.status === 'connecting') {
+          void this.endCall(false)
         }
       }
     }
