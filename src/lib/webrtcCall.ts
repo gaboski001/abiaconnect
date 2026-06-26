@@ -26,6 +26,15 @@ export interface CallPeer {
   avatarUrl?: string | null
 }
 
+export type CallQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'unknown'
+
+export interface CallStats {
+  rttMs: number | null
+  jitterMs: number | null
+  packetLossPct: number | null
+  bitrateKbps: number | null
+}
+
 export interface CallState {
   status: CallStatus
   callId: string | null
@@ -34,7 +43,10 @@ export interface CallState {
   muted: boolean
   startedAt: number | null
   error: string | null
+  quality: CallQuality
+  stats: CallStats
 }
+
 
 type Listener = (state: CallState) => void
 
@@ -50,6 +62,13 @@ function newId() {
   return `c-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
+const INITIAL_STATS: CallStats = {
+  rttMs: null,
+  jitterMs: null,
+  packetLossPct: null,
+  bitrateKbps: null,
+}
+
 class CallManager {
   private listeners = new Set<Listener>()
   private state: CallState = {
@@ -60,6 +79,8 @@ class CallManager {
     muted: false,
     startedAt: null,
     error: null,
+    quality: 'unknown',
+    stats: { ...INITIAL_STATS },
   }
   private userId: string | null = null
   private selfPeer: CallPeer | null = null
@@ -70,6 +91,11 @@ class CallManager {
   private remoteAudio: HTMLAudioElement | null = null
   private pendingCandidates: RTCIceCandidateInit[] = []
   private pendingOffer: { from: CallPeer; sdp: RTCSessionDescriptionInit; callId: string } | null = null
+  private statsTimer: number | null = null
+  private lastBytesReceived = 0
+  private lastBytesTimestamp = 0
+  private currentTargetBitrateKbps = 32
+
 
   subscribe(fn: Listener) {
     this.listeners.add(fn)
@@ -192,6 +218,7 @@ class CallManager {
         .send({ type: 'broadcast', event: 'cancel', payload: { callId } })
         .catch(() => undefined)
     }
+    this.stopStatsLoop()
     this.pc?.getSenders().forEach((s) => s.track?.stop())
     this.pc?.close()
     this.pc = null
@@ -209,6 +236,8 @@ class CallManager {
       status: 'ended',
       muted: false,
       error,
+      quality: 'unknown',
+      stats: { ...INITIAL_STATS },
     })
     window.setTimeout(() => {
       if (this.state.status === 'ended') {
@@ -223,6 +252,7 @@ class CallManager {
       }
     }, 2500)
   }
+
 
   // ----- internals -----
 
@@ -276,17 +306,37 @@ class CallManager {
     const pc = new RTCPeerConnection({ iceServers: getIceServers() })
     this.pc = pc
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+        sampleRate: 48000,
+      } as MediaTrackConstraints,
       video: false,
     })
     this.localStream = stream
     stream.getTracks().forEach((t) => pc.addTrack(t, stream))
+
+    // Apply initial encoder bitrate cap (Opus speech ~32kbps).
+    this.currentTargetBitrateKbps = 32
+    this.applyBitrate(this.currentTargetBitrateKbps).catch(() => undefined)
 
     pc.ontrack = (e) => {
       const [remote] = e.streams
       if (this.remoteAudio && remote) {
         this.remoteAudio.srcObject = remote
         this.remoteAudio.play().catch(() => undefined)
+      }
+      // Hint a small jitter buffer for low-latency speech (Chromium experimental).
+      for (const r of pc.getReceivers()) {
+        const anyR = r as unknown as { jitterBufferTarget?: number; playoutDelayHint?: number }
+        try {
+          if ('jitterBufferTarget' in anyR) anyR.jitterBufferTarget = 80
+          else if ('playoutDelayHint' in anyR) anyR.playoutDelayHint = 0.08
+        } catch {
+          // ignore
+        }
       }
     }
     pc.onicecandidate = (e) => {
@@ -296,6 +346,7 @@ class CallManager {
       const s = pc.connectionState
       if (s === 'connected') {
         this.patch({ status: 'connected', startedAt: Date.now() })
+        this.startStatsLoop()
       } else if (s === 'failed' || s === 'disconnected' || s === 'closed') {
         if (this.state.status === 'connected' || this.state.status === 'connecting') {
           void this.endCall(true, s === 'failed' ? 'Connection lost' : null)
@@ -303,6 +354,121 @@ class CallManager {
       }
     }
   }
+
+  // ----- adaptive bitrate + quality monitoring -----
+
+  private async applyBitrate(kbps: number) {
+    const pc = this.pc
+    if (!pc) return
+    const sender = pc.getSenders().find((s) => s.track?.kind === 'audio')
+    if (!sender) return
+    const params = sender.getParameters()
+    if (!params.encodings || params.encodings.length === 0) {
+      params.encodings = [{}]
+    }
+    params.encodings[0].maxBitrate = Math.max(8000, Math.floor(kbps * 1000))
+    try {
+      await sender.setParameters(params)
+    } catch {
+      // ignore browsers that reject mid-call updates
+    }
+  }
+
+  private startStatsLoop() {
+    this.stopStatsLoop()
+    this.lastBytesReceived = 0
+    this.lastBytesTimestamp = 0
+    this.statsTimer = window.setInterval(() => {
+      void this.pollStats()
+    }, 2000)
+  }
+
+  private stopStatsLoop() {
+    if (this.statsTimer != null) {
+      window.clearInterval(this.statsTimer)
+      this.statsTimer = null
+    }
+  }
+
+  private async pollStats() {
+    const pc = this.pc
+    if (!pc) return
+    let rttMs: number | null = null
+    let jitterMs: number | null = null
+    let packetLossPct: number | null = null
+    let bitrateKbps: number | null = null
+    try {
+      const report = await pc.getStats()
+      let packetsLost = 0
+      let packetsReceived = 0
+      report.forEach((r: any) => {
+        if (r.type === 'remote-inbound-rtp' && r.kind === 'audio') {
+          if (typeof r.roundTripTime === 'number') rttMs = Math.round(r.roundTripTime * 1000)
+          if (typeof r.jitter === 'number') jitterMs = Math.round(r.jitter * 1000)
+        }
+        if (r.type === 'inbound-rtp' && r.kind === 'audio') {
+          if (typeof r.jitter === 'number' && jitterMs == null) jitterMs = Math.round(r.jitter * 1000)
+          if (typeof r.packetsLost === 'number') packetsLost += r.packetsLost
+          if (typeof r.packetsReceived === 'number') packetsReceived += r.packetsReceived
+          if (typeof r.bytesReceived === 'number' && typeof r.timestamp === 'number') {
+            if (this.lastBytesTimestamp > 0) {
+              const dBytes = r.bytesReceived - this.lastBytesReceived
+              const dMs = r.timestamp - this.lastBytesTimestamp
+              if (dMs > 0 && dBytes >= 0) {
+                bitrateKbps = Math.round((dBytes * 8) / dMs)
+              }
+            }
+            this.lastBytesReceived = r.bytesReceived
+            this.lastBytesTimestamp = r.timestamp
+          }
+        }
+        if (r.type === 'candidate-pair' && r.state === 'succeeded' && r.nominated) {
+          if (typeof r.currentRoundTripTime === 'number' && rttMs == null) {
+            rttMs = Math.round(r.currentRoundTripTime * 1000)
+          }
+        }
+      })
+      const totalPackets = packetsLost + packetsReceived
+      if (totalPackets > 0) {
+        packetLossPct = Math.round((packetsLost / totalPackets) * 1000) / 10
+      }
+    } catch {
+      // ignore
+    }
+
+    const quality = this.scoreQuality(rttMs, jitterMs, packetLossPct)
+    this.patch({
+      quality,
+      stats: { rttMs, jitterMs, packetLossPct, bitrateKbps },
+    })
+    this.adaptBitrate(quality)
+  }
+
+  private scoreQuality(
+    rtt: number | null,
+    jitter: number | null,
+    loss: number | null,
+  ): CallQuality {
+    if (rtt == null && jitter == null && loss == null) return 'unknown'
+    const lossV = loss ?? 0
+    const rttV = rtt ?? 0
+    const jitterV = jitter ?? 0
+    if (lossV >= 8 || rttV >= 500 || jitterV >= 60) return 'poor'
+    if (lossV >= 3 || rttV >= 300 || jitterV >= 30) return 'fair'
+    if (lossV >= 1 || rttV >= 180 || jitterV >= 15) return 'good'
+    return 'excellent'
+  }
+
+  private adaptBitrate(quality: CallQuality) {
+    const target =
+      quality === 'poor' ? 12 : quality === 'fair' ? 20 : quality === 'good' ? 28 : 40
+    if (target !== this.currentTargetBitrateKbps) {
+      this.currentTargetBitrateKbps = target
+      void this.applyBitrate(target)
+    }
+  }
+
+
 
   private async onAccept(isCaller: boolean) {
     if (!isCaller || !this.pc) return

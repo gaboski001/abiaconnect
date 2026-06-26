@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Phone, PhoneOff, Mic, MicOff } from 'lucide-react'
+import { Phone, PhoneOff, Mic, MicOff, SignalHigh, SignalMedium, SignalLow, Signal } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
-import { callManager, type CallState } from '@/lib/webrtcCall'
+import { callManager, type CallState, type CallQuality } from '@/lib/webrtcCall'
 import { cn } from '@/lib/utils'
 
 function fmt(ms: number) {
@@ -11,6 +11,16 @@ function fmt(ms: number) {
   const s = total % 60
   return `${m}:${s.toString().padStart(2, '0')}`
 }
+
+const QUALITY_META: Record<CallQuality, { label: string; className: string; Icon: typeof Signal }> = {
+  excellent: { label: 'Excellent', className: 'text-green-500', Icon: SignalHigh },
+  good: { label: 'Good', className: 'text-green-500', Icon: SignalHigh },
+  fair: { label: 'Fair', className: 'text-yellow-500', Icon: SignalMedium },
+  poor: { label: 'Poor', className: 'text-red-500', Icon: SignalLow },
+  unknown: { label: 'Measuring…', className: 'text-muted-foreground', Icon: Signal },
+}
+
+
 
 export function CallOverlay({ state }: { state: CallState }) {
   const [now, setNow] = useState(Date.now())
@@ -56,7 +66,30 @@ export function CallOverlay({ state }: { state: CallState }) {
         </div>
         <h2 className="text-xl font-semibold">{peer.name}</h2>
         <p className="text-sm text-muted-foreground tabular-nums">{statusLabel}</p>
+        {state.status === 'connected' && (() => {
+          const meta = QUALITY_META[state.quality]
+          const { Icon } = meta
+          const { rttMs, jitterMs, packetLossPct, bitrateKbps } = state.stats
+          return (
+            <div
+              className={cn('flex items-center gap-1.5 text-xs', meta.className)}
+              title={[
+                rttMs != null ? `RTT ${rttMs}ms` : null,
+                jitterMs != null ? `jitter ${jitterMs}ms` : null,
+                packetLossPct != null ? `loss ${packetLossPct}%` : null,
+                bitrateKbps != null ? `${bitrateKbps}kbps` : null,
+              ]
+                .filter(Boolean)
+                .join(' • ')}
+              aria-label={`Call quality: ${meta.label}`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span>{meta.label}</span>
+            </div>
+          )
+        })()}
       </div>
+
 
       <div className="flex items-center gap-6">
         {state.status === 'connected' && (
