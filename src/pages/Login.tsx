@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
+import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton'
+import { enableBiometric, isBiometricAvailable, isBiometricEnabled } from '@/lib/biometric'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -36,6 +38,15 @@ export default function Login() {
         return
       }
       toast.success('Welcome back!')
+      // On native devices, offer to enable biometric unlock the first time.
+      try {
+        if (!isBiometricEnabled() && (await isBiometricAvailable())) {
+          const enabled = await enableBiometric(email, password)
+          if (enabled) toast.success('Biometric sign-in enabled')
+        }
+      } catch {
+        /* non-fatal */
+      }
       navigate('/')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Sign in failed')
@@ -107,6 +118,8 @@ export default function Login() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Signing in…' : 'Sign In'}
           </Button>
+
+          <BiometricLoginButton onSuccess={() => navigate('/')} />
 
           <p className="text-sm text-center text-muted-foreground">
             New here?{' '}
