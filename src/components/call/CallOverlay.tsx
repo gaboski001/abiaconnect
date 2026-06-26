@@ -1,9 +1,25 @@
 import { useEffect, useState } from 'react'
-import { Phone, PhoneOff, Mic, MicOff } from 'lucide-react'
+import { Phone, PhoneOff, Mic, MicOff, SignalHigh, SignalMedium, SignalLow, Signal } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
-import { callManager, type CallState } from '@/lib/webrtcCall'
+import { callManager, type CallState, type CallQuality } from '@/lib/webrtcCall'
 import { cn } from '@/lib/utils'
+
+function fmt(ms: number) {
+  const total = Math.max(0, Math.floor(ms / 1000))
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+const QUALITY_META: Record<CallQuality, { label: string; className: string; Icon: typeof Signal }> = {
+  excellent: { label: 'Excellent', className: 'text-green-500', Icon: SignalHigh },
+  good: { label: 'Good', className: 'text-green-500', Icon: SignalHigh },
+  fair: { label: 'Fair', className: 'text-yellow-500', Icon: SignalMedium },
+  poor: { label: 'Poor', className: 'text-red-500', Icon: SignalLow },
+  unknown: { label: 'Measuring…', className: 'text-muted-foreground', Icon: Signal },
+}
+
 
 function fmt(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000))
