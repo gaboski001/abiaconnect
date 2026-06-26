@@ -555,11 +555,87 @@ class CallManager {
       else if (!this.state.degraded && Date.now() - this.poorSince >= 10000) {
         this.applyEmergencyDownshift()
       }
+      // After downshift, if still poor for another 10s, try auto-reconnect.
+      if (this.state.degraded && Date.now() - (this.poorSince ?? 0) >= 20000) {
+        this.scheduleAutoReconnect('Quality remained poor')
+      }
     } else if (quality === 'good' || quality === 'excellent') {
       this.poorSince = null
       if (this.state.degraded) {
         this.patch({ degraded: false })
       }
+    }
+  }
+
+  // ----- auto reconnect with exponential backoff -----
+
+  private appendTimeline(current: QualityEvent[], quality: CallQuality, note?: string): QualityEvent[] {
+    const next = [...current, { quality, at: Date.now(), note }]
+    // Cap to last 50 entries to bound memory.
+    return next.length > 50 ? next.slice(next.length - 50) : next
+  }
+
+  private clearAutoReconnect() {
+    if (this.autoReconnectTimer != null) {
+      window.clearTimeout(this.autoReconnectTimer)
+      this.autoReconnectTimer = null
+    }
+  }
+
+  private scheduleAutoReconnect(reason: string) {
+    if (this.autoReconnecting || this.autoReconnectTimer != null) return
+    if (this.state.status !== 'connected' && this.state.status !== 'connecting') return
+    const attempt = this.state.reconnectAttempts + 1
+    if (attempt > this.state.maxReconnectAttempts) {
+      void this.endCall(true, 'Connection lost after multiple retries')
+      return
+    }
+    // Exponential backoff: 2s, 4s, 8s …
+    const delay = Math.min(2000 * 2 ** (attempt - 1), 15000)
+    this.patch({
+      reconnecting: true,
+      reconnectAttempts: attempt,
+      timeline: this.appendTimeline(
+        this.state.timeline,
+        this.state.quality,
+        `Reconnect attempt ${attempt}/${this.state.maxReconnectAttempts} in ${Math.round(delay / 1000)}s (${reason})`,
+      ),
+    })
+    this.autoReconnectTimer = window.setTimeout(() => {
+      this.autoReconnectTimer = null
+      void this.runAutoReconnect()
+    }, delay)
+  }
+
+  private async runAutoReconnect() {
+    if (this.autoReconnecting) return
+    this.autoReconnecting = true
+    try {
+      if (this.state.direction === 'outgoing') {
+        await this.performIceRestart()
+      } else {
+        await this.sessionSend('restart', {})
+      }
+      // Give the connection up to ~8s to recover, then evaluate.
+      window.setTimeout(() => {
+        this.autoReconnecting = false
+        const cs = this.pc?.connectionState
+        if (cs === 'connected') {
+          this.poorSince = null
+          this.patch({
+            reconnecting: false,
+            reconnectAttempts: 0,
+            timeline: this.appendTimeline(this.state.timeline, this.state.quality, 'Reconnect succeeded'),
+          })
+        } else if (cs === 'failed' || cs === 'disconnected') {
+          this.scheduleAutoReconnect('Still unstable')
+        } else {
+          this.patch({ reconnecting: false })
+        }
+      }, 8000)
+    } catch {
+      this.autoReconnecting = false
+      this.scheduleAutoReconnect('Restart threw')
     }
   }
 
