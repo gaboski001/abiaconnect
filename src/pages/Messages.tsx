@@ -864,19 +864,45 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient()
   const [q, setQ] = useState('')
   const [creating, setCreating] = useState(false)
+  // Absolute timestamp (ms) until which we know the user is rate-limited.
+  // Lifted to the dialog so it persists across query refetches and keystrokes.
+  const [rateLimitedUntil, setRateLimitedUntil] = useState<number>(0)
+  const [nowTs, setNowTs] = useState<number>(() => Date.now())
+
+  const remainingMs = Math.max(0, rateLimitedUntil - nowTs)
+  const isRateLimited = remainingMs > 0
+
+  // Tick once per second only while a wait is active, so the countdown stays
+  // smooth and consistent even if new search attempts come in.
+  useEffect(() => {
+    if (!isRateLimited) return
+    const id = setInterval(() => setNowTs(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [isRateLimited])
 
   const usersQ = useQuery({
     queryKey: ['user-search', q],
-    enabled: q.trim().length >= 2,
+    // Suspend searches entirely while waiting — no need to spam the server.
+    enabled: q.trim().length >= 2 && !isRateLimited,
     queryFn: async () => {
       const term = q.trim()
       const { data, error } = await supabase.rpc('search_public_profiles', {
         _term: term,
         _limit: 15,
       })
-      if (error) throw error
+      if (error) {
+        const retry = parseRetryAfter(error.message)
+        if (retry !== null) {
+          const candidate = Date.now() + retry * 1000
+          // Only extend the wait — never shorten it — so consecutive errors
+          // from the server can't make the countdown jump around.
+          setRateLimitedUntil((prev) => (candidate > prev ? candidate : prev))
+        }
+        throw error
+      }
       return ((data ?? []) as Profile[]).filter((u) => u.id !== user?.id)
     },
+    retry: false,
   })
 
   const startChat = async (other: Profile) => {
@@ -911,6 +937,9 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
     }
   }
 
+  const remainingSeconds = Math.ceil(remainingMs / 1000)
+  const showRateLimit = isRateLimited || (usersQ.isError && /rate limit/i.test((usersQ.error as Error)?.message ?? ''))
+
   return (
     <DialogContent>
       <DialogHeader>
@@ -933,11 +962,17 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
             <div className="p-4 text-xs text-muted-foreground">
               Type at least 2 characters to search.
             </div>
+          ) : showRateLimit ? (
+            <div className="p-4 text-xs text-destructive">
+              You're searching too fast.{' '}
+              {remainingSeconds > 0
+                ? `Please wait ${remainingSeconds} second${remainingSeconds === 1 ? '' : 's'} and try again.`
+                : 'You can try again now.'}
+            </div>
           ) : usersQ.isLoading ? (
             <div className="p-4 text-xs text-muted-foreground">Searching…</div>
           ) : usersQ.isError ? (
-            <RateLimitMessage error={usersQ.error as Error} />
-          
+            <div className="p-4 text-xs text-destructive">Search failed. Please try again.</div>
           ) : (usersQ.data ?? []).length === 0 ? (
             <div className="p-4 text-xs text-muted-foreground">No users found.</div>
           ) : (
@@ -972,32 +1007,5 @@ function parseRetryAfter(msg: string | undefined): number | null {
   return m ? Math.max(1, parseInt(m[1], 10)) : null
 }
 
-function RateLimitMessage({ error }: { error: Error }) {
-  const message = error?.message ?? ''
-  const initial = parseRetryAfter(message)
-  const isRate = /rate limit/i.test(message) || initial !== null
-  const [remaining, setRemaining] = useState<number>(initial ?? 0)
 
-  useEffect(() => {
-    if (!isRate || !initial) return
-    setRemaining(initial)
-    const id = setInterval(() => {
-      setRemaining((s) => (s <= 1 ? 0 : s - 1))
-    }, 1000)
-    return () => clearInterval(id)
-  }, [initial, isRate])
-
-  if (!isRate) {
-    return <div className="p-4 text-xs text-destructive">Search failed. Please try again.</div>
-  }
-
-  return (
-    <div className="p-4 text-xs text-destructive">
-      You're searching too fast.{' '}
-      {remaining > 0
-        ? `Please wait ${remaining} second${remaining === 1 ? '' : 's'} and try again.`
-        : 'You can try again now.'}
-    </div>
-  )
-}
 
