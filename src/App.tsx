@@ -4,6 +4,7 @@ import { MainLayout } from '@/components/layout/MainLayout'
 import { NativeOnboardingGate } from '@/components/mobile/NativeOnboardingGate'
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { RecoveryRedirect } from '@/components/auth/RecoveryRedirect'
+import { CallProvider } from '@/components/call/CallProvider'
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute'
 import Home from '@/pages/Home'
 import Login from '@/pages/Login'
@@ -69,6 +70,7 @@ export default function App() {
       <ScrollToTop />
       <RecoveryRedirect />
       <NativeOnboardingGate />
+      <CallProvider />
       <Routes>
       <Route element={<MainLayout />}>
         <Route index element={<Home />} />
