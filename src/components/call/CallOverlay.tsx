@@ -66,7 +66,30 @@ export function CallOverlay({ state }: { state: CallState }) {
         </div>
         <h2 className="text-xl font-semibold">{peer.name}</h2>
         <p className="text-sm text-muted-foreground tabular-nums">{statusLabel}</p>
+        {state.status === 'connected' && (() => {
+          const meta = QUALITY_META[state.quality]
+          const { Icon } = meta
+          const { rttMs, jitterMs, packetLossPct, bitrateKbps } = state.stats
+          return (
+            <div
+              className={cn('flex items-center gap-1.5 text-xs', meta.className)}
+              title={[
+                rttMs != null ? `RTT ${rttMs}ms` : null,
+                jitterMs != null ? `jitter ${jitterMs}ms` : null,
+                packetLossPct != null ? `loss ${packetLossPct}%` : null,
+                bitrateKbps != null ? `${bitrateKbps}kbps` : null,
+              ]
+                .filter(Boolean)
+                .join(' • ')}
+              aria-label={`Call quality: ${meta.label}`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span>{meta.label}</span>
+            </div>
+          )
+        })()}
       </div>
+
 
       <div className="flex items-center gap-6">
         {state.status === 'connected' && (
