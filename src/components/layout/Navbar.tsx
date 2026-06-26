@@ -158,8 +158,8 @@ export function Navbar() {
                     </Button>
                     <Button
                       asChild
+                      variant="goldGradient"
                       onClick={() => setOpen(false)}
-                      className="btn-gold-gradient"
                     >
                       <Link to="/register">Join Free</Link>
                     </Button>
@@ -223,7 +223,7 @@ export function Navbar() {
               </Button>
               <Button
                 asChild
-                className="btn-gold-gradient"
+                variant="goldGradient"
               >
                 <Link to="/register">Join Free</Link>
               </Button>
