@@ -1521,6 +1521,15 @@ export type Database = {
         Args: { _username: string }
         Returns: string
       }
+      search_public_profiles: {
+        Args: { _limit?: number; _term: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          id: string
+          username: string
+        }[]
+      }
     }
     Enums: {
       app_role: "Super Admin" | "Admin" | "Member"
