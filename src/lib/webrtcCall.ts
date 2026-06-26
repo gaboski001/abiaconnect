@@ -298,6 +298,11 @@ class CallManager {
     ch.on('broadcast', { event: 'sdp' }, ({ payload }) => this.onSdp(payload, isCaller))
     ch.on('broadcast', { event: 'ice' }, ({ payload }) => this.onIce(payload))
     ch.on('broadcast', { event: 'bye' }, () => this.endCall(false))
+    ch.on('broadcast', { event: 'restart' }, () => {
+      // Peer asked us to renegotiate with ICE restart.
+      if (isCaller) void this.performIceRestart()
+    })
+
     await new Promise<void>((resolve) => {
       ch.subscribe((status) => {
         if (status === 'SUBSCRIBED') resolve()
