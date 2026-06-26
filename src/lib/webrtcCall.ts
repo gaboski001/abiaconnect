@@ -655,7 +655,12 @@ class CallManager {
     const pc = this.pc
     if (!pc) return
     if (this.state.reconnecting) return
-    this.patch({ reconnecting: true })
+    this.clearAutoReconnect()
+    this.patch({
+      reconnecting: true,
+      reconnectAttempts: 0,
+      timeline: this.appendTimeline(this.state.timeline, this.state.quality, 'Manual reconnect'),
+    })
     try {
       if (this.state.direction === 'outgoing') {
         await this.performIceRestart()
