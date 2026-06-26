@@ -5,6 +5,7 @@ import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
 import {
   ArrowLeft,
   MessageSquarePlus,
+  Phone,
   Search,
   Send,
   Loader2,
@@ -14,6 +15,8 @@ import {
   FileText,
   Download,
 } from 'lucide-react'
+import { VoiceRecorderButton, VoiceMessageBubble, isAudioAttachment } from '@/components/messages/VoiceRecorder'
+import { callManager, useIsCallSupported } from '@/lib/webrtcCall'
 import { SEO } from '@/components/SEO'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -566,7 +569,7 @@ function ConversationView({
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <Avatar profile={other} size="sm" />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-semibold text-sm truncate">
             {other?.display_name || other?.username || 'Conversation'}
           </p>
@@ -574,6 +577,25 @@ function ConversationView({
             <p className="text-xs text-muted-foreground truncate">@{other.username}</p>
           )}
         </div>
+        {other?.id && useIsCallSupported() && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() =>
+              callManager
+                .startCall({
+                  id: other.id,
+                  name: other.display_name || other.username || 'User',
+                  avatarUrl: other.avatar_url ?? null,
+                })
+                .catch((err) => toast.error(err?.message || 'Could not start call'))
+            }
+            aria-label="Voice call"
+            title="Voice call"
+          >
+            <Phone className="h-5 w-5" />
+          </Button>
+        )}
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -591,9 +613,11 @@ function ConversationView({
               </div>
               {g.items.map((m) => {
                 const mine = m.sender_id === user?.id
+                const hasAudio =
+                  m.attachment_url && isAudioAttachment(m.attachment_type)
                 const hasImage =
-                  m.attachment_url && (m.attachment_type?.startsWith('image/') ?? false)
-                const hasFile = m.attachment_url && !hasImage
+                  m.attachment_url && !hasAudio && (m.attachment_type?.startsWith('image/') ?? false)
+                const hasFile = m.attachment_url && !hasImage && !hasAudio
                 return (
                   <div
                     key={m.id}
@@ -610,6 +634,9 @@ function ConversationView({
                         m._optimistic && 'opacity-70',
                       )}
                     >
+                      {hasAudio && (
+                        <VoiceMessageBubble url={m.attachment_url!} mine={mine} />
+                      )}
                       {hasImage && (
                         <a
                           href={m.attachment_url!}
@@ -834,6 +861,18 @@ function ConversationView({
               </Suspense>
             </PopoverContent>
           </Popover>
+          <VoiceRecorderButton
+            disabled={!user}
+            onSend={(file, _ms) => {
+              if (!user) return
+              uploadQueue.enqueue({
+                conversationId,
+                senderId: user.id,
+                content: '',
+                file,
+              })
+            }}
+          />
           <Textarea
             ref={textareaRef}
             value={draft}

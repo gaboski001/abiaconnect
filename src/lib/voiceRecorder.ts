@@ -1,0 +1,115 @@
+// Lightweight MediaRecorder wrapper for chat voice notes.
+// Records mono audio at a low bitrate, encoded as webm/opus (or mp4 on Safari/iOS).
+
+export interface VoiceRecording {
+  file: File
+  durationMs: number
+  mimeType: string
+}
+
+function pickMimeType(): string {
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4;codecs=mp4a.40.2',
+    'audio/mp4',
+    'audio/aac',
+  ]
+  for (const c of candidates) {
+    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported?.(c)) return c
+  }
+  return ''
+}
+
+export class VoiceRecorder {
+  private stream: MediaStream | null = null
+  private recorder: MediaRecorder | null = null
+  private chunks: BlobPart[] = []
+  private startedAt = 0
+  private mimeType = ''
+  private analyser: AnalyserNode | null = null
+  private audioCtx: AudioContext | null = null
+
+  async start(onLevel?: (level: number) => void) {
+    this.stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    })
+    this.mimeType = pickMimeType()
+    this.recorder = new MediaRecorder(
+      this.stream,
+      this.mimeType ? { mimeType: this.mimeType, audioBitsPerSecond: 32000 } : undefined,
+    )
+    this.chunks = []
+    this.recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size) this.chunks.push(e.data)
+    }
+    this.recorder.start(250)
+    this.startedAt = Date.now()
+
+    if (onLevel) {
+      const AC = window.AudioContext || (window as any).webkitAudioContext
+      this.audioCtx = new AC()
+      const src = this.audioCtx.createMediaStreamSource(this.stream)
+      const analyser = this.audioCtx.createAnalyser()
+      analyser.fftSize = 256
+      src.connect(analyser)
+      this.analyser = analyser
+      const data = new Uint8Array(analyser.frequencyBinCount)
+      const tick = () => {
+        if (!this.analyser) return
+        analyser.getByteFrequencyData(data)
+        let sum = 0
+        for (let i = 0; i < data.length; i++) sum += data[i]
+        const avg = sum / data.length / 255
+        onLevel(avg)
+        requestAnimationFrame(tick)
+      }
+      tick()
+    }
+  }
+
+  async stop(): Promise<VoiceRecording | null> {
+    const rec = this.recorder
+    const stream = this.stream
+    if (!rec || !stream) return null
+    return new Promise((resolve) => {
+      rec.onstop = () => {
+        const durationMs = Date.now() - this.startedAt
+        const mime = this.mimeType || 'audio/webm'
+        const ext = mime.includes('mp4') || mime.includes('aac') ? 'm4a' : 'webm'
+        const blob = new Blob(this.chunks, { type: mime })
+        const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: mime })
+        this.cleanup()
+        resolve({ file, durationMs, mimeType: mime })
+      }
+      rec.stop()
+    })
+  }
+
+  cancel() {
+    try {
+      this.recorder?.stop()
+    } catch {
+      // ignore
+    }
+    this.cleanup()
+  }
+
+  private cleanup() {
+    this.stream?.getTracks().forEach((t) => t.stop())
+    this.stream = null
+    this.recorder = null
+    this.chunks = []
+    this.analyser?.disconnect()
+    this.analyser = null
+    this.audioCtx?.close().catch(() => undefined)
+    this.audioCtx = null
+  }
+}
+
+export function formatDuration(ms: number): string {
+  const total = Math.max(0, Math.round(ms / 1000))
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
