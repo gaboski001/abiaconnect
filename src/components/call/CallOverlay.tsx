@@ -21,12 +21,6 @@ const QUALITY_META: Record<CallQuality, { label: string; className: string; Icon
 }
 
 
-function fmt(ms: number) {
-  const total = Math.max(0, Math.floor(ms / 1000))
-  const m = Math.floor(total / 60)
-  const s = total % 60
-  return `${m}:${s.toString().padStart(2, '0')}`
-}
 
 export function CallOverlay({ state }: { state: CallState }) {
   const [now, setNow] = useState(Date.now())
