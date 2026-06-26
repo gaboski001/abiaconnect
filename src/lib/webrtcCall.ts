@@ -468,7 +468,7 @@ class CallManager {
     }
   }
 
-  }
+
 
   private async onAccept(isCaller: boolean) {
     if (!isCaller || !this.pc) return
