@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { NativeOnboardingGate } from '@/components/mobile/NativeOnboardingGate'
 import { ScrollToTop } from '@/components/ScrollToTop'
+import { RecoveryRedirect } from '@/components/auth/RecoveryRedirect'
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute'
 import Home from '@/pages/Home'
 import Login from '@/pages/Login'
@@ -65,6 +66,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <RecoveryRedirect />
       <NativeOnboardingGate />
       <Routes>
       <Route element={<MainLayout />}>
