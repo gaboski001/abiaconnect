@@ -95,6 +95,9 @@ class CallManager {
     stats: { ...INITIAL_STATS },
     degraded: false,
     reconnecting: false,
+    reconnectAttempts: 0,
+    maxReconnectAttempts: 3,
+    timeline: [],
   }
 
   private userId: string | null = null
@@ -112,6 +115,8 @@ class CallManager {
   private currentTargetBitrateKbps = 32
   private currentJitterTargetMs = 80
   private poorSince: number | null = null
+  private autoReconnectTimer: number | null = null
+  private autoReconnecting = false
 
 
 
