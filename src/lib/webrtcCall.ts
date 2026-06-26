@@ -26,6 +26,15 @@ export interface CallPeer {
   avatarUrl?: string | null
 }
 
+export type CallQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'unknown'
+
+export interface CallStats {
+  rttMs: number | null
+  jitterMs: number | null
+  packetLossPct: number | null
+  bitrateKbps: number | null
+}
+
 export interface CallState {
   status: CallStatus
   callId: string | null
@@ -34,7 +43,10 @@ export interface CallState {
   muted: boolean
   startedAt: number | null
   error: string | null
+  quality: CallQuality
+  stats: CallStats
 }
+
 
 type Listener = (state: CallState) => void
 
