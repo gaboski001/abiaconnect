@@ -11,7 +11,13 @@ import { SEO } from '@/components/SEO'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton'
-import { enableBiometric, isBiometricAvailable, isBiometricEnabled } from '@/lib/biometric'
+import { BiometricOptInDialog } from '@/components/auth/BiometricOptInDialog'
+import {
+  hasDeclinedBiometric,
+  isBiometricAvailable,
+  isBiometricEnabled,
+  setBiometricDeclined,
+} from '@/lib/biometric'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -22,6 +28,8 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [optInOpen, setOptInOpen] = useState(false)
+  const [pendingCreds, setPendingCreds] = useState<{ email: string; password: string } | null>(null)
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -38,11 +46,17 @@ export default function Login() {
         return
       }
       toast.success('Welcome back!')
-      // On native devices, offer to enable biometric unlock the first time.
+      // On native devices, show an explanatory opt-in BEFORE invoking the
+      // system biometric prompt. Skip if already enabled or previously declined.
       try {
-        if (!isBiometricEnabled() && (await isBiometricAvailable())) {
-          const enabled = await enableBiometric(email, password)
-          if (enabled) toast.success('Biometric sign-in enabled')
+        if (
+          !isBiometricEnabled() &&
+          !hasDeclinedBiometric() &&
+          (await isBiometricAvailable())
+        ) {
+          setPendingCreds({ email, password })
+          setOptInOpen(true)
+          return
         }
       } catch {
         /* non-fatal */
@@ -120,6 +134,20 @@ export default function Login() {
           </Button>
 
           <BiometricLoginButton onSuccess={() => navigate('/')} />
+
+          {pendingCreds && (
+            <BiometricOptInDialog
+              open={optInOpen}
+              email={pendingCreds.email}
+              password={pendingCreds.password}
+              onClose={(enabled) => {
+                if (!enabled) setBiometricDeclined(true)
+                setOptInOpen(false)
+                setPendingCreds(null)
+                navigate('/')
+              }}
+            />
+          )}
 
           <p className="text-sm text-center text-muted-foreground">
             New here?{' '}
