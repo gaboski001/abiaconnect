@@ -936,11 +936,8 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
           ) : usersQ.isLoading ? (
             <div className="p-4 text-xs text-muted-foreground">Searching…</div>
           ) : usersQ.isError ? (
-            <div className="p-4 text-xs text-destructive">
-              {/Rate limit/i.test((usersQ.error as Error)?.message ?? '')
-                ? 'You\'re searching too fast. Please wait a minute and try again.'
-                : 'Search failed. Please try again.'}
-            </div>
+            <RateLimitMessage error={usersQ.error as Error} />
+          
           ) : (usersQ.data ?? []).length === 0 ? (
             <div className="p-4 text-xs text-muted-foreground">No users found.</div>
           ) : (
@@ -968,3 +965,39 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
     </DialogContent>
   )
 }
+
+function parseRetryAfter(msg: string | undefined): number | null {
+  if (!msg) return null
+  const m = msg.match(/retry[_ ]after[=:\s]+(\d+)/i) || msg.match(/retry in (\d+)\s*seconds?/i)
+  return m ? Math.max(1, parseInt(m[1], 10)) : null
+}
+
+function RateLimitMessage({ error }: { error: Error }) {
+  const message = error?.message ?? ''
+  const initial = parseRetryAfter(message)
+  const isRate = /rate limit/i.test(message) || initial !== null
+  const [remaining, setRemaining] = useState<number>(initial ?? 0)
+
+  useEffect(() => {
+    if (!isRate || !initial) return
+    setRemaining(initial)
+    const id = setInterval(() => {
+      setRemaining((s) => (s <= 1 ? 0 : s - 1))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [initial, isRate])
+
+  if (!isRate) {
+    return <div className="p-4 text-xs text-destructive">Search failed. Please try again.</div>
+  }
+
+  return (
+    <div className="p-4 text-xs text-destructive">
+      You're searching too fast.{' '}
+      {remaining > 0
+        ? `Please wait ${remaining} second${remaining === 1 ? '' : 's'} and try again.`
+        : 'You can try again now.'}
+    </div>
+  )
+}
+
