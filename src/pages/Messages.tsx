@@ -1007,6 +1007,5 @@ function parseRetryAfter(msg: string | undefined): number | null {
   return m ? Math.max(1, parseInt(m[1], 10)) : null
 }
 
-  )
-}
+
 
