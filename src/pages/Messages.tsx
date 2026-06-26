@@ -869,15 +869,13 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
     queryKey: ['user-search', q],
     enabled: q.trim().length >= 2,
     queryFn: async () => {
-      const term = `%${q.trim()}%`
-      const { data, error } = await supabase
-        .from('public_profiles')
-        .select('id, display_name, username, avatar_url')
-        .or(`display_name.ilike.${term},username.ilike.${term}`)
-        .neq('id', user?.id || '')
-        .limit(15)
+      const term = q.trim()
+      const { data, error } = await supabase.rpc('search_public_profiles', {
+        _term: term,
+        _limit: 15,
+      })
       if (error) throw error
-      return (data ?? []) as Profile[]
+      return ((data ?? []) as Profile[]).filter((u) => u.id !== user?.id)
     },
   })
 
