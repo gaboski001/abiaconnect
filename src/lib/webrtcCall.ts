@@ -218,6 +218,7 @@ class CallManager {
         .send({ type: 'broadcast', event: 'cancel', payload: { callId } })
         .catch(() => undefined)
     }
+    this.stopStatsLoop()
     this.pc?.getSenders().forEach((s) => s.track?.stop())
     this.pc?.close()
     this.pc = null
@@ -235,6 +236,8 @@ class CallManager {
       status: 'ended',
       muted: false,
       error,
+      quality: 'unknown',
+      stats: { ...INITIAL_STATS },
     })
     window.setTimeout(() => {
       if (this.state.status === 'ended') {
@@ -249,6 +252,7 @@ class CallManager {
       }
     }, 2500)
   }
+
 
   // ----- internals -----
 
