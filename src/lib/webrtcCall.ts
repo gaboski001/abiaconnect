@@ -35,6 +35,12 @@ export interface CallStats {
   bitrateKbps: number | null
 }
 
+export interface QualityEvent {
+  quality: CallQuality
+  at: number
+  note?: string
+}
+
 export interface CallState {
   status: CallStatus
   callId: string | null
@@ -47,6 +53,9 @@ export interface CallState {
   stats: CallStats
   degraded: boolean
   reconnecting: boolean
+  reconnectAttempts: number
+  maxReconnectAttempts: number
+  timeline: QualityEvent[]
 }
 
 
@@ -86,6 +95,9 @@ class CallManager {
     stats: { ...INITIAL_STATS },
     degraded: false,
     reconnecting: false,
+    reconnectAttempts: 0,
+    maxReconnectAttempts: 3,
+    timeline: [],
   }
 
   private userId: string | null = null
@@ -103,6 +115,8 @@ class CallManager {
   private currentTargetBitrateKbps = 32
   private currentJitterTargetMs = 80
   private poorSince: number | null = null
+  private autoReconnectTimer: number | null = null
+  private autoReconnecting = false
 
 
 
@@ -243,6 +257,8 @@ class CallManager {
     }
     this.poorSince = null
     this.currentJitterTargetMs = 80
+    this.clearAutoReconnect()
+    this.autoReconnecting = false
     this.patch({
       status: 'ended',
       muted: false,
@@ -251,6 +267,8 @@ class CallManager {
       stats: { ...INITIAL_STATS },
       degraded: false,
       reconnecting: false,
+      reconnectAttempts: 0,
+      timeline: this.appendTimeline(this.state.timeline, 'unknown', error ?? 'Call ended'),
     })
 
     window.setTimeout(() => {
@@ -262,6 +280,7 @@ class CallManager {
           peer: null,
           startedAt: null,
           error: null,
+          timeline: [],
         })
       }
     }, 2500)
@@ -364,11 +383,27 @@ class CallManager {
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState
       if (s === 'connected') {
-        this.patch({ status: 'connected', startedAt: Date.now() })
+        const wasConnecting = this.state.status !== 'connected'
+        this.patch({
+          status: 'connected',
+          startedAt: this.state.startedAt ?? Date.now(),
+          reconnecting: false,
+          timeline: wasConnecting
+            ? this.appendTimeline(this.state.timeline, 'unknown', 'Connected')
+            : this.state.timeline,
+        })
         this.startStatsLoop()
-      } else if (s === 'failed' || s === 'disconnected' || s === 'closed') {
+      } else if (s === 'failed') {
         if (this.state.status === 'connected' || this.state.status === 'connecting') {
-          void this.endCall(true, s === 'failed' ? 'Connection lost' : null)
+          this.scheduleAutoReconnect('ICE failed')
+        }
+      } else if (s === 'disconnected') {
+        if (this.state.status === 'connected') {
+          this.scheduleAutoReconnect('Disconnected')
+        }
+      } else if (s === 'closed') {
+        if (this.state.status === 'connected' || this.state.status === 'connecting') {
+          void this.endCall(false)
         }
       }
     }
@@ -456,9 +491,15 @@ class CallManager {
     }
 
     const quality = this.scoreQuality(rttMs, jitterMs, packetLossPct)
+    const prev = this.state.quality
+    const timeline =
+      quality !== prev && quality !== 'unknown'
+        ? this.appendTimeline(this.state.timeline, quality)
+        : this.state.timeline
     this.patch({
       quality,
       stats: { rttMs, jitterMs, packetLossPct, bitrateKbps },
+      timeline,
     })
     this.adaptBitrate(quality)
     this.trackPersistentPoor(quality)
@@ -514,11 +555,87 @@ class CallManager {
       else if (!this.state.degraded && Date.now() - this.poorSince >= 10000) {
         this.applyEmergencyDownshift()
       }
+      // After downshift, if still poor for another 10s, try auto-reconnect.
+      if (this.state.degraded && Date.now() - (this.poorSince ?? 0) >= 20000) {
+        this.scheduleAutoReconnect('Quality remained poor')
+      }
     } else if (quality === 'good' || quality === 'excellent') {
       this.poorSince = null
       if (this.state.degraded) {
         this.patch({ degraded: false })
       }
+    }
+  }
+
+  // ----- auto reconnect with exponential backoff -----
+
+  private appendTimeline(current: QualityEvent[], quality: CallQuality, note?: string): QualityEvent[] {
+    const next = [...current, { quality, at: Date.now(), note }]
+    // Cap to last 50 entries to bound memory.
+    return next.length > 50 ? next.slice(next.length - 50) : next
+  }
+
+  private clearAutoReconnect() {
+    if (this.autoReconnectTimer != null) {
+      window.clearTimeout(this.autoReconnectTimer)
+      this.autoReconnectTimer = null
+    }
+  }
+
+  private scheduleAutoReconnect(reason: string) {
+    if (this.autoReconnecting || this.autoReconnectTimer != null) return
+    if (this.state.status !== 'connected' && this.state.status !== 'connecting') return
+    const attempt = this.state.reconnectAttempts + 1
+    if (attempt > this.state.maxReconnectAttempts) {
+      void this.endCall(true, 'Connection lost after multiple retries')
+      return
+    }
+    // Exponential backoff: 2s, 4s, 8s …
+    const delay = Math.min(2000 * 2 ** (attempt - 1), 15000)
+    this.patch({
+      reconnecting: true,
+      reconnectAttempts: attempt,
+      timeline: this.appendTimeline(
+        this.state.timeline,
+        this.state.quality,
+        `Reconnect attempt ${attempt}/${this.state.maxReconnectAttempts} in ${Math.round(delay / 1000)}s (${reason})`,
+      ),
+    })
+    this.autoReconnectTimer = window.setTimeout(() => {
+      this.autoReconnectTimer = null
+      void this.runAutoReconnect()
+    }, delay)
+  }
+
+  private async runAutoReconnect() {
+    if (this.autoReconnecting) return
+    this.autoReconnecting = true
+    try {
+      if (this.state.direction === 'outgoing') {
+        await this.performIceRestart()
+      } else {
+        await this.sessionSend('restart', {})
+      }
+      // Give the connection up to ~8s to recover, then evaluate.
+      window.setTimeout(() => {
+        this.autoReconnecting = false
+        const cs = this.pc?.connectionState
+        if (cs === 'connected') {
+          this.poorSince = null
+          this.patch({
+            reconnecting: false,
+            reconnectAttempts: 0,
+            timeline: this.appendTimeline(this.state.timeline, this.state.quality, 'Reconnect succeeded'),
+          })
+        } else if (cs === 'failed' || cs === 'disconnected') {
+          this.scheduleAutoReconnect('Still unstable')
+        } else {
+          this.patch({ reconnecting: false })
+        }
+      }, 8000)
+    } catch {
+      this.autoReconnecting = false
+      this.scheduleAutoReconnect('Restart threw')
     }
   }
 
@@ -538,7 +655,12 @@ class CallManager {
     const pc = this.pc
     if (!pc) return
     if (this.state.reconnecting) return
-    this.patch({ reconnecting: true })
+    this.clearAutoReconnect()
+    this.patch({
+      reconnecting: true,
+      reconnectAttempts: 0,
+      timeline: this.appendTimeline(this.state.timeline, this.state.quality, 'Manual reconnect'),
+    })
     try {
       if (this.state.direction === 'outgoing') {
         await this.performIceRestart()

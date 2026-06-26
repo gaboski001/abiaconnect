@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Phone, PhoneOff, Mic, MicOff, SignalHigh, SignalMedium, SignalLow, Signal, RefreshCw } from 'lucide-react'
+import { Phone, PhoneOff, Mic, MicOff, SignalHigh, SignalMedium, SignalLow, Signal, RefreshCw, Activity } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { callManager, type CallState, type CallQuality } from '@/lib/webrtcCall'
@@ -24,6 +24,7 @@ const QUALITY_META: Record<CallQuality, { label: string; className: string; Icon
 
 export function CallOverlay({ state }: { state: CallState }) {
   const [now, setNow] = useState(Date.now())
+  const [showTimeline, setShowTimeline] = useState(false)
   useEffect(() => {
     if (state.status !== 'connected') return
     const id = window.setInterval(() => setNow(Date.now()), 500)
@@ -90,7 +91,12 @@ export function CallOverlay({ state }: { state: CallState }) {
         })()}
         {state.status === 'connected' && state.degraded && (
           <div className="mt-2 flex flex-col items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-            <span>Connection has been poor for a while.</span>
+            <span>
+              Connection has been poor for a while.
+              {state.reconnectAttempts > 0 && (
+                <> Retry {state.reconnectAttempts}/{state.maxReconnectAttempts}.</>
+              )}
+            </span>
             <Button
               type="button"
               size="sm"
@@ -99,8 +105,40 @@ export function CallOverlay({ state }: { state: CallState }) {
               onClick={() => callManager.reconnect()}
             >
               <RefreshCw className={cn('mr-1.5 h-3.5 w-3.5', state.reconnecting && 'animate-spin')} />
-              {state.reconnecting ? 'Reconnecting…' : 'Reconnect'}
+              {state.reconnecting ? 'Reconnecting…' : 'Reconnect now'}
             </Button>
+          </div>
+        )}
+        {state.status === 'connected' && (
+          <button
+            type="button"
+            onClick={() => setShowTimeline((v) => !v)}
+            className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            <Activity className="h-3 w-3" />
+            {showTimeline ? 'Hide' : 'Show'} quality timeline
+          </button>
+        )}
+        {state.status === 'connected' && showTimeline && (
+          <div className="mt-1 max-h-40 w-72 overflow-y-auto rounded-md border border-border bg-muted/40 p-2 text-[11px] font-mono">
+            {state.timeline.length === 0 ? (
+              <p className="text-muted-foreground">No events yet.</p>
+            ) : (
+              <ul className="space-y-0.5">
+                {state.timeline.map((ev, i) => {
+                  const t = new Date(ev.at)
+                  const hh = t.toLocaleTimeString([], { hour12: false })
+                  const meta = QUALITY_META[ev.quality]
+                  return (
+                    <li key={i} className="flex items-baseline gap-2">
+                      <span className="text-muted-foreground">{hh}</span>
+                      <span className={meta.className}>{meta.label}</span>
+                      {ev.note && <span className="text-muted-foreground">— {ev.note}</span>}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
           </div>
         )}
       </div>
