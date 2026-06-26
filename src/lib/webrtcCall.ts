@@ -35,6 +35,12 @@ export interface CallStats {
   bitrateKbps: number | null
 }
 
+export interface QualityEvent {
+  quality: CallQuality
+  at: number
+  note?: string
+}
+
 export interface CallState {
   status: CallStatus
   callId: string | null
@@ -47,6 +53,9 @@ export interface CallState {
   stats: CallStats
   degraded: boolean
   reconnecting: boolean
+  reconnectAttempts: number
+  maxReconnectAttempts: number
+  timeline: QualityEvent[]
 }
 
 
