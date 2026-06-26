@@ -158,8 +158,8 @@ export function Navbar() {
                     </Button>
                     <Button
                       asChild
+                      variant="goldGradient"
                       onClick={() => setOpen(false)}
-                      className="btn-gold-gradient"
                     >
                       <Link to="/register">Join Free</Link>
                     </Button>
