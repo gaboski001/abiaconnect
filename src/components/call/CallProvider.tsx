@@ -32,6 +32,9 @@ export function CallProvider() {
     stats: { rttMs: null, jitterMs: null, packetLossPct: null, bitrateKbps: null },
     degraded: false,
     reconnecting: false,
+    reconnectAttempts: 0,
+    maxReconnectAttempts: 3,
+    timeline: [],
   })
 
 
