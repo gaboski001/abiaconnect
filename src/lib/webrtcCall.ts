@@ -62,6 +62,13 @@ function newId() {
   return `c-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
+const INITIAL_STATS: CallStats = {
+  rttMs: null,
+  jitterMs: null,
+  packetLossPct: null,
+  bitrateKbps: null,
+}
+
 class CallManager {
   private listeners = new Set<Listener>()
   private state: CallState = {
@@ -72,6 +79,8 @@ class CallManager {
     muted: false,
     startedAt: null,
     error: null,
+    quality: 'unknown',
+    stats: { ...INITIAL_STATS },
   }
   private userId: string | null = null
   private selfPeer: CallPeer | null = null
@@ -82,6 +91,11 @@ class CallManager {
   private remoteAudio: HTMLAudioElement | null = null
   private pendingCandidates: RTCIceCandidateInit[] = []
   private pendingOffer: { from: CallPeer; sdp: RTCSessionDescriptionInit; callId: string } | null = null
+  private statsTimer: number | null = null
+  private lastBytesReceived = 0
+  private lastBytesTimestamp = 0
+  private currentTargetBitrateKbps = 32
+
 
   subscribe(fn: Listener) {
     this.listeners.add(fn)
