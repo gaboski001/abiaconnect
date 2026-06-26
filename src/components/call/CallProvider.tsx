@@ -28,7 +28,10 @@ export function CallProvider() {
     muted: false,
     startedAt: null,
     error: null,
+    quality: 'unknown',
+    stats: { rttMs: null, jitterMs: null, packetLossPct: null, bitrateKbps: null },
   })
+
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
