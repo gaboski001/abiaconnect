@@ -63,6 +63,7 @@ import HeroSlidesSection, {
 import { Image as ImageIcon } from 'lucide-react'
 import AppReleasesSection from '@/components/admin/AppReleasesSection'
 import TestPushSection from '@/components/admin/TestPushSection'
+import PushSetupChecklist from '@/components/admin/PushSetupChecklist'
 import { Download as DownloadIcon, BellRing } from 'lucide-react'
 
 type SectionId =
@@ -142,7 +143,12 @@ export default function AdminDashboard() {
           {section === 'slides' && <HeroSlidesSection />}
           {section === 'email' && <EmailSettingsSection />}
           {section === 'native-apps' && <AppReleasesSection />}
-          {section === 'test-push' && <TestPushSection />}
+          {section === 'test-push' && (
+            <div className="space-y-4">
+              <PushSetupChecklist />
+              <TestPushSection />
+            </div>
+          )}
         </main>
       </div>
     </div>
