@@ -80,6 +80,36 @@
   --ring:               #C8A951;
 }
 
+/* ---------- Shared brand tokens ----------
+   Single source of truth for the gold gradient used across CTAs
+   (Hero "Start a Discussion", Navbar "Join Free", etc.). Update
+   here and every CTA stays consistent. */
+:root {
+  --gold-gradient-from: #FBBF24; /* amber-400 */
+  --gold-gradient-to:   #CA8A04; /* yellow-600 */
+  --gold-gradient: linear-gradient(
+    to right,
+    var(--gold-gradient-from),
+    var(--gold-gradient-to)
+  );
+  --gold-gradient-shadow: 0 8px 30px -8px rgba(245, 200, 80, 0.7);
+  --gold-gradient-fg: #000000;
+}
+
+/* CTA utility: apply this class to any button/link to get the
+   canonical gold gradient treatment. */
+.btn-gold-gradient {
+  background-image: var(--gold-gradient);
+  color: var(--gold-gradient-fg);
+  box-shadow: var(--gold-gradient-shadow);
+  transition: opacity 150ms ease;
+}
+.btn-gold-gradient:hover {
+  opacity: 0.9;
+}
+
+
+
 body {
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
