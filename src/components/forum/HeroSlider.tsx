@@ -189,26 +189,6 @@ function HeroCarousel({ slides }: { slides: HeroSlideLike[] }) {
         <ChevronRight className="w-5 h-5" />
       </button>
 
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5">
-        {slides.map((_, index) => (
-          <button
-            key={index}
-            type="button"
-            onClick={() => {
-              emblaApi?.scrollTo(index)
-              stopAutoplay()
-              setTimeout(startAutoplay, 8000)
-            }}
-            className={`transition-all duration-300 rounded-full ${
-              index === selectedIndex
-                ? 'w-6 h-2 bg-secondary'
-                : 'w-2 h-2 bg-white/40 hover:bg-white/70'
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
-      </div>
-
       <div className="absolute top-4 right-4 z-10 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1 text-xs text-white/80 font-medium">
         {selectedIndex + 1} / {slides.length}
       </div>

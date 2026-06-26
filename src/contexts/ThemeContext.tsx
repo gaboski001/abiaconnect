@@ -18,7 +18,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   })
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
+    const root = document.documentElement
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+
+    if (theme === 'dark') {
+      root.classList.add('dark')
+      root.classList.remove('light')
+      if (metaThemeColor) metaThemeColor.setAttribute('content', '#1B3D1B')
+    } else {
+      root.classList.add('light')
+      root.classList.remove('dark')
+      if (metaThemeColor) metaThemeColor.setAttribute('content', '#1B3D1B')
+    }
     localStorage.setItem(KEY, theme)
   }, [theme])
 

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AbiaConnect Brand Colors (Dark) -->
+    <color name="forest_green">#1B3D1B</color>
+    <color name="forest_green_dark">#013220</color>
+    <color name="gold_accent">#C8A951</color>
+
+    <!-- Dark Mode Surface Colors (Matching Web Project #0D0D0D) -->
+    <color name="light_background">#0D0D0D</color>
+    <color name="light_surface">#1A1A1A</color>
+    <color name="dark_card">#1E1E1E</color>
+
+    <!-- Theme Overrides -->
+    <color name="colorPrimary">#1B3D1B</color>
+    <color name="colorPrimaryDark">#000000</color>
+    <color name="colorAccent">#C8A951</color>
+
+    <!-- Status bar should be Forest Green per user request -->
+    <color name="status_bar_color">#1B3D1B</color>
+</resources>
