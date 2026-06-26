@@ -1,9 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">abiaconnect</string>
-    <string name="title_activity_main">abiaconnect</string>
-    <string name="package_name">com.abiaconnect.app</string>
-    <string name="custom_url_scheme">com.abiaconnect.app</string>
-    <string name="navigation_drawer_open">Open navigation drawer</string>
-    <string name="navigation_drawer_close">Close navigation drawer</string>
-</resources>

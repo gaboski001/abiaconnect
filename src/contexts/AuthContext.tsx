@@ -1,8 +1,6 @@
-import { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import { Capacitor } from '@capacitor/core'
-import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin'
 
 export type Role = 'Super Admin' | 'Admin' | 'Member' | 'guest'
 
@@ -13,13 +11,10 @@ interface AuthContextValue {
   isAdmin: boolean
   loading: boolean
   signOut: () => Promise<void>
-  refreshSession: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 const CACHE_KEY = 'abia_cached_user'
-const TOKEN_KEY = 'abia_auth_token'
-const SESSION_TIMEOUT = 30 * 60 * 1000 // 30 minutes
 
 async function computeDeviceFingerprint(): Promise<string> {
   const parts = [
@@ -91,7 +86,7 @@ async function checkAndNotifyNewDevice(userId: string, email: string | undefined
       },
     })
   } catch {
-    // best-effort
+    // best-effort — never block sign-in
   }
 }
 
@@ -103,24 +98,16 @@ function resolveRole(names: string[]): Role {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY)
+      return raw ? (JSON.parse(raw) as User) : null
+    } catch {
+      return null
+    }
+  })
   const [role, setRole] = useState<Role>('guest')
   const [loading, setLoading] = useState(true)
-
-  // Use a ref for last activity to avoid frequent re-renders during mouse moves
-  const lastActivityRef = import.meta.env.SSR ? { current: Date.now() } : { current: Date.now() }
-
-  // Load initial user from cache for faster UI feedback
-  useEffect(() => {
-    const raw = localStorage.getItem(CACHE_KEY)
-    if (raw) {
-      try {
-        setUser(JSON.parse(raw))
-      } catch {
-        localStorage.removeItem(CACHE_KEY)
-      }
-    }
-  }, [])
 
   async function fetchRole(userId: string): Promise<Role> {
     try {
@@ -136,37 +123,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const applySession = useCallback(async (s: Session | null) => {
+  async function applySession(s: Session | null) {
     setSession(s)
-    const newUser = s?.user ?? null
-    setUser(newUser)
-
-    if (newUser) {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(newUser))
-
-      // Encrypted storage for token on native platforms
-      if (Capacitor.isNativePlatform() && s?.access_token) {
-        try {
-          await SecureStoragePlugin.set({ key: TOKEN_KEY, value: s.access_token })
-        } catch (e) {
-          console.error('Secure storage error:', e)
-        }
-      }
-
-      setRole(await fetchRole(newUser.id))
-      lastActivityRef.current = Date.now()
+    setUser(s?.user ?? null)
+    if (s?.user) {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(s.user))
+      setRole(await fetchRole(s.user.id))
     } else {
       localStorage.removeItem(CACHE_KEY)
-      if (Capacitor.isNativePlatform()) {
-        try {
-          await SecureStoragePlugin.remove({ key: TOKEN_KEY })
-        } catch {}
-      }
       setRole('guest')
     }
-  }, [])
+  }
 
-  // Main Auth Initialization & Listener
   useEffect(() => {
     let mounted = true
 
@@ -187,59 +155,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false
       sub.subscription.unsubscribe()
     }
-  }, [applySession])
-
-  // Separate Session Timeout Handling
-  useEffect(() => {
-    if (!user) return
-
-    const activityHandler = () => {
-      lastActivityRef.current = Date.now()
-    }
-
-    window.addEventListener('mousemove', activityHandler)
-    window.addEventListener('keydown', activityHandler)
-    window.addEventListener('touchstart', activityHandler)
-
-    const timeoutCheck = setInterval(() => {
-      if (user && Date.now() - lastActivityRef.current > SESSION_TIMEOUT) {
-        console.log('Session timed out due to inactivity')
-        void signOut()
-      }
-    }, 60000)
-
-    return () => {
-      window.removeEventListener('mousemove', activityHandler)
-      window.removeEventListener('keydown', activityHandler)
-      window.removeEventListener('touchstart', activityHandler)
-      clearInterval(timeoutCheck)
-    }
-  }, [user])
+  }, [])
 
   async function signOut() {
     await supabase.auth.signOut()
     localStorage.removeItem(CACHE_KEY)
-    if (Capacitor.isNativePlatform()) {
-      try {
-        await SecureStoragePlugin.remove({ key: TOKEN_KEY })
-      } catch {}
-    }
     setRole('guest')
     setUser(null)
     setSession(null)
   }
 
-  async function refreshSession() {
-    const { data, error } = await supabase.auth.refreshSession()
-    if (!error && data.session) {
-      await applySession(data.session)
-    }
-  }
-
   const isAdmin = role === 'Super Admin' || role === 'Admin'
 
   return (
-    <AuthContext.Provider value={{ user, session, role, isAdmin, loading, signOut, refreshSession }}>
+    <AuthContext.Provider value={{ user, session, role, isAdmin, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   )

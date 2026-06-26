@@ -1,8 +1,11 @@
-import { lazy, Suspense, useEffect, useMemo, useState, memo } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { toWebP } from '@/lib/image'
 import { Link, useNavigate } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow, startOfDay, subDays, format } from 'date-fns'
+
+const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
 import {
   Bell,
   Bookmark,
@@ -12,27 +15,35 @@ import {
   Mail,
   Settings as SettingsIcon,
   Trash2,
-  ChevronRight
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { supabase } from '@/lib/supabase'
 import { saveProfile } from '@/lib/profileUpdate'
 import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
-import { Capacitor } from '@capacitor/core'
-import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
-import { toWebP } from '@/lib/image'
 
-const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
+import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
 
-const NAV: Array<{ id: Tab; label: string; icon: any }> = [
+const NAV: Array<{ id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'posts', label: 'My Posts', icon: FileText },
   { id: 'saved', label: 'Saved Posts', icon: Bookmark },
@@ -41,13 +52,20 @@ const NAV: Array<{ id: Tab; label: string; icon: any }> = [
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ]
 
-type ProfileRow = { display_name?: string | null; avatar_url?: string | null; username?: string | null }
-const EMPTY_OBJ: ProfileRow = {}
-
+interface Profile {
+  id?: string
+  display_name?: string | null
+  username?: string | null
+  bio?: string | null
+  lga?: string | null
+  avatar_url?: string | null
+  reputation?: number | null
+}
 
 export default function Dashboard() {
   const { user, role, signOut } = useAuth()
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const [tab, setTab] = useState<Tab>('overview')
 
   const profileQ = useQuery({
@@ -57,357 +75,549 @@ export default function Dashboard() {
       const { data, error } = await supabase.rpc('get_my_profile')
       if (error) throw error
       const row = Array.isArray(data) ? data[0] : data
-      return row || EMPTY_OBJ
+      return (row ?? {}) as Profile
     },
   })
-
-  const profile = profileQ.data || EMPTY_OBJ
-  const displayName = profile.display_name || user?.email?.split('@')[0] || 'User'
+  const profile = profileQ.data ?? {}
+  const displayName = profile.display_name || user?.email?.split('@')[0] || 'You'
 
   const handleSignOut = async () => {
     await signOut()
-    navigate('/login')
+    navigate('/')
   }
 
   return (
-    <div className="space-y-6 md:space-y-8 w-full max-w-full min-w-0">
-      <SEO title="User Dashboard | AbiaConnect" description="Manage your AbiaConnect profile and view community activity." path="/dashboard" />
-
-      {/* Header Info */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border border-border p-4 md:p-6 rounded-3xl shadow-sm min-w-0">
-        <div className="flex items-center gap-4 min-w-0">
-          <UserAvatar avatarUrl={profile.avatar_url} displayName={displayName} size="xl" className="h-16 w-16 shrink-0" />
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold tracking-tight text-foreground truncate">Hello, {displayName}!</h1>
-            <p className="text-sm text-muted-foreground truncate">@{profile.username || 'abia_member'}</p>
+    <div className="grid lg:grid-cols-[16rem_1fr] gap-6">
+      <SEO title="Your Dashboard" description="Track your posts, replies, bookmarks, and reputation on AbiaConnect." path="/dashboard" />
+      {/* Sidebar - desktop */}
+      <aside className="hidden lg:block">
+        <div className="rounded-2xl border border-border bg-card p-5 sticky top-24 space-y-4">
+          <div className="flex flex-col items-center text-center gap-2">
+            <UserAvatar avatarUrl={profile.avatar_url} displayName={displayName} size="xl" />
+            <div>
+              <div className="font-bold">{displayName}</div>
+              {profile.username && (
+                <div className="text-xs text-muted-foreground">@{profile.username}</div>
+              )}
+            </div>
+            <span className="text-xs rounded-full bg-primary/10 text-primary px-2 py-0.5 font-semibold">
+              {role}
+            </span>
           </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] uppercase font-black tracking-widest bg-primary/10 text-primary px-3 py-1.5 rounded-full border border-primary/20">
-            {role}
-          </span>
-          <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-destructive hover:bg-destructive/10 h-10 px-4 rounded-xl">
-            <LogOut className="size-4 mr-2" /> Sign Out
-          </Button>
-        </div>
-      </div>
-
-      {/* Main Grid */}
-      <div className="grid lg:grid-cols-[16rem_1fr] gap-6 lg:gap-8 items-start min-w-0">
-        {/* Navigation: horizontal scroll on mobile, vertical sidebar on desktop */}
-        <aside className="bg-card border border-border rounded-3xl p-2 md:p-3 shadow-sm lg:sticky lg:top-24 min-w-0 max-w-full overflow-hidden">
-          <nav
-            className="flex lg:flex-col gap-2 lg:gap-1 overflow-x-auto lg:overflow-visible py-1 px-1 lg:py-0 lg:px-0 scrollbar-none snap-x snap-mandatory mask-fade-right"
-            style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}
-          >
+          <nav className="space-y-1">
             {NAV.map((n) => {
-              const Icon = n.icon
               const active = tab === n.id
               return (
                 <button
                   key={n.id}
                   onClick={() => setTab(n.id)}
-                  className={`flex items-center gap-2 md:gap-3 rounded-xl px-4 py-2.5 text-xs md:text-sm font-bold transition-all whitespace-nowrap snap-start border shrink-0 lg:w-full ${
+                  className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors border-l-4 ${
                     active
-                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 border-primary'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground border-transparent'
+                      ? 'border-secondary bg-muted text-foreground'
+                      : 'border-transparent text-muted-foreground hover:bg-muted/60'
                   }`}
                 >
-                  <Icon className="size-4 shrink-0" />
+                  <n.icon className="size-4" />
                   {n.label}
                 </button>
               )
             })}
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/60 border-l-4 border-transparent"
+            >
+              <LogOut className="size-4" /> Sign Out
+            </button>
           </nav>
-        </aside>
+        </div>
+      </aside>
 
-        {/* Content Area */}
-        <section className="bg-card border border-border rounded-3xl p-4 md:p-8 shadow-sm min-w-0 max-w-full overflow-hidden">
-          {tab === 'overview' && <OverviewSection profile={profile} />}
-          {tab === 'posts' && <MyPostsSection />}
-          {tab === 'saved' && <SavedPostsSection />}
-          {tab === 'messages' && <LinkCard to="/messages" title="Messages" desc="Connect privately with other members." icon={Mail} />}
-          {tab === 'notifications' && <LinkCard to="/notifications" title="Alerts" desc="Stay updated with replies and mentions." icon={Bell} />}
-          {tab === 'settings' && <SettingsSection profile={profile} onSaved={() => profileQ.refetch()} />}
-        </section>
+      {/* Mobile tabs */}
+      <div className="lg:hidden -mx-3 px-3 overflow-x-auto">
+        <div className="flex gap-2 pb-2">
+          {NAV.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => setTab(n.id)}
+              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium border ${
+                tab === n.id
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card text-muted-foreground border-border'
+              }`}
+            >
+              {n.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <main className="min-w-0">
+        {tab === 'overview' && <Overview displayName={displayName} />}
+        {tab === 'posts' && <MyPosts onDeleted={() => qc.invalidateQueries({ queryKey: ['my-threads'] })} />}
+        {tab === 'saved' && <SavedPosts />}
+        {tab === 'messages' && (
+          <LinkCard to="/messages" label="Open Messages" description="View and reply to your conversations." icon={Mail} />
+        )}
+        {tab === 'notifications' && (
+          <LinkCard to="/notifications" label="Open Notifications" description="See your latest alerts." icon={Bell} />
+        )}
+        {tab === 'settings' && <SettingsPanel profile={profile} onSaved={() => profileQ.refetch()} />}
+      </main>
+    </div>
+  )
+}
+
+/* ----------------- Overview ----------------- */
+function Overview({ displayName }: { displayName: string }) {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+
+  const stats = useQuery({
+    queryKey: ['dash-stats', user?.id],
+    enabled: !!user,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const uid = user!.id
+      const [posts, replies, bookmarks, profile] = await Promise.all([
+        supabase.from('threads').select('id', { count: 'exact', head: true }).eq('user_id', uid),
+        supabase.from('replies').select('id', { count: 'exact', head: true }).eq('user_id', uid),
+        supabase.from('bookmarks').select('id', { count: 'exact', head: true }).eq('user_id', uid),
+        supabase.from('profiles').select('reputation').eq('id', uid).maybeSingle(),
+      ])
+      return {
+        posts: posts.count ?? 0,
+        replies: replies.count ?? 0,
+        bookmarks: bookmarks.count ?? 0,
+        reputation: (profile.data as { reputation?: number } | null)?.reputation ?? 0,
+      }
+    },
+  })
+
+  const activity = useQuery({
+    queryKey: ['dash-activity', user?.id],
+    enabled: !!user,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const since = startOfDay(subDays(new Date(), 6)).toISOString()
+      const { data, error } = await supabase
+        .from('threads')
+        .select('created_at')
+        .eq('user_id', user!.id)
+        .gte('created_at', since)
+      if (error) throw error
+      return (data ?? []) as Array<{ created_at: string }>
+    },
+  })
+
+  const chartData = useMemo(() => {
+    const days = Array.from({ length: 7 }, (_, i) => startOfDay(subDays(new Date(), 6 - i)))
+    const counts = new Map(days.map((d) => [format(d, 'yyyy-MM-dd'), 0]))
+    for (const row of activity.data ?? []) {
+      const key = format(startOfDay(new Date(row.created_at)), 'yyyy-MM-dd')
+      if (counts.has(key)) counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return days.map((d) => ({
+      label: format(d, 'EEE'),
+      posts: counts.get(format(d, 'yyyy-MM-dd')) ?? 0,
+    }))
+  }, [activity.data])
+
+  const recent = useQuery({
+    queryKey: ['my-recent-threads', user?.id],
+    enabled: !!user,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('threads')
+        .select('id, title, created_at')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+      if (error) throw error
+      return (data ?? []) as Array<{ id: string; title: string; created_at: string }>
+    },
+  })
+
+  // Realtime: refresh stats/activity/recent when the user's data changes
+  useEffect(() => {
+    if (!user) return
+    const uid = user.id
+    const invalidate = () => {
+      qc.invalidateQueries({ queryKey: ['dash-stats', uid] })
+      qc.invalidateQueries({ queryKey: ['dash-activity', uid] })
+      qc.invalidateQueries({ queryKey: ['my-recent-threads', uid] })
+    }
+    const channel = supabase
+      .channel(`dash-overview:${uid}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: `user_id=eq.${uid}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'replies', filter: `user_id=eq.${uid}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmarks', filter: `user_id=eq.${uid}` }, invalidate)
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [user, qc])
+
+
+  const cards = [
+    { label: 'My Posts', value: stats.data?.posts ?? 0 },
+    { label: 'Replies', value: stats.data?.replies ?? 0 },
+    { label: 'Reputation', value: stats.data?.reputation ?? 0 },
+    { label: 'Bookmarks', value: stats.data?.bookmarks ?? 0 },
+  ]
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Welcome back, {displayName}!</h1>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {cards.map((c) => (
+          <div key={c.label} className="rounded-2xl border border-border bg-card p-4">
+            <div className="text-xs text-muted-foreground uppercase">{c.label}</div>
+            <div className="text-2xl font-bold mt-1">{c.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="font-bold mb-4">Recent Activity</h2>
+        <div className="h-56">
+          <Suspense fallback={<div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />}>
+            <ActivityChart data={chartData} />
+          </Suspense>
+        </div>
+
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="font-bold mb-4">My Recent Threads</h2>
+        {recent.isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : !recent.data?.length ? (
+          <p className="text-sm text-muted-foreground">No threads yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {recent.data.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-3">
+                <Link to={`/thread/${t.id}`} className="text-sm font-medium hover:text-primary truncate">
+                  {t.title}
+                </Link>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   )
 }
 
-/* ----------------- SECTIONS ----------------- */
-
-const OverviewSection = memo(function OverviewSection({ profile }: { profile: any }) {
-  const { user } = useAuth()
-
-  const stats = useQuery({
-    queryKey: ['dash-stats', user?.id],
-    enabled: !!user,
-    staleTime: 60000,
-    queryFn: async () => {
-      const uid = user!.id
-      const [posts, replies, bookmarks] = await Promise.all([
-        supabase.from('threads').select('id', { count: 'exact', head: true }).eq('user_id', uid),
-        supabase.from('replies').select('id', { count: 'exact', head: true }).eq('user_id', uid),
-        supabase.from('bookmarks').select('id', { count: 'exact', head: true }).eq('user_id', uid),
-      ])
-      return {
-        posts: posts.count || 0,
-        replies: replies.count || 0,
-        bookmarks: bookmarks.count || 0,
-        reputation: profile.reputation || 0,
-      }
-    },
-  })
-
-  // Sample activity data to make the dashboard look "perfect"
-  const activityData = useMemo(() => [
-    { label: 'Mon', posts: 2 },
-    { label: 'Tue', posts: 5 },
-    { label: 'Wed', posts: 3 },
-    { label: 'Thu', posts: 8 },
-    { label: 'Fri', posts: 6 },
-    { label: 'Sat', posts: 4 },
-    { label: 'Sun', posts: 7 },
-  ], [])
-
-  return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-300 pb-8 min-w-0">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 min-w-0">
-        {[
-          { label: 'THREADS', val: stats.data?.posts },
-          { label: 'REPLIES', val: stats.data?.replies },
-          { label: 'REPUTATION', val: stats.data?.reputation },
-          { label: 'SAVED', val: stats.data?.bookmarks },
-        ].map(s => (
-          <div key={s.label} className="bg-card border border-border p-3 md:p-6 rounded-2xl shadow-sm hover:shadow-md transition-all w-full flex flex-col justify-between min-h-[100px] min-w-0 overflow-hidden">
-            <div className="text-[10px] md:text-[11px] uppercase font-bold text-[#8A7A3A] tracking-[0.08em] truncate">{s.label}</div>
-            <div className="text-2xl md:text-3xl font-black mt-2 text-[#C8A951] truncate">{s.val ?? '0'}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-card border border-border p-4 md:p-6 rounded-2xl space-y-4 min-w-0 overflow-hidden">
-        <h3 className="font-bold text-foreground text-base">Activity Insights</h3>
-        <div className="h-[200px] w-full min-w-0 overflow-hidden">
-          <Suspense fallback={<div className="h-full flex items-center justify-center animate-pulse text-muted-foreground text-sm">Loading activity data...</div>}>
-            <ActivityChart data={activityData} />
-          </Suspense>
-        </div>
-      </div>
-
-      <div className="bg-card border border-border p-4 md:p-6 rounded-2xl space-y-3 min-w-0 overflow-hidden">
-        <h3 className="font-bold text-foreground">Your Community Bio</h3>
-        <p className="text-sm text-[#B0B0B0] leading-relaxed italic break-words whitespace-pre-wrap">
-          {profile.bio || "You haven't added a bio yet. Head to Settings to tell the community about yourself!"}
-        </p>
-      </div>
-
-      <div className="bg-primary/5 border border-primary/10 p-4 md:p-6 rounded-2xl flex items-center justify-between gap-3 min-w-0 overflow-hidden">
-        <div className="min-w-0 flex-1">
-          <h3 className="font-bold text-primary truncate">Ready to contribute?</h3>
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">Start a new discussion or share an update with Abians.</p>
-        </div>
-        <Button asChild size="sm" className="rounded-full shrink-0 font-bold">
-          <Link to="/create-thread">Post Now</Link>
-        </Button>
-      </div>
-    </div>
-  )
-})
-
-const MyPostsSection = memo(function MyPostsSection() {
+/* ----------------- My Posts ----------------- */
+function MyPosts({ onDeleted }: { onDeleted: () => void }) {
   const { user } = useAuth()
   const qc = useQueryClient()
   const q = useQuery({
     queryKey: ['my-threads', user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase.from('threads').select('id, title, created_at, categories(name)').eq('user_id', user!.id).order('created_at', { ascending: false })
-      return data || []
+      const { data, error } = await supabase
+        .from('threads')
+        .select('id, title, created_at, categories(name), replies(count)')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data ?? []
     },
   })
 
   const del = useMutation({
-    mutationFn: async (id: string) => supabase.from('threads').delete().eq('id', id),
-    onSuccess: () => {
-      toast.success('Deleted')
-      qc.invalidateQueries({ queryKey: ['my-threads'] })
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('threads').delete().eq('id', id)
+      if (error) throw error
     },
+    onSuccess: () => {
+      toast.success('Thread deleted')
+      qc.invalidateQueries({ queryKey: ['my-threads'] })
+      onDeleted()
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Delete failed'),
   })
 
-  if (q.isLoading) return <div className="h-40 flex items-center justify-center animate-pulse text-muted-foreground">Loading your posts...</div>
+  if (q.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>
+  const items = (q.data ?? []) as Array<{
+    id: string
+    title: string
+    created_at: string
+    categories?: { name?: string | null } | null
+    replies?: { count: number }[]
+  }>
+  if (!items.length) return <p className="text-sm text-muted-foreground">You haven't posted yet.</p>
 
   return (
-    <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-300">
-      <h2 className="text-lg font-bold mb-4">My Community Posts</h2>
-      {q.data?.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed rounded-3xl border-border">
-          <p className="text-sm text-muted-foreground">You haven't posted anything yet.</p>
-        </div>
-      ) : (
-        q.data?.map((t: any) => (
-          <div key={t.id} className="flex items-center justify-between p-4 rounded-xl border border-border hover:border-primary/40 transition-colors bg-background/50">
-            <div className="min-w-0 flex-1">
-              <Link to={`/thread/${t.id}`} className="font-bold text-sm hover:text-primary truncate block">{t.title}</Link>
-              <div className="text-[10px] text-muted-foreground mt-1 uppercase font-bold tracking-tighter">
-                {t.categories?.name} • {format(new Date(t.created_at), 'PPP')}
-              </div>
+    <ul className="space-y-3">
+      {items.map((t) => (
+        <li key={t.id} className="flex items-start justify-between gap-3 rounded-2xl border border-border bg-card p-4">
+          <div className="min-w-0">
+            <Link to={`/thread/${t.id}`} className="font-medium hover:text-primary">{t.title}</Link>
+            <div className="text-xs text-muted-foreground mt-1">
+              {t.categories?.name && <span className="mr-2">in {t.categories.name}</span>}
+              {format(new Date(t.created_at), 'PPP')} · {t.replies?.[0]?.count ?? 0} replies
             </div>
-            <Button size="icon" variant="ghost" onClick={() => del.mutate(t.id)} className="text-muted-foreground hover:text-destructive shrink-0 ml-4">
-              <Trash2 className="size-4" />
-            </Button>
           </div>
-        ))
-      )}
-    </div>
+          <Button size="icon" variant="ghost" onClick={() => del.mutate(t.id)} aria-label="Delete">
+            <Trash2 className="size-4" />
+          </Button>
+        </li>
+      ))}
+    </ul>
   )
-})
+}
 
-const SavedPostsSection = memo(function SavedPostsSection() {
+/* ----------------- Saved ----------------- */
+function SavedPosts() {
   const { user } = useAuth()
   const qc = useQueryClient()
   const q = useQuery({
     queryKey: ['bookmarks', user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase.from('bookmarks').select('id, threads(id, title)').eq('user_id', user!.id)
-      return data || []
+      const { data, error } = await supabase
+        .from('bookmarks')
+        .select('id, thread_id, threads(id, title, categories(name))')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data ?? []
     },
   })
 
   const remove = useMutation({
-    mutationFn: async (id: string) => supabase.from('bookmarks').delete().eq('id', id),
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('bookmarks').delete().eq('id', id)
+      if (error) throw error
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['bookmarks'] }),
   })
 
-  return (
-    <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-300">
-      <h2 className="text-lg font-bold mb-4">Bookmarked Threads</h2>
-      {q.data?.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed rounded-3xl border-border">
-          <p className="text-sm text-muted-foreground">No bookmarks saved yet.</p>
-        </div>
-      ) : (
-        q.data?.map((b: any) => (
-          <div key={b.id} className="flex items-center justify-between p-4 rounded-xl border border-border bg-background/50">
-            <Link to={`/thread/${b.threads?.id}`} className="font-bold text-sm hover:text-primary flex-1 truncate">{b.threads?.title || 'Untitled Thread'}</Link>
-            <Button size="sm" variant="ghost" onClick={() => remove.mutate(b.id)} className="shrink-0 ml-4">Remove</Button>
-          </div>
-        ))
-      )}
-    </div>
-  )
-})
+  if (q.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>
+  const items = (q.data ?? []) as unknown as Array<{
+    id: string
+    thread_id: string
+    threads?: { id: string; title: string; categories?: { name?: string | null } | null } | null
+  }>
+  if (!items.length) return <p className="text-sm text-muted-foreground">No saved posts yet.</p>
 
-const SettingsSection = memo(function SettingsSection({ profile, onSaved }: { profile: any, onSaved: () => void }) {
-  const { user } = useAuth()
+  return (
+    <ul className="space-y-3">
+      {items.map((b) => (
+        <li key={b.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
+          <div className="min-w-0 flex-1">
+            <Link to={`/thread/${b.threads?.id ?? b.thread_id}`} className="block font-medium hover:text-primary truncate">
+              {b.threads?.title ?? 'Thread'}
+            </Link>
+            {b.threads?.categories?.name && (
+              <div className="text-xs text-muted-foreground truncate">in {b.threads.categories.name}</div>
+            )}
+          </div>
+          <Button size="sm" variant="ghost" className="shrink-0" onClick={() => remove.mutate(b.id)}>Remove</Button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/* ----------------- Settings ----------------- */
+function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
+  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
   const [form, setForm] = useState({
-    display_name: profile.display_name || '',
-    username: profile.username || '',
-    bio: profile.bio || '',
-    lga: profile.lga || '',
+    display_name: profile.display_name ?? '',
+    username: profile.username ?? '',
+    bio: profile.bio ?? '',
+    lga: profile.lga ?? '',
   })
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
   const [uploading, setUploading] = useState(false)
 
-  // Use a ref-like comparison to avoid re-triggering if profile is effectively same
   useEffect(() => {
-    const isDifferent =
-      profile.display_name !== form.display_name ||
-      profile.username !== form.username ||
-      profile.bio !== form.bio ||
-      profile.lga !== form.lga;
-
-    if (isDifferent) {
-       setForm({
-        display_name: profile.display_name || '',
-        username: profile.username || '',
-        bio: profile.bio || '',
-        lga: profile.lga || '',
-      })
-    }
-  }, [profile.id, profile.updated_at]) // Use specific ID and timestamp to track changes
+    setForm({
+      display_name: profile.display_name ?? '',
+      username: profile.username ?? '',
+      bio: profile.bio ?? '',
+      lga: profile.lga ?? '',
+    })
+  }, [profile.display_name, profile.username, profile.bio, profile.lga])
 
   const save = async () => {
     if (!user) return
     const { error } = await saveProfile(user.id, form)
     if (error) return toast.error(error.message)
-    toast.success('Profile updated!')
+    toast.success('Profile updated')
     onSaved()
+  }
+
+  const updatePassword = async () => {
+    if (password.length < 8) return toast.error('Password must be at least 8 characters')
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) return toast.error(error.message)
+    setPassword('')
+    toast.success('Password updated')
   }
 
   const uploadAvatar = async (file: File) => {
     if (!user) return
     setUploading(true)
-    try {
-      const webp = await toWebP(file)
-      const path = `${user.id}/${Date.now()}.webp`
-      const { uploadAndScan } = await import('@/lib/scanAttachment')
-      const res = await uploadAndScan('avatars', path, webp, { contentType: 'image/webp', upsert: true })
-      if (!res.uploaded) throw new Error(res.error)
-      await supabase.from('profiles').update({ avatar_url: path }).eq('id', user.id)
-      onSaved()
-    } catch (e: any) {
-      toast.error(e.message || 'Avatar upload failed')
-    } finally {
+    const webp = await toWebP(file)
+    const ext = webp.name.split('.').pop() || 'webp'
+    const path = `${user.id}/${Date.now()}.${ext}`
+    const { uploadAndScan } = await import('@/lib/scanAttachment')
+    const res = await uploadAndScan('avatars', path, webp, {
+      contentType: webp.type,
+      upsert: true,
+    })
+    if (!res.uploaded) {
       setUploading(false)
+      return toast.error(res.error || 'Avatar blocked by security scan')
     }
+    const { error } = await supabase.from('profiles').update({ avatar_url: path }).eq('id', user.id)
+    setUploading(false)
+    if (error) return toast.error(error.message)
+    toast.success('Avatar updated')
+    onSaved()
+  }
+
+  const deleteAccount = async () => {
+    if (confirm !== 'DELETE' || !user) return
+    const { error } = await supabase.from('profiles').delete().eq('id', user.id)
+    if (error) return toast.error(error.message)
+    await signOut()
+    toast.success('Account deleted')
+    navigate('/')
   }
 
   return (
-    <div className="space-y-10 animate-in slide-in-from-bottom-2 duration-300">
-      <div className="flex items-center gap-6 pb-6 border-b">
-        <UserAvatar avatarUrl={profile.avatar_url} displayName={form.display_name} size="xl" className="h-20 w-20 ring-4 ring-muted shadow-lg" />
-        <label className="cursor-pointer">
-          <input type="file" className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && uploadAvatar(e.target.files[0])} />
-          <Button asChild variant="secondary" size="sm" className="rounded-xl" disabled={uploading}>
-            <span>{uploading ? 'Working...' : 'Change Photo'}</span>
-          </Button>
-        </label>
-      </div>
+    <div className="space-y-6">
+      <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <h2 className="font-bold">Profile</h2>
 
-      <div className="grid gap-6 max-w-3xl">
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="flex items-center gap-4">
+          <UserAvatar avatarUrl={profile.avatar_url} displayName={form.display_name || user?.email || 'User'} size="lg" className="h-16 w-16" />
+          <label className="text-sm">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => e.target.files?.[0] && uploadAvatar(e.target.files[0])}
+            />
+            <span className="inline-block cursor-pointer rounded-lg border border-border bg-background px-3 py-1.5 hover:bg-muted">
+              {uploading ? 'Uploading…' : 'Change avatar'}
+            </span>
+          </label>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-muted-foreground">Display Name</Label>
-            <Input value={form.display_name} onChange={e => setForm({...form, display_name: e.target.value})} className="rounded-xl h-12 bg-background border-border" />
+            <Label>Display Name</Label>
+            <Input value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-muted-foreground">Username</Label>
-            <Input value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="rounded-xl h-12 bg-background border-border" />
+            <Label>Username</Label>
+            <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+          </div>
+          <div className="sm:col-span-2">
+            <BioField
+              value={form.bio}
+              onChange={(v: string) => setForm({ ...form, bio: v })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>LGA</Label>
+            <Input value={form.lga} onChange={(e) => setForm({ ...form, lga: e.target.value })} />
           </div>
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-black uppercase text-muted-foreground">About Me / Bio</Label>
-          <BioField value={form.bio} onChange={v => setForm({...form, bio: v})} />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-black uppercase text-muted-foreground">LGA of Origin</Label>
-          <Input value={form.lga} onChange={e => setForm({...form, lga: e.target.value})} className="rounded-xl h-12 bg-background border-border" />
-        </div>
-        <Button onClick={save} className="h-12 rounded-xl text-md font-bold mt-4 shadow-lg shadow-primary/20">Save Profile Changes</Button>
-      </div>
+        <Button onClick={save} disabled={!profile.id}>
+          Save Changes
+        </Button>
+      </section>
 
-      <div className="pt-8 border-t border-border space-y-6">
+      <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <h2 className="font-bold">Notifications</h2>
         <NotificationSoundToggle />
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <h2 className="font-bold">App</h2>
         <NativeAppDownload />
-      </div>
+        
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <h2 className="font-bold">Change Password</h2>
+        <Input
+          type="password"
+          placeholder="New password (min 8 chars)"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <Button variant="secondary" onClick={updatePassword}>Update Password</Button>
+      </section>
+
+      <section className="rounded-2xl border border-destructive/40 bg-destructive/5 p-5 space-y-3">
+        <h2 className="font-bold text-destructive">Danger Zone</h2>
+        <p className="text-sm text-muted-foreground">
+          Permanently delete your account and all associated data.
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive">Delete Account</Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete account?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This cannot be undone. Type <strong>DELETE</strong> below to confirm.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="DELETE" />
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setConfirm('')}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={confirm !== 'DELETE'}
+                onClick={deleteAccount}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </section>
     </div>
   )
-})
+}
 
-function LinkCard({ to, title, desc, icon: Icon }: { to: string, title: string, desc: string, icon: any }) {
+/* ----------------- Helpers ----------------- */
+function LinkCard({
+  to,
+  label,
+  description,
+  icon: Icon,
+}: {
+  to: string
+  label: string
+  description: string
+  icon: React.ComponentType<{ className?: string }>
+}) {
   return (
-    <div className="flex flex-col items-center justify-center text-center py-12 px-4 space-y-4 animate-in zoom-in-95 duration-300">
-      <div className="p-5 rounded-full bg-primary/10 text-primary ring-8 ring-primary/5">
-        <Icon className="size-12" />
-      </div>
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
-        <p className="text-sm text-muted-foreground max-w-xs mx-auto">{desc}</p>
-      </div>
-      <Button asChild variant="outline" className="rounded-full px-10 h-12 font-bold hover:bg-primary hover:text-white transition-all">
-        <Link to={to} className="flex items-center">Open Page <ChevronRight className="size-4 ml-2" /></Link>
+    <div className="rounded-2xl border border-border bg-card p-6 text-center space-y-3">
+      <Icon className="size-8 mx-auto text-primary" />
+      <p className="text-sm text-muted-foreground">{description}</p>
+      <Button asChild>
+        <Link to={to}>{label}</Link>
       </Button>
     </div>
   )
