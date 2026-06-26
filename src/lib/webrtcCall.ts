@@ -45,7 +45,10 @@ export interface CallState {
   error: string | null
   quality: CallQuality
   stats: CallStats
+  degraded: boolean
+  reconnecting: boolean
 }
+
 
 
 type Listener = (state: CallState) => void
@@ -81,7 +84,10 @@ class CallManager {
     error: null,
     quality: 'unknown',
     stats: { ...INITIAL_STATS },
+    degraded: false,
+    reconnecting: false,
   }
+
   private userId: string | null = null
   private selfPeer: CallPeer | null = null
   private userChannel: RealtimeChannel | null = null
@@ -95,6 +101,9 @@ class CallManager {
   private lastBytesReceived = 0
   private lastBytesTimestamp = 0
   private currentTargetBitrateKbps = 32
+  private currentJitterTargetMs = 80
+  private poorSince: number | null = null
+
 
 
   subscribe(fn: Listener) {
@@ -232,13 +241,18 @@ class CallManager {
     if (this.remoteAudio) {
       this.remoteAudio.srcObject = null
     }
+    this.poorSince = null
+    this.currentJitterTargetMs = 80
     this.patch({
       status: 'ended',
       muted: false,
       error,
       quality: 'unknown',
       stats: { ...INITIAL_STATS },
+      degraded: false,
+      reconnecting: false,
     })
+
     window.setTimeout(() => {
       if (this.state.status === 'ended') {
         this.patch({
@@ -289,6 +303,11 @@ class CallManager {
     ch.on('broadcast', { event: 'sdp' }, ({ payload }) => this.onSdp(payload, isCaller))
     ch.on('broadcast', { event: 'ice' }, ({ payload }) => this.onIce(payload))
     ch.on('broadcast', { event: 'bye' }, () => this.endCall(false))
+    ch.on('broadcast', { event: 'restart' }, () => {
+      // Peer asked us to renegotiate with ICE restart.
+      if (isCaller) void this.performIceRestart()
+    })
+
     await new Promise<void>((resolve) => {
       ch.subscribe((status) => {
         if (status === 'SUBSCRIBED') resolve()
@@ -442,6 +461,7 @@ class CallManager {
       stats: { rttMs, jitterMs, packetLossPct, bitrateKbps },
     })
     this.adaptBitrate(quality)
+    this.trackPersistentPoor(quality)
   }
 
   private scoreQuality(
@@ -460,13 +480,92 @@ class CallManager {
   }
 
   private adaptBitrate(quality: CallQuality) {
+    if (this.state.degraded) return // managed by emergency downshift
     const target =
       quality === 'poor' ? 12 : quality === 'fair' ? 20 : quality === 'good' ? 28 : 40
     if (target !== this.currentTargetBitrateKbps) {
       this.currentTargetBitrateKbps = target
       void this.applyBitrate(target)
     }
+    const jt = quality === 'poor' ? 150 : quality === 'fair' ? 120 : 80
+    if (jt !== this.currentJitterTargetMs) {
+      this.currentJitterTargetMs = jt
+      this.applyJitterTarget(jt)
+    }
   }
+
+  private applyJitterTarget(ms: number) {
+    const pc = this.pc
+    if (!pc) return
+    for (const r of pc.getReceivers()) {
+      const anyR = r as unknown as { jitterBufferTarget?: number; playoutDelayHint?: number }
+      try {
+        if ('jitterBufferTarget' in anyR) anyR.jitterBufferTarget = ms
+        else if ('playoutDelayHint' in anyR) anyR.playoutDelayHint = ms / 1000
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  private trackPersistentPoor(quality: CallQuality) {
+    if (quality === 'poor') {
+      if (this.poorSince == null) this.poorSince = Date.now()
+      else if (!this.state.degraded && Date.now() - this.poorSince >= 10000) {
+        this.applyEmergencyDownshift()
+      }
+    } else if (quality === 'good' || quality === 'excellent') {
+      this.poorSince = null
+      if (this.state.degraded) {
+        this.patch({ degraded: false })
+      }
+    }
+  }
+
+  private applyEmergencyDownshift() {
+    this.currentTargetBitrateKbps = 8
+    void this.applyBitrate(8)
+    this.currentJitterTargetMs = 250
+    this.applyJitterTarget(250)
+    this.patch({ degraded: true })
+  }
+
+  /**
+   * Public: triggered by the UI "Reconnect" button. Performs an ICE restart
+   * to recover from a persistently poor connection without ending the call.
+   */
+  async reconnect() {
+    const pc = this.pc
+    if (!pc) return
+    if (this.state.reconnecting) return
+    this.patch({ reconnecting: true })
+    try {
+      if (this.state.direction === 'outgoing') {
+        await this.performIceRestart()
+      } else {
+        // Ask caller to renegotiate.
+        await this.sessionSend('restart', {})
+      }
+    } finally {
+      window.setTimeout(() => {
+        if (this.state.reconnecting) this.patch({ reconnecting: false })
+      }, 6000)
+    }
+  }
+
+  private async performIceRestart() {
+    const pc = this.pc
+    if (!pc) return
+    try {
+      const offer = await pc.createOffer({ iceRestart: true })
+      await pc.setLocalDescription(offer)
+      await this.sessionSend('sdp', { sdp: offer })
+    } catch {
+      // ignore
+    }
+  }
+
+
 
 
 
