@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
+import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton'
+import { enableBiometric, isBiometricAvailable, isBiometricEnabled } from '@/lib/biometric'
 
 export default function Login() {
   const navigate = useNavigate()
