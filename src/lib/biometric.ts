@@ -14,6 +14,24 @@ import { Capacitor } from '@capacitor/core'
 
 const SERVER = 'com.abiaconnect.app'
 const ENABLED_KEY = 'abia:biometric-enabled'
+const DECLINED_KEY = 'abia:biometric-declined'
+
+export function hasDeclinedBiometric(): boolean {
+  try {
+    return localStorage.getItem(DECLINED_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+export function setBiometricDeclined(declined: boolean): void {
+  try {
+    if (declined) localStorage.setItem(DECLINED_KEY, 'true')
+    else localStorage.removeItem(DECLINED_KEY)
+  } catch {
+    /* ignore */
+  }
+}
 
 type StoredCreds = { username: string; password: string }
 
