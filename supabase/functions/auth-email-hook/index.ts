@@ -218,17 +218,48 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
+  // Build a branded confirmation URL that points to the app domain instead of
+  // exposing the Supabase project URL (e.g. https://xxxx.supabase.co/auth/v1/verify...).
+  // The /auth/confirm route calls supabase.auth.verifyOtp({ token_hash, type })
+  // client-side and then forwards the user to `next`.
+  const NEXT_BY_TYPE: Record<string, string> = {
+    signup: '/dashboard',
+    invite: '/dashboard',
+    magiclink: '/dashboard',
+    recovery: '/reset-password',
+    email_change: '/profile',
+    reauthentication: '/dashboard',
+  }
+  const tokenHash = payload.data.token_hash || payload.data.token_hash_new
+  const verifyType =
+    emailType === 'email_change'
+      ? 'email_change'
+      : emailType === 'magiclink'
+        ? 'magiclink'
+        : emailType === 'recovery'
+          ? 'recovery'
+          : emailType === 'invite'
+            ? 'invite'
+            : 'signup'
+  const nextPath = NEXT_BY_TYPE[emailType] || '/'
+  const brandedUrl = tokenHash
+    ? `https://${ROOT_DOMAIN}/auth/confirm?token_hash=${encodeURIComponent(
+        tokenHash,
+      )}&type=${verifyType}&next=${encodeURIComponent(nextPath)}`
+    : payload.data.url
+
   // Build template props from payload.data (HookData structure)
   const templateProps = {
     siteName: SITE_NAME,
     siteUrl: `https://${ROOT_DOMAIN}`,
     recipient: payload.data.email,
-    confirmationUrl: payload.data.url,
+    confirmationUrl: brandedUrl,
     token: payload.data.token,
     email: payload.data.email,
     oldEmail: payload.data.old_email,
     newEmail: payload.data.new_email,
   }
+
 
   // Render React Email to HTML and plain text
   const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
