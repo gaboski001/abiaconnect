@@ -1533,6 +1533,7 @@ export type Database = {
         Args: { _pinned: boolean; _thread_id: string }
         Returns: undefined
       }
+      prune_issue_report_contact_emails: { Args: never; Returns: undefined }
       prune_search_rate_limits: { Args: never; Returns: undefined }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
