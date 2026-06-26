@@ -861,6 +861,18 @@ function ConversationView({
               </Suspense>
             </PopoverContent>
           </Popover>
+          <VoiceRecorderButton
+            disabled={!user}
+            onSend={(file, _ms) => {
+              if (!user) return
+              uploadQueue.enqueue({
+                conversationId,
+                senderId: user.id,
+                content: '',
+                file,
+              })
+            }}
+          />
           <Textarea
             ref={textareaRef}
             value={draft}
