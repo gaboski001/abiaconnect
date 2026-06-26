@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
+import { toFriendlyAuthError } from '@/lib/friendlyAuthError'
 import { SEO } from '@/components/SEO'
 
 /**
@@ -35,21 +36,28 @@ export default function AuthConfirm() {
 
     if (!tokenHash) {
       setStatus('error')
-      setMessage('This confirmation link is missing required information.')
+      setMessage(toFriendlyAuthError(new Error('missing')).message)
       return
     }
 
     void (async () => {
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: tokenHash,
-        type,
-      })
-      if (error) {
+      try {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type,
+        })
+        if (error) {
+          // Never surface raw backend text — could include host names or
+          // internal details. Map to a curated friendly message.
+          setStatus('error')
+          setMessage(toFriendlyAuthError(error).message)
+          return
+        }
+        navigate(next, { replace: true })
+      } catch (e) {
         setStatus('error')
-        setMessage(error.message || 'This link is invalid or has expired.')
-        return
+        setMessage(toFriendlyAuthError(e).message)
       }
-      navigate(next, { replace: true })
     })()
   }, [params, navigate])
 
