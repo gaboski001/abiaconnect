@@ -20,7 +20,8 @@
     "format": "prettier --write .",
     "check:dark": "bun scripts/check-dark-mode.ts",
     "cap:reset": "rimraf android ios && npm run build && npx cap add android && npx cap sync android && echo \"\\n✅ Clean Android project ready. Open in Android Studio: npx cap open android\"",
-    "android:clean-rebuild": "npm install && npm run cap:reset && npx cap open android"
+    "android:clean-rebuild": "npm install && npm run cap:reset && npx cap open android",
+    "android:sync": "npm run build && npx cap sync android"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",

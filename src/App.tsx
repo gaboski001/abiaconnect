@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { NativeOnboardingGate } from '@/components/mobile/NativeOnboardingGate'
+import { ConnectivityStatus } from '@/components/ConnectivityStatus'
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { RecoveryRedirect } from '@/components/auth/RecoveryRedirect'
 import { CallProvider } from '@/components/call/CallProvider'
@@ -69,6 +70,7 @@ export default function App() {
     <>
       <ScrollToTop />
       <RecoveryRedirect />
+      <ConnectivityStatus />
       <NativeOnboardingGate />
       <CallProvider />
       <Routes>

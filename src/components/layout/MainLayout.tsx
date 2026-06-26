@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Navbar } from './Navbar'
 import { Footer } from './Footer'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { cn } from '@/lib/utils'
 
 
 export function MainLayout() {
@@ -26,9 +27,11 @@ export function MainLayout() {
     }
   }, [])
 
+  const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname)
+
   return (
     <div data-site-theme={siteTheme} className="min-h-screen flex flex-col">
-      <Navbar />
+      {!isAuthPage && <Navbar />}
 
       {!online && (
         <div className="bg-yellow-400/90 text-yellow-950 text-sm text-center py-2 px-4">
@@ -44,14 +47,17 @@ export function MainLayout() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="mx-auto max-w-[1400px] px-3 sm:px-4 md:px-6 py-6 md:py-12"
+            className={cn(
+              "mx-auto max-w-[1400px] px-3 sm:px-4 md:px-6 py-6 md:py-12",
+              isAuthPage && "max-w-none px-0 py-0 md:py-0"
+            )}
           >
             <Outlet />
           </motion.div>
         </AnimatePresence>
       </main>
 
-      <Footer />
+      {!isAuthPage && <Footer />}
     </div>
   )
 }

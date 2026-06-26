@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
+import { useAuth } from '@/contexts/AuthContext';
 import useEmblaCarousel from 'embla-carousel-react';
 import {
   MessagesSquare,
@@ -23,6 +24,7 @@ import {
 
 interface MobileOnboardingProps {
   onFinish: () => void;
+  initialSlide?: number;
 }
 
 // Brand palette — forest green + gold, locked for the onboarding canvas.
@@ -112,11 +114,16 @@ interface StartSlide extends BaseSlide {
 }
 type Slide = WelcomeSlide | AboutSlide | FeaturesSlide | StartSlide;
 
-export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
+export const MobileOnboarding = ({ onFinish, initialSlide = 0 }: MobileOnboardingProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { settings } = useSiteSettings();
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, duration: 24 });
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: false,
+    duration: 24,
+    startIndex: initialSlide
+  });
+  const [currentSlide, setCurrentSlide] = useState(initialSlide);
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
@@ -185,7 +192,14 @@ export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
     else handleFinish();
   };
   const handlePrev = () => emblaApi?.scrollPrev();
+
   const handleFinish = () => {
+    // If skipping from an early slide and not logged in, go to the last slide instead of finishing.
+    if (!user && currentSlide < slides.length - 1) {
+      emblaApi?.scrollTo(slides.length - 1);
+      return;
+    }
+
     try {
       localStorage.setItem('hasSeenOnboarding', 'true');
     } catch {
@@ -223,15 +237,25 @@ export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
         className="relative z-10 flex items-center justify-end px-4"
         style={{ paddingTop: 'max(env(safe-area-inset-top), 1rem)' }}
       >
-        <Button
-          variant="ghost"
-          onClick={handleFinish}
-          className="font-medium hover:bg-white/5"
-          style={{ color: BRAND.textMuted }}
-          aria-label="Skip onboarding"
-        >
-          Skip
-        </Button>
+        <AnimatePresence>
+          {!isLast && (
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+            >
+              <Button
+                variant="ghost"
+                onClick={handleFinish}
+                className="font-medium hover:bg-white/5"
+                style={{ color: BRAND.textMuted }}
+                aria-label="Skip onboarding"
+              >
+                Skip
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Slides */}
@@ -295,8 +319,8 @@ export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
             <ChevronLeft className="size-5" />
           </Button>
 
-          {/* Dots */}
-          <div className="flex items-center gap-2" role="tablist" aria-label="Onboarding progress">
+          {/* Tiny Line Indicators */}
+          <div className="flex items-center gap-1.5" role="tablist" aria-label="Onboarding progress">
             {slides.map((_, i) => (
               <motion.button
                 key={i}
@@ -304,12 +328,13 @@ export const MobileOnboarding = ({ onFinish }: MobileOnboardingProps) => {
                 role="tab"
                 aria-selected={currentSlide === i}
                 aria-label={`Go to slide ${i + 1}`}
-                className="h-2 rounded-full"
+                className="h-1 rounded-full flex-shrink-0"
+                initial={false}
                 animate={{
-                  width: currentSlide === i ? 28 : 8,
-                  backgroundColor: currentSlide === i ? BRAND.gold : `${BRAND.gold}40`,
+                  width: currentSlide === i ? 16 : 4,
+                  backgroundColor: currentSlide === i ? BRAND.gold : `${BRAND.gold}20`,
                 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
+                transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
               />
             ))}
           </div>
@@ -359,7 +384,7 @@ const WelcomeView = ({ slide }: { slide: WelcomeSlide }) => (
         <img
           src="/email-logo.png"
           alt="AbiaConnect logo"
-          className="w-32 h-32 object-contain drop-shadow-2xl"
+          className="w-36 h-32 object-contain drop-shadow-[0_20px_50px_rgba(200,169,81,0.3)]"
         />
       </motion.div>
     </motion.div>
@@ -367,8 +392,8 @@ const WelcomeView = ({ slide }: { slide: WelcomeSlide }) => (
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3, duration: 0.5 }}
-      className="text-4xl font-extrabold mb-3 leading-tight bg-clip-text text-transparent"
-      style={{ backgroundImage: `linear-gradient(135deg, ${BRAND.gold} 0%, #F0D78C 100%)` }}
+      className="text-5xl font-black mb-4 leading-[1.1] tracking-tight bg-clip-text text-transparent px-2"
+      style={{ backgroundImage: `linear-gradient(135deg, ${BRAND.gold} 0%, #FDE68A 100%)` }}
     >
       {slide.tagline}
     </motion.h1>
@@ -376,8 +401,8 @@ const WelcomeView = ({ slide }: { slide: WelcomeSlide }) => (
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.5, duration: 0.5 }}
-      className="text-base max-w-xs mx-auto"
-      style={{ color: BRAND.textMuted }}
+      className="text-xl font-bold max-w-xs mx-auto leading-snug"
+      style={{ color: BRAND.text }}
     >
       {slide.subtitle}
     </motion.p>
@@ -385,11 +410,11 @@ const WelcomeView = ({ slide }: { slide: WelcomeSlide }) => (
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.8 }}
-      className="mt-8 inline-flex items-center gap-2 px-4 py-2 rounded-full"
-      style={{ background: `${BRAND.gold}15`, border: `1px solid ${BRAND.gold}30` }}
+      className="mt-10 inline-flex items-center gap-2 px-5 py-2.5 rounded-full shadow-lg"
+      style={{ background: `${BRAND.gold}20`, border: `1px solid ${BRAND.gold}40` }}
     >
-      <Sparkles className="size-3.5" style={{ color: BRAND.gold }} />
-      <span className="text-xs font-medium" style={{ color: BRAND.gold }}>
+      <Sparkles className="size-4" style={{ color: BRAND.gold }} />
+      <span className="text-sm font-bold tracking-wide" style={{ color: BRAND.gold }}>
         Connecting Abians Worldwide
       </span>
     </motion.div>
@@ -399,41 +424,41 @@ const WelcomeView = ({ slide }: { slide: WelcomeSlide }) => (
 const AboutView = ({ slide }: { slide: AboutSlide }) => (
   <div className="w-full max-w-sm">
     <div
-      className="mb-6 inline-flex p-3.5 rounded-2xl"
-      style={{ background: `${BRAND.green}40`, color: BRAND.gold }}
+      className="mb-8 inline-flex p-4 rounded-3xl shadow-xl"
+      style={{ background: `${BRAND.green}60`, color: BRAND.gold, border: `1px solid ${BRAND.gold}30` }}
     >
-      <ShieldCheck className="size-8" />
+      <ShieldCheck className="size-10" />
     </div>
-    <h2 className="text-3xl font-bold mb-2" style={{ color: BRAND.text }}>
+    <h2 className="text-4xl font-black mb-3 tracking-tight" style={{ color: BRAND.text }}>
       {slide.title}
     </h2>
-    <p className="text-sm mb-6" style={{ color: BRAND.textDim }}>
+    <p className="text-lg font-bold mb-8" style={{ color: BRAND.gold }}>
       The digital home of indigenous Abians
     </p>
-    <div className="space-y-3 text-left">
+    <div className="space-y-4 text-left">
       {slide.cards.map((c, i) => (
         <motion.div
           key={c.label}
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.15 + i * 0.12, duration: 0.4 }}
-          className="flex gap-3 p-4 rounded-2xl backdrop-blur-sm"
+          className="flex gap-4 p-5 rounded-[1.5rem] backdrop-blur-md shadow-lg"
           style={{
-            background: `${BRAND.surface}66`,
+            background: `${BRAND.surface}90`,
             border: `1px solid ${BRAND.border}`,
           }}
         >
           <div
-            className="shrink-0 size-10 rounded-xl flex items-center justify-center"
-            style={{ background: `${BRAND.gold}1A`, color: BRAND.gold }}
+            className="shrink-0 size-12 rounded-2xl flex items-center justify-center shadow-inner"
+            style={{ background: `${BRAND.gold}20`, color: BRAND.gold }}
           >
-            <c.icon className="size-5" />
+            <c.icon className="size-6" />
           </div>
           <div className="min-w-0">
-            <h3 className="font-bold text-sm mb-1" style={{ color: BRAND.text }}>
+            <h3 className="font-black text-base mb-1 uppercase tracking-wider" style={{ color: BRAND.gold }}>
               {c.label}
             </h3>
-            <p className="text-xs leading-relaxed" style={{ color: BRAND.textMuted }}>
+            <p className="text-sm leading-relaxed font-medium" style={{ color: BRAND.text }}>
               {c.body}
             </p>
           </div>
@@ -445,35 +470,35 @@ const AboutView = ({ slide }: { slide: AboutSlide }) => (
 
 const FeaturesView = ({ slide }: { slide: FeaturesSlide }) => (
   <div className="w-full max-w-md">
-    <h2 className="text-3xl font-bold mb-2" style={{ color: BRAND.text }}>
+    <h2 className="text-4xl font-black mb-3 tracking-tight" style={{ color: BRAND.text }}>
       {slide.title}
     </h2>
-    <p className="text-sm mb-6" style={{ color: BRAND.textDim }}>
-      Built for community, identity & progress
+    <p className="text-lg font-bold mb-10" style={{ color: BRAND.gold }}>
+      Built for community & progress
     </p>
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-4">
       {slide.features.map((f, i) => (
         <motion.div
           key={f.name}
           initial={{ opacity: 0, y: 16, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.1 + i * 0.08, duration: 0.35, ease: 'easeOut' }}
-          className="p-4 rounded-2xl flex flex-col items-center text-center backdrop-blur-sm"
+          className="p-5 rounded-[1.5rem] flex flex-col items-center text-center backdrop-blur-md shadow-xl"
           style={{
-            background: `${BRAND.surface}80`,
+            background: `${BRAND.surface}99`,
             border: `1px solid ${BRAND.border}`,
           }}
         >
           <div
-            className="p-2.5 rounded-xl mb-2.5"
-            style={{ background: `${BRAND.gold}1A`, color: BRAND.gold }}
+            className="p-3 rounded-2xl mb-3.5 shadow-lg"
+            style={{ background: `linear-gradient(135deg, ${BRAND.gold}30 0%, ${BRAND.gold}10 100%)`, color: BRAND.gold }}
           >
-            <f.icon className="size-5" />
+            <f.icon className="size-6" />
           </div>
-          <h3 className="font-bold text-xs mb-0.5" style={{ color: BRAND.text }}>
+          <h3 className="font-black text-sm mb-1 tracking-tight" style={{ color: BRAND.text }}>
             {f.name}
           </h3>
-          <p className="text-[10px] leading-tight" style={{ color: BRAND.textDim }}>
+          <p className="text-xs leading-tight font-bold" style={{ color: BRAND.textMuted }}>
             {f.desc}
           </p>
         </motion.div>
@@ -491,53 +516,90 @@ const StartView = ({
   onCreate: () => void;
   onSignIn: () => void;
 }) => (
-  <div className="w-full max-w-xs">
+  <div className="w-full max-w-sm px-4">
     <motion.div
-      initial={{ scale: 0, rotate: -90 }}
-      animate={{ scale: 1, rotate: 0 }}
-      transition={{ type: 'spring', stiffness: 180, damping: 14, delay: 0.1 }}
-      className="size-24 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl"
-      style={{
-        background: `linear-gradient(135deg, ${BRAND.gold} 0%, ${BRAND.goldDark} 100%)`,
-        boxShadow: `0 12px 32px -8px ${BRAND.gold}66`,
-      }}
+      initial={{ scale: 0.8, opacity: 0, y: 20 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 120, damping: 20, delay: 0.1 }}
+      className="relative size-32 mx-auto mb-10"
     >
-      <Rocket className="size-12" style={{ color: BRAND.bg }} />
+      {/* Premium Glow Effect */}
+      <div
+        className="absolute inset-0 rounded-[2.5rem] blur-2xl opacity-40 animate-pulse"
+        style={{ background: BRAND.gold }}
+      />
+
+      <div
+        className="relative h-full w-full rounded-[2.5rem] flex items-center justify-center border border-white/10 shadow-2xl overflow-hidden"
+        style={{
+          background: `linear-gradient(145deg, ${BRAND.gold} 0%, ${BRAND.goldDark} 100%)`,
+        }}
+      >
+        {/* Subtle glass reflection */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-50" />
+        <Rocket className="size-16 drop-shadow-lg" style={{ color: BRAND.bg }} />
+      </div>
     </motion.div>
-    <h2 className="text-3xl font-bold mb-3" style={{ color: BRAND.text }}>
-      {slide.title}
-    </h2>
-    <p className="text-base mb-8" style={{ color: BRAND.textMuted }}>
-      {slide.subtitle}
-    </p>
-    <div className="flex flex-col gap-3">
+
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3, duration: 0.6 }}
+    >
+      <h2 className="text-4xl font-black mb-4 tracking-tight" style={{ color: BRAND.text }}>
+        Your Community.<br />
+        <span className="text-transparent bg-clip-text" style={{ backgroundImage: `linear-gradient(to right, ${BRAND.gold}, #FDE68A)` }}>
+          Your Identity.
+        </span>
+      </h2>
+
+      <p className="text-lg leading-relaxed mb-10 font-medium" style={{ color: BRAND.textMuted }}>
+        Join the official digital home for <span className="text-white">indigenous Abians</span> worldwide.
+        Stay connected, stay informed, and grow with us.
+      </p>
+    </motion.div>
+
+    <motion.div
+      className="flex flex-col gap-4"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.5, duration: 0.6 }}
+    >
       <Button
         size="lg"
         onClick={onCreate}
-        className="h-14 rounded-2xl text-base font-bold"
+        className="h-16 rounded-2xl text-lg font-bold transition-all active:scale-[0.98]"
         style={{
           background: `linear-gradient(135deg, ${BRAND.gold} 0%, ${BRAND.goldDark} 100%)`,
           color: BRAND.bg,
-          boxShadow: `0 10px 28px -10px ${BRAND.gold}80`,
+          boxShadow: `0 12px 30px -10px ${BRAND.gold}90`,
         }}
       >
-        Create Account
+        Join the Community
       </Button>
+
       <Button
         size="lg"
         variant="outline"
         onClick={onSignIn}
-        className="h-14 rounded-2xl text-base font-bold bg-transparent hover:bg-white/5"
+        className="h-16 rounded-2xl text-lg font-bold bg-white/5 border-white/10 backdrop-blur-md transition-all active:scale-[0.98] hover:bg-white/10"
         style={{
-          borderColor: BRAND.gold,
-          color: BRAND.gold,
+          color: BRAND.text,
         }}
       >
-        Sign In
+        Sign in to your Account
       </Button>
-    </div>
-    <p className="mt-6 text-xs" style={{ color: BRAND.textDim }}>
-      By continuing you agree to our Terms & Privacy Policy
-    </p>
+    </motion.div>
+
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 0.5 }}
+      transition={{ delay: 1, duration: 1 }}
+      className="mt-10 pt-6 border-t border-white/5"
+    >
+      <p className="text-[11px] uppercase tracking-widest font-bold opacity-60" style={{ color: BRAND.textDim }}>
+        AbiaConnect &copy; 2026 • One People. One Voice.
+      </p>
+    </motion.div>
   </div>
 );

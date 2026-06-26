@@ -54,14 +54,24 @@ public class MainActivity extends BaseActivity {
 
     private void getFcmToken() {
         try {
+            // Check if Firebase is initialized before calling getInstance
+            // This prevents immediate crashes if google-services.json is missing
+            com.google.firebase.FirebaseApp app = com.google.firebase.FirebaseApp.getInstance();
+            if (app == null) {
+                Log.e(TAG, "Firebase not initialized: google-services.json might be missing");
+                return;
+            }
+
             FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
                 if (task.isSuccessful()) {
                     String token = task.getResult();
                     Log.d(TAG, "FCM Device token: " + token);
+                } else {
+                    Log.e(TAG, "FCM token request failed", task.getException());
                 }
             });
         } catch (Exception e) {
-            Log.e(TAG, "FCM not initialized", e);
+            Log.e(TAG, "Error accessing Firebase. Check if google-services.json is present in android/app/", e);
         }
     }
 }

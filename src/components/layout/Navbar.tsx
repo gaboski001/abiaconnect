@@ -116,8 +116,8 @@ export function Navbar() {
                 <Menu />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-80">
-              <SheetHeader>
+            <SheetContent side="left" className="w-80 border-r border-border/50">
+              <SheetHeader className="pr-10">
                 <SheetTitle asChild>
                   <Link to="/" onClick={() => setOpen(false)} className="flex items-center" aria-label={siteName}>
                     {showLogoImage && (
