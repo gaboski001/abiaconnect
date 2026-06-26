@@ -13,6 +13,7 @@ import Register from '@/pages/Register'
 // most common landing destinations; everything else streams in on navigation.
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'))
+const AuthConfirm = lazy(() => import('@/pages/AuthConfirm'))
 const CategoryPage = lazy(() => import('@/pages/Category'))
 const Thread = lazy(() => import('@/pages/Thread'))
 const CreateThread = lazy(() => import('@/pages/CreateThread'))
@@ -81,6 +82,7 @@ export default function App() {
               <Routes>
                 <Route path="forgot-password" element={<ForgotPassword />} />
                 <Route path="reset-password" element={<ResetPassword />} />
+                <Route path="auth/confirm" element={<AuthConfirm />} />
                 <Route path="category/:categoryId" element={<CategoryPage />} />
                 <Route path="thread/:threadId" element={<Thread />} />
                 <Route path="about/lgas" element={<LgasGuide />} />
