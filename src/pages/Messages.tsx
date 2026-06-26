@@ -594,9 +594,11 @@ function ConversationView({
               </div>
               {g.items.map((m) => {
                 const mine = m.sender_id === user?.id
+                const hasAudio =
+                  m.attachment_url && isAudioAttachment(m.attachment_type)
                 const hasImage =
-                  m.attachment_url && (m.attachment_type?.startsWith('image/') ?? false)
-                const hasFile = m.attachment_url && !hasImage
+                  m.attachment_url && !hasAudio && (m.attachment_type?.startsWith('image/') ?? false)
+                const hasFile = m.attachment_url && !hasImage && !hasAudio
                 return (
                   <div
                     key={m.id}
