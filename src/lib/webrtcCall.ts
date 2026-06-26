@@ -101,6 +101,9 @@ class CallManager {
   private lastBytesReceived = 0
   private lastBytesTimestamp = 0
   private currentTargetBitrateKbps = 32
+  private currentJitterTargetMs = 80
+  private poorSince: number | null = null
+
 
 
   subscribe(fn: Listener) {
