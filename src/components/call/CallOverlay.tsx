@@ -88,7 +88,24 @@ export function CallOverlay({ state }: { state: CallState }) {
             </div>
           )
         })()}
+        {state.status === 'connected' && state.degraded && (
+          <div className="mt-2 flex flex-col items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            <span>Connection has been poor for a while.</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              disabled={state.reconnecting}
+              onClick={() => callManager.reconnect()}
+            >
+              <RefreshCw className={cn('mr-1.5 h-3.5 w-3.5', state.reconnecting && 'animate-spin')} />
+              {state.reconnecting ? 'Reconnecting…' : 'Reconnect'}
+            </Button>
+          </div>
+        )}
       </div>
+
+
 
 
       <div className="flex items-center gap-6">
