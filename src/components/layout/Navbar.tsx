@@ -223,7 +223,7 @@ export function Navbar() {
               </Button>
               <Button
                 asChild
-                className="btn-gold-gradient"
+                variant="goldGradient"
               >
                 <Link to="/register">Join Free</Link>
               </Button>
