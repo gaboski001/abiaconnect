@@ -615,6 +615,9 @@ function ConversationView({
                         m._optimistic && 'opacity-70',
                       )}
                     >
+                      {hasAudio && (
+                        <VoiceMessageBubble url={m.attachment_url!} mine={mine} />
+                      )}
                       {hasImage && (
                         <a
                           href={m.attachment_url!}
