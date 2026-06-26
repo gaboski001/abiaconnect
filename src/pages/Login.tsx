@@ -119,6 +119,8 @@ export default function Login() {
             {loading ? 'Signing in…' : 'Sign In'}
           </Button>
 
+          <BiometricLoginButton onSuccess={() => navigate('/')} />
+
           <p className="text-sm text-center text-muted-foreground">
             New here?{' '}
             <Link to="/register" className="text-primary font-medium hover:underline">
