@@ -46,18 +46,21 @@ export function HeroSlider() {
 
   // Realtime invalidation
   useEffect(() => {
-    const channel = supabase
-      .channel('hero-slides-updates')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'hero_slides' },
-        () => queryClient.invalidateQueries({ queryKey: ['hero-slides'] }),
-      )
-      .subscribe()
+    // Unique channel name per mount so React StrictMode's double-invoke
+    // (or any re-mount) never re-uses an already-subscribed channel — adding
+    // `.on()` after `.subscribe()` on the same instance throws.
+    const channel = supabase.channel(`hero-slides-updates-${Math.random().toString(36).slice(2)}`)
+    channel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'hero_slides' },
+      () => queryClient.invalidateQueries({ queryKey: ['hero-slides'] }),
+    )
+    channel.subscribe()
     return () => {
       supabase.removeChannel(channel)
     }
   }, [queryClient])
+
 
   // Client-side safety filter for expiry
   const now = new Date()
