@@ -156,7 +156,11 @@ export function Navbar() {
                     <Button variant="secondary" asChild onClick={() => setOpen(false)}>
                       <Link to="/login">Sign In</Link>
                     </Button>
-                    <Button asChild onClick={() => setOpen(false)}>
+                    <Button
+                      asChild
+                      onClick={() => setOpen(false)}
+                      className="bg-gradient-to-r from-amber-400 to-yellow-600 text-black hover:opacity-90 shadow-[0_8px_30px_-8px_rgba(245,200,80,0.7)]"
+                    >
                       <Link to="/register">Join Free</Link>
                     </Button>
                   </div>
