@@ -45,7 +45,10 @@ export interface CallState {
   error: string | null
   quality: CallQuality
   stats: CallStats
+  degraded: boolean
+  reconnecting: boolean
 }
+
 
 
 type Listener = (state: CallState) => void
