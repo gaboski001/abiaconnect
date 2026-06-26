@@ -5,6 +5,7 @@ import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
 import {
   ArrowLeft,
   MessageSquarePlus,
+  Phone,
   Search,
   Send,
   Loader2,
@@ -14,6 +15,8 @@ import {
   FileText,
   Download,
 } from 'lucide-react'
+import { VoiceRecorderButton, VoiceMessageBubble, isAudioAttachment } from '@/components/messages/VoiceRecorder'
+import { callManager, useIsCallSupported } from '@/lib/webrtcCall'
 import { SEO } from '@/components/SEO'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
