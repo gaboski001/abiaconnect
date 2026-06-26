@@ -936,11 +936,8 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
           ) : usersQ.isLoading ? (
             <div className="p-4 text-xs text-muted-foreground">Searching…</div>
           ) : usersQ.isError ? (
-            <div className="p-4 text-xs text-destructive">
-              {/Rate limit/i.test((usersQ.error as Error)?.message ?? '')
-                ? 'You\'re searching too fast. Please wait a minute and try again.'
-                : 'Search failed. Please try again.'}
-            </div>
+            <RateLimitMessage error={usersQ.error as Error} />
+          
           ) : (usersQ.data ?? []).length === 0 ? (
             <div className="p-4 text-xs text-muted-foreground">No users found.</div>
           ) : (
