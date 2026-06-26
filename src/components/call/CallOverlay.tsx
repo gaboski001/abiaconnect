@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Phone, PhoneOff, Mic, MicOff, SignalHigh, SignalMedium, SignalLow, Signal } from 'lucide-react'
+import { Phone, PhoneOff, Mic, MicOff, SignalHigh, SignalMedium, SignalLow, Signal, RefreshCw } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { callManager, type CallState, type CallQuality } from '@/lib/webrtcCall'
