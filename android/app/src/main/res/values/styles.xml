@@ -1,30 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Professional App Theme -->
+    <!-- Main application theme. -->
     <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Brand Colors -->
+        <!-- Main theme colors -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorSecondary">@color/colorAccent</item>
 
-        <!-- Surface and Windows -->
-        <item name="android:windowBackground">@color/light_background</item>
+        <!-- Background and surface -->
+        <item name="android:windowBackground">@color/windowBackground</item>
         <item name="android:statusBarColor">@color/status_bar_color</item>
-        <item name="android:navigationBarColor">@color/light_background</item>
+        <item name="android:navigationBarColor">@color/navigationBarColor</item>
 
-        <!-- UI Configuration -->
+        <!-- UI Settings -->
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>
     </style>
 
-    <!-- Theme synchronization -->
+    <!-- Compatibility -->
     <style name="Theme.AbiaConnect" parent="AppTheme" />
     <style name="AppTheme.NoActionBar" parent="AppTheme" />
 
-    <!-- Splash Screen -->
+    <!-- Launch screen theme -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <item name="postSplashScreenTheme">@style/AppTheme</item>
     </style>
 
 </resources>

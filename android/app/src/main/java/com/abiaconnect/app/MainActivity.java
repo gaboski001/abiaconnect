@@ -41,8 +41,6 @@ public class MainActivity extends BaseActivity {
             String type = intent.getStringExtra("notification_type");
             String targetId = intent.getStringExtra("target_id");
             Log.d(TAG, "Notification tapped: type=" + type + ", targetId=" + targetId);
-            
-            // Note: Navigation logic can be implemented via getBridge().triggerWindowKeyEvent or similar Capacitor methods.
         }
     }
 
@@ -55,11 +53,15 @@ public class MainActivity extends BaseActivity {
     }
 
     private void getFcmToken() {
-        FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                String token = task.getResult();
-                Log.d(TAG, "FCM Device token: " + token);
-            }
-        });
+        try {
+            FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    String token = task.getResult();
+                    Log.d(TAG, "FCM Device token: " + token);
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "FCM not initialized", e);
+        }
     }
 }

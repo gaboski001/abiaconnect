@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Abiaconnect</string>
+    <string name="title_activity_main">Abiaconnect</string>
+    <string name="package_name">com.abiaconnect.app</string>
+    <string name="custom_url_scheme">com.abiaconnect.app</string>
+</resources>

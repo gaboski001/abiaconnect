@@ -15,7 +15,7 @@ public class BaseActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         // Apply window configuration before super.onCreate
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
-        
+
         super.onCreate(savedInstanceState);
 
         // Force status bar color to Forest Green (Brand Matching)
@@ -23,11 +23,11 @@ public class BaseActivity extends BridgeActivity {
             getWindow().setStatusBarColor(ContextCompat.getColor(this, R.color.status_bar_color));
         }
 
-        // Capacitor 6 handles layout and webview automatically.
+        // Capacitor configuration
         if (getBridge() != null && getBridge().getWebView() != null) {
             getBridge().getWebView().getSettings().setLoadWithOverviewMode(true);
             getBridge().getWebView().getSettings().setUseWideViewPort(true);
-            
+
             // Allow web content to draw outside its bounds (for shadows/glows)
             getBridge().getWebView().setClipChildren(false);
             getBridge().getWebView().setClipToPadding(false);
@@ -47,7 +47,7 @@ public class BaseActivity extends BridgeActivity {
             channel.setLightColor(android.graphics.Color.GREEN);
             channel.enableVibration(true);
             channel.setShowBadge(true);
-            
+
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
             if (notificationManager != null) {
                 notificationManager.createNotificationChannel(channel);
