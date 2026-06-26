@@ -65,6 +65,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <NativeOnboardingGate />
       <Routes>
       <Route element={<MainLayout />}>
         <Route index element={<Home />} />
