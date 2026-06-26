@@ -880,6 +880,27 @@ export type Database = {
           },
         ]
       }
+      search_rate_limits: {
+        Row: {
+          count: number
+          scope: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          scope: string
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          scope?: string
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           created_at: string
@@ -1386,6 +1407,10 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      enforce_rate_limit: {
+        Args: { _max: number; _scope: string; _window_seconds?: number }
+        Returns: undefined
+      }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
@@ -1508,6 +1533,7 @@ export type Database = {
         Args: { _pinned: boolean; _thread_id: string }
         Returns: undefined
       }
+      prune_search_rate_limits: { Args: never; Returns: undefined }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
