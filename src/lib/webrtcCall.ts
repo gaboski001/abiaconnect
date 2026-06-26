@@ -491,9 +491,15 @@ class CallManager {
     }
 
     const quality = this.scoreQuality(rttMs, jitterMs, packetLossPct)
+    const prev = this.state.quality
+    const timeline =
+      quality !== prev && quality !== 'unknown'
+        ? this.appendTimeline(this.state.timeline, quality)
+        : this.state.timeline
     this.patch({
       quality,
       stats: { rttMs, jitterMs, packetLossPct, bitrateKbps },
+      timeline,
     })
     this.adaptBitrate(quality)
     this.trackPersistentPoor(quality)
