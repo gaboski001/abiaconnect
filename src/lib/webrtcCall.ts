@@ -257,6 +257,8 @@ class CallManager {
     }
     this.poorSince = null
     this.currentJitterTargetMs = 80
+    this.clearAutoReconnect()
+    this.autoReconnecting = false
     this.patch({
       status: 'ended',
       muted: false,
@@ -265,6 +267,8 @@ class CallManager {
       stats: { ...INITIAL_STATS },
       degraded: false,
       reconnecting: false,
+      reconnectAttempts: 0,
+      timeline: this.appendTimeline(this.state.timeline, 'unknown', error ?? 'Call ended'),
     })
 
     window.setTimeout(() => {
@@ -276,6 +280,7 @@ class CallManager {
           peer: null,
           startedAt: null,
           error: null,
+          timeline: [],
         })
       }
     }, 2500)
