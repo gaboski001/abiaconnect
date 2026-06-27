@@ -1,7 +1,12 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Abiaconnect</string>
-    <string name="title_activity_main">Abiaconnect</string>
+    <string name="app_name">AbiaConnect</string>
+    <string name="title_activity_main">AbiaConnect</string>
+    <string name="push_default_channel_id">abia_default</string>
+    <string name="push_default_channel_name">AbiaConnect alerts</string>
+    <string name="push_default_channel_description">Messages, replies, mentions and system alerts</string>
+    <string name="push_call_channel_name">AbiaConnect calls</string>
+    <string name="push_call_channel_description">Incoming call alerts with heads-up display</string>
     <string name="package_name">com.abiaconnect.app</string>
     <string name="custom_url_scheme">com.abiaconnect.app</string>
 </resources>

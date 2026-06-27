@@ -1,15 +1,12 @@
 package com.abiaconnect.app;
 
-import android.app.Notification;
-import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.media.RingtoneManager;
 import android.net.Uri;
-import android.os.Build;
+import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -19,92 +16,109 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
+    private static final String TAG = "AbiaConnectFCM";
 
     @Override
     public void onNewToken(@NonNull String token) {
         super.onNewToken(token);
-        Log.d("FCM", "New token: " + token);
+        Log.d(TAG, "New token: " + token);
     }
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         super.onMessageReceived(remoteMessage);
 
-        String title = "New Notification";
-        String body = "";
+        String title = value(remoteMessage, "title", "New notification");
+        String body = value(remoteMessage, "body", value(remoteMessage, "message", ""));
+        String type = value(remoteMessage, "type", "general");
+        String callId = value(remoteMessage, "callId", "");
+        String conversationId = value(remoteMessage, "conversationId", "");
+        String url = value(remoteMessage, "url", TextUtils.isEmpty(conversationId) ? "/notifications" : "/messages/" + conversationId);
 
-        if (remoteMessage.getNotification() != null) {
-            title = remoteMessage.getNotification().getTitle();
-            body = remoteMessage.getNotification().getBody();
-        } else if (remoteMessage.getData().size() > 0) {
-            title = remoteMessage.getData().get("title");
-            body = remoteMessage.getData().get("body");
+        if ("call".equals(type)) {
+            showIncomingCallNotification(title, body, callId, url);
+        } else {
+            showStandardNotification(title, body, type, url, callId);
         }
-
-        if (title == null) title = "New Notification";
-        if (body == null) body = "";
-
-        String type = remoteMessage.getData().get("type");
-        if (type == null) type = "general";
-
-        String targetId = remoteMessage.getData().get("target_id");
-        if (targetId == null) targetId = "";
-
-        showNotification(title, body, type, targetId);
     }
 
-    private void showNotification(String title, String body, String type, String targetId) {
-        String channelId = "default_channel";
-        int notificationId = (int) System.currentTimeMillis();
+    private String value(RemoteMessage remoteMessage, String key, String fallback) {
+        String dataValue = remoteMessage.getData().get(key);
+        if (!TextUtils.isEmpty(dataValue)) return dataValue;
+        if (remoteMessage.getNotification() != null) {
+            if ("title".equals(key) && !TextUtils.isEmpty(remoteMessage.getNotification().getTitle())) {
+                return remoteMessage.getNotification().getTitle();
+            }
+            if (("body".equals(key) || "message".equals(key)) && !TextUtils.isEmpty(remoteMessage.getNotification().getBody())) {
+                return remoteMessage.getNotification().getBody();
+            }
+        }
+        return fallback;
+    }
 
+    private PendingIntent buildContentIntent(int requestCode, String type, String url, String callId) {
         Intent intent = new Intent(this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         intent.putExtra("notification_type", type);
-        intent.putExtra("target_id", targetId);
-
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-            this, notificationId, intent,
-            PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE
+        intent.putExtra("url", url);
+        intent.putExtra("call_id", callId);
+        return PendingIntent.getActivity(
+            this,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
+    }
 
-        Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+    private void showStandardNotification(String title, String body, String type, String url, String callId) {
+        int notificationId = (int) System.currentTimeMillis();
+        PendingIntent contentIntent = buildContentIntent(notificationId, type, url, callId);
+        Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, channelId)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(body)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
             .setAutoCancel(true)
-            .setSound(defaultSoundUri)
+            .setSound(sound)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setVibrate(new long[]{0, 500, 200, 500})
-            .setContentIntent(pendingIntent)
-            .setStyle(new NotificationCompat.BigTextStyle().bigText(body));
+            .setContentIntent(contentIntent)
+            .setVibrate(new long[]{0, 300, 180, 300});
 
-        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                channelId,
-                "App Notifications",
-                NotificationManager.IMPORTANCE_HIGH
-            );
-            channel.setDescription("Real-time app notifications");
-            channel.enableLights(true);
-            channel.setLightColor(Color.GREEN);
-            channel.enableVibration(true);
-            channel.setVibrationPattern(new long[]{0, 500, 200, 500});
-            channel.setShowBadge(true);
-            channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-
-            if (notificationManager != null) {
-                notificationManager.createNotificationChannel(channel);
-            }
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) {
+            manager.notify(notificationId, builder.build());
         }
+    }
 
-        if (notificationManager != null) {
-            notificationManager.notify(notificationId, notificationBuilder.build());
+    private void showIncomingCallNotification(String title, String body, String callId, String url) {
+        int notificationId = TextUtils.isEmpty(callId) ? (int) System.currentTimeMillis() : callId.hashCode();
+        PendingIntent fullScreenIntent = buildContentIntent(notificationId, "call", url, callId);
+        Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CALL_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(TextUtils.isEmpty(title) ? "Incoming call" : title)
+            .setContentText(TextUtils.isEmpty(body) ? "Open AbiaConnect to answer" : body)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(TextUtils.isEmpty(body) ? "Open AbiaConnect to answer" : body))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setSound(sound)
+            .setVibrate(new long[]{0, 700, 350, 700, 350, 700})
+            .setContentIntent(fullScreenIntent)
+            .setFullScreenIntent(fullScreenIntent, true)
+            .setTimeoutAfter(45000)
+            .addAction(0, "Open", fullScreenIntent);
+
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) {
+            manager.notify(notificationId, builder.build());
         }
     }
 }

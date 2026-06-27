@@ -4,7 +4,7 @@ Follow these steps every time you pull new changes from GitHub and want to run t
 
 ## Prerequisites (one-time setup)
 
-- **Node.js 20+** and **npm**
+- **Node.js 22 LTS** and **npm 10+**
 - **Git**
 - **Android**: [Android Studio](https://developer.android.com/studio) with Android SDK + **JDK 17**
 - **iOS** (macOS only): **Xcode 15+** and **CocoaPods** (`sudo gem install cocoapods`)
@@ -56,7 +56,33 @@ npx cap sync android
 npx cap sync ios
 ```
 
-## 6. Run the app
+## 6. Android push notification checklist
+
+Use this after any Firebase or notification-related change:
+
+```bash
+npm install
+npm run build
+npx cap sync android
+npx cap open android
+```
+
+Then in Android Studio / on device:
+
+1. Confirm `android/app/google-services.json` exists
+2. Install the app on a **physical Android phone**
+3. Sign in with a real account
+4. Open the admin **Push Setup Checklist** screen
+5. Confirm token registration succeeds and the token is stored in `device_push_tokens`
+6. Send a test push from the admin **Send Test Push** panel
+7. Verify delivery in all states:
+   - foreground
+   - background
+   - app relaunched from a terminated state
+
+> Note: swiping the app away from Recent Apps is supported. If Android system settings are used to **Force stop** the app, push delivery is blocked by the OS until the user opens the app again.
+
+## 7. Run the app
 
 ### Android
 
@@ -107,7 +133,7 @@ npx cap sync ios
 
 ---
 
-## Quick reference — full update cycle
+## 8. Quick reference — full update cycle
 
 ```bash
 git pull
@@ -119,7 +145,7 @@ npx cap run android      # or: npx cap run ios
 
 ---
 
-## Shipping a release build to testers
+## 9. Shipping a release build to testers
 
 Push a semver tag and the GitHub Actions workflow (`.github/workflows/build-and-upload-native.yml`) will build a debug APK (and IPA if signing secrets are configured) and upload it to the admin **App Releases** section automatically:
 

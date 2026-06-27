@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
+import { ArrowUpRight, Sparkles } from 'lucide-react'
 import type { Database } from '@/integrations/supabase/types'
+import { GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND } from '@/lib/mobileBrand'
 
 type HeroSlideRow = Database['public']['Tables']['hero_slides']['Row']
 
@@ -22,22 +24,24 @@ export type HeroSlideLike = Partial<HeroSlideRow> & {
 function SlideLink({
   href,
   className,
+  style,
   children,
 }: {
   href: string
   className: string
+  style?: React.CSSProperties
   children: React.ReactNode
 }) {
   const isExternal = href.startsWith('http') || href.startsWith('//')
   if (isExternal) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className} style={style}>
         {children}
       </a>
     )
   }
   return (
-    <Link to={href} className={className}>
+    <Link to={href} className={className} style={style}>
       {children}
     </Link>
   )
@@ -50,7 +54,7 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
 
   return (
     <div
-      className="relative w-full rounded-[32px] overflow-hidden border-2 border-secondary/20 min-h-[380px] md:min-h-[460px] flex flex-col items-center justify-center px-6 py-10 md:py-16 text-center"
+      className="relative flex min-h-[400px] w-full overflow-hidden rounded-[32px] border border-white/15 px-6 py-8 text-left text-white md:min-h-[470px] md:px-8 md:py-10"
       style={bgStyle}
     >
       {slide.image_url && (
@@ -58,87 +62,106 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
           src={slide.image_url}
           alt=""
           loading="lazy"
-          className="absolute inset-0 w-full h-full object-cover opacity-20"
+          className="absolute inset-0 h-full w-full object-cover opacity-20"
         />
       )}
 
-      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/40 pointer-events-none" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(5,12,22,0.84)_15%,rgba(5,12,22,0.55)_55%,rgba(5,12,22,0.82)_100%)]" />
+      <div className="absolute -right-16 top-0 h-56 w-56 rounded-full blur-3xl" style={{ background: 'rgba(248,195,1,0.16)' }} />
+      <div className="absolute -left-12 bottom-0 h-48 w-48 rounded-full blur-3xl" style={{ background: 'rgba(28,169,217,0.18)' }} />
 
       {slide.isDefault && (
         <>
-          <div
-            aria-hidden
-            className="absolute top-0 right-0 w-64 h-64 rounded-full bg-secondary/20 blur-[80px] pointer-events-none"
-          />
-          <div
-            aria-hidden
-            className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-primary/30 blur-[60px] pointer-events-none"
-          />
+          <div aria-hidden className="absolute right-8 top-8 hidden h-28 w-28 rounded-[2rem] border border-white/10 bg-white/[0.05] backdrop-blur-md md:block" />
+          <div aria-hidden className="absolute bottom-8 right-20 hidden h-12 w-24 rounded-full border border-white/10 bg-white/[0.05] backdrop-blur-md md:block" />
         </>
       )}
 
-      <div className="relative z-10 max-w-2xl mx-auto space-y-4">
-        {slide.badge_text && (
-          <div className="inline-flex items-center px-4 py-1.5 rounded-full border border-secondary/40 bg-secondary/10 text-secondary text-xs font-semibold uppercase tracking-wider">
-            {slide.badge_text}
-          </div>
-        )}
+      <div className="relative z-10 grid w-full gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+        <div className="flex max-w-2xl flex-col justify-between gap-5">
+          <div className="space-y-4">
+            {slide.badge_text && (
+              <div
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/88"
+                style={{ background: GOLD_GRADIENT_SOFT }}
+              >
+                <Sparkles className="size-3.5" style={{ color: MOBILE_BRAND.gold }} />
+                {slide.badge_text}
+              </div>
+            )}
 
-        <h2 className="text-3xl md:text-5xl font-bold leading-tight">
-          {slide.isDefault ? (
-            <>
-              <span className="text-white">{slide.title}</span>
-              {slide.subtitle && (
+            <h2 className="text-3xl font-black leading-tight md:text-5xl">
+              {slide.isDefault ? (
                 <>
-                  <br />
-                  <span className="bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-600 bg-clip-text text-transparent">
-                    {slide.subtitle}
-                  </span>
+                  <span className="text-white">{slide.title}</span>
+                  {slide.subtitle ? (
+                    <>
+                      <br />
+                      <span className="bg-gradient-to-r from-yellow-200 via-amber-300 to-yellow-500 bg-clip-text text-transparent">
+                        {slide.subtitle}
+                      </span>
+                    </>
+                  ) : null}
                 </>
+              ) : (
+                <span className="text-white">{slide.title}</span>
               )}
-            </>
-          ) : (
-            <span className="text-white">{slide.title}</span>
-          )}
-        </h2>
+            </h2>
 
-        {slide.body && (
-          <p className="text-white/80 text-base md:text-lg max-w-xl mx-auto leading-relaxed">
-            {slide.body}
-          </p>
-        )}
+            {slide.body ? (
+              <p className="max-w-xl text-base leading-8 text-white/82 md:text-lg">{slide.body}</p>
+            ) : null}
 
-        {!slide.isDefault && slide.subtitle && (
-          <p className="text-secondary font-semibold text-sm md:text-base">{slide.subtitle}</p>
-        )}
-
-        {(slide.cta_label || slide.cta_label_2) && (
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            {slide.cta_label && slide.cta_url && (
-              <SlideLink
-                href={slide.cta_url}
-                className="btn-gold-gradient px-6 py-2.5 rounded-xl font-semibold text-sm transition-opacity"
-              >
-                {slide.cta_label}
-              </SlideLink>
-            )}
-            {slide.cta_label_2 && slide.cta_url_2 && (
-              <SlideLink
-                href={slide.cta_url_2}
-                className="px-6 py-2.5 rounded-xl font-semibold text-sm border border-white/30 text-white hover:bg-white/10 transition-colors"
-              >
-                {slide.cta_label_2}
-              </SlideLink>
-            )}
+            {!slide.isDefault && slide.subtitle ? (
+              <p className="text-sm font-semibold text-white/86 md:text-base">{slide.subtitle}</p>
+            ) : null}
           </div>
-        )}
 
-        {!slide.isDefault && (
-          <p className="text-white/30 text-[10px] uppercase tracking-widest mt-2">
-            Advertisement
-          </p>
-        )}
+          {(slide.cta_label || slide.cta_label_2) && (
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              {slide.cta_label && slide.cta_url ? (
+                <SlideLink
+                  href={slide.cta_url}
+                  className="inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-bold text-slate-950 transition-opacity hover:opacity-95"
+                  style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
+                >
+                  {slide.cta_label}
+                  <ArrowUpRight className="size-4" />
+                </SlideLink>
+              ) : null}
+              {slide.cta_label_2 && slide.cta_url_2 ? (
+                <SlideLink
+                  href={slide.cta_url_2}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/25 bg-white/[0.05] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/[0.10]"
+                >
+                  {slide.cta_label_2}
+                </SlideLink>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        <div className="grid gap-3 self-end sm:grid-cols-3 lg:grid-cols-1">
+          <InfoCard title="Experience" body="Premium visuals for browsing, updates, and call-to-action clarity." />
+          <InfoCard title="Visibility" body="High contrast copy and controls for easier reading in every theme." />
+          <InfoCard title="Motion" body="Smoother carousel interactions with a more native presentation feel." />
+        </div>
       </div>
+
+      {!slide.isDefault && (
+        <p className="absolute bottom-5 right-6 z-10 text-[10px] uppercase tracking-[0.22em] text-white/45">
+          Sponsored update
+        </p>
+      )}
+    </div>
+  )
+}
+
+function InfoCard({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-[1.3rem] border border-white/10 bg-white/[0.05] p-4 backdrop-blur-md">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/58">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-white/82">{body}</p>
     </div>
   )
 }

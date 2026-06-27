@@ -9,16 +9,21 @@ export function ConnectivityStatus() {
   const [isSupabaseReachable, setIsSupabaseReachable] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
 
-  const checkConnection = async () => {
+  const checkConnection = async (isInitial = false) => {
     setIsChecking(true);
     const result = await checkSupabaseConnection();
+    const wasPreviouslyDisconnected = isSupabaseReachable === false;
+
     setIsSupabaseReachable(result.connected);
     setIsChecking(false);
 
     if (!result.connected) {
       console.error('Connection check failed:', result.error);
-      toast.error('Network Error: Cannot reach the server. Please check your internet connection.');
-    } else {
+      // Only show error toast if not the initial check (to avoid noise on every app start)
+      if (!isInitial) {
+        toast.error('Network Error: Cannot reach the server. Please check your internet connection.');
+      }
+    } else if (wasPreviouslyDisconnected && !isInitial) {
       toast.success('Connection restored!');
     }
   };
@@ -36,9 +41,9 @@ export function ConnectivityStatus() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Initial check
+    // Initial check - passing true to suppress the 'restored' toast
     if (navigator.onLine) {
-      checkConnection();
+      checkConnection(true);
     }
 
     return () => {

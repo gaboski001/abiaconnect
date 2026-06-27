@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 
 // Lazy-load Textarea — only needed when user opens a reply form.
 const Textarea = lazy(() =>
@@ -108,25 +109,25 @@ const ReplyItem = memo(function ReplyItem({
   const isOpen = replyingTo === r.id
   return (
     <li
-      className={`rounded-2xl border border-border bg-card p-4 transition-opacity ${
+      className={`rounded-[1.5rem] border border-slate-200/80 bg-white/96 p-4 text-slate-950 shadow-[0_18px_50px_-34px_rgba(15,23,42,0.18)] transition-opacity dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)] dark:text-white dark:shadow-none ${
         r.parent_reply_id ? 'ml-8' : ''
       } ${isOptimistic ? 'opacity-60' : ''}`}
       aria-busy={isOptimistic ? 'true' : undefined}
     >
-      <div className="flex items-center gap-2 mb-2">
+      <div className="mb-2 flex items-center gap-2">
         <Avatar name={name} url={r.profiles?.avatar_url} />
-        <span className="font-medium text-sm">{name}</span>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{name}</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">
           {isOptimistic
             ? 'Sending…'
             : formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
         </span>
       </div>
       <div
-        className="prose prose-sm dark:prose-invert max-w-none"
+        className="prose prose-sm max-w-none prose-p:text-slate-700 prose-p:leading-7 prose-strong:text-slate-950 dark:prose-invert dark:prose-p:text-slate-300 dark:prose-strong:text-white"
         dangerouslySetInnerHTML={{ __html: safeHtml }}
       />
-      <div className="flex items-center gap-1 mt-2">
+      <div className="mt-3 flex items-center gap-1">
         <Button
           size="sm"
           variant="ghost"
@@ -166,6 +167,7 @@ const ReplyItem = memo(function ReplyItem({
               rows={3}
               maxLength={5000}
               autoFocus
+              className="rounded-2xl border-slate-200/80 bg-white text-slate-950 placeholder:text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-400"
             />
           </Suspense>
           <div className="flex justify-end gap-2">
@@ -185,20 +187,26 @@ const ReplyItem = memo(function ReplyItem({
 export default function ThreadPage() {
   const { user, loading } = useAuth()
   if (loading) {
-    return <div className="p-8 text-sm text-muted-foreground">Loading…</div>
+    return <div className="p-8 text-sm text-slate-600 dark:text-slate-300/74">Loading…</div>
   }
   if (!user) {
     return (
-      <div className="max-w-xl mx-auto mt-16 rounded-2xl border border-border bg-card p-8 text-center space-y-4">
-        <h1 className="text-2xl font-bold">Sign in to view this thread</h1>
-        <p className="text-muted-foreground">
+      <div className="mx-auto mt-16 max-w-xl space-y-4 rounded-[2rem] border border-slate-200/80 bg-white/96 p-8 text-center shadow-[0_24px_80px_-42px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)] dark:shadow-none">
+        <div
+          className="mx-auto inline-flex items-center gap-2 rounded-full border border-slate-200/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700 dark:border-white/10 dark:text-slate-200/80"
+          style={{ background: GOLD_GRADIENT_SOFT }}
+        >
+          Thread access
+        </div>
+        <h1 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">Sign in to view this thread</h1>
+        <p className="text-slate-600 dark:text-slate-300/76">
           Join AbiaConnect to read full discussions, vote, and participate in the conversation.
         </p>
         <div className="flex justify-center gap-3 pt-2">
-          <Link to="/login" className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-5 py-2 text-sm font-semibold hover:opacity-90">
+          <Link to="/login" className="inline-flex items-center justify-center rounded-2xl px-5 py-2.5 text-sm font-bold text-slate-950 hover:opacity-95" style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
             Sign in
           </Link>
-          <Link to="/register" className="inline-flex items-center justify-center rounded-md border border-border px-5 py-2 text-sm font-semibold hover:bg-muted">
+          <Link to="/register" className="inline-flex items-center justify-center rounded-2xl border border-slate-200/80 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/[0.06]">
             Create account
           </Link>
         </div>
@@ -750,43 +758,43 @@ function Thread() {
           },
         ]}
       />
-    <div className="space-y-6 max-w-3xl mx-auto">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="mx-auto max-w-4xl space-y-6">
+      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
         <ChevronLeft className="size-4" />
         {thread.categories ? (
-          <Link to={`/category/${thread.categories.id}`} className="hover:text-primary">
+          <Link to={`/category/${thread.categories.id}`} className="hover:text-slate-900 dark:hover:text-white">
             {thread.categories.name}
           </Link>
         ) : (
-          <Link to="/" className="hover:text-primary">All Forums</Link>
+          <Link to="/" className="hover:text-slate-900 dark:hover:text-white">All Forums</Link>
         )}
       </div>
 
-      <article className="rounded-2xl border border-border bg-card p-6 space-y-5">
+      <article className="space-y-5 rounded-[2rem] border border-slate-200/80 bg-white/96 p-6 text-slate-950 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)] dark:text-white dark:shadow-none" style={{ boxShadow: PREMIUM_SHADOW }}>
         <div className="flex flex-wrap items-center gap-2">
           {thread.is_pinned && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-secondary/20 text-secondary-foreground px-2 py-0.5 text-xs font-semibold">
+            <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-slate-950" style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
               <Pin className="size-3" /> Pinned
             </span>
           )}
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
             <Eye className="size-3.5" /> {thread.view_count ?? 0} views
           </span>
         </div>
-        <h1 className="text-3xl font-bold">{thread.title}</h1>
+        <h1 className="text-3xl font-black tracking-tight text-slate-950 dark:text-white">{thread.title}</h1>
 
         <div className="flex items-start gap-3">
           <Avatar name={authorName} url={thread.profiles?.avatar_url} size={10} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-semibold">{authorName}</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-100">{authorName}</span>
               {thread.profiles?.role && (
-                <span className="text-xs rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">
+                <span className="rounded-full border border-slate-200/80 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200">
                   {thread.profiles.role}
                 </span>
               )}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-slate-500 dark:text-slate-400">
               {thread.profiles?.created_at &&
                 `Joined ${formatDistanceToNow(new Date(thread.profiles.created_at), { addSuffix: true })} · `}
               Posted {formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}
@@ -795,11 +803,11 @@ function Thread() {
         </div>
 
         <div
-          className="prose prose-sm dark:prose-invert max-w-none"
+          className="prose prose-sm max-w-none prose-p:text-slate-700 prose-p:leading-7 prose-strong:text-slate-950 dark:prose-invert dark:prose-p:text-slate-300 dark:prose-strong:text-white"
           dangerouslySetInnerHTML={{ __html: safeBody }}
         />
 
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
+        <div className="flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-2 dark:border-white/10">
           <Button
             size="sm"
             variant="outline"
@@ -818,26 +826,36 @@ function Thread() {
           >
             <ThumbsDown /> {thread.downvotes ?? 0}
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => bookmark.mutate()} disabled={!user}>
+          <Button size="sm" variant="ghost" className="rounded-xl" onClick={() => bookmark.mutate()} disabled={!user}>
             <Bookmark /> Bookmark
           </Button>
-          <Button size="sm" variant="ghost" onClick={share}>
+          <Button size="sm" variant="ghost" className="rounded-xl" onClick={share}>
             <Share2 /> Share
           </Button>
         </div>
       </article>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold">
-          {totalReplies} {totalReplies === 1 ? 'Reply' : 'Replies'}
-        </h2>
+      <section className="space-y-4 rounded-[2rem] border border-slate-200/80 bg-white/96 p-5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)] dark:shadow-none">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700 dark:border-white/10 dark:text-slate-200/80" style={{ background: GOLD_GRADIENT_SOFT }}>
+              Discussion replies
+            </div>
+            <h2 className="mt-3 text-xl font-black tracking-tight text-slate-950 dark:text-white">
+              {totalReplies} {totalReplies === 1 ? 'Reply' : 'Replies'}
+            </h2>
+          </div>
+          <div className="rounded-full border border-slate-200/80 bg-slate-50/90 px-4 py-2 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300/76">
+            Live conversation
+          </div>
+        </div>
 
         {repliesQ.isLoading ? (
           <ul className="space-y-3" aria-busy="true">
             {[0, 1, 2].map((i) => (
               <li
                 key={i}
-                className="rounded-2xl border border-border bg-card p-4 space-y-2 animate-pulse"
+                className="space-y-2 rounded-[1.5rem] border border-slate-200/80 bg-slate-50/90 p-4 animate-pulse dark:border-white/10 dark:bg-white/[0.04]"
               >
                 <div className="flex items-center gap-2">
                   <div className="size-8 rounded-full bg-muted" />
@@ -851,13 +869,13 @@ function Thread() {
           </ul>
         ) : repliesQ.isError ? (
           <div className="text-sm space-y-2">
-            <p className="text-muted-foreground">Failed to load replies.</p>
+            <p className="text-slate-600 dark:text-slate-300/74">Failed to load replies.</p>
             <Button size="sm" variant="outline" onClick={() => repliesQ.refetch()}>
               Retry
             </Button>
           </div>
         ) : replies.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No replies yet.</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300/74">No replies yet.</p>
         ) : (
           <>
             <ul className="space-y-3">
@@ -885,6 +903,7 @@ function Thread() {
                 <Button
                   variant="outline"
                   size="sm"
+                  className="rounded-2xl border-slate-200/80 text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/[0.06]"
                   onClick={() => repliesQ.fetchNextPage()}
                   disabled={repliesQ.isFetchingNextPage}
                 >
@@ -918,20 +937,21 @@ function Thread() {
                   placeholder="Write a reply…"
                   rows={4}
                   maxLength={5000}
+                  className="rounded-2xl border-slate-200/80 bg-white text-slate-950 placeholder:text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-400"
                 />
               </Suspense>
               <div className="flex justify-end">
-                <Button type="submit" disabled={submitReply.isPending || !reply.trim()}>
+                <Button type="submit" disabled={submitReply.isPending || !reply.trim()} className="rounded-2xl border-0 font-bold text-slate-950" style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
                   {submitReply.isPending ? 'Posting…' : 'Post Reply'}
                 </Button>
               </div>
             </form>
           ) : (
-            <p className="text-sm text-muted-foreground">Commenting is currently disabled.</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300/74">Commenting is currently disabled.</p>
           )
         ) : (
-          <div className="rounded-2xl border border-border bg-muted/40 p-4 text-center text-sm">
-            <Link to="/login" className="text-primary font-medium hover:underline">
+          <div className="rounded-[1.5rem] border border-slate-200/80 bg-slate-50/90 p-4 text-center text-sm text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200">
+            <Link to="/login" className="font-semibold hover:underline" style={{ color: MOBILE_BRAND.goldWarm }}>
               Sign in
             </Link>{' '}
             to reply.

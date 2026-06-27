@@ -27,16 +27,16 @@ interface MobileOnboardingProps {
   initialSlide?: number;
 }
 
-// Brand palette — forest green + gold, locked for the onboarding canvas.
+// Brand palette — premium blue + AbiaConnect gold for the onboarding canvas.
 const BRAND = {
-  bg: '#0D0D0D',
-  surface: '#1E1E1E',
-  surfaceAlt: '#141414',
-  border: '#2A2A2A',
-  gold: '#C8A951',
-  goldDark: '#8A7A3A',
-  green: '#1B3D1B',
-  greenDark: '#013220',
+  bg: '#07111F',
+  surface: '#101A2E',
+  surfaceAlt: '#0B1424',
+  border: 'rgba(255,255,255,0.08)',
+  gold: '#F8C301',
+  goldDark: '#E87015',
+  green: '#1CA9D9',
+  greenDark: '#0A6E99',
   text: '#FFFFFF',
   textMuted: '#B0B0B0',
   textDim: '#707070',
@@ -175,7 +175,7 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0 }: MobileOnboardin
         { icon: Users, name: 'Subgroups', desc: 'LGA, profession, interest' },
         { icon: Zap, name: 'Live Polls', desc: 'Real-time community pulse' },
         { icon: Bell, name: 'Smart Alerts', desc: 'Never miss what matters' },
-        { icon: Heart, name: 'Direct Chat', desc: 'Connect one-on-one' },
+        { icon: Heart, name: 'Voice & Chat', desc: 'Premium messaging and calling' },
         { icon: Globe2, name: 'Worldwide', desc: 'Diaspora-first design' },
       ],
     },
@@ -183,7 +183,7 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0 }: MobileOnboardin
       id: 4,
       type: 'start',
       title: 'Ready to join?',
-      subtitle: 'Join 10,000+ Abians connecting from every corner of the globe.',
+      subtitle: 'Join 10,000+ Abians with premium messaging, smart alerts, and community tools built for mobile.',
     },
   ];
 

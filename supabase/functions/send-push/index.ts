@@ -1,4 +1,4 @@
-// Sends a data-only FCM v1 push notification to a user's registered devices.
+// Sends a production-safe FCM v1 push notification to a user's registered devices.
 // Body: { userId: string, title: string, message: string, data?: Record<string,string> }
 // Requires FCM_SERVICE_ACCOUNT secret (the Firebase service-account JSON).
 
@@ -94,9 +94,10 @@ Deno.serve(async (req) => {
     const accessToken = await getAccessToken(sa)
     const endpoint = `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`
 
-    // DATA-ONLY payload — required for reliable background delivery and to
-    // let the native app render the notification itself (mirrors the
-    // "bulletproof" pattern: no `notification` object).
+    // Hybrid payload: `data` drives deep links and in-app routing, while the
+    // `notification` block guarantees Android/iOS can still surface a tray
+    // notification when the app is backgrounded or relaunched from a killed
+    // process.
     const payloadData: Record<string, string> = {
       title: String(title),
       message: String(message),
@@ -119,6 +120,8 @@ Deno.serve(async (req) => {
             priority: 'HIGH' as const,
             notification: {
               channel_id: 'abia_default',
+              icon: 'ic_stat_abiaconnect',
+              color: '#F8C301',
               default_sound: true,
               default_vibrate_timings: true,
             },

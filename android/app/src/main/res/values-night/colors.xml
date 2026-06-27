@@ -4,6 +4,9 @@
     <color name="forest_green">#1B3D1B</color>
     <color name="forest_green_dark">#013220</color>
     <color name="gold_primary">#C8A951</color>
+    <color name="gold_gradient_start">#FBBF24</color>
+    <color name="gold_gradient_end">#CA8A04</color>
+    <color name="notification_color">#F8C301</color>
 
     <!-- App Theme Colors (Dark Mode) -->
     <color name="colorPrimary">#1B3D1B</color>
@@ -13,5 +16,6 @@
     <color name="navigationBarColor">#0D0D0D</color>
 
     <!-- UI Color Mapping -->
-    <color name="status_bar_color">#1B3D1B</color>
+    <color name="status_bar_color">#0D0D0D</color>
+    <color name="splash_background">#0D0D0D</color>
 </resources>

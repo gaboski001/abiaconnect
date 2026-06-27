@@ -22,6 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 
 interface PollOption {
   id: string
@@ -106,7 +107,6 @@ export default function Polls() {
     },
   })
 
-  // Realtime
   useEffect(() => {
     const ch = supabase
       .channel('poll-votes')
@@ -135,28 +135,58 @@ export default function Polls() {
   })
 
   const polls = pollsQ.data ?? []
+  const openPolls = polls.filter((poll) => !poll.expires_at || new Date(poll.expires_at) > new Date()).length
+  const totalVotes = polls.reduce((sum, poll) => sum + (poll.total_votes ?? 0), 0)
 
   return (
     <div className="space-y-6">
       <SEO title="Community Polls" description="Vote on issues that matter to the AbiaConnect community." path="/polls" />
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Vote className="size-7 text-primary" /> Community Polls
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Vote on issues that matter to the AbiaConnect community.
-          </p>
+
+      <section
+        className="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/96 p-5 text-slate-950 sm:p-6 dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)] dark:text-white"
+        style={{ boxShadow: PREMIUM_SHADOW }}
+      >
+        <div className="absolute inset-0 opacity-80 dark:opacity-100" style={{ background: 'radial-gradient(circle at top right, rgba(248,195,1,0.18), transparent 32%), radial-gradient(circle at bottom left, rgba(28,169,217,0.16), transparent 36%)' }} />
+        <div className="relative space-y-5">
+          <header className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700 dark:border-white/10 dark:text-slate-200/80"
+                style={{ background: GOLD_GRADIENT_SOFT }}
+              >
+                <Vote className="size-3.5" style={{ color: MOBILE_BRAND.gold }} />
+                Community voice
+              </div>
+              <h1 className="mt-3 flex items-center gap-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white">
+                <Vote className="size-7" style={{ color: MOBILE_BRAND.gold }} /> Community Polls
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-700 dark:text-slate-300/76">
+                Vote on issues that matter to the AbiaConnect community through a cleaner, more professional polling experience with stronger readability and clearer results.
+              </p>
+            </div>
+            {canCreate && <CreatePollDialog onCreated={() => pollsQ.refetch()} />}
+          </header>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <InfoMetric label="Active polls" value={String(polls.length)} />
+            <InfoMetric label="Open now" value={String(openPolls)} compact />
+            <InfoMetric label="Total votes" value={String(totalVotes)} compact />
+          </div>
         </div>
-        {canCreate && <CreatePollDialog onCreated={() => pollsQ.refetch()} />}
-      </header>
+      </section>
 
       {pollsQ.isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading polls…</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-72 animate-pulse rounded-[1.8rem] bg-slate-100 dark:bg-white/[0.05]" />
+          ))}
+        </div>
       ) : polls.length === 0 ? (
-        <div className="py-16 text-center text-muted-foreground">No active polls right now.</div>
+        <div className="rounded-[1.8rem] border border-dashed border-slate-200/80 bg-white/90 px-5 py-16 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300/70">
+          No active polls right now.
+        </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid gap-4 md:grid-cols-2">
           {polls.map((p) => (
             <PollCard
               key={p.id}
@@ -173,7 +203,6 @@ export default function Polls() {
   )
 }
 
-/* -------------------- Poll Card -------------------- */
 function PollCard({
   poll,
   myVote,
@@ -192,21 +221,27 @@ function PollCard({
   const total = poll.total_votes ?? 0
 
   return (
-    <article className="rounded-2xl border border-border bg-card p-5 space-y-4">
-      <div>
-        <h3 className="font-bold text-lg">{poll.question}</h3>
-        <p className="text-xs text-muted-foreground mt-1">
-          {poll.creator?.display_name ? `By ${poll.creator.display_name} · ` : ''}
-          {formatDistanceToNow(new Date(poll.created_at), { addSuffix: true })}
-        </p>
+    <article
+      className="rounded-[1.8rem] border border-slate-200/80 bg-white/96 p-5 text-slate-950 dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)] dark:text-white"
+      style={{ boxShadow: PREMIUM_SHADOW }}
+    >
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-xl font-black tracking-tight text-slate-950 dark:text-white">{poll.question}</h3>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            {poll.creator?.display_name ? `By ${poll.creator.display_name} · ` : ''}
+            {formatDistanceToNow(new Date(poll.created_at), { addSuffix: true })}
+          </p>
+        </div>
         {poll.expires_at && (
           <span
             className={cn(
-              'inline-block mt-2 rounded-full px-2 py-0.5 text-xs font-medium',
+              'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
               closed
-                ? 'bg-muted text-muted-foreground'
-                : 'bg-secondary/20 text-secondary-foreground',
+                ? 'border border-slate-200/80 bg-slate-100 text-slate-700 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300'
+                : 'text-slate-950',
             )}
+            style={closed ? undefined : { backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
           >
             {closed
               ? 'Closed'
@@ -215,7 +250,7 @@ function PollCard({
         )}
       </div>
 
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {poll.options.map((opt) => {
           const count = opt.vote_count ?? 0
           const pct = total ? Math.round((count / total) * 100) : 0
@@ -229,11 +264,11 @@ function PollCard({
                 disabled={!canClick}
                 onClick={() => canClick && onVote(opt.id)}
                 className={cn(
-                  'relative w-full overflow-hidden rounded-xl border px-3 py-2 text-left transition-colors',
+                  'relative w-full overflow-hidden rounded-[1.2rem] border px-4 py-3 text-left transition-colors',
                   canClick
-                    ? 'border-border hover:border-primary cursor-pointer'
-                    : 'border-border cursor-default',
-                  selected && 'border-primary',
+                    ? 'border-slate-200/80 bg-slate-50/90 hover:border-slate-300 hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]'
+                    : 'border-slate-200/80 bg-slate-50/90 dark:border-white/10 dark:bg-white/[0.04]',
+                  selected && 'ring-2 ring-[rgba(248,195,1,0.45)]',
                 )}
               >
                 {showResults && (
@@ -241,17 +276,17 @@ function PollCard({
                     initial={{ width: 0 }}
                     animate={{ width: `${pct}%` }}
                     transition={{ duration: 0.6, ease: 'easeOut' }}
-                    className="absolute inset-y-0 left-0 bg-primary/10"
+                    className="absolute inset-y-0 left-0 bg-[rgba(248,195,1,0.18)]"
                     aria-hidden
                   />
                 )}
                 <span className="relative flex items-center justify-between gap-3 text-sm font-medium">
-                  <span className="flex items-center gap-2 truncate">
-                    {selected && <Check className="size-4 text-primary shrink-0" />}
+                  <span className="flex items-center gap-2 truncate text-slate-900 dark:text-slate-100">
+                    {selected && <Check className="size-4 shrink-0" style={{ color: MOBILE_BRAND.goldWarm }} />}
                     {opt.text}
                   </span>
                   {showResults && (
-                    <span className="text-xs text-muted-foreground shrink-0">
+                    <span className="shrink-0 text-xs font-semibold text-slate-600 dark:text-slate-300/82">
                       {pct}% · {count}
                     </span>
                   )}
@@ -262,7 +297,7 @@ function PollCard({
         })}
       </ul>
 
-      <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border pt-3">
+      <div className="mt-4 flex items-center justify-between border-t border-slate-200/80 pt-3 text-xs text-slate-500 dark:border-white/10 dark:text-slate-300/76">
         <span>{total} {total === 1 ? 'vote' : 'votes'}</span>
         {!isLoggedIn && !closed && <span>Sign in to vote</span>}
       </div>
@@ -270,7 +305,15 @@ function PollCard({
   )
 }
 
-/* -------------------- Create Poll Dialog -------------------- */
+function InfoMetric({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
+  return (
+    <div className="rounded-[1.35rem] border border-slate-200/80 bg-white/92 p-3.5 dark:border-white/10 dark:bg-white/[0.05]">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300/62">{label}</p>
+      <p className={`mt-2 font-black text-slate-950 dark:text-white ${compact ? 'text-base sm:text-lg' : 'text-xl sm:text-2xl'}`}>{value}</p>
+    </div>
+  )
+}
+
 function CreatePollDialog({ onCreated }: { onCreated: () => void }) {
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
@@ -326,9 +369,11 @@ function CreatePollDialog({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><Plus /> Create Poll</Button>
+        <Button className="h-12 rounded-2xl border-0 px-5 font-bold text-slate-950" style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
+          <Plus className="mr-2 size-4" /> Create Poll
+        </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg rounded-[1.8rem] border-slate-200/80 bg-white/98 dark:border-white/10 dark:bg-[rgba(8,14,26,0.98)]">
         <DialogHeader>
           <DialogTitle>New Poll</DialogTitle>
           <DialogDescription>Ask the community a question.</DialogDescription>
@@ -377,7 +422,7 @@ function CreatePollDialog({ onCreated }: { onCreated: () => void }) {
                 size="sm"
                 onClick={() => setOptions((prev) => [...prev, ''])}
               >
-                <Plus /> Add option
+                <Plus className="mr-2 size-4" /> Add option
               </Button>
             )}
           </div>
@@ -393,7 +438,7 @@ function CreatePollDialog({ onCreated }: { onCreated: () => void }) {
                     !expires && 'text-muted-foreground',
                   )}
                 >
-                  <CalendarIcon />
+                  <CalendarIcon className="mr-2 size-4" />
                   {expires ? format(expires, 'PPP') : 'No expiry'}
                 </Button>
               </PopoverTrigger>
@@ -404,7 +449,7 @@ function CreatePollDialog({ onCreated }: { onCreated: () => void }) {
                   onSelect={setExpires}
                   disabled={(d) => d < new Date()}
                   initialFocus
-                  className="p-3 pointer-events-auto"
+                  className="pointer-events-auto p-3"
                 />
               </PopoverContent>
             </Popover>
@@ -418,7 +463,7 @@ function CreatePollDialog({ onCreated }: { onCreated: () => void }) {
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={!valid || submitting}>
+          <Button onClick={submit} disabled={!valid || submitting} className="border-0 text-slate-950" style={{ backgroundImage: GOLD_GRADIENT }}>
             {submitting ? 'Creating…' : 'Create Poll'}
           </Button>
         </DialogFooter>

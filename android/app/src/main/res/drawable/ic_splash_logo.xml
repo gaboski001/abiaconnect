@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="288dp"
+    android:height="288dp"
+    android:viewportWidth="288"
+    android:viewportHeight="288">
+
+    <!-- Background Circle for depth -->
+    <path
+        android:pathData="M144,144m-120,0a120,120 0,1 1,240 0a120,120 0,1 1,-240 0"
+        android:fillColor="#1B3D1B"
+        android:fillAlpha="0.1"/>
+
+    <!-- Premium Gold Ring -->
+    <path
+        android:pathData="M144,144m-110,0a110,110 0,1 1,220 0a110,110 0,1 1,-220 0"
+        android:strokeWidth="2"
+        android:strokeColor="#C8A951"
+        android:strokeAlpha="0.3"/>
+
+    <!-- Logo placeholder - Rocket / Tower shape -->
+    <group
+        android:name="logo_group"
+        android:translateX="96"
+        android:translateY="80"
+        android:scaleX="0.8"
+        android:scaleY="0.8"
+        android:pivotX="48"
+        android:pivotY="60">
+        <path
+            android:pathData="M48,15L15,105L48,85L81,105L48,15Z"
+            android:fillColor="#C8A951"/>
+        <path
+            android:pathData="M48,85L48,115"
+            android:strokeWidth="4"
+            android:strokeColor="#C8A951"
+            android:strokeLineCap="round"/>
+    </group>
+
+    <group android:translateX="144" android:translateY="200">
+        <!-- Professional Text -->
+        <path
+            android:pathData="M-50,0 L50,0"
+            android:strokeWidth="1"
+            android:strokeColor="#FFFFFF"
+            android:strokeAlpha="0.2"/>
+    </group>
+</vector>

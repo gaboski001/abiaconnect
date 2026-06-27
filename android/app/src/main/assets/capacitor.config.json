@@ -1,6 +1,6 @@
 {
 	"appId": "com.abiaconnect.app",
-	"appName": "Abiaconnect",
+	"appName": "AbiaConnect",
 	"webDir": "dist",
 	"plugins": {
 		"PushNotifications": {

@@ -22,8 +22,12 @@ allprojects {
         google()
         mavenCentral()
     }
+    // Silence compiler warnings and notes across all projects
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:-options" << "-Xlint:-unchecked" << "-Xlint:-deprecation" << "-nowarn"
+    }
 }
 
 task clean(type: Delete) {
-    delete rootProject.buildDir
+    delete rootProject.layout.buildDirectory
 }

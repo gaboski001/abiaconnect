@@ -24,6 +24,7 @@ export interface CallPeer {
   id: string
   name: string
   avatarUrl?: string | null
+  conversationId?: string | null
 }
 
 export type CallQuality = 'excellent' | 'good' | 'fair' | 'poor' | 'unknown'
@@ -117,6 +118,7 @@ class CallManager {
   private poorSince: number | null = null
   private autoReconnectTimer: number | null = null
   private autoReconnecting = false
+  private inviteRetryTimer: number | null = null
 
 
 
@@ -184,15 +186,9 @@ class CallManager {
     })
     await this.openSessionChannel(callId, true)
     await this.setupPeer(true)
-    // Send invite to callee's user channel.
-    await supabase.channel(`call-user:${target.id}`).send({
-      type: 'broadcast',
-      event: 'invite',
-      payload: {
-        callId,
-        from: this.selfPeer,
-      },
-    })
+    await this.sendInvite(target, callId)
+    this.startInviteRetryLoop(target, callId)
+    void this.sendIncomingCallPush(target, callId)
     // Time out unanswered calls after 35s.
     window.setTimeout(() => {
       if (this.state.callId === callId && this.state.status === 'calling') {
@@ -205,6 +201,7 @@ class CallManager {
   async accept() {
     if (!this.pendingOffer) return
     const { from, callId } = this.pendingOffer
+    this.clearInviteRetryLoop()
     this.patch({ status: 'connecting', callId, direction: 'incoming', peer: from })
     await this.openSessionChannel(callId, false)
     await this.setupPeer(false)
@@ -220,8 +217,66 @@ class CallManager {
       .channel(`call-user:${from.id}`)
       .send({ type: 'broadcast', event: 'cancel', payload: { callId, reason: 'rejected' } })
       .catch(() => undefined)
+    this.clearInviteRetryLoop()
     this.pendingOffer = null
     this.patch({ status: 'idle', callId: null, direction: null, peer: null })
+  }
+
+  private async sendInvite(target: CallPeer, callId: string) {
+    await supabase.channel(`call-user:${target.id}`).send({
+      type: 'broadcast',
+      event: 'invite',
+      payload: {
+        callId,
+        from: this.selfPeer,
+      },
+    })
+  }
+
+  private startInviteRetryLoop(target: CallPeer, callId: string) {
+    this.clearInviteRetryLoop()
+    let attempts = 0
+    this.inviteRetryTimer = window.setInterval(() => {
+      if (this.state.callId !== callId || this.state.status !== 'calling') {
+        this.clearInviteRetryLoop()
+        return
+      }
+      attempts += 1
+      if (attempts > 6) {
+        this.clearInviteRetryLoop()
+        return
+      }
+      void this.sendInvite(target, callId)
+    }, 5000)
+  }
+
+  private clearInviteRetryLoop() {
+    if (this.inviteRetryTimer) {
+      window.clearInterval(this.inviteRetryTimer)
+      this.inviteRetryTimer = null
+    }
+  }
+
+  private async sendIncomingCallPush(target: CallPeer, callId: string) {
+    try {
+      await supabase.functions.invoke('send-push', {
+        body: {
+          userId: target.id,
+          title: 'Incoming call',
+          message: `${this.selfPeer?.name || 'Someone'} is calling you on AbiaConnect`,
+          data: {
+            type: 'call',
+            callId,
+            callerId: this.selfPeer?.id,
+            callerName: this.selfPeer?.name,
+            conversationId: target.conversationId || null,
+            url: target.conversationId ? `/messages/${target.conversationId}` : '/messages',
+          },
+        },
+      })
+    } catch {
+      // Best effort only; realtime invite remains the primary path.
+    }
   }
 
   toggleMute() {
@@ -241,6 +296,7 @@ class CallManager {
         .send({ type: 'broadcast', event: 'cancel', payload: { callId } })
         .catch(() => undefined)
     }
+    this.clearInviteRetryLoop()
     this.stopStatsLoop()
     this.pc?.getSenders().forEach((s) => s.track?.stop())
     this.pc?.close()
@@ -429,6 +485,7 @@ class CallManager {
   }
 
   private startStatsLoop() {
+    this.clearInviteRetryLoop()
     this.stopStatsLoop()
     this.lastBytesReceived = 0
     this.lastBytesTimestamp = 0
