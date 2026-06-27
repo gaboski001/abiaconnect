@@ -44,21 +44,14 @@ export function MainLayout() {
       )}
 
       <main className={cn('flex-1', isPremiumMobileRoute && 'pb-24 md:pb-0')}>
-        <AnimatePresence mode="popLayout">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15, ease: 'linear' }}
-            className={cn(
-              'mx-auto max-w-[1400px] px-3 py-6 sm:px-4 md:px-6 md:py-12',
-              isAuthPage && 'max-w-none px-0 py-0 md:py-0',
-            )}
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+        <div
+          className={cn(
+            'mx-auto max-w-[1400px] px-3 py-6 sm:px-4 md:px-6 md:py-12',
+            isAuthPage && 'max-w-none px-0 py-0 md:py-0',
+          )}
+        >
+          <Outlet />
+        </div>
       </main>
 
       {!isAuthPage && !isPremiumMobileRoute && <Footer />}
