@@ -76,7 +76,7 @@ export function ConnectivityStatus() {
           variant="secondary"
           size="sm"
           className="w-full h-8 text-xs font-medium"
-          onClick={checkConnection}
+          onClick={() => { void checkConnection() }}
           disabled={isChecking}
         >
           {isChecking ? (
