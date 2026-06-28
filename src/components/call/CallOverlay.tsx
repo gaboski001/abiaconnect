@@ -16,6 +16,7 @@ import {
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { callManager, type CallQuality, type CallState } from '@/lib/webrtcCall'
+import { startRingtone, stopRingtone } from '@/lib/ringtone'
 import { cn } from '@/lib/utils'
 import { GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 
