@@ -201,11 +201,11 @@ export default function Messages() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-200/80" style={{ background: GOLD_GRADIENT_SOFT }}>
                 <Sparkles className="size-3.5" style={{ color: MOBILE_BRAND.gold }} />
-                Premium conversations
+                AbiaConnect messages
               </div>
-              <h1 className="mt-4 text-3xl font-black tracking-tight">Messaging, polished for mobile</h1>
+              <h1 className="mt-4 text-3xl font-black tracking-tight">Stay connected across Abia</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300/76">
-                Cleaner inbox cards, stronger visual hierarchy, more professional chat bubbles, and voice call controls that feel more native on Android.
+                Private, real-time conversations with fellow community members — share updates, coordinate on local issues, and place secure voice calls without leaving AbiaConnect.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
