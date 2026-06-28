@@ -177,6 +177,7 @@ class CallManager {
     if (!this.userId || !this.selfPeer) throw new Error('Call manager not initialised')
     if (this.state.status !== 'idle' && this.state.status !== 'ended') return
     const callId = newId()
+    this.wasConnected = false
     this.patch({
       status: 'calling',
       callId,
