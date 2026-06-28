@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import {
   CADENCE_PRESETS,
   getRingtoneSettings,
+  loadRingtoneSettingsFromProfile,
   setRingtoneSettings,
   type RingCadence,
   type RingtoneSettings,
@@ -23,6 +24,8 @@ export function CallRingtoneSettings() {
       if (detail) setSettings(detail)
     }
     window.addEventListener('abia:ringtone-settings', onChange as EventListener)
+    // Pull the latest from the user's profile so settings stay in sync across devices.
+    void loadRingtoneSettingsFromProfile()
     return () => window.removeEventListener('abia:ringtone-settings', onChange as EventListener)
   }, [])
 
