@@ -717,6 +717,9 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
         <div className="mt-4 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
           <NotificationSoundToggle />
         </div>
+        <div className="mt-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
+          <CallRingtoneSettings />
+        </div>
       </section>
 
       <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
