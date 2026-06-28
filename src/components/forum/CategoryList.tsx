@@ -47,19 +47,12 @@ export function CategoryList() {
     >
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-200/80"
-            style={{ background: GOLD_GRADIENT_SOFT }}
-          >
-            <Sparkles className="size-3.5" style={{ color: MOBILE_BRAND.gold }} />
-            Forum discovery
-          </div>
-          <div className="mt-3 flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <Hash className="size-5" style={{ color: MOBILE_BRAND.gold }} />
             <h2 className="text-2xl font-black tracking-tight text-white">Forum Categories</h2>
           </div>
           <p className="mt-2 text-sm leading-6 text-slate-300/72">
-            Browse the community through cleaner, more editorial category cards built for premium Android navigation.
+            Join conversations across culture, news, events, politics and the 17 LGAs of Abia State.
           </p>
         </div>
 
