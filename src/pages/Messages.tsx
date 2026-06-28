@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   PhoneIncoming,
   PhoneMissed,
+  PhoneCall,
 } from 'lucide-react'
 import { VoiceRecorderButton, VoiceMessageBubble, isAudioAttachment } from '@/components/messages/VoiceRecorder'
 import { callManager, useIsCallSupported } from '@/lib/webrtcCall'
@@ -138,13 +139,14 @@ export default function Messages() {
       const unreadMap: Record<string, number> = {}
       ;(msgs ?? []).forEach((m: any) => {
         if (!lastMap[m.conversation_id]) {
-          lastMap[m.conversation_id] = {
-            content:
-              typeof m.content === 'string' && m.content.startsWith('[call:missed]')
-                ? '📞 Missed voice call'
-                : m.content || '📎 Attachment',
-            created_at: m.created_at,
+          const c = typeof m.content === 'string' ? m.content : ''
+          let preview = m.content || '📎 Attachment'
+          if (c.startsWith('[call:missed]')) preview = '📞 Missed voice call'
+          else if (c.startsWith('[call:ended]')) {
+            const dur = c.replace('[call:ended]', '').trim() || ''
+            preview = `📞 Voice call${dur ? ` · ${dur}` : ''}`
           }
+          lastMap[m.conversation_id] = { content: preview, created_at: m.created_at }
         }
         if (!m.is_read && m.sender_id !== user!.id) {
           unreadMap[m.conversation_id] = (unreadMap[m.conversation_id] || 0) + 1
@@ -660,14 +662,32 @@ function ConversationView({
                   m.attachment_url && !hasAudio && (m.attachment_type?.startsWith('image/') ?? false)
                 const hasFile = m.attachment_url && !hasImage && !hasAudio
                 const isMissedCall = typeof m.content === 'string' && m.content.startsWith('[call:missed]')
-                if (isMissedCall) {
-                  const reason = m.content!.replace('[call:missed]', '').trim() || 'No answer'
+                const isEndedCall = typeof m.content === 'string' && m.content.startsWith('[call:ended]')
+                if (isMissedCall || isEndedCall) {
+                  const timeLabel = format(new Date(m.created_at), 'p')
+                  if (isMissedCall) {
+                    const reason = m.content!.replace('[call:missed]', '').trim() || 'No answer'
+                    return (
+                      <div key={m.id} data-mid={m.id} className="flex justify-center">
+                        <div className="flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-200">
+                          <PhoneMissed className="h-3.5 w-3.5" />
+                          <span>{mine ? 'Missed call' : 'Missed voice call'} · {reason}</span>
+                          <span className="opacity-70">· {timeLabel}</span>
+                        </div>
+                      </div>
+                    )
+                  }
+                  const raw = m.content!.replace('[call:ended]', '').trim()
+                  const secs = parseInt(raw, 10) || 0
+                  const mm = Math.floor(secs / 60)
+                  const ss = secs % 60
+                  const duration = secs > 0 ? `${mm}:${ss.toString().padStart(2, '0')}` : '—'
                   return (
                     <div key={m.id} data-mid={m.id} className="flex justify-center">
-                      <div className="flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-200">
-                        <PhoneMissed className="h-3.5 w-3.5" />
-                        <span>{mine ? 'Missed call' : 'Missed voice call'} · {reason}</span>
-                        <span className="opacity-70">{format(new Date(m.created_at), 'p')}</span>
+                      <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200">
+                        <PhoneCall className="h-3.5 w-3.5" />
+                        <span>Voice call · {duration}</span>
+                        <span className="opacity-70">· {timeLabel}</span>
                       </div>
                     </div>
                   )
