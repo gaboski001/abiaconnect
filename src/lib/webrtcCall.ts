@@ -119,6 +119,7 @@ class CallManager {
   private autoReconnectTimer: number | null = null
   private autoReconnecting = false
   private inviteRetryTimer: number | null = null
+  private wasConnected = false
 
 
 
@@ -176,6 +177,7 @@ class CallManager {
     if (!this.userId || !this.selfPeer) throw new Error('Call manager not initialised')
     if (this.state.status !== 'idle' && this.state.status !== 'ended') return
     const callId = newId()
+    this.wasConnected = false
     this.patch({
       status: 'calling',
       callId,
@@ -202,6 +204,7 @@ class CallManager {
     if (!this.pendingOffer) return
     const { from, callId } = this.pendingOffer
     this.clearInviteRetryLoop()
+    this.wasConnected = false
     this.patch({ status: 'connecting', callId, direction: 'incoming', peer: from })
     await this.openSessionChannel(callId, false)
     await this.setupPeer(false)
@@ -289,6 +292,9 @@ class CallManager {
   async endCall(notifyPeer = true, error: string | null = null) {
     const peerId = this.state.peer?.id
     const callId = this.state.callId
+    const conversationId = this.state.peer?.conversationId
+    const direction = this.state.direction
+    const wasConnected = this.wasConnected
     if (notifyPeer && peerId && callId) {
       await this.sessionSend('bye', { callId }).catch(() => undefined)
       await supabase
@@ -296,6 +302,28 @@ class CallManager {
         .send({ type: 'broadcast', event: 'cancel', payload: { callId } })
         .catch(() => undefined)
     }
+    // Log a missed-call entry in the conversation when the call never connected.
+    // Only the caller writes it (single source of truth — both peers see the same row).
+    if (!wasConnected && direction === 'outgoing' && conversationId && this.userId) {
+      const reason = error || 'No answer'
+      const senderId = this.userId
+      void (async () => {
+        try {
+          await supabase.from('messages').insert({
+            conversation_id: conversationId,
+            sender_id: senderId,
+            content: `[call:missed] ${reason}`,
+          })
+          await supabase
+            .from('conversations')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('id', conversationId)
+        } catch {
+          // best-effort logging only
+        }
+      })()
+    }
+    this.wasConnected = false
     this.clearInviteRetryLoop()
     this.stopStatsLoop()
     this.pc?.getSenders().forEach((s) => s.track?.stop())
@@ -440,6 +468,7 @@ class CallManager {
       const s = pc.connectionState
       if (s === 'connected') {
         const wasConnecting = this.state.status !== 'connected'
+        this.wasConnected = true
         this.patch({
           status: 'connected',
           startedAt: this.state.startedAt ?? Date.now(),
