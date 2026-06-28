@@ -73,27 +73,16 @@ export function HeroSlider() {
       className="rounded-[2rem] border border-slate-200/80 bg-white/96 p-4 sm:p-5 dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)]"
       style={{ boxShadow: PREMIUM_SHADOW }}
     >
-      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-700 dark:border-white/10 dark:text-slate-200/80"
-            style={{ background: GOLD_GRADIENT_SOFT }}
-          >
-            <Sparkles className="size-3.5" style={{ color: MOBILE_BRAND.gold }} />
-            AbiaConnect spotlight
-          </div>
-          <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
-            What's happening across Abia
+      <div className="mb-5">
+        <div className="flex items-center gap-2">
+          <Sparkles className="size-5" style={{ color: MOBILE_BRAND.gold }} />
+          <h2 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+            AbiaConnect Spotlight
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700 dark:text-slate-300/74">
-            Top discussions, community announcements, cultural events, and updates from across the 17 LGAs and the Abian diaspora worldwide.
-          </p>
         </div>
-
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50/90 px-4 py-2 text-sm font-medium text-slate-700 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200">
-          <span className="inline-flex h-2.5 w-2.5 rounded-full" style={{ backgroundColor: MOBILE_BRAND.success }} />
-          Live slider updates
-        </div>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700 dark:text-slate-300/74">
+          Featured discussions, announcements and events from across Abia State and the diaspora.
+        </p>
       </div>
 
       {allSlides.length === 1 ? <SingleSlide slide={allSlides[0]} /> : <HeroCarousel slides={allSlides} />}
