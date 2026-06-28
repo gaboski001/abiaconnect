@@ -41,6 +41,7 @@ import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
+import { CallRingtoneSettings } from '@/components/notifications/CallRingtoneSettings'
 import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 import { toWebP } from '@/lib/image'
 import { BLUE_GOLD_GRADIENT, GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
@@ -715,6 +716,9 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
         <p className="mt-1 text-sm text-slate-300/68">Choose how your device alerts you without losing the premium Android feel.</p>
         <div className="mt-4 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
           <NotificationSoundToggle />
+        </div>
+        <div className="mt-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
+          <CallRingtoneSettings />
         </div>
       </section>
 

@@ -68,32 +68,41 @@ function stopTone() {
   masterGain = null
 }
 
+import { getRingtoneSettings, CADENCE_PRESETS } from './ringtoneSettings'
+
 export function startRingtone(direction: 'incoming' | 'outgoing') {
   if (mode === direction) return
   stopRingtone()
   mode = direction
-  const volume = direction === 'incoming' ? 0.22 : 0.12
-  const onMs = 2000
-  const offMs = direction === 'incoming' ? 4000 : 4000
 
-  const cycle = () => {
-    startTone(volume)
-    cycleTimer = window.setTimeout(() => {
-      stopTone()
-      cycleTimer = window.setTimeout(cycle, offMs)
-    }, onMs)
+  const settings = getRingtoneSettings()
+  const preset = CADENCE_PRESETS[settings.cadence]
+  const onMs = preset.onMs
+  const offMs = preset.offMs
+  // Outgoing ringback is always quieter; respects the same enabled flag.
+  const baseVolume = direction === 'incoming' ? settings.volume : Math.min(settings.volume, 0.14)
+
+  if (settings.ringEnabled) {
+    const cycle = () => {
+      startTone(baseVolume)
+      cycleTimer = window.setTimeout(() => {
+        stopTone()
+        cycleTimer = window.setTimeout(cycle, offMs)
+      }, onMs)
+    }
+    cycle()
   }
-  cycle()
 
-  if (direction === 'incoming' && 'vibrate' in navigator) {
+  if (direction === 'incoming' && settings.vibrateEnabled && 'vibrate' in navigator) {
     const pattern = [600, 400, 600, 400, 600]
     const tick = () => {
       try { navigator.vibrate(pattern) } catch {}
-      vibrateTimer = window.setTimeout(tick, 3500)
+      vibrateTimer = window.setTimeout(tick, onMs + offMs - 500)
     }
     tick()
   }
 }
+
 
 export function stopRingtone() {
   mode = null
