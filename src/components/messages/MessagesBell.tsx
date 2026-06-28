@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MessageCircle } from 'lucide-react'
@@ -6,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { playNotificationChime } from '@/lib/notificationSound'
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 
 export function MessagesBell() {
   const { user } = useAuth()
