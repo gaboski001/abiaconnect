@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Mic,
   MicOff,
@@ -34,7 +34,7 @@ const QUALITY_META: Record<CallQuality, { label: string; className: string; Icon
 }
 
 export function CallOverlay({ state }: { state: CallState }) {
-  const [now, setNow] = (require('react') as typeof import('react')).useState(Date.now())
+  const [now, setNow] = useState(Date.now())
   
 
   useEffect(() => {
@@ -114,33 +114,6 @@ export function CallOverlay({ state }: { state: CallState }) {
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-300/76">
                 {callMeta.length > 0 ? callMeta.map((line) => <span key={line} className="rounded-full border border-white/10 px-3 py-1">{line}</span>) : <span className="rounded-full border border-white/10 px-3 py-1">Listening for network metrics</span>}
               </div>
-
-              <button type="button" onClick={() => setShowTimeline((v) => !v)} className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-slate-300/76 hover:text-white">
-                <Activity className="h-3.5 w-3.5" />
-                {showTimeline ? 'Hide' : 'Show'} quality timeline
-              </button>
-
-              {showTimeline ? (
-                <div className="mt-3 max-h-40 overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-3 text-[11px] font-mono">
-                  {state.timeline.length === 0 ? (
-                    <p className="text-slate-400">No events yet.</p>
-                  ) : (
-                    <ul className="space-y-1.5">
-                      {state.timeline.map((ev, i) => {
-                        const t = new Date(ev.at)
-                        const meta = QUALITY_META[ev.quality]
-                        return (
-                          <li key={i} className="flex items-start gap-2">
-                            <span className="text-slate-500">{t.toLocaleTimeString([], { hour12: false })}</span>
-                            <span className={meta.className}>{meta.label}</span>
-                            {ev.note ? <span className="text-slate-400">— {ev.note}</span> : null}
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  )}
-                </div>
-              ) : null}
             </div>
           ) : null}
 
