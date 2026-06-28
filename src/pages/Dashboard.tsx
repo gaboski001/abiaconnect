@@ -131,13 +131,20 @@ export default function Dashboard() {
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-slate-200/76" style={{ background: GOLD_GRADIENT_SOFT }}>
                 <Sparkles className="size-3.5" style={{ color: MOBILE_BRAND.gold }} />
-                Premium native dashboard
+                Your AbiaConnect profile
               </div>
               <div>
                 <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Welcome back, {displayName}</h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300/78 sm:text-base">
-                  {heroSubtitle}. Your mobile dashboard now surfaces the things that matter first — conversations, alerts, saved knowledge, and account control.
-                </p>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300/70">{heroSubtitle}</p>
+                {profile.bio?.trim() ? (
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-200/85 sm:text-base">
+                    {profile.bio}
+                  </p>
+                ) : (
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300/70 sm:text-base italic">
+                    Add a short bio so fellow Abians know who you are and what you contribute to the community.
+                  </p>
+                )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs font-semibold text-slate-100">{role}</span>
