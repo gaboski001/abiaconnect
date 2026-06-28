@@ -139,13 +139,14 @@ export default function Messages() {
       const unreadMap: Record<string, number> = {}
       ;(msgs ?? []).forEach((m: any) => {
         if (!lastMap[m.conversation_id]) {
-          lastMap[m.conversation_id] = {
-            content:
-              typeof m.content === 'string' && m.content.startsWith('[call:missed]')
-                ? '📞 Missed voice call'
-                : m.content || '📎 Attachment',
-            created_at: m.created_at,
+          const c = typeof m.content === 'string' ? m.content : ''
+          let preview = m.content || '📎 Attachment'
+          if (c.startsWith('[call:missed]')) preview = '📞 Missed voice call'
+          else if (c.startsWith('[call:ended]')) {
+            const dur = c.replace('[call:ended]', '').trim() || ''
+            preview = `📞 Voice call${dur ? ` · ${dur}` : ''}`
           }
+          lastMap[m.conversation_id] = { content: preview, created_at: m.created_at }
         }
         if (!m.is_read && m.sender_id !== user!.id) {
           unreadMap[m.conversation_id] = (unreadMap[m.conversation_id] || 0) + 1
