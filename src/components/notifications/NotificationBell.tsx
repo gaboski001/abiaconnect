@@ -78,6 +78,15 @@ export function NotificationBell() {
     },
   })
 
+  // Throttle chime + query invalidations so bursts don't flood renders.
+  const throttledChime = useThrottledCallback(() => playNotificationChime(), 2000)
+  const throttledInvalidate = useThrottledCallback(() => {
+    if (!user) return
+    qc.invalidateQueries({ queryKey: ['notifications-unread', user.id] })
+    qc.invalidateQueries({ queryKey: ['notifications-recent', user.id] })
+    qc.invalidateQueries({ queryKey: ['notifications-all', user.id] })
+  }, 600)
+
   useRealtimeChannel({
     enabled: !!user,
     channelName: `notifications:${user?.id ?? 'anon'}`,
@@ -93,16 +102,15 @@ export function NotificationBell() {
             },
             handler: (payload) => {
               if (payload.eventType === 'INSERT') {
-                playNotificationChime()
+                throttledChime()
               }
-              qc.invalidateQueries({ queryKey: ['notifications-unread', user.id] })
-              qc.invalidateQueries({ queryKey: ['notifications-recent', user.id] })
-              qc.invalidateQueries({ queryKey: ['notifications-all', user.id] })
+              throttledInvalidate()
             },
           },
         ]
       : [],
   })
+
 
   const markAllRead = async () => {
     if (!user) return
