@@ -139,7 +139,10 @@ export default function Messages() {
       ;(msgs ?? []).forEach((m: any) => {
         if (!lastMap[m.conversation_id]) {
           lastMap[m.conversation_id] = {
-            content: m.content || '📎 Attachment',
+            content:
+              typeof m.content === 'string' && m.content.startsWith('[call:missed]')
+                ? '📞 Missed voice call'
+                : m.content || '📎 Attachment',
             created_at: m.created_at,
           }
         }
