@@ -26,7 +26,7 @@ import { GOLD_GRADIENT, GOLD_SHADOW, MOBILE_BRAND } from '@/lib/mobileBrand'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { refreshSession } = useAuth()
+  const { refreshSession, user } = useAuth()
   const { settings } = useSiteSettings()
   const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
   const [identifier, setIdentifier] = useState('')
@@ -36,6 +36,30 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [optInOpen, setOptInOpen] = useState(false)
   const [pendingCreds, setPendingCreds] = useState<{ email: string; password: string } | null>(null)
+
+  // Single-flight redirect guard: ensures navigate() runs at most once per mount,
+  // no matter how many code paths (form submit, onAuthStateChange, biometric dialog)
+  // try to trigger it.
+  const hasRedirectedRef = useRef(false)
+  const redirectOnce = useCallback(
+    (fallback = '/dashboard') => {
+      if (hasRedirectedRef.current) return
+      hasRedirectedRef.current = true
+      const pending =
+        typeof window !== 'undefined' ? sessionStorage.getItem('abia_pending_push_route') : null
+      navigate(pending || fallback, { replace: true })
+    },
+    [navigate],
+  )
+
+  // If the AuthContext hydrates a user (e.g. onAuthStateChange fires before the
+  // submit handler's await chain completes, or a stale session is restored on
+  // mount), redirect immediately — but only once, and only when no biometric
+  // opt-in dialog is being shown.
+  useEffect(() => {
+    if (user && !optInOpen) redirectOnce()
+  }, [user, optInOpen, redirectOnce])
+
 
 
 
