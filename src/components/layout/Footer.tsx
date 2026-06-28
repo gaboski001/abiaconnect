@@ -51,7 +51,6 @@ const LINK_GROUPS: Array<{ title: string; links: Array<{ label: string; href: st
     links: [
       { label: 'Help Center', href: '/help' },
       { label: 'Report an Issue', href: '/report-issue' },
-      { label: 'Version Info', href: '/version' },
     ],
   },
   {
