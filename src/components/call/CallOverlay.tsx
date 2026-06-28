@@ -16,6 +16,7 @@ import {
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { callManager, type CallQuality, type CallState } from '@/lib/webrtcCall'
+import { startRingtone, stopRingtone } from '@/lib/ringtone'
 import { cn } from '@/lib/utils'
 import { GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 
@@ -43,6 +44,18 @@ export function CallOverlay({ state }: { state: CallState }) {
     const id = window.setInterval(() => setNow(Date.now()), 500)
     return () => window.clearInterval(id)
   }, [state.status])
+
+  // Professional ringtone/ringback while ringing or calling.
+  useEffect(() => {
+    if (state.status === 'ringing' && state.direction === 'incoming') {
+      startRingtone('incoming')
+    } else if (state.status === 'calling' && state.direction === 'outgoing') {
+      startRingtone('outgoing')
+    } else {
+      stopRingtone()
+    }
+    return () => stopRingtone()
+  }, [state.status, state.direction])
 
   const peer = state.peer!
   const elapsed = state.startedAt ? now - state.startedAt : 0
