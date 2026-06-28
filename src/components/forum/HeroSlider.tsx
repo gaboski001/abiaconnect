@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
+import { GOLD_GRADIENT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 import { SlideCard, type HeroSlideLike } from './SlideCard'
 
 export function HeroSlider() {

@@ -4,7 +4,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { BookOpen, CalendarDays, ChevronRight, MessageSquarePlus, Sparkles, TrendingUp, Users } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
+import { GOLD_GRADIENT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 
 interface Thread {
   id: string
