@@ -191,13 +191,13 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-4 rounded-[1.2rem] border border-white/10 bg-white/[0.03] px-4 py-3">
+          <div className="flex items-center gap-4 rounded-[1.2rem] border border-white/10 bg-white/[0.03] px-4 py-3">
             <label htmlFor="remember" className="flex cursor-pointer items-center gap-3 text-sm text-slate-300/80">
               <Checkbox id="remember" checked={remember} onCheckedChange={(checked) => setRemember(Boolean(checked))} />
-              Keep this device ready for faster access
+              Remember me on this device
             </label>
-            <span className="hidden text-xs text-slate-400 sm:inline">Android-friendly autofill</span>
           </div>
+
 
           <Button
             type="submit"
