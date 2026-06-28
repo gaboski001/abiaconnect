@@ -306,20 +306,22 @@ class CallManager {
     // Only the caller writes it (single source of truth — both peers see the same row).
     if (!wasConnected && direction === 'outgoing' && conversationId && this.userId) {
       const reason = error || 'No answer'
-      supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: this.userId,
-          content: `[call:missed] ${reason}`,
-        })
-        .then(() =>
-          supabase
+      const senderId = this.userId
+      void (async () => {
+        try {
+          await supabase.from('messages').insert({
+            conversation_id: conversationId,
+            sender_id: senderId,
+            content: `[call:missed] ${reason}`,
+          })
+          await supabase
             .from('conversations')
             .update({ updated_at: new Date().toISOString() })
-            .eq('id', conversationId),
-        )
-        .then(() => undefined, () => undefined)
+            .eq('id', conversationId)
+        } catch {
+          // best-effort logging only
+        }
+      })()
     }
     this.wasConnected = false
     this.clearInviteRetryLoop()
