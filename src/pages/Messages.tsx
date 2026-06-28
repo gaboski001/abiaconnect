@@ -128,7 +128,8 @@ export default function Messages() {
           .from('messages')
           .select('conversation_id, sender_id, content, is_read, created_at')
           .in('conversation_id', ids)
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .limit(600),
       ])
       const profileMap: Record<string, Profile> = {}
       ;(profiles ?? []).forEach((p: any) => (profileMap[p.id] = p))
@@ -162,7 +163,7 @@ export default function Messages() {
   useEffect(() => {
     if (!user) return
     const channel = supabase
-      .channel(`messages-inbox:${user.id}`)
+      .channel(`messages-inbox:${user.id}:${Date.now()}:${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
@@ -307,7 +308,7 @@ function ConversationView({
 }) {
   const { user } = useAuth()
   const qc = useQueryClient()
-  const queryKey = ['messages', conversationId]
+  const queryKey = useMemo(() => ['messages', conversationId], [conversationId])
   const scrollRef = useRef<HTMLDivElement>(null)
   const [draft, setDraft] = useState('')
   const [pendingFile, setPendingFile] = useState<File | null>(null)
@@ -316,6 +317,8 @@ function ConversationView({
   const [uploadPct, setUploadPct] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const readQueueRef = useRef<Set<string>>(new Set())
+  const readFlushTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!pendingFile) {
@@ -338,9 +341,10 @@ function ConversationView({
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(120)
       if (error) throw error
-      return (data ?? []) as Message[]
+      return [...((data ?? []) as Message[])].reverse()
     },
   })
 
@@ -348,7 +352,7 @@ function ConversationView({
   useEffect(() => {
     if (!conversationId) return
     const channel = supabase
-      .channel(`messages-${conversationId}`)
+      .channel(`messages-${conversationId}:${Date.now()}:${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {
@@ -416,6 +420,39 @@ function ConversationView({
     else messageRefs.current.delete(id)
   }
 
+  const flushReadReceipts = () => {
+    if (!user) return
+    const ids = Array.from(readQueueRef.current)
+    readQueueRef.current.clear()
+    readFlushTimerRef.current = null
+    if (!ids.length) return
+
+    const nowIso = new Date().toISOString()
+    qc.setQueryData<Message[]>(queryKey, (prev) =>
+      (prev ?? []).map((m) =>
+        ids.includes(m.id) ? { ...m, is_read: true, read_at: m.read_at ?? nowIso } : m,
+      ),
+    )
+
+    Promise.all(ids.map((id) => supabase.rpc('mark_message_read', { _message_id: id }))).then(() => {
+      qc.invalidateQueries({ queryKey: ['conversations', user.id] })
+      qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
+    })
+  }
+
+  const queueReadReceipt = (id: string) => {
+    readQueueRef.current.add(id)
+    if (readFlushTimerRef.current !== null) return
+    readFlushTimerRef.current = window.setTimeout(flushReadReceipts, 350)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (readFlushTimerRef.current !== null) window.clearTimeout(readFlushTimerRef.current)
+      readQueueRef.current.clear()
+    }
+  }, [])
+
   useEffect(() => {
     if (!user || !messagesQ.data?.length) return
     const root = scrollRef.current
@@ -428,17 +465,7 @@ function ConversationView({
           if (!id || markedRef.current.has(id)) continue
           markedRef.current.add(id)
           observer.unobserve(entry.target)
-          const nowIso = new Date().toISOString()
-          // Optimistic local patch — no refetch, no duplicate render.
-          qc.setQueryData<Message[]>(queryKey, (prev) =>
-            (prev ?? []).map((m) =>
-              m.id === id ? { ...m, is_read: true, read_at: m.read_at ?? nowIso } : m,
-            ),
-          )
-          supabase.rpc('mark_message_read', { _message_id: id }).then(() => {
-            qc.invalidateQueries({ queryKey: ['conversations', user.id] })
-            qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
-          })
+          queueReadReceipt(id)
         }
       },
       { root, threshold: 0.6 },

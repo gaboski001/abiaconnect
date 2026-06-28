@@ -1,24 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { callManager, type CallState } from '@/lib/webrtcCall'
 import { CallOverlay } from './CallOverlay'
 
 export function CallProvider() {
   const { user } = useAuth()
-  const profileQ = useQuery({
-    queryKey: ['profile-min', user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase.rpc('get_my_profile')
-      return Array.isArray(data) ? (data[0] ?? null) : data
-    },
-  })
-  const profile = profileQ.data as
-    | { display_name?: string | null; username?: string | null; avatar_url?: string | null }
-    | null
-    | undefined
+  const userId = user?.id ?? null
 
   const [state, setState] = useState<CallState>({
     status: 'idle',
@@ -41,16 +28,23 @@ export function CallProvider() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
-    if (!user) return
+    if (!userId) return
     callManager.init({
-      id: user.id,
-      name: profile?.display_name || profile?.username || 'You',
-      avatarUrl: profile?.avatar_url ?? null,
+      id: userId,
+      name:
+        (user?.user_metadata?.display_name as string | undefined) ||
+        (user?.user_metadata?.username as string | undefined) ||
+        user?.email ||
+        'You',
+      avatarUrl: (user?.user_metadata?.avatar_url as string | undefined) ?? null,
     })
     return () => {
       callManager.shutdown()
     }
-  }, [user, profile?.display_name, profile?.username, profile?.avatar_url])
+    // Keep this keyed only by user id so profile fetches/rerenders do not tear
+    // down the native call signaling channel while the user is navigating chat.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
 
   useEffect(() => {
     const unsub = callManager.subscribe(setState)
@@ -63,7 +57,7 @@ export function CallProvider() {
     callManager.setRemoteAudioElement(audioRef.current)
   }, [])
 
-  if (!user) return null
+  if (!userId) return null
 
   return (
     <>
