@@ -4,7 +4,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { BookOpen, CalendarDays, ChevronRight, MessageSquarePlus, Sparkles, TrendingUp, Users } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
+import { GOLD_GRADIENT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 
 interface Thread {
   id: string
@@ -174,12 +174,6 @@ export function SidebarWidgets() {
             </span>
             <ChevronRight className="size-4" />
           </Link>
-          <div
-            className="rounded-[1.3rem] border border-slate-200/80 px-4 py-3 text-sm leading-6 text-slate-700 dark:border-white/10 dark:text-slate-200/80"
-            style={{ background: GOLD_GRADIENT_SOFT }}
-          >
-            Use the upgraded category and thread layout to move from discovery to posting with fewer taps and better readability.
-          </div>
         </div>
       </Card>
     </aside>
