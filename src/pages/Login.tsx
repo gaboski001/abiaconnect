@@ -112,8 +112,6 @@ export default function Login() {
 
       toast.success('Welcome back to AbiaConnect!')
 
-      const pendingPushRoute = typeof window !== 'undefined' ? sessionStorage.getItem('abia_pending_push_route') : null
-
       // Biometric opt-in: check with a hard timeout so it can never block navigation.
       let shouldPromptBiometric = false
       try {
@@ -135,7 +133,8 @@ export default function Login() {
         return
       }
 
-      navigate(pendingPushRoute || '/dashboard', { replace: true })
+      redirectOnce()
+
 
     } catch (err: any) {
       clearTimeout(timeout)
