@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
-  Activity,
   Mic,
   MicOff,
   Phone,
@@ -36,7 +35,7 @@ const QUALITY_META: Record<CallQuality, { label: string; className: string; Icon
 
 export function CallOverlay({ state }: { state: CallState }) {
   const [now, setNow] = useState(Date.now())
-  const [showTimeline, setShowTimeline] = useState(false)
+  
 
   useEffect(() => {
     if (state.status !== 'connected') return
