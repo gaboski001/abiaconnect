@@ -111,13 +111,15 @@ export function CallRingtoneSettings() {
           <span className="ml-auto text-xs text-slate-300/70">{Math.round(settings.volume * 100)}%</span>
         </div>
         <div className="mt-3">
-          <Slider
-            value={[Math.round(settings.volume * 100)]}
+          <input
+            type="range"
             min={5}
             max={60}
             step={1}
             disabled={!settings.ringEnabled}
-            onValueChange={(v) => update({ volume: (v[0] ?? 22) / 100 })}
+            value={Math.round(settings.volume * 100)}
+            onChange={(e) => update({ volume: Number(e.target.value) / 100 })}
+            className="w-full accent-amber-400 disabled:opacity-50"
           />
         </div>
       </div>
