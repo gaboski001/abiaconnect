@@ -133,6 +133,7 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
               ) : null}
             </div>
           )}
+        </div>
       </div>
 
       {!slide.isDefault && (
@@ -144,12 +145,5 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
   )
 }
 
-  return (
-    <div className="rounded-[1.3rem] border border-white/10 bg-white/[0.05] p-4 backdrop-blur-md">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/58">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-white/82">{body}</p>
-    </div>
-  )
-}
 
 export default SlideCard
