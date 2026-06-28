@@ -441,6 +441,7 @@ class CallManager {
       const s = pc.connectionState
       if (s === 'connected') {
         const wasConnecting = this.state.status !== 'connected'
+        this.wasConnected = true
         this.patch({
           status: 'connected',
           startedAt: this.state.startedAt ?? Date.now(),
