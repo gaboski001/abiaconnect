@@ -204,6 +204,7 @@ class CallManager {
     if (!this.pendingOffer) return
     const { from, callId } = this.pendingOffer
     this.clearInviteRetryLoop()
+    this.wasConnected = false
     this.patch({ status: 'connecting', callId, direction: 'incoming', peer: from })
     await this.openSessionChannel(callId, false)
     await this.setupPeer(false)
