@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Bell, BellOff, PhoneIncoming, Vibrate, Volume2, Play, Square } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
-import { Slider } from '@/components/ui/slider'
+
 import {
   CADENCE_PRESETS,
   getRingtoneSettings,
