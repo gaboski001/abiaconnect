@@ -117,11 +117,8 @@ export default function Login() {
       <SEO title="Sign in to AbiaConnect" description="Sign in to your AbiaConnect account." path="/login" />
       <PremiumAuthShell
         logoUrl={logoUrl}
-        badge="Premium Android sign in"
-        title="Welcome back to your community hub"
-        subtitle="Move from onboarding to conversation with a smoother, more native-feeling sign-in experience built for speed, clarity, and trust."
-        panelTitle="Modern access for Abians worldwide"
-        panelDescription="The refreshed mobile sign-in flow uses stronger visual hierarchy, motion, and touch-friendly spacing while keeping your existing backend flow intact."
+        title="Welcome back"
+        subtitle="Sign in to continue to AbiaConnect."
         footer={pendingCreds ? (
           <BiometricOptInDialog
             open={optInOpen}
@@ -138,33 +135,9 @@ export default function Login() {
         ) : null}
       >
         <form onSubmit={onSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-200">
-                <CheckCircle2 className="size-3.5" />
-                Stable session restore
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300/80">
-                <ShieldCheck className="size-3.5" style={{ color: MOBILE_BRAND.gold }} />
-                Encrypted access flow
-              </div>
-            </div>
-
-            <div>
-              <h2 className="text-2xl font-black tracking-tight text-white">Sign in</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-300/72">
-                Continue to your discussions, private chats, notifications, and community updates.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl sm:grid-cols-3">
-            {TRUST_POINTS.map((point) => (
-              <div key={point} className="flex items-start gap-3 rounded-2xl border border-white/6 bg-slate-950/25 p-3">
-                <Sparkles className="mt-0.5 size-4 shrink-0" style={{ color: MOBILE_BRAND.gold }} />
-                <p className="text-xs leading-5 text-slate-300/74">{point}</p>
-              </div>
-            ))}
+          <div>
+            <h2 className="text-2xl font-black tracking-tight text-white">Sign in</h2>
+            <p className="mt-1 text-sm text-slate-300/72">Access your discussions, chats, and updates.</p>
           </div>
 
           <div className="space-y-5">
@@ -182,8 +155,8 @@ export default function Login() {
                 placeholder="name@example.com"
                 className="h-14 rounded-2xl border-white/10 bg-slate-950/40 text-white placeholder:text-white/25"
               />
-              <p className="text-xs text-slate-400/80">{helperLabel}</p>
             </div>
+
 
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-4">
