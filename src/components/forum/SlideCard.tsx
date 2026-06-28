@@ -133,13 +133,6 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
               ) : null}
             </div>
           )}
-        </div>
-
-        <div className="grid gap-3 self-end sm:grid-cols-3 lg:grid-cols-1">
-          <InfoCard title="Experience" body="Premium visuals for browsing, updates, and call-to-action clarity." />
-          <InfoCard title="Visibility" body="High contrast copy and controls for easier reading in every theme." />
-          <InfoCard title="Motion" body="Smoother carousel interactions with a more native presentation feel." />
-        </div>
       </div>
 
       {!slide.isDefault && (
@@ -151,7 +144,6 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
   )
 }
 
-function InfoCard({ title, body }: { title: string; body: string }) {
   return (
     <div className="rounded-[1.3rem] border border-white/10 bg-white/[0.05] p-4 backdrop-blur-md">
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/58">{title}</p>
