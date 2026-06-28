@@ -128,7 +128,8 @@ export default function Messages() {
           .from('messages')
           .select('conversation_id, sender_id, content, is_read, created_at')
           .in('conversation_id', ids)
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .limit(600),
       ])
       const profileMap: Record<string, Profile> = {}
       ;(profiles ?? []).forEach((p: any) => (profileMap[p.id] = p))
@@ -162,7 +163,7 @@ export default function Messages() {
   useEffect(() => {
     if (!user) return
     const channel = supabase
-      .channel(`messages-inbox:${user.id}`)
+      .channel(`messages-inbox:${user.id}:${Date.now()}:${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
@@ -307,7 +308,7 @@ function ConversationView({
 }) {
   const { user } = useAuth()
   const qc = useQueryClient()
-  const queryKey = ['messages', conversationId]
+  const queryKey = useMemo(() => ['messages', conversationId], [conversationId])
   const scrollRef = useRef<HTMLDivElement>(null)
   const [draft, setDraft] = useState('')
   const [pendingFile, setPendingFile] = useState<File | null>(null)
@@ -338,9 +339,10 @@ function ConversationView({
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(120)
       if (error) throw error
-      return (data ?? []) as Message[]
+      return [...((data ?? []) as Message[])].reverse()
     },
   })
 
@@ -348,7 +350,7 @@ function ConversationView({
   useEffect(() => {
     if (!conversationId) return
     const channel = supabase
-      .channel(`messages-${conversationId}`)
+      .channel(`messages-${conversationId}:${Date.now()}:${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {

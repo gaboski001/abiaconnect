@@ -383,7 +383,7 @@ function Thread() {
   useEffect(() => {
     if (!threadId) return
     const channel = supabase
-      .channel(`thread:${threadId}`)
+      .channel(`thread:${threadId}:${Date.now()}:${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'replies', filter: `thread_id=eq.${threadId}` },

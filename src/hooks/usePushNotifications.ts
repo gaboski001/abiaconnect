@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { useNavigate } from 'react-router-dom'
 import { PushNotifications } from '@capacitor/push-notifications'
@@ -76,26 +76,29 @@ function isAppVisible() {
 export function usePushNotifications() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
+  const userId = user?.id ?? null
 
-  const queueOrNavigate = (route: string) => {
+  const queueOrNavigate = useCallback((route: string) => {
     if (typeof window === 'undefined') return
     sessionStorage.setItem(PENDING_PUSH_ROUTE_KEY, route)
     if (loading) return
-    if (user) {
+    if (userId) {
       sessionStorage.removeItem(PENDING_PUSH_ROUTE_KEY)
       navigate(route, { replace: true })
       return
     }
     navigate('/login', { replace: true })
-  }
+  }, [loading, navigate, userId])
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
 
+    let cancelled = false
     let removeListeners: (() => void) | null = null
 
     ;(async () => {
       await ensureAndroidPushChannel()
+      if (cancelled) return
 
       const receivedSub = await PushNotifications.addListener('pushNotificationReceived', (notification) => {
         if (!isAppVisible()) return
@@ -117,6 +120,11 @@ export function usePushNotifications() {
         const route = normalizePushRoute(detail?.url)
         queueOrNavigate(route)
       }
+      if (cancelled) {
+        receivedSub.remove()
+        actionSub.remove()
+        return
+      }
       if (typeof window !== 'undefined') {
         window.addEventListener('abiaconnect-native-notification', nativeNotificationHandler as EventListener)
       }
@@ -133,24 +141,27 @@ export function usePushNotifications() {
     })
 
     return () => {
+      cancelled = true
       removeListeners?.()
     }
-  }, [loading, navigate, user])
+  }, [queueOrNavigate])
 
   useEffect(() => {
-    if (!user || !Capacitor.isNativePlatform()) return
+    if (!userId || !Capacitor.isNativePlatform()) return
 
+    let cancelled = false
     let removeListeners: (() => void) | null = null
 
     ;(async () => {
       try {
         await ensureAndroidPushChannel()
+        if (cancelled) return
 
         let perm = await PushNotifications.checkPermissions()
         if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') {
           perm = await PushNotifications.requestPermissions()
         }
-        if (perm.receive !== 'granted') return
+        if (cancelled || perm.receive !== 'granted') return
 
         const platform =
           Capacitor.getPlatform() === 'ios' ? 'ios'
@@ -163,7 +174,7 @@ export function usePushNotifications() {
               .from('device_push_tokens')
               .upsert(
                 {
-                  user_id: user.id,
+                  user_id: userId,
                   token: token.value,
                   platform,
                   updated_at: new Date().toISOString(),
@@ -178,6 +189,11 @@ export function usePushNotifications() {
         const errSub = await PushNotifications.addListener('registrationError', () => {
           // Best effort — surfaced through the admin checklist when needed.
         })
+        if (cancelled) {
+          regSub.remove()
+          errSub.remove()
+          return
+        }
 
         removeListeners = () => {
           regSub.remove()
@@ -191,15 +207,16 @@ export function usePushNotifications() {
     })()
 
     return () => {
+      cancelled = true
       removeListeners?.()
     }
-  }, [user?.id])
+  }, [userId])
 
   useEffect(() => {
-    if (typeof window === 'undefined' || loading || !user) return
+    if (typeof window === 'undefined' || loading || !userId) return
     const pendingRoute = sessionStorage.getItem(PENDING_PUSH_ROUTE_KEY)
     if (!pendingRoute) return
     sessionStorage.removeItem(PENDING_PUSH_ROUTE_KEY)
     navigate(pendingRoute, { replace: true })
-  }, [loading, navigate, user])
+  }, [loading, navigate, userId])
 }

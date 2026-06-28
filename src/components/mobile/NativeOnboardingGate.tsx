@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 const MobileOnboarding = lazy(() =>
@@ -17,12 +18,20 @@ const STORAGE_KEY = 'hasSeenOnboarding';
  */
 export const NativeOnboardingGate = () => {
   const { user, loading } = useAuth();
+  const location = useLocation();
   const [show, setShow] = useState(false);
   const [startAtLast, setStartAtLast] = useState(false);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-    if (loading) return;
+    if (!Capacitor.isNativePlatform() || loading) return;
+
+    // Never cover real app screens. The native welcome gate is only allowed on
+    // the root route; otherwise login, chats, threads, and push deep-links stay
+    // immediately interactive instead of sitting behind a full-screen overlay.
+    if (location.pathname !== '/') {
+      setShow(false);
+      return;
+    }
 
     const hasSeen = localStorage.getItem(STORAGE_KEY) === 'true';
 
@@ -36,7 +45,7 @@ export const NativeOnboardingGate = () => {
       setShow(!hasSeen);
       setStartAtLast(false);
     }
-  }, [user, loading]);
+  }, [user, loading, location.pathname]);
 
   if (!show || loading) return null;
 

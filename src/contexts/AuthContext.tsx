@@ -151,22 +151,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true
+    const bootstrapTimeout = window.setTimeout(() => {
+      if (mounted) setLoading(false)
+    }, 8000)
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return
-      await applySession(data.session)
-      setLoading(false)
-    })
+    supabase.auth
+      .getSession()
+      .then(async ({ data }) => {
+        if (!mounted) return
+        await applySession(data.session)
+      })
+      .catch(() => {
+        if (mounted) void applySession(null)
+      })
+      .finally(() => {
+        window.clearTimeout(bootstrapTimeout)
+        if (mounted) setLoading(false)
+      })
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
       void applySession(newSession)
       if (event === 'SIGNED_IN' && newSession?.user) {
-        void checkAndNotifyNewDevice(newSession.user.id, newSession.user.email)
+        window.setTimeout(() => {
+          void checkAndNotifyNewDevice(newSession.user.id, newSession.user.email)
+        }, 0)
       }
     })
 
     return () => {
       mounted = false
+      window.clearTimeout(bootstrapTimeout)
       sub.subscription.unsubscribe()
     }
   }, [])
