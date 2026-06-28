@@ -119,6 +119,7 @@ class CallManager {
   private autoReconnectTimer: number | null = null
   private autoReconnecting = false
   private inviteRetryTimer: number | null = null
+  private wasConnected = false
 
 
 
