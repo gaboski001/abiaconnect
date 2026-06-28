@@ -81,29 +81,38 @@ export default function Login() {
         throw new Error('Authentication failed: No session returned.')
       }
 
-      await refreshSession(data.session)
+      // Don't await refreshSession here — onAuthStateChange will hydrate the
+      // AuthContext. Awaiting it (plus the biometric check) was racing with
+      // the SIGNED_IN listener and leaving the button stuck on "Signing you in…".
+      void refreshSession(data.session)
 
-      if (!remember) {
-        toast.message('Signed in without changing your saved biometric preference.')
-      } else {
-        toast.success('Welcome back to AbiaConnect!')
-      }
+      toast.success('Welcome back to AbiaConnect!')
 
       const pendingPushRoute = typeof window !== 'undefined' ? sessionStorage.getItem('abia_pending_push_route') : null
 
+      // Biometric opt-in: check with a hard timeout so it can never block navigation.
+      let shouldPromptBiometric = false
       try {
-        if (!isBiometricEnabled() && !hasDeclinedBiometric() && (await isBiometricAvailable())) {
-          setPendingCreds({ email, password })
-          setOptInOpen(true)
-          setLoading(false)
-          return
+        if (!isBiometricEnabled() && !hasDeclinedBiometric()) {
+          shouldPromptBiometric = await Promise.race([
+            isBiometricAvailable(),
+            new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 1500)),
+          ])
         }
       } catch {
-        // best effort only
+        shouldPromptBiometric = false
       }
 
       setLoading(false)
+
+      if (shouldPromptBiometric) {
+        setPendingCreds({ email, password })
+        setOptInOpen(true)
+        return
+      }
+
       navigate(pendingPushRoute || '/dashboard', { replace: true })
+
     } catch (err: any) {
       clearTimeout(timeout)
       const errMsg = err?.message || 'Sign in failed. Please check your connection.'
