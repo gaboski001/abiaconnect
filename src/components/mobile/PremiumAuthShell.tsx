@@ -1,24 +1,17 @@
 import { type ReactNode } from 'react'
 import { motion } from 'framer-motion'
-import { BellRing, Fingerprint, Globe2, ShieldCheck, Sparkles } from 'lucide-react'
-import { AUTH_HIGHLIGHTS, BLUE_GOLD_GRADIENT, GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
+import { GOLD_GRADIENT, GOLD_SHADOW, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 
 interface PremiumAuthShellProps {
   logoUrl?: string | null
-  badge: string
+  badge?: string
   title: string
   subtitle: string
-  panelTitle: string
-  panelDescription: string
+  panelTitle?: string
+  panelDescription?: string
   children: ReactNode
   footer?: ReactNode
 }
-
-const PANEL_ITEMS = [
-  { icon: Globe2, title: 'Global community', copy: 'Connect Abians at home and across the diaspora with one polished mobile experience.' },
-  { icon: BellRing, title: 'Instant updates', copy: 'Messages, mentions, replies, and alerts stay visible with focused notification flows.' },
-  { icon: Fingerprint, title: 'Secure access', copy: 'Biometric sign-in and resilient session handling keep access fast and trustworthy.' },
-]
 
 export function PremiumAuthShell({
   logoUrl,
