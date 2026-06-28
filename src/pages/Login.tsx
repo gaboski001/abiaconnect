@@ -37,11 +37,8 @@ export default function Login() {
   const [optInOpen, setOptInOpen] = useState(false)
   const [pendingCreds, setPendingCreds] = useState<{ email: string; password: string } | null>(null)
 
-  const helperLabel = useMemo(() => {
-    if (!identifier) return 'Use the email address connected to your AbiaConnect account.'
-    if (!identifier.includes('@')) return 'Email format helps the mobile sign-in stay reliable.'
-    return 'Looks good — continue with your password.'
-  }, [identifier])
+
+
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
