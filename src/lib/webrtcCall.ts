@@ -292,6 +292,9 @@ class CallManager {
   async endCall(notifyPeer = true, error: string | null = null) {
     const peerId = this.state.peer?.id
     const callId = this.state.callId
+    const conversationId = this.state.peer?.conversationId
+    const direction = this.state.direction
+    const wasConnected = this.wasConnected
     if (notifyPeer && peerId && callId) {
       await this.sessionSend('bye', { callId }).catch(() => undefined)
       await supabase
@@ -299,6 +302,26 @@ class CallManager {
         .send({ type: 'broadcast', event: 'cancel', payload: { callId } })
         .catch(() => undefined)
     }
+    // Log a missed-call entry in the conversation when the call never connected.
+    // Only the caller writes it (single source of truth — both peers see the same row).
+    if (!wasConnected && direction === 'outgoing' && conversationId && this.userId) {
+      const reason = error || 'No answer'
+      supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: this.userId,
+          content: `[call:missed] ${reason}`,
+        })
+        .then(() =>
+          supabase
+            .from('conversations')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('id', conversationId),
+        )
+        .then(() => undefined, () => undefined)
+    }
+    this.wasConnected = false
     this.clearInviteRetryLoop()
     this.stopStatsLoop()
     this.pc?.getSenders().forEach((s) => s.track?.stop())
