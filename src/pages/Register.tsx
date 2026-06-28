@@ -195,30 +195,14 @@ export default function Register() {
       <SEO title="Create your AbiaConnect account" description="Join AbiaConnect." path="/register" />
       <PremiumAuthShell
         logoUrl={logoUrl}
-        badge="Premium Android onboarding"
-        title="Create your AbiaConnect identity"
-        subtitle="A modern native-style sign-up flow with better spacing, smoother transitions, and clearer trust cues so new members can register confidently."
-        panelTitle="Designed to feel like a premium native app"
-        panelDescription="The refreshed sign-up experience keeps your current backend and validation flow, while making onboarding cleaner, warmer, and more professional for first-time members."
+        title="Create your account"
+        subtitle="Join the AbiaConnect community."
       >
-        <div className="space-y-5">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300/80">
-              <UserPlus className="size-3.5" style={{ color: MOBILE_BRAND.gold }} />
-              Step-by-step account creation
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-200">
-              <ShieldCheck className="size-3.5" />
-              Bot-resistant verification
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-black tracking-tight text-white">Join AbiaConnect</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-300/72">
-              Build your account once, verify it securely, and step into a stronger community experience built for Abians worldwide.
-            </p>
-          </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black tracking-tight text-white">Join AbiaConnect</h2>
+          <p className="text-sm text-slate-300/72">
+            It only takes a moment — verify your email after sign up.
+          </p>
         </div>
 
         <div className="mt-6">
@@ -237,18 +221,7 @@ export default function Register() {
                   transition={{ duration: 0.28, ease: 'easeOut' }}
                 >
                   <form onSubmit={onStep1} className="space-y-5 text-left">
-                    <div className="grid gap-4 rounded-[1.4rem] border border-white/10 bg-slate-950/25 p-4 sm:grid-cols-3">
-                      {[
-                        'Cleaner registration flow',
-                        'Touch-friendly Android spacing',
-                        'Professional account write-up',
-                      ].map((item) => (
-                        <div key={item} className="flex items-start gap-3 rounded-2xl border border-white/6 bg-white/[0.03] p-3">
-                          <Sparkles className="mt-0.5 size-4 shrink-0" style={{ color: MOBILE_BRAND.gold }} />
-                          <p className="text-xs leading-5 text-slate-300/74">{item}</p>
-                        </div>
-                      ))}
-                    </div>
+
 
                     <Field label="Full name" error={form.formState.errors.name?.message}>
                       <Input {...form.register('name')} placeholder="First and last name" className="h-14 rounded-2xl border-white/10 bg-slate-950/40 text-white placeholder:text-white/25" />
