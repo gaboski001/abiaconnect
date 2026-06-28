@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, CheckCircle2, Eye, EyeOff, Fingerprint, ShieldCheck, Sparkles } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, Fingerprint } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -23,11 +23,6 @@ import {
 import PremiumAuthShell from '@/components/mobile/PremiumAuthShell'
 import { GOLD_GRADIENT, GOLD_SHADOW, MOBILE_BRAND } from '@/lib/mobileBrand'
 
-const TRUST_POINTS = [
-  'Fast, stable sign-in with smoother Android navigation',
-  'Fingerprint sign-in available on supported devices',
-  'Live alerts for replies, mentions, and direct messages',
-]
 
 export default function Login() {
   const navigate = useNavigate()
