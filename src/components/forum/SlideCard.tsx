@@ -70,14 +70,8 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
       <div className="absolute -right-16 top-0 h-56 w-56 rounded-full blur-3xl" style={{ background: 'rgba(248,195,1,0.16)' }} />
       <div className="absolute -left-12 bottom-0 h-48 w-48 rounded-full blur-3xl" style={{ background: 'rgba(28,169,217,0.18)' }} />
 
-      {slide.isDefault && (
-        <>
-          <div aria-hidden className="absolute right-8 top-8 hidden h-28 w-28 rounded-[2rem] border border-white/10 bg-white/[0.05] backdrop-blur-md md:block" />
-          <div aria-hidden className="absolute bottom-8 right-20 hidden h-12 w-24 rounded-full border border-white/10 bg-white/[0.05] backdrop-blur-md md:block" />
-        </>
-      )}
+      <div className="relative z-10 grid w-full gap-8 lg:items-end">
 
-      <div className="relative z-10 grid w-full gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
         <div className="flex max-w-2xl flex-col justify-between gap-5">
           <div className="space-y-4">
             {slide.badge_text && (
@@ -140,12 +134,6 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
             </div>
           )}
         </div>
-
-        <div className="grid gap-3 self-end sm:grid-cols-3 lg:grid-cols-1">
-          <InfoCard title="Experience" body="Premium visuals for browsing, updates, and call-to-action clarity." />
-          <InfoCard title="Visibility" body="High contrast copy and controls for easier reading in every theme." />
-          <InfoCard title="Motion" body="Smoother carousel interactions with a more native presentation feel." />
-        </div>
       </div>
 
       {!slide.isDefault && (
@@ -157,13 +145,5 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
   )
 }
 
-function InfoCard({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="rounded-[1.3rem] border border-white/10 bg-white/[0.05] p-4 backdrop-blur-md">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/58">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-white/82">{body}</p>
-    </div>
-  )
-}
 
 export default SlideCard

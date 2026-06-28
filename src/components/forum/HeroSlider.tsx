@@ -231,11 +231,8 @@ function HeroCarousel({ slides }: { slides: HeroSlideLike[] }) {
           })}
         </div>
 
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50/90 px-4 py-2 text-xs font-medium text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300/76">
-          <span className="inline-flex h-2.5 w-2.5 rounded-full" style={{ backgroundColor: MOBILE_BRAND.success }} />
-          Auto-rotates every {intervalSeconds}s
-        </div>
       </div>
+
     </div>
   )
 }
