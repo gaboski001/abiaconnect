@@ -373,14 +373,14 @@ function Overview({ displayName }: { displayName: string }) {
         <div className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">At a glance</p>
-              <h2 className="mt-2 text-2xl font-black text-white">Your premium dashboard snapshot</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Your AbiaConnect hub</p>
+              <h2 className="mt-2 text-2xl font-black text-white">Stay close to your community</h2>
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300/72">
-                Hello {displayName}. This view now emphasizes the most useful signals first, so the dashboard feels less like a settings page and more like a polished mobile control center.
+                Welcome back, {displayName}. Track your contributions across Abia's 17 LGAs, follow live discussions, and respond to neighbours, leaders, and groups you care about — all from one place.
               </p>
             </div>
             <div className="rounded-[1.4rem] border border-white/10 px-4 py-3 text-sm text-slate-300/74" style={{ background: GOLD_GRADIENT_SOFT }}>
-              <span className="font-semibold text-white">Pro tip:</span> open Messages and Notifications from the hero area for the fastest response loop.
+              <span className="font-semibold text-white">Tip:</span> jump into Messages or Notifications to keep conversations with your LGA moving in real time.
             </div>
           </div>
 
