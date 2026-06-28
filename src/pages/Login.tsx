@@ -160,8 +160,7 @@ export default function Login() {
               if (!enabled) setBiometricDeclined(true)
               setOptInOpen(false)
               setPendingCreds(null)
-              const pendingPushRoute = typeof window !== 'undefined' ? sessionStorage.getItem('abia_pending_push_route') : null
-              navigate(pendingPushRoute || '/dashboard', { replace: true })
+              redirectOnce()
             }}
           />
         ) : null}
