@@ -17,6 +17,7 @@ import {
   Sparkles,
   ShieldCheck,
   PhoneIncoming,
+  PhoneMissed,
 } from 'lucide-react'
 import { VoiceRecorderButton, VoiceMessageBubble, isAudioAttachment } from '@/components/messages/VoiceRecorder'
 import { callManager, useIsCallSupported } from '@/lib/webrtcCall'
