@@ -34,7 +34,7 @@ const QUALITY_META: Record<CallQuality, { label: string; className: string; Icon
 }
 
 export function CallOverlay({ state }: { state: CallState }) {
-  const [now, setNow] = useState(Date.now())
+  const [now, setNow] = (require('react') as typeof import('react')).useState(Date.now())
   
 
   useEffect(() => {
