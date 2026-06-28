@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import {
   CADENCE_PRESETS,
   getRingtoneSettings,
+  loadRingtoneSettingsFromProfile,
   setRingtoneSettings,
   type RingCadence,
   type RingtoneSettings,
