@@ -302,17 +302,22 @@ class CallManager {
         .send({ type: 'broadcast', event: 'cancel', payload: { callId } })
         .catch(() => undefined)
     }
-    // Log a missed-call entry in the conversation when the call never connected.
+    // Log a call entry in the conversation (missed or completed).
     // Only the caller writes it (single source of truth — both peers see the same row).
-    if (!wasConnected && direction === 'outgoing' && conversationId && this.userId) {
-      const reason = error || 'No answer'
+    if (direction === 'outgoing' && conversationId && this.userId) {
       const senderId = this.userId
+      const startedAt = this.state.startedAt
+      const durationSec =
+        wasConnected && startedAt ? Math.max(1, Math.round((Date.now() - startedAt) / 1000)) : 0
+      const content = wasConnected
+        ? `[call:ended] ${durationSec}s`
+        : `[call:missed] ${error || 'No answer'}`
       void (async () => {
         try {
           await supabase.from('messages').insert({
             conversation_id: conversationId,
             sender_id: senderId,
-            content: `[call:missed] ${reason}`,
+            content,
           })
           await supabase
             .from('conversations')
