@@ -27,16 +27,16 @@ interface MobileOnboardingProps {
   initialSlide?: number;
 }
 
-// Brand palette — premium blue + AbiaConnect gold for the onboarding canvas.
+// Brand palette — dark forest green + AbiaConnect gold for the onboarding canvas.
 const BRAND = {
-  bg: '#07111F',
-  surface: '#101A2E',
-  surfaceAlt: '#0B1424',
+  bg: '#0B1F0B',
+  surface: '#163516',
+  surfaceAlt: '#102A10',
   border: 'rgba(255,255,255,0.08)',
   gold: '#F8C301',
   goldDark: '#E87015',
-  green: '#1CA9D9',
-  greenDark: '#0A6E99',
+  green: '#1B3D1B',
+  greenDark: '#0B1F0B',
   text: '#FFFFFF',
   textMuted: '#B0B0B0',
   textDim: '#707070',
