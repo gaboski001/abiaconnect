@@ -662,14 +662,32 @@ function ConversationView({
                   m.attachment_url && !hasAudio && (m.attachment_type?.startsWith('image/') ?? false)
                 const hasFile = m.attachment_url && !hasImage && !hasAudio
                 const isMissedCall = typeof m.content === 'string' && m.content.startsWith('[call:missed]')
-                if (isMissedCall) {
-                  const reason = m.content!.replace('[call:missed]', '').trim() || 'No answer'
+                const isEndedCall = typeof m.content === 'string' && m.content.startsWith('[call:ended]')
+                if (isMissedCall || isEndedCall) {
+                  const timeLabel = format(new Date(m.created_at), 'p')
+                  if (isMissedCall) {
+                    const reason = m.content!.replace('[call:missed]', '').trim() || 'No answer'
+                    return (
+                      <div key={m.id} data-mid={m.id} className="flex justify-center">
+                        <div className="flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-200">
+                          <PhoneMissed className="h-3.5 w-3.5" />
+                          <span>{mine ? 'Missed call' : 'Missed voice call'} · {reason}</span>
+                          <span className="opacity-70">· {timeLabel}</span>
+                        </div>
+                      </div>
+                    )
+                  }
+                  const raw = m.content!.replace('[call:ended]', '').trim()
+                  const secs = parseInt(raw, 10) || 0
+                  const mm = Math.floor(secs / 60)
+                  const ss = secs % 60
+                  const duration = secs > 0 ? `${mm}:${ss.toString().padStart(2, '0')}` : '—'
                   return (
                     <div key={m.id} data-mid={m.id} className="flex justify-center">
-                      <div className="flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-200">
-                        <PhoneMissed className="h-3.5 w-3.5" />
-                        <span>{mine ? 'Missed call' : 'Missed voice call'} · {reason}</span>
-                        <span className="opacity-70">{format(new Date(m.created_at), 'p')}</span>
+                      <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200">
+                        <PhoneCall className="h-3.5 w-3.5" />
+                        <span>Voice call · {duration}</span>
+                        <span className="opacity-70">· {timeLabel}</span>
                       </div>
                     </div>
                   )
