@@ -80,13 +80,13 @@ export function HeroSlider() {
             style={{ background: GOLD_GRADIENT_SOFT }}
           >
             <Sparkles className="size-3.5" style={{ color: MOBILE_BRAND.gold }} />
-            Slider hero
+            AbiaConnect spotlight
           </div>
           <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
-            Featured community updates
+            What's happening across Abia
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700 dark:text-slate-300/74">
-            A more professional hero carousel highlights key messages, live promotions, and important actions with stronger readability in light and dark mode.
+            Top discussions, community announcements, cultural events, and updates from across the 17 LGAs and the Abian diaspora worldwide.
           </p>
         </div>
 
