@@ -199,33 +199,6 @@ export default function Messages() {
     <>
       <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
       <div className="relative mx-auto max-w-7xl">
-        <div className="absolute inset-x-0 top-0 -z-10 h-72 rounded-[2rem] blur-3xl opacity-50" style={{ background: 'radial-gradient(circle at 10% 20%, rgba(28,169,217,0.24), transparent 36%), radial-gradient(circle at 85% 10%, rgba(248,195,1,0.20), transparent 28%)' }} />
-
-        <section className="mb-4 overflow-hidden rounded-[2rem] border border-white/10 bg-[#091220] p-5 text-white sm:p-6" style={{ boxShadow: PREMIUM_SHADOW }}>
-          <div className="absolute" />
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-200/80" style={{ background: GOLD_GRADIENT_SOFT }}>
-                <Sparkles className="size-3.5" style={{ color: MOBILE_BRAND.gold }} />
-                AbiaConnect messages
-              </div>
-              <h1 className="mt-4 text-3xl font-black tracking-tight">Stay connected across Abia</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300/76">
-                Private, real-time conversations with fellow community members — share updates, coordinate on local issues, and place secure voice calls without leaving AbiaConnect.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
-              <div className="rounded-[1.3rem] border border-white/10 bg-white/[0.05] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300/62">Realtime</p>
-                <p className="mt-1 text-sm font-bold text-emerald-300">Connected</p>
-              </div>
-              <div className="rounded-[1.3rem] border border-white/10 bg-white/[0.05] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300/62">Calls</p>
-                <p className="mt-1 text-sm font-bold text-slate-100">Push-ready</p>
-              </div>
-            </div>
-          </div>
-        </section>
 
         <div className="flex h-[calc(100vh-14.5rem)] min-h-0 overflow-hidden rounded-[2rem] border border-white/10 bg-[rgba(8,14,26,0.94)] text-white md:h-[calc(100vh-12.8rem)]" style={{ boxShadow: PREMIUM_SHADOW }}>
           <aside className={cn('w-full min-h-0 border-r border-white/10 bg-[rgba(7,12,22,0.92)] md:w-[22rem] md:min-w-[22rem] flex-col', conversationId ? 'hidden md:flex' : 'flex')}>
