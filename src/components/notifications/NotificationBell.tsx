@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { playNotificationChime } from '@/lib/notificationSound'
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
+import { useThrottledCallback } from '@/hooks/useThrottledCallback'
+
 
 export interface NotificationRow {
   id: string
