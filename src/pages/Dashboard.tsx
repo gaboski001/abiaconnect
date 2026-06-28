@@ -402,16 +402,16 @@ function Overview({ displayName }: { displayName: string }) {
         </div>
 
         <div className="rounded-[1.8rem] border border-white/10 p-5 text-slate-950" style={{ background: BLUE_GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-950/70">Mobile-first flow</p>
-          <h3 className="mt-2 text-2xl font-black">Cleaner routes, faster decisions</h3>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-950/70">Your AbiaConnect hub</p>
+          <h3 className="mt-2 text-2xl font-black">Everything that matters, in one place</h3>
           <p className="mt-3 text-sm leading-6 text-slate-950/76">
-            The redesigned dashboard keeps navigation visible, reduces clutter, and makes the most important actions obvious on Android-sized screens.
+            Track your conversations, contributions and community reach across Abia State's 17 LGAs — without leaving your dashboard.
           </p>
           <div className="mt-5 space-y-3">
             {[
-              'Open unread conversations faster',
-              'Reach settings and profile edits with fewer taps',
-              'Keep stats, activity, and saved items visible without hunting around',
+              'Pick up unread messages and replies the moment they arrive',
+              'Manage your profile, privacy and notification preferences in one tap',
+              'Follow your threads, bookmarks and reputation as they grow',
             ].map((item) => (
               <div key={item} className="flex items-start gap-3 rounded-2xl bg-black/8 px-3 py-3 text-sm font-medium text-slate-950/82">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0" />
