@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MessageCircle } from 'lucide-react'
@@ -6,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { playNotificationChime } from '@/lib/notificationSound'
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 
 export function MessagesBell() {
   const { user } = useAuth()
@@ -37,28 +37,27 @@ export function MessagesBell() {
     },
   })
 
-  useEffect(() => {
-    if (!user) return
-    const channel = supabase
-      .channel(`messages-bell:${user.id}:${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const row = payload.new as { sender_id?: string } | null
-            if (row && row.sender_id && row.sender_id !== user.id) {
-              playNotificationChime()
-            }
-          }
-          qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
-        },
-      )
-      .subscribe()
-    return () => {
-      void supabase.removeChannel(channel)
-    }
-  }, [user, qc])
+  useRealtimeChannel({
+    enabled: !!user,
+    channelName: `messages-bell:${user?.id ?? 'anon'}`,
+    deps: [user?.id],
+    subscriptions: user
+      ? [
+          {
+            filter: { event: '*', schema: 'public', table: 'messages' },
+            handler: (payload) => {
+              if (payload.eventType === 'INSERT') {
+                const row = payload.new as { sender_id?: string } | null
+                if (row?.sender_id && row.sender_id !== user.id) {
+                  playNotificationChime()
+                }
+              }
+              qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
+            },
+          },
+        ]
+      : [],
+  })
 
   if (!user) return null
   const count = unreadQ.data ?? 0
