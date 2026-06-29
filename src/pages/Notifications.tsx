@@ -45,20 +45,28 @@ export default function Notifications() {
     },
   })
 
-  useEffect(() => {
-    if (!user) return
-    const channel = supabase
-      .channel(`notifications-page:${user.id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        () => qc.invalidateQueries({ queryKey: ['notifications-all', user.id] }),
-      )
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [user, qc])
+  const invalidateNotifs = useThrottledCallback(
+    useCallback(() => {
+      if (!user) return
+      qc.invalidateQueries({ queryKey: ['notifications-all', user.id] })
+    }, [qc, user]),
+    800,
+  )
+
+  useRealtimeChannel({
+    enabled: !!user,
+    channelName: `notifications-page:${user?.id ?? 'anon'}`,
+    deps: [user?.id],
+    subscriptions: user
+      ? [
+          {
+            filter: { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+            handler: invalidateNotifs,
+          },
+        ]
+      : [],
+  })
+
 
   const filtered = useMemo(() => {
     const list = notifsQ.data ?? []
