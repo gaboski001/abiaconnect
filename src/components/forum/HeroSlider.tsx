@@ -2,8 +2,10 @@ import useEmblaCarousel from 'embla-carousel-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 import { useThrottledCallback } from '@/hooks/useThrottledCallback'
+
 
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { GOLD_GRADIENT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
