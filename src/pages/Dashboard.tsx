@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { formatDistanceToNow, startOfDay, subDays, format } from 'date-fns'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -45,8 +45,11 @@ import { CallRingtoneSettings } from '@/components/notifications/CallRingtoneSet
 import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 import { toWebP } from '@/lib/image'
 import { BLUE_GOLD_GRADIENT, GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
+import { useThrottledCallback } from '@/hooks/useThrottledCallback'
 
 const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
+
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
 
