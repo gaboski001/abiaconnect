@@ -120,7 +120,7 @@ export function Footer() {
 
             {/* Link columns */}
             {LINK_GROUPS.map((group) => (
-              <div key={group.title} className="md:col-span-1 lg:col-span-2">
+              <div key={group.title} className="col-span-1 sm:col-span-1 md:col-span-1 lg:col-span-2">
                 <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-900 dark:text-white">
                   {group.title}
                 </h3>
