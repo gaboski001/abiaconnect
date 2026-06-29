@@ -206,18 +206,20 @@ export default function Dashboard() {
         </aside>
 
         <div className="space-y-4 lg:hidden">
-          <div className="-mx-1 overflow-x-auto px-1">
-            <div className="flex gap-2 pb-1">
-              {NAV.map((n) => (
-                <button
-                  key={n.id}
-                  onClick={() => setTab(n.id)}
-                  className="whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition"
-                  style={tab === n.id ? { backgroundImage: GOLD_GRADIENT, color: MOBILE_BRAND.ink, borderColor: 'transparent', boxShadow: GOLD_SHADOW } : { background: 'rgba(255,255,255,0.04)', color: 'rgba(226,232,240,0.78)', borderColor: 'rgba(255,255,255,0.08)' }}
-                >
-                  {n.mobileLabel}
-                </button>
-              ))}
+          <div className="rounded-[1.6rem] border border-white/10 bg-[rgba(10,18,32,0.92)] p-2 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
+            <div className="-mx-1 overflow-x-auto px-1 scrollbar-none">
+              <div className="flex gap-2 pb-1">
+                {NAV.map((n) => (
+                  <button
+                    key={n.id}
+                    onClick={() => setTab(n.id)}
+                    className="whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition"
+                    style={tab === n.id ? { backgroundImage: GOLD_GRADIENT, color: MOBILE_BRAND.ink, borderColor: 'transparent', boxShadow: GOLD_SHADOW } : { background: 'rgba(255,255,255,0.06)', color: '#F8FAFC', borderColor: 'rgba(255,255,255,0.12)' }}
+                  >
+                    {n.mobileLabel}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
