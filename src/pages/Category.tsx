@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
+import { useThrottledCallback } from '@/hooks/useThrottledCallback'
+
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
@@ -56,29 +59,32 @@ export default function CategoryPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
 
-  useEffect(() => {
-    if (!categoryId) return
-    const channel = supabase
-      .channel(`threads-category:${categoryId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'threads', filter: `category_id=eq.${categoryId}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['threads', categoryId] })
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'replies' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['threads', categoryId] })
-        },
-      )
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [categoryId, queryClient])
+  const invalidateThreads = useThrottledCallback(
+    useCallback(() => {
+      if (!categoryId) return
+      queryClient.invalidateQueries({ queryKey: ['threads', categoryId] })
+    }, [queryClient, categoryId]),
+    800,
+  )
+
+  useRealtimeChannel({
+    enabled: !!categoryId,
+    channelName: `threads-category:${categoryId ?? 'none'}`,
+    deps: [categoryId],
+    subscriptions: categoryId
+      ? [
+          {
+            filter: { event: '*', schema: 'public', table: 'threads', filter: `category_id=eq.${categoryId}` },
+            handler: invalidateThreads,
+          },
+          {
+            filter: { event: 'INSERT', schema: 'public', table: 'replies' },
+            handler: invalidateThreads,
+          },
+        ]
+      : [],
+  })
+
 
   const categoryQ = useQuery({
     queryKey: ['category', categoryId],

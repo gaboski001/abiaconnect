@@ -3,6 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
+import { useThrottledCallback } from '@/hooks/useThrottledCallback'
+
+
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { GOLD_GRADIENT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 import { SlideCard, type HeroSlideLike } from './SlideCard'
@@ -45,18 +49,23 @@ export function HeroSlider() {
     },
   })
 
-  useEffect(() => {
-    const channel = supabase.channel(`hero-slides-updates-${Math.random().toString(36).slice(2)}`)
-    channel.on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'hero_slides' },
-      () => queryClient.invalidateQueries({ queryKey: ['hero-slides'] }),
-    )
-    channel.subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [queryClient])
+  const invalidateHero = useThrottledCallback(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['hero-slides'] })
+    }, [queryClient]),
+    800,
+  )
+
+  useRealtimeChannel({
+    channelName: 'hero-slides-updates',
+    subscriptions: [
+      {
+        filter: { event: '*', schema: 'public', table: 'hero_slides' },
+        handler: invalidateHero,
+      },
+    ],
+  })
+
 
   const now = new Date()
   const activeFetched = (fetched ?? []).filter((s) => {
