@@ -56,6 +56,15 @@ export function MobileTopBar() {
                   className="border-slate-200 dark:border-white/10"
                 />
               </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={async () => { await signOut(); navigate('/') }}
+                aria-label="Sign out"
+                className="h-9 w-9 rounded-xl text-slate-700 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-white/[0.08]"
+              >
+                <LogOut className="size-4" />
+              </Button>
             </>
           ) : (
             <Button
