@@ -36,6 +36,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
+import { useThrottledCallback } from '@/hooks/useThrottledCallback'
+
 
 type AccountType = 'bank' | 'crypto' | 'mobile_money'
 type DonationAccount = {
@@ -78,17 +81,19 @@ export default function AdminDonations() {
     },
   })
 
-  useEffect(() => {
-    const channel = supabase
-      .channel('donation_accounts_admin')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'donation_accounts' }, () => {
-        qc.invalidateQueries({ queryKey: ['donation_accounts', 'admin'] })
-      })
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [qc])
+  const invalidateAdminAccounts = useThrottledCallback(() => {
+    qc.invalidateQueries({ queryKey: ['donation_accounts', 'admin'] })
+  }, 800)
+
+  useRealtimeChannel({
+    channelName: 'donation_accounts_admin',
+    subscriptions: [
+      {
+        filter: { event: '*', schema: 'public', table: 'donation_accounts' },
+        handler: () => invalidateAdminAccounts(),
+      },
+    ],
+  })
 
   const toggleActive = useMutation({
     mutationFn: async (row: DonationAccount) => {

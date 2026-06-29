@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
+import { useThrottledCallback } from '@/hooks/useThrottledCallback'
 import { SEO } from '@/components/SEO'
 import { motion } from 'framer-motion'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -107,17 +109,19 @@ export default function Polls() {
     },
   })
 
-  useEffect(() => {
-    const ch = supabase
-      .channel('poll-votes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'poll_votes' }, () => {
-        qc.invalidateQueries({ queryKey: ['polls'] })
-      })
-      .subscribe()
-    return () => {
-      void supabase.removeChannel(ch)
-    }
-  }, [qc])
+  const invalidatePolls = useThrottledCallback(() => {
+    qc.invalidateQueries({ queryKey: ['polls'] })
+  }, 800)
+
+  useRealtimeChannel({
+    channelName: 'poll-votes',
+    subscriptions: [
+      {
+        filter: { event: '*', schema: 'public', table: 'poll_votes' },
+        handler: () => invalidatePolls(),
+      },
+    ],
+  })
 
   const vote = useMutation({
     mutationFn: async ({ pollId, optionId }: { pollId: string; optionId: string }) => {

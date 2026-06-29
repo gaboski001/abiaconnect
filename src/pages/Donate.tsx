@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { SEO } from '@/components/SEO'
 import LegalRegistration from '@/components/LegalRegistration'
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
+import { useThrottledCallback } from '@/hooks/useThrottledCallback'
 
 type DonationAccount = {
   id: string
@@ -151,17 +153,19 @@ export default function Donate() {
     },
   })
 
-  useEffect(() => {
-    const channel = supabase
-      .channel('donation_accounts_public')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'donation_accounts' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['donation_accounts', 'active'] })
-      })
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [queryClient])
+  const invalidateAccounts = useThrottledCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['donation_accounts', 'active'] })
+  }, 800)
+
+  useRealtimeChannel({
+    channelName: 'donation_accounts_public',
+    subscriptions: [
+      {
+        filter: { event: '*', schema: 'public', table: 'donation_accounts' },
+        handler: () => invalidateAccounts(),
+      },
+    ],
+  })
 
   const grouped = useMemo(() => {
     const out: Record<DonationAccount['account_type'], DonationAccount[]> = { bank: [], mobile_money: [], crypto: [] }
