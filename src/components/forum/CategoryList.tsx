@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { ArrowRight, Flame, Hash, Sparkles } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowRight, ChevronDown, Flame, Hash } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { GOLD_GRADIENT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
@@ -95,13 +95,13 @@ export function CategoryList() {
           No categories found. Check back soon.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="flex flex-col gap-2">
           {filtered.map((c, i) => (
             <motion.div
               key={c.id}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05, duration: 0.3 }}
+              transition={{ delay: i * 0.03, duration: 0.25 }}
             >
               <CategoryCard category={c} />
             </motion.div>
@@ -113,43 +113,82 @@ export function CategoryList() {
 }
 
 function CategoryCard({ category }: { category: Category }) {
+  const [open, setOpen] = useState(false)
   const color = category.color ?? MOBILE_BRAND.gold
 
   return (
-    <Link
-      to={`/category/${category.id}`}
-      className="group relative flex h-full flex-col overflow-hidden rounded-[1.65rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.03)_100%)] p-5 transition duration-300 hover:-translate-y-1 hover:border-[#F8C301]/20"
-      style={{ boxShadow: '0 18px 50px -34px rgba(7,17,31,0.95)' }}
+    <div
+      className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.03)_100%)] transition hover:border-[#F8C301]/20"
+      style={{ boxShadow: '0 12px 32px -28px rgba(7,17,31,0.95)' }}
     >
-      <div className="absolute inset-x-0 top-0 h-px opacity-40" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />
-      <div className="flex items-start justify-between gap-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+      >
         <span
-          className="flex h-14 w-14 items-center justify-center rounded-2xl border text-2xl"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-lg"
           style={{ backgroundColor: `${color}26`, borderColor: `${color}55` }}
         >
           {category.icon ?? '💬'}
         </span>
+        <span className="flex-1 truncate text-sm font-bold text-white">{category.name}</span>
         {category.is_popular ? (
-          <span className="inline-flex items-center gap-1 rounded-full border border-[#F8C301]/20 px-2.5 py-1 text-[11px] font-semibold text-slate-950" style={{ backgroundImage: GOLD_GRADIENT }}>
-            <Flame className="size-3" /> Popular
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-[#F8C301]/20 px-2 py-0.5 text-[10px] font-semibold text-slate-950"
+            style={{ backgroundImage: GOLD_GRADIENT }}
+          >
+            <Flame className="size-3" /> Hot
           </span>
         ) : null}
-      </div>
+        <span className="text-[11px] font-semibold text-slate-400">{category.thread_count ?? 0}</span>
+        <ChevronDown
+          className="size-4 text-slate-300 transition-transform"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        />
+      </button>
 
-      <h3 className="mt-4 text-lg font-black tracking-tight text-white transition-colors group-hover:text-white">{category.name}</h3>
-      {category.description ? <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-300/72">{category.description}</p> : null}
-
-      <div className="mt-5 flex items-center justify-between gap-3 border-t border-white/10 pt-4">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Threads</p>
-          <p className="mt-1 text-sm font-bold text-white">{category.thread_count ?? 0}</p>
-        </div>
-        <span className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: MOBILE_BRAND.gold }}>
-          Browse <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-        </span>
-      </div>
-    </Link>
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-white/10 px-4 py-4">
+              <div
+                className="absolute inset-x-0 top-0 h-px opacity-40"
+                style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }}
+              />
+              {category.description ? (
+                <p className="text-sm leading-6 text-slate-300/75">{category.description}</p>
+              ) : (
+                <p className="text-sm text-slate-400/70">Join the conversation in {category.name}.</p>
+              )}
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Threads</p>
+                  <p className="mt-1 text-sm font-bold text-white">{category.thread_count ?? 0}</p>
+                </div>
+                <Link
+                  to={`/category/${category.id}`}
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-950"
+                  style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
+                >
+                  Browse <ArrowRight className="size-3.5" />
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
   )
 }
 
 export default CategoryList
+
