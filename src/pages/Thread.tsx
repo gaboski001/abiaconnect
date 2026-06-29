@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
@@ -379,41 +380,46 @@ function Thread() {
 
 
 
-  // Realtime subscription
-  useEffect(() => {
-    if (!threadId) return
-    const channel = supabase
-      .channel(`thread:${threadId}:${Date.now()}:${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'replies', filter: `thread_id=eq.${threadId}` },
-        async (payload) => {
-          const next = payload.new as Reply
-          let withProfile: Reply = next
-          if (next.user_id) {
-            const { data: profs } = await supabase.rpc('get_public_profiles', { _ids: [next.user_id] })
-            const prof = ((profs ?? []) as Array<{ display_name: string | null; avatar_url: string | null }>)[0]
-            if (prof) withProfile = { ...next, profiles: { display_name: prof.display_name, avatar_url: prof.avatar_url } }
-          }
-          qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
-            if (!prev) return prev
-            const exists = prev.pages.some((p) => p.rows.some((r) => r.id === withProfile.id))
-            if (exists) return prev
-            const pages = prev.pages.map((p, i) =>
-              i === prev.pages.length - 1
-                ? { ...p, rows: [...p.rows, withProfile], total: p.total + 1 }
-                : { ...p, total: p.total + 1 },
-            )
-            return { ...prev, pages }
-          })
-        },
+  // Realtime subscription — migrated to useRealtimeChannel for consistency.
+  // Keeps setQueryData behavior (no invalidation) and proper cleanup.
+  const handleReplyInsert = useCallback(
+    async (payload: { new: Record<string, unknown> }) => {
+      const next = payload.new as unknown as Reply
+      let withProfile: Reply = next
+      if (next.user_id) {
+        const { data: profs } = await supabase.rpc('get_public_profiles', { _ids: [next.user_id] })
+        const prof = ((profs ?? []) as Array<{ display_name: string | null; avatar_url: string | null }>)[0]
+        if (prof) withProfile = { ...next, profiles: { display_name: prof.display_name, avatar_url: prof.avatar_url } }
+      }
+      qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
+        if (!prev) return prev
+        const exists = prev.pages.some((p) => p.rows.some((r) => r.id === withProfile.id))
+        if (exists) return prev
+        const pages = prev.pages.map((p, i) =>
+          i === prev.pages.length - 1
+            ? { ...p, rows: [...p.rows, withProfile], total: p.total + 1 }
+            : { ...p, total: p.total + 1 },
+        )
+        return { ...prev, pages }
+      })
+    },
+    [qc, threadId],
+  )
 
-      )
-      .subscribe()
-    return () => {
-      void supabase.removeChannel(channel)
-    }
-  }, [threadId, qc])
+  useRealtimeChannel({
+    enabled: !!threadId,
+    channelName: `thread-replies:${threadId ?? 'none'}`,
+    deps: [threadId],
+    subscriptions: threadId
+      ? [
+          {
+            filter: { event: 'INSERT', schema: 'public', table: 'replies', filter: `thread_id=eq.${threadId}` },
+            handler: handleReplyInsert,
+          },
+        ]
+      : [],
+  })
+
 
   const vote = useMutation({
     mutationFn: async (value: 1 | -1) => {
