@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import { Navbar } from './Navbar'
 import { Footer } from './Footer'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { cn } from '@/lib/utils'
+
+const isNative = Capacitor.isNativePlatform()
 
 export function MainLayout() {
   const location = useLocation()
@@ -54,7 +57,7 @@ export function MainLayout() {
         </div>
       </main>
 
-      {!isAuthPage && !isPremiumMobileRoute && <Footer />}
+      {!isAuthPage && !isPremiumMobileRoute && !isNative && <Footer />}
       {!isAuthPage && isPremiumMobileRoute && <MobileBottomNav />}
     </div>
   )
