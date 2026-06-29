@@ -8,24 +8,35 @@ export function ConnectivityStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSupabaseReachable, setIsSupabaseReachable] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
+  const failuresRef = (typeof window !== 'undefined') ? (window as any).__abiaConnFailRef ||= { count: 0 } : { count: 0 };
 
   const checkConnection = async (isInitial = false) => {
     setIsChecking(true);
     const result = await checkSupabaseConnection();
     const wasPreviouslyDisconnected = isSupabaseReachable === false;
 
-    setIsSupabaseReachable(result.connected);
-    setIsChecking(false);
-
-    if (!result.connected) {
-      console.error('Connection check failed:', result.error);
-      // Only show error toast if not the initial check (to avoid noise on every app start)
-      if (!isInitial) {
-        toast.error('Network Error: Cannot reach the server. Please check your internet connection.');
+    if (result.connected) {
+      failuresRef.count = 0;
+      setIsSupabaseReachable(true);
+      if (wasPreviouslyDisconnected && !isInitial) {
+        toast.success('Connection restored!');
       }
-    } else if (wasPreviouslyDisconnected && !isInitial) {
-      toast.success('Connection restored!');
+    } else {
+      failuresRef.count += 1;
+      // Require 2 consecutive failures before flagging as unreachable — avoids
+      // false positives during iOS WKWebView cold-start when the network stack
+      // isn't ready yet.
+      if (failuresRef.count >= 2) {
+        setIsSupabaseReachable(false);
+        if (!isInitial) {
+          toast.error('Network Error: Cannot reach the server. Please check your internet connection.');
+        }
+      } else {
+        // schedule a quick retry
+        setTimeout(() => { void checkConnection(true); }, 1500);
+      }
     }
+    setIsChecking(false);
   };
 
   useEffect(() => {
@@ -41,12 +52,13 @@ export function ConnectivityStatus() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Initial check - passing true to suppress the 'restored' toast
-    if (navigator.onLine) {
-      checkConnection(true);
-    }
+    // Defer initial probe so WKWebView/Capacitor bridge has time to settle.
+    const initialTimer = window.setTimeout(() => {
+      if (navigator.onLine) void checkConnection(true);
+    }, 2500);
 
     return () => {
+      window.clearTimeout(initialTimer);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
