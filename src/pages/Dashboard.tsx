@@ -618,11 +618,5 @@ function PanelState({ label }: { label: string }) {
   )
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <Label className="text-xs font-bold uppercase tracking-[0.22em] text-slate-300/76">{label}</Label>
-      {children}
-    </div>
-  )
-}
+
+
