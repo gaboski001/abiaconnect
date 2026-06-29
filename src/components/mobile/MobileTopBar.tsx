@@ -13,7 +13,8 @@ import { useState, useEffect } from 'react'
 import { MOBILE_BRAND, GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 
 export function MobileTopBar() {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
   const { data: profile } = useProfile()
   const { settings } = useSiteSettings()
   const siteName = settings.site_name || 'AbiaConnect'
