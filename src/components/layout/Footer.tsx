@@ -141,7 +141,7 @@ export function Footer() {
 
             {/* Newsletter */}
             <div className="md:col-span-6 lg:col-span-1 lg:hidden xl:hidden" aria-hidden />
-            <div className="md:col-span-6 lg:col-span-1">
+            <div className="col-span-2 sm:col-span-4 md:col-span-6 lg:col-span-1">
               <h3 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-900 dark:text-white">
                 <Mail className="size-3.5" style={{ color: MOBILE_BRAND.gold }} />
                 Newsletter
