@@ -27,6 +27,9 @@ jobs:
       - name: Security gate (sensitive keys + RLS exposure)
         run: npm run check:security
 
+      - name: Realtime handler gate (no invalidateQueries inside useRealtimeChannel)
+        run: npm run check:realtime
+
       - name: Build abiaconnect
         run: npm run build
 
