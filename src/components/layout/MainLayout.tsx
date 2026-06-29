@@ -5,6 +5,7 @@ import { Navbar } from './Navbar'
 import { Footer } from './Footer'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
 import { MobileTopBar } from '@/components/mobile/MobileTopBar'
+import { InstallAppPrompt } from '@/components/pwa/InstallAppPrompt'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { cn } from '@/lib/utils'
 
@@ -60,6 +61,7 @@ export function MainLayout() {
 
       {!isAuthPage && <Footer />}
       {!isAuthPage && <MobileBottomNav />}
+      {!isAuthPage && <InstallAppPrompt />}
     </div>
   )
 }
