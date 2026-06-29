@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { AlertTriangle, Banknote, Bitcoin, Check, Copy, Heart, Smartphone } from 'lucide-react'
 import { toast } from 'sonner'
