@@ -58,7 +58,7 @@ export function MainLayout() {
         </div>
       </main>
 
-      {!isAuthPage && !isNative && <div className="hidden md:block"><Footer /></div>}
+      {!isAuthPage && <Footer />}
       {!isAuthPage && <MobileBottomNav />}
     </div>
   )
