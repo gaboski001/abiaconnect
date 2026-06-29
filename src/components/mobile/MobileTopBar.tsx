@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { LogOut } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { MessagesBell } from '@/components/messages/MessagesBell'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
@@ -12,7 +13,8 @@ import { useState, useEffect } from 'react'
 import { MOBILE_BRAND, GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 
 export function MobileTopBar() {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
   const { data: profile } = useProfile()
   const { settings } = useSiteSettings()
   const siteName = settings.site_name || 'AbiaConnect'
@@ -54,6 +56,15 @@ export function MobileTopBar() {
                   className="border-slate-200 dark:border-white/10"
                 />
               </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={async () => { await signOut(); navigate('/') }}
+                aria-label="Sign out"
+                className="h-9 w-9 rounded-xl text-slate-700 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-white/[0.08]"
+              >
+                <LogOut className="size-4" />
+              </Button>
             </>
           ) : (
             <Button
