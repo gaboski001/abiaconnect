@@ -95,13 +95,13 @@ export function CategoryList() {
           No categories found. Check back soon.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="flex flex-col gap-2">
           {filtered.map((c, i) => (
             <motion.div
               key={c.id}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05, duration: 0.3 }}
+              transition={{ delay: i * 0.03, duration: 0.25 }}
             >
               <CategoryCard category={c} />
             </motion.div>
@@ -111,6 +111,87 @@ export function CategoryList() {
     </section>
   )
 }
+
+function CategoryCard({ category }: { category: Category }) {
+  const [open, setOpen] = useState(false)
+  const color = category.color ?? MOBILE_BRAND.gold
+
+  return (
+    <div
+      className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.03)_100%)] transition hover:border-[#F8C301]/20"
+      style={{ boxShadow: '0 12px 32px -28px rgba(7,17,31,0.95)' }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+      >
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-lg"
+          style={{ backgroundColor: `${color}26`, borderColor: `${color}55` }}
+        >
+          {category.icon ?? '💬'}
+        </span>
+        <span className="flex-1 truncate text-sm font-bold text-white">{category.name}</span>
+        {category.is_popular ? (
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-[#F8C301]/20 px-2 py-0.5 text-[10px] font-semibold text-slate-950"
+            style={{ backgroundImage: GOLD_GRADIENT }}
+          >
+            <Flame className="size-3" /> Hot
+          </span>
+        ) : null}
+        <span className="text-[11px] font-semibold text-slate-400">{category.thread_count ?? 0}</span>
+        <ChevronDown
+          className="size-4 text-slate-300 transition-transform"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-white/10 px-4 py-4">
+              <div
+                className="absolute inset-x-0 top-0 h-px opacity-40"
+                style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }}
+              />
+              {category.description ? (
+                <p className="text-sm leading-6 text-slate-300/75">{category.description}</p>
+              ) : (
+                <p className="text-sm text-slate-400/70">Join the conversation in {category.name}.</p>
+              )}
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">Threads</p>
+                  <p className="mt-1 text-sm font-bold text-white">{category.thread_count ?? 0}</p>
+                </div>
+                <Link
+                  to={`/category/${category.id}`}
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-950"
+                  style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
+                >
+                  Browse <ArrowRight className="size-3.5" />
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+export default CategoryList
+
 
 function CategoryCard({ category }: { category: Category }) {
   const color = category.color ?? MOBILE_BRAND.gold
