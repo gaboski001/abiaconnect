@@ -338,62 +338,60 @@ function ConversationView({
     },
   })
 
-  // Realtime: merge INSERT/UPDATE directly into cache (no refetch, no duplicates)
-  useEffect(() => {
-    if (!conversationId) return
-    const channel = supabase
-      .channel(`messages-${conversationId}:${Date.now()}:${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const incoming = payload.new as Message
-          qc.setQueryData<Message[]>(queryKey, (prev) => {
-            const list = prev ?? []
-            if (list.some((m) => m.id === incoming.id)) return list
-            // Reconcile: replace a matching optimistic temp row, else append.
-            const tempIdx = list.findIndex(
-              (m) =>
-                m._optimistic &&
-                m.sender_id === incoming.sender_id &&
-                (m.content ?? '') === (incoming.content ?? ''),
-            )
-            const next = { ...incoming, _status: 'delivered' as const }
-            if (tempIdx >= 0) {
-              const copy = list.slice()
-              copy[tempIdx] = next
-              return copy
-            }
-            return [...list, next]
-          })
-        },
+  // Realtime: merge INSERT/UPDATE directly into cache (no refetch, no invalidations).
+  // Migrated to useRealtimeChannel for consistency (StrictMode-safe unique channel + cleanup).
+  const handleMessageInsert = useCallback(
+    (payload: { new: Record<string, unknown> }) => {
+      const incoming = payload.new as unknown as Message
+      qc.setQueryData<Message[]>(queryKey, (prev) => {
+        const list = prev ?? []
+        if (list.some((m) => m.id === incoming.id)) return list
+        const tempIdx = list.findIndex(
+          (m) =>
+            m._optimistic &&
+            m.sender_id === incoming.sender_id &&
+            (m.content ?? '') === (incoming.content ?? ''),
+        )
+        const next = { ...incoming, _status: 'delivered' as const }
+        if (tempIdx >= 0) {
+          const copy = list.slice()
+          copy[tempIdx] = next
+          return copy
+        }
+        return [...list, next]
+      })
+    },
+    [qc, queryKey],
+  )
+
+  const handleMessageUpdate = useCallback(
+    (payload: { new: Record<string, unknown> }) => {
+      const updated = payload.new as unknown as Message
+      qc.setQueryData<Message[]>(queryKey, (prev) =>
+        (prev ?? []).map((m) => (m.id === updated.id ? { ...m, ...updated } : m)),
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const updated = payload.new as Message
-          qc.setQueryData<Message[]>(queryKey, (prev) =>
-            (prev ?? []).map((m) => (m.id === updated.id ? { ...m, ...updated } : m)),
-          )
-        },
-      )
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, qc])
+    },
+    [qc, queryKey],
+  )
+
+  useRealtimeChannel({
+    enabled: !!conversationId,
+    channelName: `messages-stream:${conversationId ?? 'none'}`,
+    deps: [conversationId],
+    subscriptions: conversationId
+      ? [
+          {
+            filter: { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+            handler: handleMessageInsert,
+          },
+          {
+            filter: { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+            handler: handleMessageUpdate,
+          },
+        ]
+      : [],
+  })
+
 
   // Auto-scroll on new messages
   useEffect(() => {
