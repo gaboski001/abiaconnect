@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { LogOut } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { MessagesBell } from '@/components/messages/MessagesBell'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
