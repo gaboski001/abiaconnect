@@ -168,21 +168,29 @@ export default function Messages() {
     },
   })
 
-  // Realtime: refresh conversation list on any new message
-  useEffect(() => {
-    if (!user) return
-    const channel = supabase
-      .channel(`messages-inbox:${user.id}:${Date.now()}:${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        () => qc.invalidateQueries({ queryKey: ['conversations', user.id] }),
-      )
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [user, qc])
+  // Realtime: refresh conversation list on any new message (throttled).
+  const invalidateInbox = useThrottledCallback(
+    useCallback(() => {
+      if (!user) return
+      qc.invalidateQueries({ queryKey: ['conversations', user.id] })
+    }, [qc, user]),
+    800,
+  )
+
+  useRealtimeChannel({
+    enabled: !!user,
+    channelName: `messages-inbox:${user?.id ?? 'anon'}`,
+    deps: [user?.id],
+    subscriptions: user
+      ? [
+          {
+            filter: { event: 'INSERT', schema: 'public', table: 'messages' },
+            handler: invalidateInbox,
+          },
+        ]
+      : [],
+  })
+
 
   const filteredConvos = useMemo(() => {
     const list = convosQ.data ?? []
