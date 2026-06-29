@@ -49,18 +49,23 @@ export function HeroSlider() {
     },
   })
 
-  useEffect(() => {
-    const channel = supabase.channel(`hero-slides-updates-${Math.random().toString(36).slice(2)}`)
-    channel.on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'hero_slides' },
-      () => queryClient.invalidateQueries({ queryKey: ['hero-slides'] }),
-    )
-    channel.subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [queryClient])
+  const invalidateHero = useThrottledCallback(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['hero-slides'] })
+    }, [queryClient]),
+    800,
+  )
+
+  useRealtimeChannel({
+    channelName: 'hero-slides-updates',
+    subscriptions: [
+      {
+        filter: { event: '*', schema: 'public', table: 'hero_slides' },
+        handler: invalidateHero,
+      },
+    ],
+  })
+
 
   const now = new Date()
   const activeFetched = (fetched ?? []).filter((s) => {
