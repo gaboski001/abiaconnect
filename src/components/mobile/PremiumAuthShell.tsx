@@ -61,15 +61,18 @@ export function PremiumAuthShell({
           className="flex min-h-[calc(100vh-3rem)] flex-col justify-center"
         >
           <div className="mx-auto w-full max-w-xl rounded-[2rem] border border-white/10 bg-[rgba(10,17,31,0.82)] p-5 shadow-2xl backdrop-blur-2xl sm:p-7" style={{ boxShadow: PREMIUM_SHADOW }}>
-            <div className="mb-6 flex items-center gap-3 lg:hidden">
-              <div className="flex h-12 w-12 items-center justify-center rounded-[1.1rem] border border-white/10 bg-white/10 p-2">
+            <div className="mb-6 flex flex-col items-center text-center lg:hidden">
+              <div
+                className="flex h-20 w-20 items-center justify-center rounded-[1.5rem] border border-white/10 bg-white/10 p-3"
+                style={{ boxShadow: GOLD_SHADOW }}
+              >
                 {logoUrl ? (
-                  <img src={logoUrl} alt="AbiaConnect" className="h-8 w-8 object-contain" />
+                  <img src={logoUrl} alt="AbiaConnect" className="h-14 w-14 object-contain" />
                 ) : (
-                  <span className="text-xl font-black" style={{ backgroundImage: GOLD_GRADIENT, WebkitBackgroundClip: 'text', color: 'transparent' }}>A</span>
+                  <span className="text-3xl font-black" style={{ backgroundImage: GOLD_GRADIENT, WebkitBackgroundClip: 'text', color: 'transparent' }}>A</span>
                 )}
               </div>
-              <h1 className="text-xl font-black text-white">{title}</h1>
+              <h1 className="mt-4 text-xl font-black text-white">{title}</h1>
             </div>
 
             {children}
