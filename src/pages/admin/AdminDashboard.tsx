@@ -408,7 +408,6 @@ function UsersSection() {
     onError: (e: any) => toast.error(e.message || 'Failed'),
   })
 
-  useEffect(() => {
   const invalidateAdminUsers = useThrottledCallback(() => {
     qc.invalidateQueries({ queryKey: ['admin-users'] })
   }, 800)
