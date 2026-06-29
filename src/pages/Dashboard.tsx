@@ -234,26 +234,6 @@ export default function Dashboard() {
         </main>
       </div>
 
-      <nav className="fixed inset-x-3 bottom-3 z-40 rounded-[1.8rem] border border-white/10 bg-[rgba(5,10,18,0.98)] px-2 py-2 backdrop-blur-2xl lg:hidden" style={{ boxShadow: PREMIUM_SHADOW }}>
-        <div className="grid grid-cols-6 gap-1">
-          {NAV.map((n) => {
-            const active = tab === n.id
-            return (
-              <button
-                key={n.id}
-                onClick={() => setTab(n.id)}
-                className="flex min-h-[4.25rem] flex-col items-center justify-center gap-1 rounded-[1.2rem] px-1 py-2 text-[10px] font-semibold leading-none transition"
-                style={active ? { backgroundImage: GOLD_GRADIENT, color: MOBILE_BRAND.ink, boxShadow: GOLD_SHADOW } : { color: 'rgba(226,232,240,0.82)' }}
-                aria-label={n.label}
-                title={n.label}
-              >
-                <n.icon className="size-[1.05rem] shrink-0" />
-                <span className="max-w-full truncate text-[9px] uppercase tracking-[0.12em]">{n.mobileLabel}</span>
-              </button>
-            )
-          })}
-        </div>
-      </nav>
     </div>
   )
 }
