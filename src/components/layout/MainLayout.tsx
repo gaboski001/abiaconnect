@@ -57,7 +57,7 @@ export function MainLayout() {
         </div>
       </main>
 
-      {!isAuthPage && !isPremiumMobileRoute && <Footer />}
+      {!isAuthPage && !isPremiumMobileRoute && !isNative && <Footer />}
       {!isAuthPage && isPremiumMobileRoute && <MobileBottomNav />}
     </div>
   )
