@@ -91,9 +91,9 @@ export function Footer() {
       <footer className="mt-12 border-t border-slate-200/80 bg-white dark:border-white/10 dark:bg-[rgba(8,14,26,1)]">
         <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
           {/* Compact grid: brand + 4 link cols + newsletter */}
-          <div className="grid gap-8 md:grid-cols-6 lg:grid-cols-12">
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-4 md:grid-cols-6 md:gap-8 lg:grid-cols-12">
             {/* Brand */}
-            <div className="md:col-span-2 lg:col-span-3">
+            <div className="col-span-2 sm:col-span-4 md:col-span-2 lg:col-span-3">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 dark:border-white/10 dark:bg-white/[0.06]">
                   {showLogoImage ? (
