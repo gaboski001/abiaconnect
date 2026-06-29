@@ -41,8 +41,8 @@ export function MobileBottomNav() {
 
   const items = useMemo<Item[]>(() => {
     const list: Item[] = [
-      { to: '/dashboard', label: 'Home', icon: LayoutDashboard, match: (p) => p === '/dashboard' },
-      { to: '/', label: 'Forums', icon: Home, match: (p) => p === '/' },
+      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, match: (p) => p === '/dashboard' },
+      { to: '/', label: 'Home', icon: Home, match: (p) => p === '/' },
       { to: '/polls', label: 'Polls', icon: BarChart3, match: (p) => p.startsWith('/polls') },
       {
         to: '/subgroups',
