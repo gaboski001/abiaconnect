@@ -45,20 +45,26 @@ export default function Login() {
     (fallback = '/') => {
       if (hasRedirectedRef.current) return
       hasRedirectedRef.current = true
-      const pending =
-        typeof window !== 'undefined' ? sessionStorage.getItem('abia_pending_push_route') : null
+      let pending: string | null = null
+      if (typeof window !== 'undefined') {
+        pending = sessionStorage.getItem('abia_pending_push_route')
+        sessionStorage.removeItem('abia_pending_push_route')
+        // Never bounce back to an auth screen
+        if (pending && /^\/(login|register|forgot-password|reset-password)/.test(pending)) {
+          pending = null
+        }
+      }
       navigate(pending || fallback, { replace: true })
     },
     [navigate],
   )
 
-  // If the AuthContext hydrates a user (e.g. onAuthStateChange fires before the
-  // submit handler's await chain completes, or a stale session is restored on
-  // mount), redirect immediately — but only once, and only when no biometric
-  // opt-in dialog is being shown.
+  // If the AuthContext already has a user when this page mounts (cached session
+  // or onAuthStateChange fires first), redirect away immediately.
   useEffect(() => {
     if (user && !optInOpen) redirectOnce()
   }, [user, optInOpen, redirectOnce])
+
 
 
 
