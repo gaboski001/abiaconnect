@@ -323,24 +323,32 @@ function Overview({ displayName }: { displayName: string }) {
     },
   })
 
-  useEffect(() => {
-    if (!user) return
-    const uid = user.id
-    const invalidate = () => {
+  const uid = user?.id
+  // Coalesce realtime bursts so back-to-back inserts trigger at most one
+  // refetch every 600ms — keeps the dashboard live but never flooded.
+  const invalidate = useThrottledCallback(
+    useCallback(() => {
+      if (!uid) return
       qc.invalidateQueries({ queryKey: ['dash-stats', uid] })
       qc.invalidateQueries({ queryKey: ['dash-activity', uid] })
       qc.invalidateQueries({ queryKey: ['my-recent-threads', uid] })
-    }
-    const channel = supabase
-      .channel(`dash-overview:${uid}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: `user_id=eq.${uid}` }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'replies', filter: `user_id=eq.${uid}` }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmarks', filter: `user_id=eq.${uid}` }, invalidate)
-      .subscribe()
-    return () => {
-      void supabase.removeChannel(channel)
-    }
-  }, [user, qc])
+    }, [qc, uid]),
+    600,
+  )
+
+  useRealtimeChannel({
+    enabled: !!uid,
+    channelName: `dash-overview:${uid ?? 'anon'}`,
+    deps: [uid],
+    subscriptions: uid
+      ? [
+          { filter: { event: '*', schema: 'public', table: 'threads', filter: `user_id=eq.${uid}` }, handler: invalidate },
+          { filter: { event: '*', schema: 'public', table: 'replies', filter: `user_id=eq.${uid}` }, handler: invalidate },
+          { filter: { event: '*', schema: 'public', table: 'bookmarks', filter: `user_id=eq.${uid}` }, handler: invalidate },
+        ]
+      : [],
+  })
+
 
   const cards = [
     { label: 'Posts', value: stats.data?.posts ?? 0, icon: FileText, accent: 'rgba(28,169,217,0.18)' },
