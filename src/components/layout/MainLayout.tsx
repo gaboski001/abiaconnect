@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core'
 import { Navbar } from './Navbar'
 import { Footer } from './Footer'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
+import { MobileTopBar } from '@/components/mobile/MobileTopBar'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { cn } from '@/lib/utils'
 
@@ -32,9 +33,12 @@ export function MainLayout() {
   return (
     <div data-site-theme={siteTheme} className="min-h-screen flex flex-col">
       {!isAuthPage && (
-        <div className="hidden md:block">
-          <Navbar />
-        </div>
+        <>
+          <div className="hidden md:block">
+            <Navbar />
+          </div>
+          <MobileTopBar />
+        </>
       )}
 
       {!online && (
