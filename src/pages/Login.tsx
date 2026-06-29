@@ -42,7 +42,7 @@ export default function Login() {
   // try to trigger it.
   const hasRedirectedRef = useRef(false)
   const redirectOnce = useCallback(
-    (fallback = '/dashboard') => {
+    (fallback = '/') => {
       if (hasRedirectedRef.current) return
       hasRedirectedRef.current = true
       const pending =
@@ -257,7 +257,7 @@ export default function Login() {
               <Fingerprint className="size-4" style={{ color: MOBILE_BRAND.gold }} />
               Quick unlock on supported devices
             </div>
-            <BiometricLoginButton onSuccess={() => navigate('/dashboard', { replace: true })} />
+            <BiometricLoginButton onSuccess={() => navigate('/', { replace: true })} />
           </div>
 
           <p className="text-center text-sm text-slate-300/72">
