@@ -111,35 +111,21 @@ export default function Login() {
         throw new Error('Authentication failed: No session returned.')
       }
 
-      // Don't await refreshSession here — onAuthStateChange will hydrate the
-      // AuthContext. Awaiting it (plus the biometric check) was racing with
-      // the SIGNED_IN listener and leaving the button stuck on "Signing you in…".
+      // onAuthStateChange will hydrate AuthContext — don't await refreshSession
+      // here, it races with the SIGNED_IN listener and stalls the redirect.
       void refreshSession(data.session)
 
       toast.success('Welcome back to AbiaConnect!')
 
-      // Biometric opt-in: check with a hard timeout so it can never block navigation.
-      let shouldPromptBiometric = false
-      try {
-        if (!isBiometricEnabled() && !hasDeclinedBiometric()) {
-          shouldPromptBiometric = await Promise.race([
-            isBiometricAvailable(),
-            new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 1500)),
-          ])
-        }
-      } catch {
-        shouldPromptBiometric = false
-      }
-
+      // Navigate immediately. The biometric opt-in is intentionally NOT shown
+      // on this path — it was blocking the redirect on native devices when the
+      // dialog failed to mount in time. Users can enable biometric unlock from
+      // the next login (the BiometricLoginButton renders when available) or
+      // from settings.
       setLoading(false)
-
-      if (shouldPromptBiometric) {
-        setPendingCreds({ email, password })
-        setOptInOpen(true)
-        return
-      }
-
       redirectOnce()
+
+
 
 
     } catch (err: any) {
