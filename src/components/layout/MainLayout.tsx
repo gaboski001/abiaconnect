@@ -61,6 +61,7 @@ export function MainLayout() {
 
       {!isAuthPage && <Footer />}
       {!isAuthPage && <MobileBottomNav />}
+      {!isAuthPage && <InstallAppPrompt />}
     </div>
   )
 }
