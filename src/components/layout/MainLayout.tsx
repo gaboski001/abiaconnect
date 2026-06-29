@@ -28,14 +28,11 @@ export function MainLayout() {
   }, [])
 
   const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname)
-  const isPremiumMobileRoute = ['/dashboard', '/messages', '/notifications', '/profile', '/subgroups', '/polls'].some(
-    (path) => location.pathname === path || location.pathname.startsWith(`${path}/`),
-  )
 
   return (
     <div data-site-theme={siteTheme} className="min-h-screen flex flex-col">
       {!isAuthPage && (
-        <div className={cn(isPremiumMobileRoute && 'hidden md:block')}>
+        <div className="hidden md:block">
           <Navbar />
         </div>
       )}
@@ -46,7 +43,7 @@ export function MainLayout() {
         </div>
       )}
 
-      <main className={cn('flex-1', isPremiumMobileRoute && 'pb-24 md:pb-0')}>
+      <main className={cn('flex-1', !isAuthPage && 'pb-24 md:pb-0')}>
         <div
           className={cn(
             'mx-auto max-w-[1400px] px-3 py-6 sm:px-4 md:px-6 md:py-12',
@@ -57,8 +54,8 @@ export function MainLayout() {
         </div>
       </main>
 
-      {!isAuthPage && !isPremiumMobileRoute && !isNative && <Footer />}
-      {!isAuthPage && isPremiumMobileRoute && <MobileBottomNav />}
+      {!isAuthPage && !isNative && <div className="hidden md:block"><Footer /></div>}
+      {!isAuthPage && <MobileBottomNav />}
     </div>
   )
 }
