@@ -45,20 +45,26 @@ export default function Login() {
     (fallback = '/') => {
       if (hasRedirectedRef.current) return
       hasRedirectedRef.current = true
-      const pending =
-        typeof window !== 'undefined' ? sessionStorage.getItem('abia_pending_push_route') : null
+      let pending: string | null = null
+      if (typeof window !== 'undefined') {
+        pending = sessionStorage.getItem('abia_pending_push_route')
+        sessionStorage.removeItem('abia_pending_push_route')
+        // Never bounce back to an auth screen
+        if (pending && /^\/(login|register|forgot-password|reset-password)/.test(pending)) {
+          pending = null
+        }
+      }
       navigate(pending || fallback, { replace: true })
     },
     [navigate],
   )
 
-  // If the AuthContext hydrates a user (e.g. onAuthStateChange fires before the
-  // submit handler's await chain completes, or a stale session is restored on
-  // mount), redirect immediately — but only once, and only when no biometric
-  // opt-in dialog is being shown.
+  // If the AuthContext already has a user when this page mounts (cached session
+  // or onAuthStateChange fires first), redirect away immediately.
   useEffect(() => {
     if (user && !optInOpen) redirectOnce()
   }, [user, optInOpen, redirectOnce])
+
 
 
 
@@ -105,35 +111,21 @@ export default function Login() {
         throw new Error('Authentication failed: No session returned.')
       }
 
-      // Don't await refreshSession here — onAuthStateChange will hydrate the
-      // AuthContext. Awaiting it (plus the biometric check) was racing with
-      // the SIGNED_IN listener and leaving the button stuck on "Signing you in…".
+      // onAuthStateChange will hydrate AuthContext — don't await refreshSession
+      // here, it races with the SIGNED_IN listener and stalls the redirect.
       void refreshSession(data.session)
 
       toast.success('Welcome back to AbiaConnect!')
 
-      // Biometric opt-in: check with a hard timeout so it can never block navigation.
-      let shouldPromptBiometric = false
-      try {
-        if (!isBiometricEnabled() && !hasDeclinedBiometric()) {
-          shouldPromptBiometric = await Promise.race([
-            isBiometricAvailable(),
-            new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 1500)),
-          ])
-        }
-      } catch {
-        shouldPromptBiometric = false
-      }
-
+      // Navigate immediately. The biometric opt-in is intentionally NOT shown
+      // on this path — it was blocking the redirect on native devices when the
+      // dialog failed to mount in time. Users can enable biometric unlock from
+      // the next login (the BiometricLoginButton renders when available) or
+      // from settings.
       setLoading(false)
-
-      if (shouldPromptBiometric) {
-        setPendingCreds({ email, password })
-        setOptInOpen(true)
-        return
-      }
-
       redirectOnce()
+
+
 
 
     } catch (err: any) {
