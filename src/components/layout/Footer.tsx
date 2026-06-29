@@ -91,9 +91,9 @@ export function Footer() {
       <footer className="mt-12 border-t border-slate-200/80 bg-white dark:border-white/10 dark:bg-[rgba(8,14,26,1)]">
         <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
           {/* Compact grid: brand + 4 link cols + newsletter */}
-          <div className="grid gap-8 md:grid-cols-6 lg:grid-cols-12">
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-4 md:grid-cols-6 md:gap-8 lg:grid-cols-12">
             {/* Brand */}
-            <div className="md:col-span-2 lg:col-span-3">
+            <div className="col-span-2 sm:col-span-4 md:col-span-2 lg:col-span-3">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 dark:border-white/10 dark:bg-white/[0.06]">
                   {showLogoImage ? (
@@ -120,7 +120,7 @@ export function Footer() {
 
             {/* Link columns */}
             {LINK_GROUPS.map((group) => (
-              <div key={group.title} className="md:col-span-1 lg:col-span-2">
+              <div key={group.title} className="col-span-1 sm:col-span-1 md:col-span-1 lg:col-span-2">
                 <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-900 dark:text-white">
                   {group.title}
                 </h3>
@@ -141,7 +141,7 @@ export function Footer() {
 
             {/* Newsletter */}
             <div className="md:col-span-6 lg:col-span-1 lg:hidden xl:hidden" aria-hidden />
-            <div className="md:col-span-6 lg:col-span-1">
+            <div className="col-span-2 sm:col-span-4 md:col-span-6 lg:col-span-1">
               <h3 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-900 dark:text-white">
                 <Mail className="size-3.5" style={{ color: MOBILE_BRAND.gold }} />
                 Newsletter
