@@ -22,33 +22,17 @@ import {
 import { toast } from 'sonner'
 import { SEO } from '@/components/SEO'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { supabase } from '@/lib/supabase'
-import { saveProfile } from '@/lib/profileUpdate'
-import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
-import { CallRingtoneSettings } from '@/components/notifications/CallRingtoneSettings'
-import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
-import { toWebP } from '@/lib/image'
 import { BLUE_GOLD_GRADIENT, GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 import { useThrottledCallback } from '@/hooks/useThrottledCallback'
 
 const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
+const SettingsPanel = lazy(() => import('@/pages/dashboard/SettingsPanel'))
+
 
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
