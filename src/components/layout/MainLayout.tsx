@@ -5,7 +5,6 @@ import { Navbar } from './Navbar'
 import { Footer } from './Footer'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
 import { MobileTopBar } from '@/components/mobile/MobileTopBar'
-import { InstallAppPrompt } from '@/components/pwa/InstallAppPrompt'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { cn } from '@/lib/utils'
 
@@ -35,10 +34,9 @@ export function MainLayout() {
     <div data-site-theme={siteTheme} className="min-h-screen flex flex-col">
       {!isAuthPage && (
         <>
-          <div className="hidden md:block">
-            <Navbar />
-          </div>
-          <MobileTopBar />
+          {/* Web: always show the standard Navbar. Native app: use the
+              dedicated mobile top bar instead. */}
+          {isNative ? <MobileTopBar /> : <Navbar />}
         </>
       )}
 
@@ -48,7 +46,7 @@ export function MainLayout() {
         </div>
       )}
 
-      <main className={cn('flex-1', !isAuthPage && 'pb-24 md:pb-0')}>
+      <main className={cn('flex-1', !isAuthPage && isNative && 'pb-24')}>
         <div
           className={cn(
             'mx-auto max-w-[1400px] px-3 py-6 sm:px-4 md:px-6 md:py-12',
@@ -60,8 +58,9 @@ export function MainLayout() {
       </main>
 
       {!isAuthPage && <Footer />}
-      {!isAuthPage && <MobileBottomNav />}
-      {!isAuthPage && <InstallAppPrompt />}
+      {/* Native-only bottom tab bar. The web build keeps its original
+          Navbar + Footer chrome with no fixed bottom nav and no install popup. */}
+      {!isAuthPage && isNative && <MobileBottomNav />}
     </div>
   )
 }
