@@ -217,7 +217,12 @@ export default function Dashboard() {
           {tab === 'saved' && <SavedPosts />}
           {tab === 'messages' && <LinkCard to="/messages" label="Open Messages" description="Jump into direct conversations with a more focused native card layout." icon={Mail} />}
           {tab === 'notifications' && <LinkCard to="/notifications" label="Open Notifications" description="Review the latest mentions, replies, and system alerts from one place." icon={Bell} />}
-          {tab === 'settings' && <SettingsPanel profile={profile} onSaved={() => profileQ.refetch()} />}
+          {tab === 'settings' && (
+            <Suspense fallback={<PanelState label="Loading settings…" />}>
+              <SettingsPanel profile={profile} onSaved={() => profileQ.refetch()} />
+            </Suspense>
+          )}
+
         </main>
       </div>
 
