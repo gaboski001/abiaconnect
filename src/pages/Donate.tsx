@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { AlertTriangle, Banknote, Bitcoin, Check, Copy, Heart, Smartphone } from 'lucide-react'
 import { toast } from 'sonner'
@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { SEO } from '@/components/SEO'
 import LegalRegistration from '@/components/LegalRegistration'
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
+import { useThrottledCallback } from '@/hooks/useThrottledCallback'
 
 type DonationAccount = {
   id: string
