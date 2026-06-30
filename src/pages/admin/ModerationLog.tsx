@@ -88,6 +88,13 @@ export default function ModerationLog() {
     onError: (e: Error) => toast.error(e.message),
   })
 
+  if (authLoading) {
+    return <div className="container mx-auto max-w-5xl py-12 flex justify-center"><Loader2 className="animate-spin" /></div>
+  }
+  if (!isAdmin) {
+    return <Navigate to="/" replace />
+  }
+
   return (
     <div className="container mx-auto max-w-5xl py-6 space-y-6">
       <SEO title="Moderation Log" description="Admin review of AI-moderated thread submissions." path="/admin/moderation" />
