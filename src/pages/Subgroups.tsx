@@ -239,13 +239,17 @@ export default function Subgroups() {
             groups.get(key)!.push(s)
           }
           const entries = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]))
-          // When user is searching, auto-expand all to show matches
-          const defaultOpen = search.trim() ? entries.map(([k]) => k) : []
+          const searching = !!search.trim()
+          // When searching, force-open all categories so matches are visible;
+          // otherwise honor the user's persisted choice.
+          const value = searching ? entries.map(([k]) => k) : expanded
           return (
             <Accordion
               type="multiple"
-              defaultValue={defaultOpen}
-              key={search.trim() ? 'open' : 'closed'}
+              value={value}
+              onValueChange={(v) => {
+                if (!searching) persistExpanded(v)
+              }}
               className="space-y-3"
             >
               {entries.map(([category, items]) => (
