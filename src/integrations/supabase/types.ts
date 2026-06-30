@@ -507,6 +507,57 @@ export type Database = {
           },
         ]
       }
+      moderation_appeals: {
+        Row: {
+          categories: string[] | null
+          created_at: string
+          id: string
+          original_content: string
+          original_title: string | null
+          reason_shown: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          surface: string
+          updated_at: string
+          user_id: string
+          user_note: string
+        }
+        Insert: {
+          categories?: string[] | null
+          created_at?: string
+          id?: string
+          original_content: string
+          original_title?: string | null
+          reason_shown?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          surface: string
+          updated_at?: string
+          user_id: string
+          user_note: string
+        }
+        Update: {
+          categories?: string[] | null
+          created_at?: string
+          id?: string
+          original_content?: string
+          original_title?: string | null
+          reason_shown?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          surface?: string
+          updated_at?: string
+          user_id?: string
+          user_note?: string
+        }
+        Relationships: []
+      }
       moderation_log: {
         Row: {
           allowed: boolean
@@ -1612,6 +1663,17 @@ export type Database = {
           id: string
           username: string
         }[]
+      }
+      submit_moderation_appeal: {
+        Args: {
+          _categories: string[]
+          _original_content: string
+          _original_title: string
+          _reason_shown: string
+          _surface: string
+          _user_note: string
+        }
+        Returns: string
       }
     }
     Enums: {
