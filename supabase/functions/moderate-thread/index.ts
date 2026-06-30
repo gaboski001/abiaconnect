@@ -27,9 +27,14 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors })
 
   try {
-    const { title, content } = await req.json()
+    const body = await req.json()
+    const title = body?.title
+    const content = body?.content
+    const surface = (body?.surface as string) || 'thread'
+    const allowedSurfaces = ['thread', 'reply', 'message', 'subgroup']
+    const safeSurface = allowedSurfaces.includes(surface) ? surface : 'thread'
     const cleanContent = String(content ?? '').replace(/<[^>]+>/g, ' ')
-    const text = `Title: ${String(title ?? '').slice(0, 300)}\n\nContent: ${cleanContent.slice(0, 4000)}`
+    const text = `Surface: ${safeSurface}\nTitle: ${String(title ?? '').slice(0, 300)}\n\nContent: ${cleanContent.slice(0, 4000)}`
 
     // Identify caller (best-effort) so we can attribute the log to a user.
     let userId: string | null = null
@@ -50,7 +55,7 @@ Deno.serve(async (req) => {
       try {
         await admin.from('moderation_log').insert({
           user_id: userId,
-          surface: 'thread',
+          surface: safeSurface,
           allowed,
           reason,
           categories,
