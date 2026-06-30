@@ -1,79 +1,92 @@
-import { useMemo, useState } from 'react'
-import {
-  Bell,
-  Compass,
-  LayoutDashboard,
-  MessageCircleMore,
-  UserRound,
-  Home,
-  BarChart3,
-  Info,
-  Heart,
-  Users,
-  ShieldCheck,
-  Store,
-  Menu,
-  type LucideIcon,
-} from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
-import { cn } from '@/lib/utils'
-import { useAuth } from '@/contexts/AuthContext'
-import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { LogOut, Menu, Search } from 'lucide-react'
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
-import { GOLD_GRADIENT, GOLD_SHADOW, MOBILE_BRAND } from '@/lib/mobileBrand'
-
-type Item = {
-  to: string
-  label: string
-  icon: LucideIcon
-  external?: boolean
-  match: (pathname: string) => boolean
-}
+import { Input } from '@/components/ui/input'
+import { useAuth } from '@/contexts/AuthContext'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { useSignedUrl } from '@/hooks/useSignedUrl'
 
 /**
- * Left-side slide-out drawer that replaces the bottom tab bar on mobile.
- * Mirrors the tablet/desktop sidebar pattern. Opens from a hamburger trigger
- * placed in the mobile top bar.
+ * Mobile left-side drawer. Mirrors the tablet Navbar Sheet menu UI exactly:
+ * logo, search, nav links, and sign-in / sign-out section using the default
+ * Sheet theme (no dark/gold mobile theme).
  */
 export function MobileSideNav() {
-  const location = useLocation()
-  const { user, role, isAdmin } = useAuth()
+  const navigate = useNavigate()
+  const { user, role, isAdmin, signOut } = useAuth()
   const { settings } = useSiteSettings()
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [logoFailed, setLogoFailed] = useState(false)
 
+  const siteName = settings.site_name || 'AbiaConnect'
+  const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
+  const showLogoImage = !!logoUrl && !logoFailed
   const subgroupsEnabled = settings.global_subgroups_enabled !== 'false'
   const storeLink = settings.store_link
 
-  const items = useMemo<Item[]>(() => {
-    const list: Item[] = [
-      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, match: (p) => p === '/dashboard' },
-      { to: '/', label: 'Home', icon: Home, match: (p) => p === '/' },
-      { to: '/polls', label: 'Polls', icon: BarChart3, match: (p) => p.startsWith('/polls') },
-      { to: '/subgroups', label: 'Community', icon: Compass, match: (p) => p.startsWith('/subgroups') },
-      { to: '/messages', label: 'Chats', icon: MessageCircleMore, match: (p) => p.startsWith('/messages') },
-      { to: '/notifications', label: 'Alerts', icon: Bell, match: (p) => p.startsWith('/notifications') },
-      { to: '/profile', label: 'Profile', icon: UserRound, match: (p) => p.startsWith('/profile') },
-      { to: '/about', label: 'About', icon: Info, match: (p) => p.startsWith('/about') },
-      { to: '/donate', label: 'Donate', icon: Heart, match: (p) => p.startsWith('/donate') },
-    ]
-    if (!subgroupsEnabled) {
-      const idx = list.findIndex((i) => i.to === '/subgroups')
-      if (idx >= 0) list.splice(idx, 1)
+  const onSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (query.trim()) {
+      navigate(`/?q=${encodeURIComponent(query.trim())}`)
+      setOpen(false)
     }
-    if (storeLink) {
-      list.push({ to: storeLink, label: 'Store', icon: Store, external: true, match: () => false })
-    }
-    if (isAdmin) {
-      list.push({ to: '/admin/dashboard', label: 'Admin', icon: ShieldCheck, match: (p) => p.startsWith('/admin/dashboard') })
-      list.push({ to: '/admin/donations', label: 'Donations', icon: Users, match: (p) => p.startsWith('/admin/donations') })
-    }
-    if (!user || role === 'guest') {
-      const idx = list.findIndex((i) => i.to === '/dashboard')
-      if (idx >= 0) list.splice(idx, 1)
-    }
-    return list
-  }, [isAdmin, role, storeLink, subgroupsEnabled, user])
+  }
+
+  const handleSignOut = async () => {
+    await signOut()
+    setOpen(false)
+    navigate('/')
+  }
+
+  const navLinks = (
+    <>
+      <Link to="/" className="text-sm font-medium hover:text-primary transition-colors">
+        Forums
+      </Link>
+      <Link to="/polls" className="text-sm font-medium hover:text-primary transition-colors">
+        Polls
+      </Link>
+      <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">
+        About Us
+      </Link>
+      <Link to="/donate" className="text-sm font-medium text-rose-600 hover:text-rose-700 transition-colors">
+        Donate ❤️
+      </Link>
+      {subgroupsEnabled && (
+        <Link to="/subgroups" className="text-sm font-medium hover:text-primary transition-colors">
+          Subgroups
+        </Link>
+      )}
+      {storeLink && (
+        <a
+          href={storeLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm font-medium hover:text-primary transition-colors"
+        >
+          Store
+        </a>
+      )}
+      {user && role !== 'guest' && (
+        <Link to="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
+          My Dashboard
+        </Link>
+      )}
+      {isAdmin && (
+        <>
+          <Link to="/admin/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
+            Admin Portal
+          </Link>
+          <Link to="/admin/donations" className="text-sm font-medium hover:text-primary transition-colors">
+            Donations
+          </Link>
+        </>
+      )}
+    </>
+  )
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -82,65 +95,62 @@ export function MobileSideNav() {
           variant="ghost"
           size="icon"
           aria-label="Open menu"
-          className="md:hidden h-9 w-9 rounded-xl text-slate-700 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-white/[0.08]"
+          className="md:hidden"
         >
-          <Menu className="size-5" />
+          <Menu />
         </Button>
       </SheetTrigger>
-      <SheetContent
-        side="left"
-        className="w-[80vw] max-w-[300px] border-r border-white/10 bg-[rgba(5,10,18,0.98)] p-0 text-slate-100"
-      >
-        <SheetHeader className="border-b border-white/10 px-4 py-3 text-left">
-          <SheetTitle className="text-sm font-black uppercase tracking-[0.18em] text-slate-200">
-            Menu
+      <SheetContent side="left" className="w-80">
+        <SheetHeader>
+          <SheetTitle asChild>
+            <Link to="/" onClick={() => setOpen(false)} className="flex items-center" aria-label={siteName}>
+              {showLogoImage ? (
+                <img
+                  src={logoUrl as string}
+                  alt={siteName}
+                  onError={() => setLogoFailed(true)}
+                  className="h-10 w-auto max-w-[180px] object-contain"
+                />
+              ) : (
+                <span className="text-base font-bold">{siteName}</span>
+              )}
+            </Link>
           </SheetTitle>
         </SheetHeader>
-        <nav className="flex flex-col gap-1 p-3" aria-label="Mobile navigation">
-          {items.map((item) => {
-            const active = item.match(location.pathname)
-            const Icon = item.icon
-            const className = cn(
-              'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors active:scale-[0.98]',
-              !active && 'text-slate-300/85 hover:bg-white/[0.06]'
-            )
-            const style = active
-              ? { backgroundImage: GOLD_GRADIENT, color: MOBILE_BRAND.ink, boxShadow: GOLD_SHADOW }
-              : undefined
-            const inner = (
-              <>
-                <Icon className="size-4 shrink-0" />
-                <span className="truncate">{item.label}</span>
-              </>
-            )
-            if (item.external) {
-              return (
-                <a
-                  key={item.to}
-                  href={item.to}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={className}
-                  style={style}
-                  onClick={() => setOpen(false)}
-                >
-                  {inner}
-                </a>
-              )
-            }
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={className}
-                style={style}
-                onClick={() => setOpen(false)}
-              >
-                {inner}
-              </Link>
-            )
-          })}
+
+        <form onSubmit={onSearch} className="relative mt-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search…"
+            className="pl-9 rounded-xl"
+          />
+        </form>
+
+        <nav className="mt-6 flex flex-col gap-4" onClick={() => setOpen(false)}>
+          {navLinks}
         </nav>
+
+        <div className="mt-6 border-t border-border pt-4">
+          {user ? (
+            <div className="flex flex-col gap-3">
+              <div className="text-sm text-muted-foreground truncate">{user.email}</div>
+              <Button variant="outline" onClick={handleSignOut}>
+                <LogOut /> Sign Out
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Button variant="secondary" asChild onClick={() => setOpen(false)}>
+                <Link to="/login">Sign In</Link>
+              </Button>
+              <Button asChild onClick={() => setOpen(false)}>
+                <Link to="/register">Join Free</Link>
+              </Button>
+            </div>
+          )}
+        </div>
       </SheetContent>
     </Sheet>
   )
