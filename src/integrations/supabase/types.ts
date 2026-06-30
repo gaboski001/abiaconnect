@@ -515,7 +515,11 @@ export type Database = {
           created_at: string
           degraded: boolean
           id: string
+          overridden: boolean
           reason: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           surface: string
           title: string | null
           user_id: string | null
@@ -527,7 +531,11 @@ export type Database = {
           created_at?: string
           degraded?: boolean
           id?: string
+          overridden?: boolean
           reason?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           surface?: string
           title?: string | null
           user_id?: string | null
@@ -539,7 +547,11 @@ export type Database = {
           created_at?: string
           degraded?: boolean
           id?: string
+          overridden?: boolean
           reason?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           surface?: string
           title?: string | null
           user_id?: string | null
