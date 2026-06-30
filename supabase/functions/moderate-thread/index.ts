@@ -1,5 +1,5 @@
-// AI-powered moderation check for new threads.
-// Body: { title: string, content: string }
+// AI-powered moderation for user-generated content.
+// Body: { title?: string, content: string, surface?: 'thread' | 'reply' | 'message' | 'subgroup' }
 // Returns: { allowed: boolean, reason?: string, categories?: string[] }
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
