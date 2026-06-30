@@ -262,15 +262,29 @@ function AppealsSection({ isAdmin }: { isAdmin: boolean }) {
   })
 
   return (
-    <Tabs value={filter} onValueChange={(v) => setFilter(v as AppealFilter)}>
-      <TabsList>
-        <TabsTrigger value="pending">Pending</TabsTrigger>
-        <TabsTrigger value="approved">Approved</TabsTrigger>
-        <TabsTrigger value="rejected">Denied</TabsTrigger>
-        <TabsTrigger value="all">All</TabsTrigger>
-      </TabsList>
+    <Tabs value={filter} onValueChange={(v) => { setFilter(v as AppealFilter); resetPage() }}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <TabsList>
+          <TabsTrigger value="pending">Pending</TabsTrigger>
+          <TabsTrigger value="approved">Approved</TabsTrigger>
+          <TabsTrigger value="rejected">Denied</TabsTrigger>
+          <TabsTrigger value="all">All</TabsTrigger>
+        </TabsList>
+        <div className="flex items-center gap-2 text-xs">
+          <label className="text-muted-foreground">Sort</label>
+          <select
+            className="rounded-md border border-border bg-background px-2 py-1"
+            value={sort}
+            onChange={(e) => { setSort(e.target.value as 'newest' | 'oldest'); resetPage() }}
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
+        </div>
+      </div>
 
       <TabsContent value={filter} className="mt-4">
+
         {isLoading ? (
           <div className="flex justify-center py-12"><Loader2 className="animate-spin" /></div>
         ) : rows.length === 0 ? (
