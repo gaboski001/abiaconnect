@@ -28,6 +28,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
+import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 
 const schema = z.object({
   category_id: z.string().optional(),
