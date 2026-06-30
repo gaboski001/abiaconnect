@@ -23,6 +23,17 @@ function isStandalone(): boolean {
   return Boolean(mq || iosStandalone)
 }
 
+function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  const iOSClassic = /iPad|iPhone|iPod/.test(ua)
+  const iPadOS =
+    ua.includes('Macintosh') &&
+    typeof navigator.maxTouchPoints === 'number' &&
+    navigator.maxTouchPoints > 1
+  return iOSClassic || iPadOS
+}
+
 export function InstallAppPrompt() {
   const [open, setOpen] = useState(false)
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
