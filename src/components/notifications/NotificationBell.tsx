@@ -77,32 +77,35 @@ export function NotificationBell() {
     },
   })
 
-  useEffect(() => {
-    if (!user) return
-    const channel = supabase
-      .channel(`notifications:${user.id}`)
-      .on(
-        'postgres_changes',
-        {
+  const onChange = useCallback(
+    (payload: { eventType: string }) => {
+      if (!user) return
+      if (payload.eventType === 'INSERT') {
+        playNotificationChime()
+      }
+      qc.invalidateQueries({ queryKey: ['notifications-unread', user.id] })
+      qc.invalidateQueries({ queryKey: ['notifications-recent', user.id] })
+      qc.invalidateQueries({ queryKey: ['notifications-all', user.id] })
+    },
+    [user, qc],
+  )
+
+  useRealtimeChannel({
+    channelName: `notifications:${user?.id ?? 'anon'}`,
+    enabled: !!user,
+    subscriptions: [
+      {
+        filter: {
           event: '*',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${user?.id ?? ''}`,
         },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            playNotificationChime()
-          }
-          qc.invalidateQueries({ queryKey: ['notifications-unread', user.id] })
-          qc.invalidateQueries({ queryKey: ['notifications-recent', user.id] })
-          qc.invalidateQueries({ queryKey: ['notifications-all', user.id] })
-        },
-      )
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [user, qc])
+        handler: onChange as never,
+      },
+    ],
+    deps: [user?.id],
+  })
 
   const markAllRead = async () => {
     if (!user) return
