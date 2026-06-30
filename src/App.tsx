@@ -26,6 +26,7 @@ const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'))
 const EmailDns = lazy(() => import('@/pages/admin/EmailDns'))
 const AdminDonations = lazy(() => import('@/pages/admin/Donations'))
 const BirthdayPreview = lazy(() => import('@/pages/admin/BirthdayPreview'))
+const ModerationLog = lazy(() => import('@/pages/admin/ModerationLog'))
 const Donate = lazy(() => import('@/pages/Donate'))
 const LgasGuide = lazy(() => import('@/pages/LgasGuide'))
 const KnownFor = lazy(() => import('@/pages/KnownFor'))
@@ -121,6 +122,7 @@ export default function App() {
                     <Route path="admin/email-dns" element={<EmailDns />} />
                     <Route path="admin/donations" element={<AdminDonations />} />
                     <Route path="admin/birthday-preview" element={<BirthdayPreview />} />
+                    <Route path="admin/moderation" element={<ModerationLog />} />
                   </Route>
                 </Route>
 
