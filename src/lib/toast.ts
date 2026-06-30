@@ -32,7 +32,7 @@ export const toast = Object.assign(
     error: wrap(sonnerToast.error),
     info: wrap(sonnerToast.info),
     warning: wrap(sonnerToast.warning),
-    message: wrap(sonnerToast.message as never),
+    message: wrap(sonnerToast.message as unknown as (msg: Message, opts?: ExternalToast) => unknown),
     loading: wrap(sonnerToast.loading),
     dismiss: sonnerToast.dismiss,
     promise: sonnerToast.promise,
