@@ -67,6 +67,7 @@ export function MainLayout() {
       {!isAuthPage && <InstallAppPrompt />}
       {!isAuthPage && <IOSInstallPrompt />}
       {!isAuthPage && <UpdateAvailablePrompt />}
+      <ModerationBlockedDialog />
     </div>
   )
 }
