@@ -39,6 +39,7 @@ import {
 } from '@/lib/chatAttachments'
 import { cn } from '@/lib/utils'
 import { VoiceBubble } from '@/components/messages/VoiceBubble'
+import { VoiceRecorderButton } from '@/components/messages/VoiceRecorder'
 
 import { uploadQueue } from '@/lib/uploadQueue'
 import { useUploadQueue } from '@/hooks/useUploadQueue'
@@ -812,6 +813,19 @@ function ConversationView({
           >
             <Paperclip className="h-5 w-5" />
           </Button>
+          {user && (
+            <VoiceRecorderButton
+              disabled={!conversationId}
+              onSend={(file) => {
+                uploadQueue.enqueue({
+                  conversationId,
+                  senderId: user.id,
+                  content: '',
+                  file,
+                })
+              }}
+            />
+          )}
           <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
             <PopoverTrigger asChild>
               <Button type="button" variant="ghost" size="icon" aria-label="Add emoji">
