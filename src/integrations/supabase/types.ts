@@ -1410,6 +1410,7 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      email_queue_dispatch: { Args: never; Returns: undefined }
       enforce_rate_limit: {
         Args: { _max: number; _scope: string; _window_seconds?: number }
         Returns: undefined
