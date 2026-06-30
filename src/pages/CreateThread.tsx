@@ -206,7 +206,13 @@ export default function CreateThread() {
       })
       toast.dismiss(moderating)
       if (!modErr && mod && mod.allowed === false) {
-        toast.error(mod.reason || 'Your post was flagged by our AI moderator. Please revise and try again.')
+        showModerationBlocked({
+          surface: 'thread',
+          allowed: false,
+          reason: mod.reason,
+          categories: mod.categories,
+        })
+        toast.error('Your post was blocked by AI moderation.')
         return
       }
     } catch {
