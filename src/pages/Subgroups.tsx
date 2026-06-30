@@ -393,7 +393,12 @@ function CreateSubgroupDialog({
         name.trim(),
       )
       if (!mod.allowed) {
-        showModerationBlocked({ surface: 'subgroup', ...mod })
+        showModerationBlocked({
+          surface: 'subgroup',
+          content: `${name.trim()}\n\n${description.trim()}`,
+          title: name.trim(),
+          ...mod,
+        })
         toast.error('Subgroup blocked by AI moderation.')
         setSaving(false)
         return

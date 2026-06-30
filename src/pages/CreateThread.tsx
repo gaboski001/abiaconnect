@@ -212,6 +212,8 @@ export default function CreateThread() {
           allowed: false,
           reason: mod.reason,
           categories: mod.categories,
+          title: values.title,
+          content: values.content,
         })
         toast.error('Your post was blocked by AI moderation.')
         return
