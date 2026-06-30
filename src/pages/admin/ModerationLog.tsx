@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Loader2, ShieldCheck, ShieldAlert, Check } from 'lucide-react'
+import { Navigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { SEO } from '@/components/SEO'
+import { useAuth } from '@/hooks/useAuth'
 
 interface ModRow {
   id: string
@@ -32,11 +34,13 @@ function fmt(ts: string) {
 }
 
 export default function ModerationLog() {
+  const { isAdmin, loading: authLoading } = useAuth()
   const [filter, setFilter] = useState<Filter>('blocked')
   const qc = useQueryClient()
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['moderation-log', filter],
+    enabled: isAdmin,
     queryFn: async () => {
       let q = supabase
         .from('moderation_log')
@@ -54,7 +58,7 @@ export default function ModerationLog() {
   const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean))) as string[]
   const { data: profiles = [] } = useQuery({
     queryKey: ['moderation-log-profiles', userIds.sort().join(',')],
-    enabled: userIds.length > 0,
+    enabled: isAdmin && userIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_public_profiles', { _ids: userIds })
       if (error) throw error
@@ -83,6 +87,13 @@ export default function ModerationLog() {
     },
     onError: (e: Error) => toast.error(e.message),
   })
+
+  if (authLoading) {
+    return <div className="container mx-auto max-w-5xl py-12 flex justify-center"><Loader2 className="animate-spin" /></div>
+  }
+  if (!isAdmin) {
+    return <Navigate to="/" replace />
+  }
 
   return (
     <div className="container mx-auto max-w-5xl py-6 space-y-6">

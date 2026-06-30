@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Users can view their own moderation logs" ON public.moderation_log;
