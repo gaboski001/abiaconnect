@@ -29,20 +29,22 @@ export function MobileTopBar() {
       <div className="flex h-14 items-center justify-between gap-2 px-3">
         <div className="flex min-w-0 items-center gap-1">
           <MobileSideNav />
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 dark:border-white/10 dark:bg-white/[0.06]">
-            {showLogo ? (
-              <img
-                src={logoUrl as string}
-                alt={siteName}
-                onError={() => setLogoFailed(true)}
-                className="h-6 w-auto max-w-[80px] object-contain"
-              />
-            ) : (
-              <span className="text-xs font-black" style={{ color: MOBILE_BRAND.goldWarm }}>AC</span>
-            )}
-          </div>
-          <span className="truncate text-sm font-black text-slate-950 dark:text-white">{siteName}</span>
-        </Link>
+          <Link to="/" className="flex min-w-0 items-center gap-2" aria-label={siteName}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 dark:border-white/10 dark:bg-white/[0.06]">
+              {showLogo ? (
+                <img
+                  src={logoUrl as string}
+                  alt={siteName}
+                  onError={() => setLogoFailed(true)}
+                  className="h-6 w-auto max-w-[80px] object-contain"
+                />
+              ) : (
+                <span className="text-xs font-black" style={{ color: MOBILE_BRAND.goldWarm }}>AC</span>
+              )}
+            </div>
+            <span className="truncate text-sm font-black text-slate-950 dark:text-white">{siteName}</span>
+          </Link>
+        </div>
 
         <div className="flex items-center gap-1">
           <ThemeToggle />
