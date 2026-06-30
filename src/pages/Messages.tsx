@@ -662,13 +662,7 @@ function ConversationView({
               </div>
               {g.items.map((m) => {
                 const mine = m.sender_id === user?.id
-                const hasImage =
-                  m.attachment_url && (m.attachment_type?.startsWith('image/') ?? false)
-                const hasAudio =
-                  m.attachment_url &&
-                  ((m.attachment_type?.startsWith('audio/') ?? false) ||
-                    /\.(webm|mp3|m4a|ogg|wav|aac)(\?|$)/i.test(m.attachment_url || ''))
-                const hasFile = m.attachment_url && !hasImage && !hasAudio
+                const hasAttachment = !!(m.attachment_path || m.attachment_url)
                 return (
                   <div
                     key={m.id}
@@ -685,42 +679,7 @@ function ConversationView({
                         m._optimistic && 'opacity-70',
                       )}
                     >
-                      {hasImage && (
-                        <a
-                          href={m.attachment_url!}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block"
-                        >
-                          <img
-                            src={m.attachment_url!}
-                            alt={m.attachment_name || 'attachment'}
-                            loading="lazy"
-                            className="rounded-lg max-h-64 w-auto object-cover"
-                          />
-                        </a>
-                      )}
-                      {hasAudio && (
-                        <VoiceBubble src={m.attachment_url!} mine={mine} />
-                      )}
-                      {hasFile && (
-                        <a
-                          href={m.attachment_url!}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          download={m.attachment_name || undefined}
-                          className={cn(
-                            'flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs',
-                            mine ? 'bg-secondary-foreground/10' : 'bg-background/60',
-                          )}
-                        >
-                          <FileText className="h-4 w-4 shrink-0" />
-                          <span className="truncate flex-1">
-                            {m.attachment_name || 'Attachment'}
-                          </span>
-                          <Download className="h-3.5 w-3.5 shrink-0 opacity-70" />
-                        </a>
-                      )}
+                      {hasAttachment && <MessageAttachment m={m} mine={mine} />}
                       {m.content && (
                         <p className="whitespace-pre-wrap break-words">{m.content}</p>
                       )}
@@ -731,9 +690,7 @@ function ConversationView({
                         )}
                       >
                         {format(new Date(m.created_at), 'p')}
-                        {m.attachment_expires_at && (
-                          <span className="ml-1">· expires in 48h</span>
-                        )}
+
                         {mine && (m._status || m.is_read) && (
                           <span className="ml-1" aria-label={m.is_read ? 'read' : m._status === 'delivered' ? 'delivered' : 'sent'}>
                             {m.is_read || m._status === 'delivered' ? '✓✓' : '✓'}
