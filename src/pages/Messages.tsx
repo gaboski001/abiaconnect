@@ -593,7 +593,11 @@ function ConversationView({
                 const mine = m.sender_id === user?.id
                 const hasImage =
                   m.attachment_url && (m.attachment_type?.startsWith('image/') ?? false)
-                const hasFile = m.attachment_url && !hasImage
+                const hasAudio =
+                  m.attachment_url &&
+                  ((m.attachment_type?.startsWith('audio/') ?? false) ||
+                    /\.(webm|mp3|m4a|ogg|wav|aac)(\?|$)/i.test(m.attachment_url || ''))
+                const hasFile = m.attachment_url && !hasImage && !hasAudio
                 return (
                   <div
                     key={m.id}
@@ -624,6 +628,31 @@ function ConversationView({
                             className="rounded-lg max-h-64 w-auto object-cover"
                           />
                         </a>
+                      )}
+                      {hasAudio && (
+                        <div
+                          className={cn(
+                            'flex flex-col gap-1 rounded-lg p-2',
+                            mine ? 'bg-secondary-foreground/10' : 'bg-background/60',
+                          )}
+                        >
+                          <audio
+                            controls
+                            preload="metadata"
+                            src={m.attachment_url!}
+                            className="w-full max-w-[260px] h-10"
+                          />
+                          <a
+                            href={m.attachment_url!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download={m.attachment_name || 'voice-note'}
+                            className="flex items-center gap-1 self-end text-[10px] opacity-80 hover:opacity-100"
+                          >
+                            <Download className="h-3 w-3" />
+                            <span>Download</span>
+                          </a>
+                        </div>
                       )}
                       {hasFile && (
                         <a
