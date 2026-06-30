@@ -6,6 +6,7 @@ import { Share, Plus, Smartphone, X } from 'lucide-react'
 
 const DEVICE_KEY = 'abia:ios-install-device-id'
 const DISMISS_KEY = 'abia:ios-install-dismissed-at'
+const ACCEPTED_KEY = 'abia:ios-install-accepted'
 const SHOW_DELAY_MS = 3000
 // Re-prompt once per 14 days after dismissal on the same browser/device.
 const REPROMPT_AFTER_MS = 14 * 24 * 60 * 60 * 1000
