@@ -678,6 +678,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          call_ringtone_settings: Json | null
           created_at: string
           display_name: string | null
           dob: string | null
@@ -695,6 +696,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          call_ringtone_settings?: Json | null
           created_at?: string
           display_name?: string | null
           dob?: string | null
@@ -712,6 +714,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          call_ringtone_settings?: Json | null
           created_at?: string
           display_name?: string | null
           dob?: string | null
@@ -879,6 +882,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      search_rate_limits: {
+        Row: {
+          count: number
+          scope: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          scope: string
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          scope?: string
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
       }
       site_settings: {
         Row: {
@@ -1386,6 +1410,10 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      enforce_rate_limit: {
+        Args: { _max: number; _scope: string; _window_seconds?: number }
+        Returns: undefined
+      }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
@@ -1395,6 +1423,7 @@ export type Database = {
         Returns: {
           avatar_url: string | null
           bio: string | null
+          call_ringtone_settings: Json | null
           created_at: string
           display_name: string | null
           dob: string | null
@@ -1508,6 +1537,8 @@ export type Database = {
         Args: { _pinned: boolean; _thread_id: string }
         Returns: undefined
       }
+      prune_issue_report_contact_emails: { Args: never; Returns: undefined }
+      prune_search_rate_limits: { Args: never; Returns: undefined }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -1520,6 +1551,15 @@ export type Database = {
       resolve_username_to_email: {
         Args: { _username: string }
         Returns: string
+      }
+      search_public_profiles: {
+        Args: { _limit?: number; _term: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          id: string
+          username: string
+        }[]
       }
     }
     Enums: {
