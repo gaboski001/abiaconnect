@@ -41,6 +41,7 @@ export function InstallAppPrompt() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (Capacitor.isNativePlatform()) return
+    if (isIOS()) return // iOS uses the dedicated IOSInstallPrompt
     if (isStandalone()) return
 
     const dismissedAt = Number(localStorage.getItem(DISMISS_KEY) || 0)
