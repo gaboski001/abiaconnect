@@ -39,6 +39,7 @@ import {
 } from '@/lib/chatAttachments'
 import { cn } from '@/lib/utils'
 import { VoiceBubble } from '@/components/messages/VoiceBubble'
+import { VoiceRecorderButton } from '@/components/messages/VoiceRecorder'
 
 import { uploadQueue } from '@/lib/uploadQueue'
 import { useUploadQueue } from '@/hooks/useUploadQueue'
