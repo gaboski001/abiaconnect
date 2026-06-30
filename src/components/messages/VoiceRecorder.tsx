@@ -3,7 +3,12 @@ import { Mic, Square, Trash2, Send, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { VoiceRecorder as Recorder, formatDuration } from '@/lib/voiceRecorder'
+import {
+  VoiceRecorder as Recorder,
+  formatDuration,
+  getMicPermissionState,
+  MicError,
+} from '@/lib/voiceRecorder'
 
 interface Props {
   disabled?: boolean
