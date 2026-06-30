@@ -191,26 +191,38 @@ function LogSection({ isAdmin }: { isAdmin: boolean }) {
   )
 }
 
+const PAGE_SIZE = 20
+
 function AppealsSection({ isAdmin }: { isAdmin: boolean }) {
   const [filter, setFilter] = useState<AppealFilter>('pending')
+  const [sort, setSort] = useState<'newest' | 'oldest'>('newest')
+  const [page, setPage] = useState(0)
   const [notes, setNotes] = useState<Record<string, string>>({})
   const qc = useQueryClient()
 
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ['moderation-appeals', filter],
+  // Reset page when filter/sort change
+  const resetPage = () => setPage(0)
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['moderation-appeals', filter, sort, page],
     enabled: isAdmin,
     queryFn: async () => {
+      const from = page * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
       let q = supabase
         .from('moderation_appeals')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200)
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: sort === 'oldest' })
+        .range(from, to)
       if (filter !== 'all') q = q.eq('status', filter)
-      const { data, error } = await q
+      const { data, error, count } = await q
       if (error) throw error
-      return (data ?? []) as AppealRow[]
+      return { rows: (data ?? []) as AppealRow[], count: count ?? 0 }
     },
   })
+  const rows = data?.rows ?? []
+  const total = data?.count ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)))
   const { data: profiles = [] } = useQuery({
