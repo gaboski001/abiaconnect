@@ -59,15 +59,19 @@ export function IOSInstallPrompt() {
     if (typeof window === 'undefined') return
     if (Capacitor.isNativePlatform()) return
     if (!isIOSSafari()) return
-    if (isStandalone()) return
+    if (isStandalone()) {
+      // Already installed → persist the accepted flag so we never prompt again.
+      localStorage.setItem(ACCEPTED_KEY, '1')
+      return
+    }
+    // User previously accepted/installed on this device.
+    if (localStorage.getItem(ACCEPTED_KEY) === '1') return
 
     const existingDevice = localStorage.getItem(DEVICE_KEY)
     const dismissedAt = Number(localStorage.getItem(DISMISS_KEY) || 0)
     const recentlyDismissed =
       dismissedAt && Date.now() - dismissedAt < REPROMPT_AFTER_MS
 
-    // First time on this browser/device → always prompt.
-    // Returning visitor → only prompt past the cool-down.
     if (existingDevice && recentlyDismissed) return
 
     if (!existingDevice) {
@@ -79,6 +83,13 @@ export function IOSInstallPrompt() {
   }, [])
 
   const dismiss = () => {
+    localStorage.setItem(DISMISS_KEY, String(Date.now()))
+    setOpen(false)
+  }
+
+  const accept = () => {
+    // Persist permanently — the user confirmed they're installing.
+    localStorage.setItem(ACCEPTED_KEY, '1')
     localStorage.setItem(DISMISS_KEY, String(Date.now()))
     setOpen(false)
   }
