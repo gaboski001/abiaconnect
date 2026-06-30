@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { moderateContent } from '@/lib/moderateContent'
+import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
@@ -513,6 +514,7 @@ function Thread() {
       if (trimmed.length === 0 || trimmed.length > 5000) throw new Error('Reply must be 1–5000 characters')
       const mod = await moderateContent('reply', trimmed)
       if (!mod.allowed) {
+        showModerationBlocked({ surface: 'reply', ...mod })
         throw new Error(mod.reason || 'Reply blocked by AI moderation.')
       }
       const { data, error } = await supabase

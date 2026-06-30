@@ -12,6 +12,7 @@ import {
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { moderateContent } from '@/lib/moderateContent'
+import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 import { SUBGROUP_MEMBERS_UPSERT_OPTIONS } from '@/lib/subgroupMembers'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -392,7 +393,8 @@ function CreateSubgroupDialog({
         name.trim(),
       )
       if (!mod.allowed) {
-        toast.error(mod.reason || 'Subgroup blocked by AI moderation.')
+        showModerationBlocked({ surface: 'subgroup', ...mod })
+        toast.error('Subgroup blocked by AI moderation.')
         setSaving(false)
         return
       }

@@ -8,6 +8,7 @@ import { MobileTopBar } from '@/components/mobile/MobileTopBar'
 import { InstallAppPrompt } from '@/components/pwa/InstallAppPrompt'
 import { IOSInstallPrompt } from '@/components/pwa/IOSInstallPrompt'
 import { UpdateAvailablePrompt } from '@/components/pwa/UpdateAvailablePrompt'
+import { ModerationBlockedDialog } from '@/components/moderation/ModerationBlockedDialog'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 
 
@@ -66,6 +67,7 @@ export function MainLayout() {
       {!isAuthPage && <InstallAppPrompt />}
       {!isAuthPage && <IOSInstallPrompt />}
       {!isAuthPage && <UpdateAvailablePrompt />}
+      <ModerationBlockedDialog />
     </div>
   )
 }
