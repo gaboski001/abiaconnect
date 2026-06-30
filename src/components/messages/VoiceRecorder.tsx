@@ -27,6 +27,16 @@ export function VoiceRecorderButton({ disabled, onSend }: Props) {
 
   const start = async () => {
     if (disabled || recording) return
+    // Pre-check permission so we can show a clearer message before prompting.
+    const state = await getMicPermissionState()
+    if (state === 'denied') {
+      toast.error('Microphone is blocked', {
+        description:
+          'Open your browser site settings (lock icon in the address bar) and allow microphone access for this site, then try again.',
+        duration: 7000,
+      })
+      return
+    }
     try {
       const rec = new Recorder()
       recorderRef.current = rec
@@ -41,8 +51,26 @@ export function VoiceRecorderButton({ disabled, onSend }: Props) {
         if (e > 5 * 60 * 1000) void stopAndSend()
       }, 200)
     } catch (err: any) {
-      toast.error(err?.message || 'Microphone permission denied')
       recorderRef.current = null
+      if (err instanceof MicError) {
+        const titleByKind: Record<string, string> = {
+          denied: 'Microphone access blocked',
+          dismissed: 'Microphone request dismissed',
+          'no-device': 'No microphone detected',
+          'in-use': 'Microphone unavailable',
+          insecure: 'Secure connection required',
+          unsupported: 'Recording not supported',
+          unknown: 'Could not start recording',
+        }
+        toast.error(titleByKind[err.kind] ?? 'Could not start recording', {
+          description: err.message,
+          duration: 7000,
+        })
+      } else {
+        toast.error('Could not start recording', {
+          description: err?.message || 'Please try again.',
+        })
+      }
     }
   }
 
