@@ -27,7 +27,8 @@ export function MobileTopBar() {
   return (
     <header className="md:hidden sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl dark:border-white/10 dark:bg-[rgba(5,10,18,0.88)]">
       <div className="flex h-14 items-center justify-between gap-2 px-3">
-        <Link to="/" className="flex min-w-0 items-center gap-2" aria-label={siteName}>
+        <div className="flex min-w-0 items-center gap-1">
+          <MobileSideNav />
           <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 dark:border-white/10 dark:bg-white/[0.06]">
             {showLogo ? (
               <img
