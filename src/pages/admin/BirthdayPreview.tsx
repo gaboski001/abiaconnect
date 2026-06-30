@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader2, Mail, Bell } from 'lucide-react'
 import { SEO } from '@/components/SEO'
 import { supabase } from '@/integrations/supabase/client'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export default function BirthdayPreview() {
   const [name, setName] = useState('Chinedu')

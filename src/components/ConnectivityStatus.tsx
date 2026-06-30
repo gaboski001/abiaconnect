@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { WifiOff, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { checkSupabaseConnection } from '@/lib/supabase';
 
 export function ConnectivityStatus() {

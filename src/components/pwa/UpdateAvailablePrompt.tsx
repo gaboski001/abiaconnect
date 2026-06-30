@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Download, RefreshCw, Sparkles, X } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 const DISMISS_KEY = 'abia:update-prompt-dismissed-version'
 const CHECK_INTERVAL_MS = 60 * 60 * 1000 // 1 hour
