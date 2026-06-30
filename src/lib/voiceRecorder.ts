@@ -59,6 +59,8 @@ export async function getMicPermissionState(): Promise<PermissionState | 'unknow
     return 'unknown'
   }
 }
+
+function pickMimeType(): string {
   const candidates = [
     'audio/webm;codecs=opus',
     'audio/webm',
