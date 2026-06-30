@@ -162,6 +162,21 @@ export default function Subgroups() {
     return list.filter((s) => s.name.toLowerCase().includes(q))
   }, [groupsQ.data, search])
 
+  const grouped = useMemo(() => {
+    const map = new Map<string, Subgroup[]>()
+    filtered.forEach((s) => {
+      const key = s.category?.trim() || 'Uncategorized'
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(s)
+    })
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+  }, [filtered])
+
+  const [openCategories, setOpenCategories] = useState<string[]>([])
+  useEffect(() => {
+    setOpenCategories(grouped.map(([cat]) => cat))
+  }, [grouped])
+
   return (
     <div className="container mx-auto px-4 py-8">
       <SEO title="Community Subgroups" description="Discover and join subgroups of like-minded Abians on AbiaConnect." path="/subgroups" />
