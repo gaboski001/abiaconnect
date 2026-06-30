@@ -507,6 +507,45 @@ export type Database = {
           },
         ]
       }
+      moderation_log: {
+        Row: {
+          allowed: boolean
+          categories: string[]
+          content_excerpt: string | null
+          created_at: string
+          degraded: boolean
+          id: string
+          reason: string | null
+          surface: string
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          allowed: boolean
+          categories?: string[]
+          content_excerpt?: string | null
+          created_at?: string
+          degraded?: boolean
+          id?: string
+          reason?: string | null
+          surface?: string
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          allowed?: boolean
+          categories?: string[]
+          content_excerpt?: string | null
+          created_at?: string
+          degraded?: boolean
+          id?: string
+          reason?: string | null
+          surface?: string
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
