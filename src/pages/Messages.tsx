@@ -38,6 +38,7 @@ import {
   ATTACHMENT_TTL_HOURS,
 } from '@/lib/chatAttachments'
 import { cn } from '@/lib/utils'
+import { VoiceBubble } from '@/components/messages/VoiceBubble'
 
 import { uploadQueue } from '@/lib/uploadQueue'
 import { useUploadQueue } from '@/hooks/useUploadQueue'
