@@ -2,12 +2,17 @@
 // Body: { title: string, content: string }
 // Returns: { allowed: boolean, reason?: string, categories?: string[] }
 
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
 
 const SYSTEM_PROMPT = `You are a strict content moderator for AbiaConnect, a community forum for Abia State, Nigeria.
 
