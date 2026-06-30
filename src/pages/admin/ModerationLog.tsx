@@ -191,26 +191,38 @@ function LogSection({ isAdmin }: { isAdmin: boolean }) {
   )
 }
 
+const PAGE_SIZE = 20
+
 function AppealsSection({ isAdmin }: { isAdmin: boolean }) {
   const [filter, setFilter] = useState<AppealFilter>('pending')
+  const [sort, setSort] = useState<'newest' | 'oldest'>('newest')
+  const [page, setPage] = useState(0)
   const [notes, setNotes] = useState<Record<string, string>>({})
   const qc = useQueryClient()
 
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ['moderation-appeals', filter],
+  // Reset page when filter/sort change
+  const resetPage = () => setPage(0)
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['moderation-appeals', filter, sort, page],
     enabled: isAdmin,
     queryFn: async () => {
+      const from = page * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
       let q = supabase
         .from('moderation_appeals')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200)
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: sort === 'oldest' })
+        .range(from, to)
       if (filter !== 'all') q = q.eq('status', filter)
-      const { data, error } = await q
+      const { data, error, count } = await q
       if (error) throw error
-      return (data ?? []) as AppealRow[]
+      return { rows: (data ?? []) as AppealRow[], count: count ?? 0 }
     },
   })
+  const rows = data?.rows ?? []
+  const total = data?.count ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)))
   const { data: profiles = [] } = useQuery({
@@ -250,15 +262,29 @@ function AppealsSection({ isAdmin }: { isAdmin: boolean }) {
   })
 
   return (
-    <Tabs value={filter} onValueChange={(v) => setFilter(v as AppealFilter)}>
-      <TabsList>
-        <TabsTrigger value="pending">Pending</TabsTrigger>
-        <TabsTrigger value="approved">Approved</TabsTrigger>
-        <TabsTrigger value="rejected">Denied</TabsTrigger>
-        <TabsTrigger value="all">All</TabsTrigger>
-      </TabsList>
+    <Tabs value={filter} onValueChange={(v) => { setFilter(v as AppealFilter); resetPage() }}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <TabsList>
+          <TabsTrigger value="pending">Pending</TabsTrigger>
+          <TabsTrigger value="approved">Approved</TabsTrigger>
+          <TabsTrigger value="rejected">Denied</TabsTrigger>
+          <TabsTrigger value="all">All</TabsTrigger>
+        </TabsList>
+        <div className="flex items-center gap-2 text-xs">
+          <label className="text-muted-foreground">Sort</label>
+          <select
+            className="rounded-md border border-border bg-background px-2 py-1"
+            value={sort}
+            onChange={(e) => { setSort(e.target.value as 'newest' | 'oldest'); resetPage() }}
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
+        </div>
+      </div>
 
       <TabsContent value={filter} className="mt-4">
+
         {isLoading ? (
           <div className="flex justify-center py-12"><Loader2 className="animate-spin" /></div>
         ) : rows.length === 0 ? (
@@ -352,6 +378,33 @@ function AppealsSection({ isAdmin }: { isAdmin: boolean }) {
                 </article>
               )
             })}
+          </div>
+        )}
+
+        {total > 0 && (
+          <div className="flex items-center justify-between gap-2 pt-4 text-xs text-muted-foreground">
+            <div>
+              {total === 0 ? '0' : `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, total)}`} of {total}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page === 0 || isFetching}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                Previous
+              </Button>
+              <span>Page {page + 1} / {totalPages}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page + 1 >= totalPages || isFetching}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         )}
       </TabsContent>
