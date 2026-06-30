@@ -8,7 +8,7 @@ import {
   ChevronDown, ChevronUp, ShieldCheck, Copy, Trash2, Check, X,
   ThumbsUp, Eye, Circle,
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { supabase } from '@/lib/supabase'
 import { SUBGROUP_MEMBERS_UPSERT_OPTIONS } from '@/lib/subgroupMembers'
 import { useAuth } from '@/contexts/AuthContext'

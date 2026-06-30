@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Loader2, ShieldCheck, ShieldAlert, Check, X, MessageSquareWarning } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'

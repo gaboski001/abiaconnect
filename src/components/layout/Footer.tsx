@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useScroll, useSpring } from 'framer-motion'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import {
   ChevronUp,
   HeartHandshake,

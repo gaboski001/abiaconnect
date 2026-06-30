@@ -15,7 +15,7 @@ import {
   Download,
 } from 'lucide-react'
 import { SEO } from '@/components/SEO'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'

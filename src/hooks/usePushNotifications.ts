@@ -4,7 +4,7 @@ import { PushNotifications } from '@capacitor/push-notifications'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { playNotificationChime } from '@/lib/notificationSound'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 /**
  * Registers the device for FCM/APNs push notifications when running inside the
