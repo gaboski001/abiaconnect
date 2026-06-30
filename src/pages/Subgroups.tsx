@@ -385,6 +385,17 @@ function CreateSubgroupDialog({
     if (!user) return
     setSaving(true)
     try {
+      // AI moderation gate on subgroup name + description.
+      const mod = await moderateContent(
+        'subgroup',
+        `${name.trim()}\n\n${description.trim()}`,
+        name.trim(),
+      )
+      if (!mod.allowed) {
+        toast.error(mod.reason || 'Subgroup blocked by AI moderation.')
+        setSaving(false)
+        return
+      }
       const { data, error } = await supabase
         .from('subgroups')
         .insert({
