@@ -17,9 +17,10 @@ export default function Version() {
   useEffect(() => {
     if (!isNative) return
     // Dynamically import @capacitor/app so the web build doesn't require it.
-    import(/* @vite-ignore */ '@capacitor/app' as string)
-      .then(async (mod: any) => {
-        const info = await mod.App.getInfo()
+    const mod = '@capacitor/' + 'app'
+    ;(new Function('m', 'return import(m)'))(mod)
+      .then(async (m: any) => {
+        const info = await m.App.getInfo()
         setNative({ version: info.version, build: info.build, id: info.id, name: info.name })
       })
       .catch(() => {
