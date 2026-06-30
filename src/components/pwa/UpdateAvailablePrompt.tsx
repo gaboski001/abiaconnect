@@ -147,11 +147,20 @@ export function UpdateAvailablePrompt() {
           </DialogDescription>
         </DialogHeader>
 
-        {release.changelog && (
-          <pre className="text-xs whitespace-pre-wrap text-muted-foreground bg-muted/40 rounded p-2 max-h-40 overflow-auto">
-            {release.changelog}
-          </pre>
-        )}
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            What's new in v{release.version}
+          </p>
+          {release.changelog ? (
+            <pre className="text-xs whitespace-pre-wrap text-foreground bg-muted/40 rounded p-3 max-h-48 overflow-auto border">
+              {release.changelog}
+            </pre>
+          ) : (
+            <p className="text-xs italic text-muted-foreground bg-muted/40 rounded p-3 border">
+              No release notes were provided for this update.
+            </p>
+          )}
+        </div>
 
         <div className="space-y-2">
           <Button onClick={download} className="w-full gap-2">
