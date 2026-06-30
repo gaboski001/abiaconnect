@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/accordion'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { moderateContent } from '@/lib/moderateContent'
 import { SUBGROUP_MEMBERS_UPSERT_OPTIONS } from '@/lib/subgroupMembers'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -384,6 +385,17 @@ function CreateSubgroupDialog({
     if (!user) return
     setSaving(true)
     try {
+      // AI moderation gate on subgroup name + description.
+      const mod = await moderateContent(
+        'subgroup',
+        `${name.trim()}\n\n${description.trim()}`,
+        name.trim(),
+      )
+      if (!mod.allowed) {
+        toast.error(mod.reason || 'Subgroup blocked by AI moderation.')
+        setSaving(false)
+        return
+      }
       const { data, error } = await supabase
         .from('subgroups')
         .insert({
