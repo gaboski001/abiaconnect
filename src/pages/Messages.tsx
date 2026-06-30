@@ -98,6 +98,60 @@ function Avatar({ profile, size = 'md' }: { profile?: Profile | null; size?: 'sm
   )
 }
 
+/**
+ * Resolves a chat attachment to a short-lived signed URL on demand from the
+ * stored bucket path. Avoids persisting/exposing long-lived backend URLs in
+ * the message row, share sheets, or browser history.
+ */
+function useAttachmentUrl(m: Message): string | null {
+  const source = m.attachment_path || m.attachment_url || null
+  return useSignedUrl(source, 'chat-attachments', 60 * 60)
+}
+
+function MessageAttachment({ m, mine }: { m: Message; mine: boolean }) {
+  const url = useAttachmentUrl(m)
+  const hasImage = !!url && (m.attachment_type?.startsWith('image/') ?? false)
+  const lowerName = (m.attachment_name || m.attachment_path || '').toLowerCase()
+  const hasAudio =
+    !!url &&
+    ((m.attachment_type?.startsWith('audio/') ?? false) ||
+      /\.(webm|mp3|m4a|ogg|wav|aac)$/i.test(lowerName))
+  const hasFile = !!url && !hasImage && !hasAudio
+  if (!url) return null
+  if (hasImage) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+        <img
+          src={url}
+          alt={m.attachment_name || 'attachment'}
+          loading="lazy"
+          className="rounded-lg max-h-64 w-auto object-cover"
+        />
+      </a>
+    )
+  }
+  if (hasAudio) return <VoiceBubble src={url} mine={mine} />
+  if (hasFile) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        download={m.attachment_name || undefined}
+        className={cn(
+          'flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs',
+          mine ? 'bg-secondary-foreground/10' : 'bg-background/60',
+        )}
+      >
+        <FileText className="h-4 w-4 shrink-0" />
+        <span className="truncate flex-1">{m.attachment_name || 'Attachment'}</span>
+        <Download className="h-3.5 w-3.5 shrink-0 opacity-70" />
+      </a>
+    )
+  }
+  return null
+}
+
 export default function Messages() {
   const { user } = useAuth()
   const { conversationId } = useParams<{ conversationId?: string }>()
