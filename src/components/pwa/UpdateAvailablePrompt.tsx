@@ -47,6 +47,17 @@ async function getCurrentNativeVersion(): Promise<string | null> {
 export function UpdateAvailablePrompt() {
   const [release, setRelease] = useState<Release | null>(null)
   const [open, setOpen] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  const { isLong, preview } = useMemo(() => {
+    const text = release?.changelog ?? ''
+    const lines = text.split('\n')
+    const long = text.length > CHANGELOG_COLLAPSE_CHARS || lines.length > CHANGELOG_COLLAPSE_LINES
+    const previewText = long
+      ? lines.slice(0, CHANGELOG_COLLAPSE_LINES).join('\n').slice(0, CHANGELOG_COLLAPSE_CHARS).trimEnd() + '…'
+      : text
+    return { isLong: long, preview: previewText }
+  }, [release?.changelog])
 
   useEffect(() => {
     let cancelled = false
