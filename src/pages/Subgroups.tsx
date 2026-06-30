@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/accordion'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { moderateContent } from '@/lib/moderateContent'
 import { SUBGROUP_MEMBERS_UPSERT_OPTIONS } from '@/lib/subgroupMembers'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
