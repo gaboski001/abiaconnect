@@ -34,7 +34,9 @@ export function MainLayout() {
   return (
     <div data-site-theme={siteTheme} className="min-h-screen flex flex-col">
       {!isAuthPage && <MobileTopBar />}
-      <Navbar />
+      <div className="hidden md:block">
+        <Navbar />
+      </div>
 
       {!online && (
         <div className="bg-yellow-400/90 text-yellow-950 text-sm text-center py-2 px-4">
