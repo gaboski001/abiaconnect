@@ -380,6 +380,33 @@ function AppealsSection({ isAdmin }: { isAdmin: boolean }) {
             })}
           </div>
         )}
+
+        {total > 0 && (
+          <div className="flex items-center justify-between gap-2 pt-4 text-xs text-muted-foreground">
+            <div>
+              {total === 0 ? '0' : `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, total)}`} of {total}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page === 0 || isFetching}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                Previous
+              </Button>
+              <span>Page {page + 1} / {totalPages}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page + 1 >= totalPages || isFetching}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </TabsContent>
     </Tabs>
   )
