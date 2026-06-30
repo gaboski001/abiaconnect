@@ -11,6 +11,7 @@ import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { Button } from '@/components/ui/button'
 import { useState, useEffect } from 'react'
 import { MOBILE_BRAND, GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
+import { MobileSideNav } from './MobileSideNav'
 
 export function MobileTopBar() {
   const { user, signOut } = useAuth()
