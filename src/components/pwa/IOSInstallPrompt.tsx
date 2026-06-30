@@ -22,6 +22,20 @@ function isIOS(): boolean {
   return iOSClassic || iPadOS
 }
 
+/**
+ * Only Safari on iOS can "Add to Home Screen". Chrome/Firefox/Edge/Opera on iOS
+ * (CriOS/FxiOS/EdgiOS/OPiOS) all use WebKit under the hood but cannot install
+ * PWAs — showing them the Safari Share-sheet instructions would be misleading.
+ */
+function isIOSSafari(): boolean {
+  if (typeof navigator === 'undefined') return false
+  if (!isIOS()) return false
+  const ua = navigator.userAgent || ''
+  const isOtherIOSBrowser = /CriOS|FxiOS|EdgiOS|OPiOS|GSA|YaBrowser|DuckDuckGo/i.test(ua)
+  const hasSafari = /Safari/.test(ua)
+  return hasSafari && !isOtherIOSBrowser
+}
+
 function isStandalone(): boolean {
   if (typeof window === 'undefined') return false
   const mq = window.matchMedia?.('(display-mode: standalone)').matches
