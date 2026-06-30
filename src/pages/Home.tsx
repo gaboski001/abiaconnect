@@ -11,14 +11,14 @@ export default function Home() {
         description="Community forum for Abians worldwide. Join discussions on culture, news, events, polls, and subgroups across all 17 LGAs of Abia State."
         path="/"
       />
-      <div className="space-y-6 md:space-y-8">
+      <div className="space-y-12">
         <HeroSlider />
 
-        <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
+        <div className="grid lg:grid-cols-12 gap-8">
           <div className="lg:col-span-8">
             <CategoryList />
           </div>
-          <div className="hidden lg:block lg:col-span-4">
+          <div className="lg:col-span-4">
             <SidebarWidgets />
           </div>
         </div>

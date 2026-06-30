@@ -1,14 +1,9 @@
 import useEmblaCarousel from 'embla-carousel-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
-import { useThrottledCallback } from '@/hooks/useThrottledCallback'
-
-
 import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { GOLD_GRADIENT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 import { SlideCard, type HeroSlideLike } from './SlideCard'
 
 export function HeroSlider() {
@@ -28,7 +23,7 @@ export function HeroSlider() {
     cta_url_2: settings.store_link || '#',
     bg_color_from: '#013220',
     bg_color_to: '#000000',
-    badge_text: 'Connecting Abia State Worldwide',
+    badge_text: '✦ Connecting Abia State Worldwide',
     image_url: null,
     isDefault: true,
   }
@@ -49,24 +44,22 @@ export function HeroSlider() {
     },
   })
 
-  const invalidateHero = useThrottledCallback(
-    useCallback(() => {
-      queryClient.invalidateQueries({ queryKey: ['hero-slides'] })
-    }, [queryClient]),
-    800,
-  )
+  // Realtime invalidation
+  useEffect(() => {
+    const channel = supabase
+      .channel('hero-slides-updates')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'hero_slides' },
+        () => queryClient.invalidateQueries({ queryKey: ['hero-slides'] }),
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [queryClient])
 
-  useRealtimeChannel({
-    channelName: 'hero-slides-updates',
-    subscriptions: [
-      {
-        filter: { event: '*', schema: 'public', table: 'hero_slides' },
-        handler: invalidateHero,
-      },
-    ],
-  })
-
-
+  // Client-side safety filter for expiry
   const now = new Date()
   const activeFetched = (fetched ?? []).filter((s) => {
     if (!s.is_active) return false
@@ -76,35 +69,15 @@ export function HeroSlider() {
 
   const allSlides: HeroSlideLike[] = [defaultSlide, ...activeFetched]
 
-  return (
-    <section
-      aria-label="Featured updates"
-      className="rounded-[2rem] border border-slate-200/80 bg-white/96 p-4 sm:p-5 dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)]"
-      style={{ boxShadow: PREMIUM_SHADOW }}
-    >
-      <div className="mb-5">
-        <div className="flex items-center gap-2">
-          <Sparkles className="size-5" style={{ color: MOBILE_BRAND.gold }} />
-          <h2 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">
-            AbiaConnect Spotlight
-          </h2>
-        </div>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700 dark:text-slate-300/74">
-          Featured discussions, announcements and events from across Abia State and the diaspora.
-        </p>
-      </div>
+  if (allSlides.length === 1) {
+    return (
+      <section aria-label="Hero">
+        <SlideCard slide={allSlides[0]} />
+      </section>
+    )
+  }
 
-      {allSlides.length === 1 ? <SingleSlide slide={allSlides[0]} /> : <HeroCarousel slides={allSlides} />}
-    </section>
-  )
-}
-
-function SingleSlide({ slide }: { slide: HeroSlideLike }) {
-  return (
-    <div className="overflow-hidden rounded-[2rem]">
-      <SlideCard slide={slide} />
-    </div>
-  )
+  return <HeroCarousel slides={allSlides} />
 }
 
 function HeroCarousel({ slides }: { slides: HeroSlideLike[] }) {
@@ -125,7 +98,8 @@ function HeroCarousel({ slides }: { slides: HeroSlideLike[] }) {
   const autoplayRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const intervalSeconds = Number(settings.hero_slide_interval_seconds) || 6
-  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 640 : false
+  const isMobile =
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false
   const effectiveMs = (isMobile ? intervalSeconds * 2 : intervalSeconds) * 1000
 
   const stopAutoplay = useCallback(() => {
@@ -137,7 +111,8 @@ function HeroCarousel({ slides }: { slides: HeroSlideLike[] }) {
 
   const startAutoplay = useCallback(() => {
     stopAutoplay()
-    if (prefersReduced || slides.length <= 1) return
+    if (prefersReduced) return
+    if (slides.length <= 1) return
     autoplayRef.current = setInterval(() => {
       emblaApi?.scrollNext()
     }, effectiveMs)
@@ -177,72 +152,67 @@ function HeroCarousel({ slides }: { slides: HeroSlideLike[] }) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="relative w-full">
-        <div ref={emblaRef} className="overflow-hidden rounded-[2rem]">
-          <div className="flex">
-            {slides.map((slide, idx) => (
-              <div
-                key={slide.id ?? idx}
-                className="min-w-0 flex-[0_0_100%]"
-                aria-current={idx === selectedIndex ? 'true' : undefined}
-              >
-                <SlideCard slide={slide} />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => handleNav('prev')}
-          className="absolute left-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-          aria-label="Previous slide"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleNav('next')}
-          className="absolute right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-black/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-          aria-label="Next slide"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
-
-        <div className="absolute right-4 top-4 z-10 rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs font-medium text-white/86 backdrop-blur-sm">
-          {selectedIndex + 1} / {slides.length}
+    <section
+      role="region"
+      aria-label="Hero announcements"
+      className="relative w-full"
+    >
+      <div ref={emblaRef} className="overflow-hidden rounded-[32px]">
+        <div className="flex">
+          {slides.map((slide, idx) => (
+            <div
+              key={slide.id ?? idx}
+              className="flex-[0_0_100%] min-w-0"
+              aria-current={idx === selectedIndex ? 'true' : undefined}
+            >
+              <SlideCard slide={slide} />
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          {slides.map((slide, idx) => {
-            const active = idx === selectedIndex
-            return (
-              <button
-                key={slide.id ?? idx}
-                type="button"
-                onClick={() => emblaApi?.scrollTo(idx)}
-                className="rounded-full border px-3 py-1.5 text-xs font-semibold transition"
-                style={
-                  active
-                    ? { backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW, color: MOBILE_BRAND.ink, borderColor: 'transparent' }
-                    : undefined
-                }
-              >
-                <span className={active ? '' : 'text-slate-600 dark:text-slate-300/78'}>
-                  {slide.badge_text || slide.title}
-                </span>
-              </button>
-            )
-          })}
-        </div>
+      <button
+        type="button"
+        onClick={() => handleNav('prev')}
+        className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white flex items-center justify-center hover:bg-black/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary"
+        aria-label="Previous slide"
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </button>
 
+      <button
+        type="button"
+        onClick={() => handleNav('next')}
+        className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white flex items-center justify-center hover:bg-black/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary"
+        aria-label="Next slide"
+      >
+        <ChevronRight className="w-5 h-5" />
+      </button>
+
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5">
+        {slides.map((_, index) => (
+          <button
+            key={index}
+            type="button"
+            onClick={() => {
+              emblaApi?.scrollTo(index)
+              stopAutoplay()
+              setTimeout(startAutoplay, 8000)
+            }}
+            className={`transition-all duration-300 rounded-full ${
+              index === selectedIndex
+                ? 'w-6 h-2 bg-secondary'
+                : 'w-2 h-2 bg-white/40 hover:bg-white/70'
+            }`}
+            aria-label={`Go to slide ${index + 1}`}
+          />
+        ))}
       </div>
 
-    </div>
+      <div className="absolute top-4 right-4 z-10 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1 text-xs text-white/80 font-medium">
+        {selectedIndex + 1} / {slides.length}
+      </div>
+    </section>
   )
 }
 

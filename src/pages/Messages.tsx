@@ -1,14 +1,10 @@
-import { FormEvent, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
-import { useThrottledCallback } from '@/hooks/useThrottledCallback'
-
+import { FormEvent, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
 import {
   ArrowLeft,
   MessageSquarePlus,
-  Phone,
   Search,
   Send,
   Loader2,
@@ -17,14 +13,7 @@ import {
   X,
   FileText,
   Download,
-  Sparkles,
-  ShieldCheck,
-  PhoneIncoming,
-  PhoneMissed,
-  PhoneCall,
 } from 'lucide-react'
-import { VoiceRecorderButton, VoiceMessageBubble, isAudioAttachment } from '@/components/messages/VoiceRecorder'
-import { callManager, useIsCallSupported } from '@/lib/webrtcCall'
 import { SEO } from '@/components/SEO'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -49,7 +38,6 @@ import {
   ATTACHMENT_TTL_HOURS,
 } from '@/lib/chatAttachments'
 import { cn } from '@/lib/utils'
-import { GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 
 import { uploadQueue } from '@/lib/uploadQueue'
 import { useUploadQueue } from '@/hooks/useUploadQueue'
@@ -133,8 +121,7 @@ export default function Messages() {
           .from('messages')
           .select('conversation_id, sender_id, content, is_read, created_at')
           .in('conversation_id', ids)
-          .order('created_at', { ascending: false })
-          .limit(600),
+          .order('created_at', { ascending: false }),
       ])
       const profileMap: Record<string, Profile> = {}
       ;(profiles ?? []).forEach((p: any) => (profileMap[p.id] = p))
@@ -142,14 +129,10 @@ export default function Messages() {
       const unreadMap: Record<string, number> = {}
       ;(msgs ?? []).forEach((m: any) => {
         if (!lastMap[m.conversation_id]) {
-          const c = typeof m.content === 'string' ? m.content : ''
-          let preview = m.content || '📎 Attachment'
-          if (c.startsWith('[call:missed]')) preview = '📞 Missed voice call'
-          else if (c.startsWith('[call:ended]')) {
-            const dur = c.replace('[call:ended]', '').trim() || ''
-            preview = `📞 Voice call${dur ? ` · ${dur}` : ''}`
+          lastMap[m.conversation_id] = {
+            content: m.content || '📎 Attachment',
+            created_at: m.created_at,
           }
-          lastMap[m.conversation_id] = { content: preview, created_at: m.created_at }
         }
         if (!m.is_read && m.sender_id !== user!.id) {
           unreadMap[m.conversation_id] = (unreadMap[m.conversation_id] || 0) + 1
@@ -168,29 +151,21 @@ export default function Messages() {
     },
   })
 
-  // Realtime: refresh conversation list on any new message (throttled).
-  const invalidateInbox = useThrottledCallback(
-    useCallback(() => {
-      if (!user) return
-      qc.invalidateQueries({ queryKey: ['conversations', user.id] })
-    }, [qc, user]),
-    800,
-  )
-
-  useRealtimeChannel({
-    enabled: !!user,
-    channelName: `messages-inbox:${user?.id ?? 'anon'}`,
-    deps: [user?.id],
-    subscriptions: user
-      ? [
-          {
-            filter: { event: 'INSERT', schema: 'public', table: 'messages' },
-            handler: invalidateInbox,
-          },
-        ]
-      : [],
-  })
-
+  // Realtime: refresh conversation list on any new message
+  useEffect(() => {
+    if (!user) return
+    const channel = supabase
+      .channel(`messages-inbox:${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        () => qc.invalidateQueries({ queryKey: ['conversations', user.id] }),
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, qc])
 
   const filteredConvos = useMemo(() => {
     const list = convosQ.data ?? []
@@ -209,80 +184,111 @@ export default function Messages() {
   return (
     <>
       <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
-      <div className="relative mx-auto max-w-7xl">
-
-        <div className="flex h-[calc(100vh-14.5rem)] min-h-0 overflow-hidden rounded-[2rem] border border-white/10 bg-[rgba(8,14,26,0.94)] text-white md:h-[calc(100vh-12.8rem)]" style={{ boxShadow: PREMIUM_SHADOW }}>
-          <aside className={cn('w-full min-h-0 border-r border-white/10 bg-[rgba(7,12,22,0.92)] md:w-[22rem] md:min-w-[22rem] flex-col', conversationId ? 'hidden md:flex' : 'flex')}>
-            <div className="border-b border-white/10 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-lg font-black tracking-tight text-white">Messages</h2>
-                  <p className="mt-1 text-xs text-slate-400">Private conversations and voice calls</p>
-                </div>
-                <Dialog open={newOpen} onOpenChange={setNewOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="icon" aria-label="New message" className="h-11 w-11 rounded-2xl text-slate-950" style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
-                      <MessageSquarePlus className="h-5 w-5" />
-                    </Button>
-                  </DialogTrigger>
-                  <NewMessageDialog onClose={() => setNewOpen(false)} />
-                </Dialog>
-              </div>
-              <div className="relative mt-4">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search conversations" className="h-12 rounded-2xl border-white/10 bg-white/[0.05] pl-9 text-white placeholder:text-slate-500" />
-              </div>
+    <div className="container mx-auto px-0 md:px-4 py-0 md:py-6">
+      <div className="md:rounded-2xl md:border md:bg-card overflow-hidden h-[calc(100vh-5rem)] md:h-[calc(100vh-8rem)] flex">
+        {/* LEFT */}
+        <aside
+          className={cn(
+            'w-full md:w-80 border-r flex-col bg-background',
+            conversationId ? 'hidden md:flex' : 'flex',
+          )}
+        >
+          <div className="p-4 border-b flex items-center justify-between gap-2">
+            <h1 className="text-lg font-bold">Messages</h1>
+            <Dialog open={newOpen} onOpenChange={setNewOpen}>
+              <DialogTrigger asChild>
+                <Button size="icon" variant="ghost" aria-label="New message">
+                  <MessageSquarePlus className="h-5 w-5" />
+                </Button>
+              </DialogTrigger>
+              <NewMessageDialog onClose={() => setNewOpen(false)} />
+            </Dialog>
+          </div>
+          <div className="p-3 border-b">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search conversations..."
+                className="pl-9"
+              />
             </div>
-
-            <div className="flex-1 space-y-2 overflow-y-auto p-3">
-              {convosQ.isLoading ? (
-                <div className="space-y-3 p-1">
-                  {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-20 animate-pulse rounded-[1.3rem] bg-white/[0.05]" />)}
-                </div>
-              ) : filteredConvos.length === 0 ? (
-                <div className="rounded-[1.4rem] border border-dashed border-white/10 bg-white/[0.03] px-5 py-10 text-center text-sm text-slate-300/70">No conversations yet.</div>
-              ) : (
-                filteredConvos.map((c) => {
-                  const active = c.id === conversationId
-                  return (
-                    <Link
-                      key={c.id}
-                      to={`/messages/${c.id}`}
-                      className={cn('flex items-start gap-3 rounded-[1.35rem] border px-3 py-3 transition', active ? 'border-[#F8C301]/20 bg-[rgba(248,195,1,0.08)]' : 'border-white/8 bg-white/[0.03] hover:bg-white/[0.05]')}
-                    >
-                      <Avatar profile={c.other_user} />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="truncate text-sm font-semibold text-slate-100">{c.other_user?.display_name || c.other_user?.username || 'User'}</span>
-                          <span className="shrink-0 text-[10px] text-slate-400">{c.last_message_at && formatDistanceToNow(new Date(c.last_message_at), { addSuffix: false })}</span>
-                        </div>
-                        <div className="mt-1 flex items-center justify-between gap-2">
-                          <p className="truncate text-xs text-slate-400">{c.last_message || 'No messages yet'}</p>
-                          {!!c.unread_count && <span className="min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold text-slate-950" style={{ backgroundImage: GOLD_GRADIENT }}>{c.unread_count}</span>}
-                        </div>
-                      </div>
-                    </Link>
-                  )
-                })
-              )}
-            </div>
-          </aside>
-
-          <section className={cn('flex-1 min-h-0 flex-col bg-[rgba(5,10,18,0.96)]', conversationId ? 'flex' : 'hidden md:flex')}>
-            {!conversationId ? (
-              <div className="flex flex-1 items-center justify-center px-6 text-center">
-                <div className="max-w-sm rounded-[1.8rem] border border-white/10 bg-white/[0.04] p-8">
-                  <PhoneIncoming className="mx-auto mb-4 h-12 w-12 text-slate-400" />
-                  <p className="text-lg font-bold text-white">Select a conversation</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">Open a chat to send messages, share files, or start a premium voice call.</p>
-                </div>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {convosQ.isLoading ? (
+              <div className="p-4 text-sm text-muted-foreground">Loading…</div>
+            ) : filteredConvos.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                No conversations yet.
               </div>
             ) : (
-              <ConversationView conversationId={conversationId} other={activeConvo?.other_user} onBack={() => navigate('/messages')} />
+              filteredConvos.map((c) => {
+                const active = c.id === conversationId
+                return (
+                  <Link
+                    key={c.id}
+                    to={`/messages/${c.id}`}
+                    className={cn(
+                      'flex items-start gap-3 px-3 py-3 border-l-4 hover:bg-muted/50 transition-colors',
+                      active ? 'border-secondary bg-secondary/5' : 'border-transparent',
+                    )}
+                  >
+                    <Avatar profile={c.other_user} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold truncate">
+                          {c.other_user?.display_name || c.other_user?.username || 'User'}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">
+                          {c.last_message_at &&
+                            formatDistanceToNow(new Date(c.last_message_at), { addSuffix: false })}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs text-muted-foreground truncate">
+                          {c.last_message || 'No messages yet'}
+                        </p>
+                        {!!c.unread_count && (
+                          <span className="text-[10px] font-bold bg-secondary text-secondary-foreground rounded-full px-1.5 min-w-[18px] text-center">
+                            {c.unread_count}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })
             )}
-          </section>
-        </div>
+          </div>
+        </aside>
+
+        {/* RIGHT */}
+        <section
+          className={cn(
+            'flex-1 flex-col bg-background',
+            conversationId ? 'flex' : 'hidden md:flex',
+          )}
+        >
+          {!conversationId ? (
+            <div className="flex-1 flex items-center justify-center text-center px-6">
+              <div>
+                <MessageSquarePlus className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-muted-foreground">
+                  Select a conversation to start messaging
+                </p>
+              </div>
+            </div>
+          ) : (
+            <ConversationView
+              conversationId={conversationId}
+              other={activeConvo?.other_user}
+              onBack={() => navigate('/messages')}
+            />
+          )}
+        </section>
       </div>
+    </div>
     </>
   )
 }
@@ -298,7 +304,7 @@ function ConversationView({
 }) {
   const { user } = useAuth()
   const qc = useQueryClient()
-  const queryKey = useMemo(() => ['messages', conversationId], [conversationId])
+  const queryKey = ['messages', conversationId]
   const scrollRef = useRef<HTMLDivElement>(null)
   const [draft, setDraft] = useState('')
   const [pendingFile, setPendingFile] = useState<File | null>(null)
@@ -307,8 +313,6 @@ function ConversationView({
   const [uploadPct, setUploadPct] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const readQueueRef = useRef<Set<string>>(new Set())
-  const readFlushTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!pendingFile) {
@@ -331,67 +335,68 @@ function ConversationView({
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: false })
-        .limit(120)
+        .order('created_at', { ascending: true })
       if (error) throw error
-      return [...((data ?? []) as Message[])].reverse()
+      return (data ?? []) as Message[]
     },
   })
 
-  // Realtime: merge INSERT/UPDATE directly into cache (no refetch, no invalidations).
-  // Migrated to useRealtimeChannel for consistency (StrictMode-safe unique channel + cleanup).
-  const handleMessageInsert = useCallback(
-    (payload: { new: Record<string, unknown> }) => {
-      const incoming = payload.new as unknown as Message
-      qc.setQueryData<Message[]>(queryKey, (prev) => {
-        const list = prev ?? []
-        if (list.some((m) => m.id === incoming.id)) return list
-        const tempIdx = list.findIndex(
-          (m) =>
-            m._optimistic &&
-            m.sender_id === incoming.sender_id &&
-            (m.content ?? '') === (incoming.content ?? ''),
-        )
-        const next = { ...incoming, _status: 'delivered' as const }
-        if (tempIdx >= 0) {
-          const copy = list.slice()
-          copy[tempIdx] = next
-          return copy
-        }
-        return [...list, next]
-      })
-    },
-    [qc, queryKey],
-  )
-
-  const handleMessageUpdate = useCallback(
-    (payload: { new: Record<string, unknown> }) => {
-      const updated = payload.new as unknown as Message
-      qc.setQueryData<Message[]>(queryKey, (prev) =>
-        (prev ?? []).map((m) => (m.id === updated.id ? { ...m, ...updated } : m)),
+  // Realtime: merge INSERT/UPDATE directly into cache (no refetch, no duplicates)
+  useEffect(() => {
+    if (!conversationId) return
+    const channel = supabase
+      .channel(`messages-${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const incoming = payload.new as Message
+          qc.setQueryData<Message[]>(queryKey, (prev) => {
+            const list = prev ?? []
+            if (list.some((m) => m.id === incoming.id)) return list
+            // Reconcile: replace a matching optimistic temp row, else append.
+            const tempIdx = list.findIndex(
+              (m) =>
+                m._optimistic &&
+                m.sender_id === incoming.sender_id &&
+                (m.content ?? '') === (incoming.content ?? ''),
+            )
+            const next = { ...incoming, _status: 'delivered' as const }
+            if (tempIdx >= 0) {
+              const copy = list.slice()
+              copy[tempIdx] = next
+              return copy
+            }
+            return [...list, next]
+          })
+        },
       )
-    },
-    [qc, queryKey],
-  )
-
-  useRealtimeChannel({
-    enabled: !!conversationId,
-    channelName: `messages-stream:${conversationId ?? 'none'}`,
-    deps: [conversationId],
-    subscriptions: conversationId
-      ? [
-          {
-            filter: { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
-            handler: handleMessageInsert,
-          },
-          {
-            filter: { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
-            handler: handleMessageUpdate,
-          },
-        ]
-      : [],
-  })
-
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const updated = payload.new as Message
+          qc.setQueryData<Message[]>(queryKey, (prev) =>
+            (prev ?? []).map((m) => (m.id === updated.id ? { ...m, ...updated } : m)),
+          )
+        },
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId, qc])
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -408,39 +413,6 @@ function ConversationView({
     else messageRefs.current.delete(id)
   }
 
-  const flushReadReceipts = () => {
-    if (!user) return
-    const ids = Array.from(readQueueRef.current)
-    readQueueRef.current.clear()
-    readFlushTimerRef.current = null
-    if (!ids.length) return
-
-    const nowIso = new Date().toISOString()
-    qc.setQueryData<Message[]>(queryKey, (prev) =>
-      (prev ?? []).map((m) =>
-        ids.includes(m.id) ? { ...m, is_read: true, read_at: m.read_at ?? nowIso } : m,
-      ),
-    )
-
-    Promise.all(ids.map((id) => supabase.rpc('mark_message_read', { _message_id: id }))).then(() => {
-      qc.invalidateQueries({ queryKey: ['conversations', user.id] })
-      qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
-    })
-  }
-
-  const queueReadReceipt = (id: string) => {
-    readQueueRef.current.add(id)
-    if (readFlushTimerRef.current !== null) return
-    readFlushTimerRef.current = window.setTimeout(flushReadReceipts, 350)
-  }
-
-  useEffect(() => {
-    return () => {
-      if (readFlushTimerRef.current !== null) window.clearTimeout(readFlushTimerRef.current)
-      readQueueRef.current.clear()
-    }
-  }, [])
-
   useEffect(() => {
     if (!user || !messagesQ.data?.length) return
     const root = scrollRef.current
@@ -453,7 +425,17 @@ function ConversationView({
           if (!id || markedRef.current.has(id)) continue
           markedRef.current.add(id)
           observer.unobserve(entry.target)
-          queueReadReceipt(id)
+          const nowIso = new Date().toISOString()
+          // Optimistic local patch — no refetch, no duplicate render.
+          qc.setQueryData<Message[]>(queryKey, (prev) =>
+            (prev ?? []).map((m) =>
+              m.id === id ? { ...m, is_read: true, read_at: m.read_at ?? nowIso } : m,
+            ),
+          )
+          supabase.rpc('mark_message_read', { _message_id: id }).then(() => {
+            qc.invalidateQueries({ queryKey: ['conversations', user.id] })
+            qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
+          })
         }
       },
       { root, threshold: 0.6 },
@@ -576,54 +558,25 @@ function ConversationView({
   }, [messagesQ.data])
 
   const canSend = !!draft.trim() || !!pendingFile
-  const callSupported = useIsCallSupported()
 
   return (
     <>
-      <div className="border-b border-white/10 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl text-slate-300 md:hidden hover:bg-white/[0.05]" onClick={onBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-1.5">
-            <Avatar profile={other} size="sm" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-white">
-              {other?.display_name || other?.username || 'Conversation'}
-            </p>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-              {other?.username ? <span className="truncate">@{other.username}</span> : null}
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-emerald-200">
-                <ShieldCheck className="size-3" /> Realtime ready
-              </span>
-            </div>
-          </div>
-          {other?.id && callSupported && (
-            <Button
-              size="icon"
-              className="h-11 w-11 rounded-2xl text-slate-950"
-              style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
-              onClick={() =>
-                callManager
-                  .startCall({
-                    id: other.id,
-                    name: other.display_name || other.username || 'User',
-                    avatarUrl: other.avatar_url ?? null,
-                    conversationId,
-                  })
-                  .catch((err) => toast.error(err?.message || 'Could not start call'))
-              }
-              aria-label="Voice call"
-              title="Voice call"
-            >
-              <Phone className="h-5 w-5" />
-            </Button>
+      <div className="px-4 py-3 border-b flex items-center gap-2">
+        <Button variant="ghost" size="icon" className="md:hidden" onClick={onBack}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <Avatar profile={other} size="sm" />
+        <div className="min-w-0">
+          <p className="font-semibold text-sm truncate">
+            {other?.display_name || other?.username || 'Conversation'}
+          </p>
+          {other?.username && (
+            <p className="text-xs text-muted-foreground truncate">@{other.username}</p>
           )}
         </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(28,169,217,0.06),transparent_30%),linear-gradient(180deg,rgba(5,10,18,0.98)_0%,rgba(8,14,26,1)_100%)] p-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messagesQ.isLoading ? (
           <div className="text-sm text-muted-foreground">Loading…</div>
         ) : grouped.length === 0 ? (
@@ -638,42 +591,9 @@ function ConversationView({
               </div>
               {g.items.map((m) => {
                 const mine = m.sender_id === user?.id
-                const hasAudio =
-                  m.attachment_url && isAudioAttachment(m.attachment_type)
                 const hasImage =
-                  m.attachment_url && !hasAudio && (m.attachment_type?.startsWith('image/') ?? false)
-                const hasFile = m.attachment_url && !hasImage && !hasAudio
-                const isMissedCall = typeof m.content === 'string' && m.content.startsWith('[call:missed]')
-                const isEndedCall = typeof m.content === 'string' && m.content.startsWith('[call:ended]')
-                if (isMissedCall || isEndedCall) {
-                  const timeLabel = format(new Date(m.created_at), 'p')
-                  if (isMissedCall) {
-                    const reason = m.content!.replace('[call:missed]', '').trim() || 'No answer'
-                    return (
-                      <div key={m.id} data-mid={m.id} className="flex justify-center">
-                        <div className="flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-200">
-                          <PhoneMissed className="h-3.5 w-3.5" />
-                          <span>{mine ? 'Missed call' : 'Missed voice call'} · {reason}</span>
-                          <span className="opacity-70">· {timeLabel}</span>
-                        </div>
-                      </div>
-                    )
-                  }
-                  const raw = m.content!.replace('[call:ended]', '').trim()
-                  const secs = parseInt(raw, 10) || 0
-                  const mm = Math.floor(secs / 60)
-                  const ss = secs % 60
-                  const duration = secs > 0 ? `${mm}:${ss.toString().padStart(2, '0')}` : '—'
-                  return (
-                    <div key={m.id} data-mid={m.id} className="flex justify-center">
-                      <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-200">
-                        <PhoneCall className="h-3.5 w-3.5" />
-                        <span>Voice call · {duration}</span>
-                        <span className="opacity-70">· {timeLabel}</span>
-                      </div>
-                    </div>
-                  )
-                }
+                  m.attachment_url && (m.attachment_type?.startsWith('image/') ?? false)
+                const hasFile = m.attachment_url && !hasImage
                 return (
                   <div
                     key={m.id}
@@ -685,14 +605,11 @@ function ConversationView({
                       className={cn(
                         'max-w-[75%] rounded-2xl px-3 py-2 text-sm space-y-2',
                         mine
-                          ? 'rounded-br-sm border border-[#F8C301]/15 bg-[linear-gradient(135deg,rgba(232,112,21,0.96)_0%,rgba(248,195,1,0.96)_100%)] text-slate-950 shadow-[0_16px_34px_-18px_rgba(248,195,1,0.5)]'
-                          : 'rounded-bl-sm border border-white/10 bg-white/[0.06] text-slate-100',
+                          ? 'bg-secondary text-secondary-foreground rounded-br-sm'
+                          : 'bg-muted text-foreground rounded-bl-sm',
                         m._optimistic && 'opacity-70',
                       )}
                     >
-                      {hasAudio && (
-                        <VoiceMessageBubble url={m.attachment_url!} mine={mine} />
-                      )}
                       {hasImage && (
                         <a
                           href={m.attachment_url!}
@@ -731,8 +648,8 @@ function ConversationView({
                       )}
                       <p
                         className={cn(
-                          'text-[10px] opacity-80',
-                          mine ? 'text-right text-slate-800/85' : 'text-left text-slate-300/70',
+                          'text-[10px] opacity-70',
+                          mine ? 'text-right' : 'text-left',
                         )}
                       >
                         {format(new Date(m.created_at), 'p')}
@@ -760,7 +677,7 @@ function ConversationView({
           <div className="space-y-2">
             {queueItems.map((q) => (
               <div key={q.id} className="flex justify-end">
-                <div className="max-w-[75%] space-y-2 rounded-2xl rounded-br-sm border border-[#F8C301]/15 bg-[linear-gradient(135deg,rgba(232,112,21,0.28)_0%,rgba(248,195,1,0.18)_100%)] px-3 py-2 text-sm text-slate-100 shadow-[0_16px_34px_-22px_rgba(248,195,1,0.35)]">
+                <div className="max-w-[75%] rounded-2xl rounded-br-sm px-3 py-2 text-sm space-y-2 bg-secondary/60 text-secondary-foreground">
                   {q.previewUrl && (
                     <img
                       src={q.previewUrl}
@@ -830,23 +747,23 @@ function ConversationView({
       </div>
 
 
-      <form onSubmit={handleSend} className="space-y-2 border-t border-white/10 bg-[rgba(5,10,18,0.98)] p-3">
+      <form onSubmit={handleSend} className="p-3 border-t space-y-2">
         {pendingFile && (
-          <div className="flex items-center gap-3 rounded-[1.2rem] border border-white/10 bg-white/[0.05] p-3 text-slate-100 backdrop-blur-xl">
+          <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-2">
             {filePreview ? (
               <img
                 src={filePreview}
                 alt="preview"
-                className="h-12 w-12 rounded-xl object-cover"
+                className="h-12 w-12 rounded object-cover"
               />
             ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]">
-                <FileText className="h-5 w-5 text-slate-300/72" />
+              <div className="h-12 w-12 rounded bg-background flex items-center justify-center">
+                <FileText className="h-5 w-5 text-muted-foreground" />
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="truncate text-xs font-semibold text-slate-100">{pendingFile.name}</p>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-xs font-medium truncate">{pendingFile.name}</p>
+              <p className="text-[10px] text-muted-foreground">
                 {(pendingFile.size / 1024).toFixed(0)} KB · auto-deletes in 48h
               </p>
             </div>
@@ -870,7 +787,7 @@ function ConversationView({
             />
           </div>
         )}
-        <div className="flex items-end gap-1.5 rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-2 backdrop-blur-xl">
+        <div className="flex items-end gap-1.5">
           <input
             ref={fileRef}
             type="file"
@@ -884,13 +801,12 @@ function ConversationView({
             size="icon"
             onClick={() => fileRef.current?.click()}
             aria-label="Attach file"
-            className="h-11 w-11 rounded-2xl border border-white/10 text-slate-300 hover:bg-white/[0.06]"
           >
             <Paperclip className="h-5 w-5" />
           </Button>
           <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
             <PopoverTrigger asChild>
-              <Button type="button" variant="ghost" size="icon" aria-label="Add emoji" className="h-11 w-11 rounded-2xl border border-white/10 text-slate-300 hover:bg-white/[0.06]">
+              <Button type="button" variant="ghost" size="icon" aria-label="Add emoji">
                 <Smile className="h-5 w-5" />
               </Button>
             </PopoverTrigger>
@@ -918,18 +834,6 @@ function ConversationView({
               </Suspense>
             </PopoverContent>
           </Popover>
-          <VoiceRecorderButton
-            disabled={!user}
-            onSend={(file, _ms) => {
-              if (!user) return
-              uploadQueue.enqueue({
-                conversationId,
-                senderId: user.id,
-                content: '',
-                file,
-              })
-            }}
-          />
           <Textarea
             ref={textareaRef}
             value={draft}
@@ -942,9 +846,9 @@ function ConversationView({
             }}
             placeholder="Write a message..."
             rows={1}
-            className="min-h-[42px] max-h-32 resize-none border-0 bg-transparent text-white placeholder:text-slate-500 focus-visible:ring-0"
+            className="resize-none min-h-[40px] max-h-32"
           />
-          <Button type="submit" size="icon" disabled={!canSend} className="h-11 w-11 rounded-2xl text-slate-950 disabled:opacity-50" style={{ backgroundImage: GOLD_GRADIENT, boxShadow: canSend ? GOLD_SHADOW : 'none' }}>
+          <Button type="submit" size="icon" disabled={!canSend}>
             <Send className="h-4 w-4" />
           </Button>
         </div>
@@ -960,45 +864,21 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient()
   const [q, setQ] = useState('')
   const [creating, setCreating] = useState(false)
-  // Absolute timestamp (ms) until which we know the user is rate-limited.
-  // Lifted to the dialog so it persists across query refetches and keystrokes.
-  const [rateLimitedUntil, setRateLimitedUntil] = useState<number>(0)
-  const [nowTs, setNowTs] = useState<number>(() => Date.now())
-
-  const remainingMs = Math.max(0, rateLimitedUntil - nowTs)
-  const isRateLimited = remainingMs > 0
-
-  // Tick once per second only while a wait is active, so the countdown stays
-  // smooth and consistent even if new search attempts come in.
-  useEffect(() => {
-    if (!isRateLimited) return
-    const id = setInterval(() => setNowTs(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [isRateLimited])
 
   const usersQ = useQuery({
     queryKey: ['user-search', q],
-    // Suspend searches entirely while waiting — no need to spam the server.
-    enabled: q.trim().length >= 2 && !isRateLimited,
+    enabled: q.trim().length >= 2,
     queryFn: async () => {
-      const term = q.trim()
-      const { data, error } = await supabase.rpc('search_public_profiles', {
-        _term: term,
-        _limit: 15,
-      })
-      if (error) {
-        const retry = parseRetryAfter(error.message)
-        if (retry !== null) {
-          const candidate = Date.now() + retry * 1000
-          // Only extend the wait — never shorten it — so consecutive errors
-          // from the server can't make the countdown jump around.
-          setRateLimitedUntil((prev) => (candidate > prev ? candidate : prev))
-        }
-        throw error
-      }
-      return ((data ?? []) as Profile[]).filter((u) => u.id !== user?.id)
+      const term = `%${q.trim()}%`
+      const { data, error } = await supabase
+        .from('public_profiles')
+        .select('id, display_name, username, avatar_url')
+        .or(`display_name.ilike.${term},username.ilike.${term}`)
+        .neq('id', user?.id || '')
+        .limit(15)
+      if (error) throw error
+      return (data ?? []) as Profile[]
     },
-    retry: false,
   })
 
   const startChat = async (other: Profile) => {
@@ -1033,9 +913,6 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
     }
   }
 
-  const remainingSeconds = Math.ceil(remainingMs / 1000)
-  const showRateLimit = isRateLimited || (usersQ.isError && /rate limit/i.test((usersQ.error as Error)?.message ?? ''))
-
   return (
     <DialogContent>
       <DialogHeader>
@@ -1058,17 +935,8 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
             <div className="p-4 text-xs text-muted-foreground">
               Type at least 2 characters to search.
             </div>
-          ) : showRateLimit ? (
-            <div className="p-4 text-xs text-destructive">
-              You're searching too fast.{' '}
-              {remainingSeconds > 0
-                ? `Please wait ${remainingSeconds} second${remainingSeconds === 1 ? '' : 's'} and try again.`
-                : 'You can try again now.'}
-            </div>
           ) : usersQ.isLoading ? (
             <div className="p-4 text-xs text-muted-foreground">Searching…</div>
-          ) : usersQ.isError ? (
-            <div className="p-4 text-xs text-destructive">Search failed. Please try again.</div>
           ) : (usersQ.data ?? []).length === 0 ? (
             <div className="p-4 text-xs text-muted-foreground">No users found.</div>
           ) : (
@@ -1096,12 +964,3 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
     </DialogContent>
   )
 }
-
-function parseRetryAfter(msg: string | undefined): number | null {
-  if (!msg) return null
-  const m = msg.match(/retry[_ ]after[=:\s]+(\d+)/i) || msg.match(/retry in (\d+)\s*seconds?/i)
-  return m ? Math.max(1, parseInt(m[1], 10)) : null
-}
-
-
-

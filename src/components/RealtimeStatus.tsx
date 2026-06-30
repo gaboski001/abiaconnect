@@ -26,53 +26,17 @@ export function RealtimeStatus({ className }: { className?: string }) {
   const [status, setStatus] = useState<Status>('connecting')
 
   useEffect(() => {
-    let channel: any;
-    let retryTimeout: NodeJS.Timeout;
-
-    const connect = () => {
-      if (channel) {
-        void supabase.removeChannel(channel);
-      }
-
-      setStatus('connecting');
-      channel = supabase.channel('realtime-status-heartbeat')
-
-      channel.subscribe((state: string) => {
-        console.log('Realtime status:', state);
-        if (state === 'SUBSCRIBED') {
-          setStatus('connected');
-        } else if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT' || state === 'CLOSED') {
-          setStatus('disconnected');
-          // Aggressive retry logic for native apps
-          clearTimeout(retryTimeout);
-          retryTimeout = setTimeout(() => {
-            connect();
-          }, 10000); // Wait 10s before retrying
-        } else {
-          setStatus('connecting');
-        }
-      });
-    };
-
-    connect();
-
-    // Re-connect when window comes back online or focus returns
-    const handleReappear = () => {
-      if (document.visibilityState === 'visible') {
-        connect();
-      }
-    };
-
-    window.addEventListener('online', connect);
-    window.addEventListener('visibilitychange', handleReappear);
-
+    const channel = supabase.channel('realtime-status-heartbeat')
+    channel.subscribe((state) => {
+      if (state === 'SUBSCRIBED') setStatus('connected')
+      else if (state === 'CHANNEL_ERROR' || state === 'TIMED_OUT' || state === 'CLOSED')
+        setStatus('disconnected')
+      else setStatus('connecting')
+    })
     return () => {
-      window.removeEventListener('online', connect);
-      window.removeEventListener('visibilitychange', handleReappear);
-      clearTimeout(retryTimeout);
-      if (channel) void supabase.removeChannel(channel);
+      void supabase.removeChannel(channel)
     }
-  }, []);
+  }, [])
 
   return (
     <TooltipProvider delayDuration={150}>

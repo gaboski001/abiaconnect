@@ -11,7 +11,6 @@ interface AuthContextValue {
   isAdmin: boolean
   loading: boolean
   signOut: () => Promise<void>
-  refreshSession: (nextSession?: Session | null) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -99,8 +98,6 @@ function resolveRole(names: string[]): Role {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
-
-  // High-performance: read from cache immediately
   const [user, setUser] = useState<User | null>(() => {
     try {
       const raw = localStorage.getItem(CACHE_KEY)
@@ -109,13 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null
     }
   })
-
-  const [role, setRole] = useState<Role>(() => {
-    return (localStorage.getItem('abia_cached_role') as Role) || 'guest'
-  })
-
-  // If we have a cached user, we don't need to block with 'loading' screen
-  const [loading, setLoading] = useState(!user)
+  const [role, setRole] = useState<Role>('guest')
+  const [loading, setLoading] = useState(true)
 
   async function fetchRole(userId: string): Promise<Role> {
     try {
@@ -125,79 +117,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
       if (error || !data) return 'Member'
       const names = (data as { role: string }[]).map((r) => r.role).filter(Boolean)
-      const resolved = names.length ? resolveRole(names) : 'Member'
-      localStorage.setItem('abia_cached_role', resolved)
-      return resolved
+      return names.length ? resolveRole(names) : 'Member'
     } catch {
       return 'Member'
     }
   }
 
   async function applySession(s: Session | null) {
-    const newUser = s?.user ?? null
     setSession(s)
-    setUser(newUser)
-
-    if (newUser) {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(newUser))
-      // Update role in background to avoid blocking
-      fetchRole(newUser.id).then(setRole)
+    setUser(s?.user ?? null)
+    if (s?.user) {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(s.user))
+      setRole(await fetchRole(s.user.id))
     } else {
       localStorage.removeItem(CACHE_KEY)
-      localStorage.removeItem('abia_cached_role')
       setRole('guest')
     }
   }
 
   useEffect(() => {
     let mounted = true
-    const bootstrapTimeout = window.setTimeout(() => {
-      if (mounted) setLoading(false)
-    }, 8000)
 
-    supabase.auth
-      .getSession()
-      .then(async ({ data }) => {
-        if (!mounted) return
-        await applySession(data.session)
-      })
-      .catch(() => {
-        if (mounted) void applySession(null)
-      })
-      .finally(() => {
-        window.clearTimeout(bootstrapTimeout)
-        if (mounted) setLoading(false)
-      })
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!mounted) return
+      await applySession(data.session)
+      setLoading(false)
+    })
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
       void applySession(newSession)
       if (event === 'SIGNED_IN' && newSession?.user) {
-        window.setTimeout(() => {
-          void checkAndNotifyNewDevice(newSession.user.id, newSession.user.email)
-        }, 0)
+        void checkAndNotifyNewDevice(newSession.user.id, newSession.user.email)
       }
     })
 
     return () => {
       mounted = false
-      window.clearTimeout(bootstrapTimeout)
       sub.subscription.unsubscribe()
     }
   }, [])
-
-  async function refreshSession(nextSession?: Session | null) {
-    setLoading(true)
-    try {
-      if (typeof nextSession !== 'undefined') {
-        await applySession(nextSession)
-      } else {
-        const { data } = await supabase.auth.getSession()
-        await applySession(data.session)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function signOut() {
     await supabase.auth.signOut()
@@ -210,7 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = role === 'Super Admin' || role === 'Admin'
 
   return (
-    <AuthContext.Provider value={{ user, session, role, isAdmin, loading, signOut, refreshSession }}>
+    <AuthContext.Provider value={{ user, session, role, isAdmin, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   )

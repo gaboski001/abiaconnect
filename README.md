@@ -1,8 +1,6 @@
 # AbiaConnect
 
-A community forum for Abians worldwide — built with React, Vite, Tailwind, Supabase, and Capacitor for Android/iOS packaging.
-
-> Recommended local toolchain: **Node.js 22 LTS**, **npm 10+**, **Android Studio Ladybug+**, and **JDK 17**. Capacitor 8 emits engine warnings on older Node versions.
+A community forum for Abians worldwide — built with React, Vite, Tailwind, and Supabase.
 
 ## Quick Start (Development)
 
@@ -53,20 +51,6 @@ A community forum for Abians worldwide — built with React, Vite, Tailwind, Sup
 - `npm run cap:reset` — wipe `android/` & `ios/`, rebuild web, re-add Android, and sync Capacitor
 
 ## Android (Capacitor) — Clean Rebuild
-
-### Android push notifications quick check
-
-1. Put `google-services.json` in `android/app/google-services.json`
-2. Run `npm run android:sync`
-3. Open Android Studio with `npx cap open android`
-4. Install on a **physical Android device**
-5. Sign in, then open the in-app admin **Push Setup Checklist** to confirm:
-   - notification permission granted
-   - FCM token issued
-   - token saved in `device_push_tokens`
-6. Use the in-app **Send Test Push** panel to verify foreground, background, and terminated delivery
-
-> Important: Android can deliver notifications when the app is in the foreground, background, or swiped away from Recents. If the user explicitly force-stops the app from Android system settings, no app can receive push again until it is reopened manually.
 
 Use this whenever the native Android project is out of sync or you hit Gradle / app-id errors.
 

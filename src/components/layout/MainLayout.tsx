@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { Capacitor } from '@capacitor/core'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Navbar } from './Navbar'
 import { Footer } from './Footer'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
 import { MobileTopBar } from '@/components/mobile/MobileTopBar'
 import { InstallAppPrompt } from '@/components/pwa/InstallAppPrompt'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { cn } from '@/lib/utils'
 
-const isNative = Capacitor.isNativePlatform()
 
 export function MainLayout() {
   const location = useLocation()
   const { settings } = useSiteSettings()
   const siteTheme = settings.theme || settings.site_theme || 'default'
 
-  const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true)
+  const [online, setOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true,
+  )
 
   useEffect(() => {
     const on = () => setOnline(true)
@@ -29,34 +29,32 @@ export function MainLayout() {
     }
   }, [])
 
-  const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname)
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register'
 
   return (
     <div data-site-theme={siteTheme} className="min-h-screen flex flex-col">
-      {!isAuthPage && (
-        <>
-          <div className="hidden md:block">
-            <Navbar />
-          </div>
-          <MobileTopBar />
-        </>
-      )}
+      {!isAuthPage && <MobileTopBar />}
+      <Navbar />
 
       {!online && (
-        <div className="bg-yellow-400/90 px-4 py-2 text-center text-sm text-yellow-950">
+        <div className="bg-yellow-400/90 text-yellow-950 text-sm text-center py-2 px-4">
           You are offline. Some features may be unavailable.
         </div>
       )}
 
-      <main className={cn('flex-1', !isAuthPage && 'pb-24 md:pb-0')}>
-        <div
-          className={cn(
-            'mx-auto max-w-[1400px] px-3 py-6 sm:px-4 md:px-6 md:py-12',
-            isAuthPage && 'max-w-none px-0 py-0 md:py-0',
-          )}
-        >
-          <Outlet />
-        </div>
+      <main className="flex-1">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="mx-auto max-w-[1400px] px-3 sm:px-4 md:px-6 py-6 md:py-12"
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {!isAuthPage && <Footer />}

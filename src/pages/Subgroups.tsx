@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Lock, MessageSquare, Plus, Search, Users } from 'lucide-react'
+import { Users, Plus, Search, MessageSquare, Lock } from 'lucide-react'
 import { SEO } from '@/components/SEO'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -29,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 
 interface Subgroup {
   id: string
@@ -154,101 +153,71 @@ export default function Subgroups() {
     const q = search.trim().toLowerCase()
     const list = groupsQ.data ?? []
     if (!q) return list
-    return list.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        (s.category ?? '').toLowerCase().includes(q) ||
-        (s.description ?? '').toLowerCase().includes(q),
-    )
+    return list.filter((s) => s.name.toLowerCase().includes(q))
   }, [groupsQ.data, search])
 
-  const totalMembers = (groupsQ.data ?? []).reduce((sum, item) => sum + (item.member_count ?? 0), 0)
-  const totalThreads = (groupsQ.data ?? []).reduce((sum, item) => sum + (item.thread_count ?? 0), 0)
-
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="container mx-auto px-4 py-8">
       <SEO title="Community Subgroups" description="Discover and join subgroups of like-minded Abians on AbiaConnect." path="/subgroups" />
-
-      <section
-        className="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/96 p-5 text-slate-950 sm:p-6 dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)] dark:text-white"
-        style={{ boxShadow: PREMIUM_SHADOW }}
-      >
-        <div className="absolute inset-0 opacity-80 dark:opacity-100" style={{ background: 'radial-gradient(circle at top right, rgba(248,195,1,0.18), transparent 32%), radial-gradient(circle at bottom left, rgba(28,169,217,0.16), transparent 36%)' }} />
-        <div className="relative space-y-5">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-[1.4rem] border border-slate-200/80 bg-white dark:border-white/10 dark:bg-white/[0.06]">
-                <Users className="h-6 w-6" style={{ color: MOBILE_BRAND.gold }} />
-              </div>
-              <div>
-                <div
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700 dark:border-white/10 dark:text-slate-200/80"
-                  style={{ background: GOLD_GRADIENT_SOFT }}
-                >
-                  Community circles
-                </div>
-                <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 dark:text-white">Community Subgroups</h1>
-                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-700 dark:text-slate-300/76">
-                  Discover professional, well-organized subgroup spaces for focused conversations, local interests, collaboration, and cultural exchange.
-                </p>
-              </div>
-            </div>
-            {user && (
-              <Dialog open={open} onOpenChange={setOpen}>
-                <DialogTrigger asChild>
-                  <Button className="h-12 rounded-2xl border-0 px-5 font-bold text-slate-950" style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
-                    <Plus className="mr-2 h-4 w-4" /> Create Subgroup
-                  </Button>
-                </DialogTrigger>
-                <CreateSubgroupDialog
-                  onClose={() => setOpen(false)}
-                  onCreated={() => qc.invalidateQueries({ queryKey: ['subgroups'] })}
-                />
-              </Dialog>
-            )}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-secondary/10 p-2 text-secondary">
+            <Users className="h-6 w-6" />
           </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <InfoMetric label="Visible groups" value={String(filtered.length || groupsQ.data?.length || 0)} />
-            <InfoMetric label="Active members" value={String(totalMembers)} compact />
-            <InfoMetric label="Thread hubs" value={String(totalThreads)} compact />
+          <div>
+            <h1 className="text-2xl font-bold">Community Subgroups</h1>
+            <p className="text-sm text-muted-foreground">
+              Discover and join groups of like-minded Abians
+            </p>
           </div>
         </div>
-      </section>
+        {user && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" /> Create Subgroup
+              </Button>
+            </DialogTrigger>
+            <CreateSubgroupDialog
+              onClose={() => setOpen(false)}
+              onCreated={() => qc.invalidateQueries({ queryKey: ['subgroups'] })}
+            />
+          </Dialog>
+        )}
+      </div>
 
-      <div className="relative mt-6 max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400" />
+      <div className="relative max-w-md mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search subgroups..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-12 rounded-2xl border-slate-200/80 bg-white/96 pl-9 text-slate-950 placeholder:text-slate-500 dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:placeholder:text-slate-400"
+          className="pl-9"
         />
       </div>
 
       {groupsQ.isLoading ? (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-64 animate-pulse rounded-[1.8rem] bg-slate-100 dark:bg-white/[0.05]" />
+            <div key={i} className="h-64 rounded-2xl bg-muted/40 animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="mt-6 rounded-[1.8rem] border border-dashed border-slate-200/80 bg-white/90 px-5 py-16 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300/70">
+        <div className="text-center py-16 text-muted-foreground">
           No subgroups found.
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((s) => {
             const joined = myMembershipsQ.data?.has(s.id) ?? false
             return (
-              <article
+              <div
                 key={s.id}
-                className="flex flex-col overflow-hidden rounded-[1.8rem] border border-slate-200/80 bg-white/96 text-slate-950 transition duration-300 hover:-translate-y-1 hover:border-slate-300 dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)] dark:text-white"
-                style={{ boxShadow: PREMIUM_SHADOW }}
+                className="rounded-2xl border bg-card overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
               >
                 <Link to={`/subgroups/${s.id}`} className="block">
                   <div
-                    className={`relative h-32 bg-gradient-to-br ${gradientFor(s.name)}`}
+                    className={`h-28 bg-gradient-to-br ${gradientFor(s.name)} relative`}
                     style={
                       s.cover_image_url
                         ? {
@@ -259,89 +228,69 @@ export default function Subgroups() {
                         : undefined
                     }
                   >
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,12,22,0.18),rgba(5,12,22,0.68))]" />
                     {s.is_private && (
-                      <Badge className="absolute right-3 top-3 border-white/15 bg-black/60 text-white">
-                        <Lock className="mr-1 h-3 w-3" /> Private
+                      <Badge className="absolute top-2 right-2 bg-black/60 border-secondary/40 text-secondary">
+                        <Lock className="h-3 w-3 mr-1" /> Private
                       </Badge>
                     )}
                   </div>
                 </Link>
-
-                <div className="flex flex-1 flex-col p-4">
+                <div className="p-4 flex-1 flex flex-col">
                   <div className="flex items-start justify-between gap-2">
                     <Link to={`/subgroups/${s.id}`}>
-                      <h3 className="text-lg font-black tracking-tight text-slate-950 transition-colors hover:opacity-90 dark:text-white">
+                      <h3 className="font-bold text-lg hover:text-secondary transition-colors">
                         {s.name}
                       </h3>
                     </Link>
                     {s.category && (
-                      <Badge variant="outline" className="shrink-0 border-slate-200/80 text-slate-700 dark:border-white/10 dark:text-slate-200">
+                      <Badge variant="outline" className="shrink-0">
                         {s.category}
                       </Badge>
                     )}
                   </div>
-                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-700 dark:text-slate-300/76">
+                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
                     {s.description || 'No description provided.'}
                   </p>
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <StatChip icon={Users} label="Members" value={String(s.member_count ?? 0)} />
-                    <StatChip icon={MessageSquare} label="Threads" value={String(s.thread_count ?? 0)} />
+                  <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3.5 w-3.5" /> {s.member_count} members
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MessageSquare className="h-3.5 w-3.5" /> {s.thread_count} threads
+                    </span>
                   </div>
-                  <div className="mt-5">
+                  <div className="mt-4">
                     {!user ? (
-                      <Button asChild variant="outline" size="sm" className="h-11 w-full rounded-2xl border-slate-200/80 text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/[0.06]">
+                      <Button asChild variant="outline" size="sm" className="w-full">
                         <Link to="/login">Sign in to join</Link>
                       </Button>
                     ) : joined ? (
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-11 w-full rounded-2xl border-slate-200/80 text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/[0.06]"
+                        className="w-full"
                         disabled={leaveMut.isPending}
                         onClick={() => leaveMut.mutate(s.id)}
                       >
-                        Leave subgroup
+                        Leave
                       </Button>
                     ) : (
                       <Button
                         size="sm"
-                        className="h-11 w-full rounded-2xl border-0 font-bold text-slate-950"
-                        style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
+                        className="w-full"
                         disabled={joinMut.isPending}
                         onClick={() => joinMut.mutate(s.id)}
                       >
-                        Join subgroup
+                        Join
                       </Button>
                     )}
                   </div>
                 </div>
-              </article>
+              </div>
             )
           })}
         </div>
       )}
-    </div>
-  )
-}
-
-function InfoMetric({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
-  return (
-    <div className="rounded-[1.35rem] border border-slate-200/80 bg-white/92 p-3.5 dark:border-white/10 dark:bg-white/[0.05]">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300/62">{label}</p>
-      <p className={`mt-2 font-black text-slate-950 dark:text-white ${compact ? 'text-base sm:text-lg' : 'text-xl sm:text-2xl'}`}>{value}</p>
-    </div>
-  )
-}
-
-function StatChip({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: string }) {
-  return (
-    <div className="rounded-[1.2rem] border border-slate-200/80 bg-slate-50/90 px-3 py-3 dark:border-white/10 dark:bg-white/[0.04]">
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-        <Icon className="h-3.5 w-3.5" style={{ color: MOBILE_BRAND.gold }} />
-        {label}
-      </div>
-      <p className="mt-2 text-sm font-bold text-slate-950 dark:text-white">{value}</p>
     </div>
   )
 }
@@ -383,6 +332,7 @@ function CreateSubgroupDialog({
         .select('id')
         .single()
       if (error) throw error
+      // auto-join as a member
       if (data?.id) {
         await supabase
           .from('subgroup_members')
@@ -399,7 +349,7 @@ function CreateSubgroupDialog({
   }
 
   return (
-    <DialogContent className="rounded-[1.8rem] border-slate-200/80 bg-white/98 dark:border-white/10 dark:bg-[rgba(8,14,26,0.98)]">
+    <DialogContent>
       <DialogHeader>
         <DialogTitle>Create a Subgroup</DialogTitle>
         <DialogDescription>
@@ -445,7 +395,7 @@ function CreateSubgroupDialog({
             placeholder="https://..."
           />
         </div>
-        <div className="flex items-center justify-between rounded-xl border border-slate-200/80 p-3 dark:border-white/10">
+        <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
             <Label>Private group</Label>
             <p className="text-xs text-muted-foreground">
@@ -459,7 +409,7 @@ function CreateSubgroupDialog({
         <Button variant="outline" onClick={onClose} disabled={saving}>
           Cancel
         </Button>
-        <Button onClick={submit} disabled={saving} className="border-0 text-slate-950" style={{ backgroundImage: GOLD_GRADIENT }}>
+        <Button onClick={submit} disabled={saving}>
           {saving ? 'Creating...' : 'Create Subgroup'}
         </Button>
       </DialogFooter>

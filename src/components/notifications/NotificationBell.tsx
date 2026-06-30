@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
@@ -8,9 +9,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { playNotificationChime } from '@/lib/notificationSound'
-import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
-import { useThrottledCallback } from '@/hooks/useThrottledCallback'
-
 
 export interface NotificationRow {
   id: string
@@ -78,39 +76,32 @@ export function NotificationBell() {
     },
   })
 
-  // Throttle chime + query invalidations so bursts don't flood renders.
-  const throttledChime = useThrottledCallback(() => playNotificationChime(), 2000)
-  const throttledInvalidate = useThrottledCallback(() => {
+  useEffect(() => {
     if (!user) return
-    qc.invalidateQueries({ queryKey: ['notifications-unread', user.id] })
-    qc.invalidateQueries({ queryKey: ['notifications-recent', user.id] })
-    qc.invalidateQueries({ queryKey: ['notifications-all', user.id] })
-  }, 600)
-
-  useRealtimeChannel({
-    enabled: !!user,
-    channelName: `notifications:${user?.id ?? 'anon'}`,
-    deps: [user?.id],
-    subscriptions: user
-      ? [
-          {
-            filter: {
-              event: '*',
-              schema: 'public',
-              table: 'notifications',
-              filter: `user_id=eq.${user.id}`,
-            },
-            handler: (payload) => {
-              if (payload.eventType === 'INSERT') {
-                throttledChime()
-              }
-              throttledInvalidate()
-            },
-          },
-        ]
-      : [],
-  })
-
+    const channel = supabase
+      .channel(`notifications:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            playNotificationChime()
+          }
+          qc.invalidateQueries({ queryKey: ['notifications-unread', user.id] })
+          qc.invalidateQueries({ queryKey: ['notifications-recent', user.id] })
+          qc.invalidateQueries({ queryKey: ['notifications-all', user.id] })
+        },
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, qc])
 
   const markAllRead = async () => {
     if (!user) return

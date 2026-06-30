@@ -24,14 +24,5 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Security gate (sensitive keys + RLS exposure)
-        run: npm run check:security
-
-      - name: Realtime handler gate (no invalidateQueries inside useRealtimeChannel)
-        run: npm run check:realtime
-
       - name: Build abiaconnect
         run: npm run build
-
-      - name: Backend-leak scan on built bundle
-        run: npm run check:leaks

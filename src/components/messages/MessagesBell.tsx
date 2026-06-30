@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MessageCircle } from 'lucide-react'
@@ -5,8 +6,6 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { playNotificationChime } from '@/lib/notificationSound'
-import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
-import { useThrottledCallback } from '@/hooks/useThrottledCallback'
 
 export function MessagesBell() {
   const { user } = useAuth()
@@ -38,34 +37,28 @@ export function MessagesBell() {
     },
   })
 
-  // Throttle chime to at most once every 2s; throttle invalidations to ~600ms.
-  const throttledChime = useThrottledCallback(() => playNotificationChime(), 2000)
-  const throttledInvalidate = useThrottledCallback(() => {
-    if (user) qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
-  }, 600)
-
-  useRealtimeChannel({
-    enabled: !!user,
-    channelName: `messages-bell:${user?.id ?? 'anon'}`,
-    deps: [user?.id],
-    subscriptions: user
-      ? [
-          {
-            filter: { event: '*', schema: 'public', table: 'messages' },
-            handler: (payload) => {
-              if (payload.eventType === 'INSERT') {
-                const row = payload.new as { sender_id?: string } | null
-                if (row?.sender_id && row.sender_id !== user.id) {
-                  throttledChime()
-                }
-              }
-              throttledInvalidate()
-            },
-          },
-        ]
-      : [],
-  })
-
+  useEffect(() => {
+    if (!user) return
+    const channel = supabase
+      .channel(`messages-bell:${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const row = payload.new as { sender_id?: string } | null
+            if (row && row.sender_id && row.sender_id !== user.id) {
+              playNotificationChime()
+            }
+          }
+          qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
+        },
+      )
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [user, qc])
 
   if (!user) return null
   const count = unreadQ.data ?? 0

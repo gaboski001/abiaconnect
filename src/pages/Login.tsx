@@ -1,265 +1,122 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, Eye, EyeOff, Fingerprint } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
-import { useAuth } from '@/contexts/AuthContext'
-import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton'
-import { BiometricOptInDialog } from '@/components/auth/BiometricOptInDialog'
-import {
-  hasDeclinedBiometric,
-  isBiometricAvailable,
-  isBiometricEnabled,
-  setBiometricDeclined,
-} from '@/lib/biometric'
-import PremiumAuthShell from '@/components/mobile/PremiumAuthShell'
-import { GOLD_GRADIENT, GOLD_SHADOW, MOBILE_BRAND } from '@/lib/mobileBrand'
-
 
 export default function Login() {
   const navigate = useNavigate()
-  const { refreshSession, user } = useAuth()
+  const { isAdmin } = useAuth()
   const { settings } = useSiteSettings()
   const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
-  const [remember, setRemember] = useState(true)
   const [loading, setLoading] = useState(false)
-  const [optInOpen, setOptInOpen] = useState(false)
-  const [pendingCreds, setPendingCreds] = useState<{ email: string; password: string } | null>(null)
-
-  // Single-flight redirect guard: ensures navigate() runs at most once per mount,
-  // no matter how many code paths (form submit, onAuthStateChange, biometric dialog)
-  // try to trigger it.
-  const hasRedirectedRef = useRef(false)
-  const redirectOnce = useCallback(
-    (fallback = '/') => {
-      if (hasRedirectedRef.current) return
-      hasRedirectedRef.current = true
-      let pending: string | null = null
-      if (typeof window !== 'undefined') {
-        pending = sessionStorage.getItem('abia_pending_push_route')
-        sessionStorage.removeItem('abia_pending_push_route')
-        // Never bounce back to an auth screen
-        if (pending && /^\/(login|register|forgot-password|reset-password)/.test(pending)) {
-          pending = null
-        }
-      }
-      navigate(pending || fallback, { replace: true })
-    },
-    [navigate],
-  )
-
-  // If the AuthContext already has a user when this page mounts (cached session
-  // or onAuthStateChange fires first), redirect away immediately.
-  useEffect(() => {
-    if (user && !optInOpen) redirectOnce()
-  }, [user, optInOpen, redirectOnce])
-
-
-
-
-
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (loading) return
-
     setLoading(true)
-
-    const timeout = setTimeout(() => {
-      setLoading(false)
-      toast.error('Connection timed out. Please check your internet and try again.')
-    }, 15000)
-
     try {
       const email = identifier.trim()
       if (!email.includes('@')) {
         toast.error('Please sign in with your email address.')
-        clearTimeout(timeout)
-        setLoading(false)
         return
       }
-
-      if (!navigator.onLine) {
-        throw new Error('You are currently offline. Please check your internet connection.')
-      }
-
-      const { data, error } = (await Promise.race([
-        supabase.auth.signInWithPassword({ email, password }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Auth request timed out')), 12000)),
-      ])) as Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>
-
-      clearTimeout(timeout)
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         toast.error(error.message)
-        setLoading(false)
         return
       }
-
-      if (!data?.session) {
-        throw new Error('Authentication failed: No session returned.')
-      }
-
-      // onAuthStateChange will hydrate AuthContext — don't await refreshSession
-      // here, it races with the SIGNED_IN listener and stalls the redirect.
-      void refreshSession(data.session)
-
-      toast.success('Welcome back to AbiaConnect!')
-
-      // Navigate immediately. The biometric opt-in is intentionally NOT shown
-      // on this path — it was blocking the redirect on native devices when the
-      // dialog failed to mount in time. Users can enable biometric unlock from
-      // the next login (the BiometricLoginButton renders when available) or
-      // from settings.
-      setLoading(false)
-      redirectOnce()
-
-
-
-
-    } catch (err: any) {
-      clearTimeout(timeout)
-      const errMsg = err?.message || 'Sign in failed. Please check your connection.'
-      toast.error(errMsg)
+      toast.success('Welcome back!')
+      navigate('/')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Sign in failed')
+    } finally {
       setLoading(false)
     }
   }
 
   return (
     <>
-      <SEO title="Sign in to AbiaConnect" description="Sign in to your AbiaConnect account." path="/login" />
-      <PremiumAuthShell
-        logoUrl={logoUrl}
-        title="Welcome back"
-        subtitle="Sign in to continue to AbiaConnect."
-        footer={pendingCreds ? (
-          <BiometricOptInDialog
-            open={optInOpen}
-            email={pendingCreds.email}
-            password={pendingCreds.password}
-            onClose={(enabled) => {
-              if (!enabled) setBiometricDeclined(true)
-              setOptInOpen(false)
-              setPendingCreds(null)
-              redirectOnce()
-            }}
-          />
-        ) : null}
-      >
-        <form onSubmit={onSubmit} className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-black tracking-tight text-white">Sign in</h2>
-            <p className="mt-1 text-sm text-slate-300/72">Access your discussions, chats, and updates.</p>
-          </div>
-
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="identifier" className="text-xs font-bold uppercase tracking-[0.22em] text-slate-300/76">
-                Email address
-              </Label>
-              <Input
-                id="identifier"
-                type="email"
-                required
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                autoComplete="email"
-                placeholder="name@example.com"
-                className="h-14 rounded-2xl border-white/10 bg-slate-950/40 text-white placeholder:text-white/25"
-              />
-            </div>
-
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-4">
-                <Label htmlFor="password" className="text-xs font-bold uppercase tracking-[0.22em] text-slate-300/76">
-                  Password
-                </Label>
-                <Link to="/forgot-password" className="text-xs font-semibold text-slate-100 transition-opacity hover:opacity-80" style={{ color: MOBILE_BRAND.gold }}>
-                  Forgot password?
-                </Link>
-              </div>
-
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={show ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  placeholder="Enter your secure password"
-                  className="h-14 rounded-2xl border-white/10 bg-slate-950/40 pr-12 text-white placeholder:text-white/25"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShow((s) => !s)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 transition-colors hover:text-white"
-                  aria-label={show ? 'Hide password' : 'Show password'}
-                >
-                  {show ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 rounded-[1.2rem] border border-white/10 bg-white/[0.03] px-4 py-3">
-            <label htmlFor="remember" className="flex cursor-pointer items-center gap-3 text-sm text-slate-300/80">
-              <Checkbox id="remember" checked={remember} onCheckedChange={(checked) => setRemember(Boolean(checked))} />
-              Remember me on this device
-            </label>
-          </div>
-
-
-          <Button
-            type="submit"
-            disabled={loading}
-            className="h-16 w-full rounded-2xl text-base font-black text-slate-950 transition-all active:scale-[0.99]"
-            style={{ backgroundImage: GOLD_GRADIENT, boxShadow: loading ? 'none' : GOLD_SHADOW }}
-          >
-            {loading ? (
-              <span className="flex items-center gap-3">
-                <motion.span
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  className="size-5 rounded-full border-2 border-current border-t-transparent"
-                />
-                Signing you in…
-              </span>
+      <SEO title="Sign in to AbiaConnect" description="Sign in to your AbiaConnect account to join discussions, vote in polls, and connect with Abians worldwide." path="/login" />
+    <div className="min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 rounded-3xl p-6">
+      <div className="w-full max-w-md rounded-3xl border border-border bg-card shadow-xl p-8">
+        <div className="flex flex-col items-center gap-3 mb-6">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground overflow-hidden">
+            {logoUrl ? (
+              <img src={logoUrl} alt={settings.site_name || 'AbiaConnect'} className="h-full w-full object-contain" />
             ) : (
-              <span className="flex items-center gap-2">
-                Continue to dashboard <ArrowRight className="size-5" />
-              </span>
+              <span className="text-lg font-bold">{(settings.site_name || 'A').charAt(0)}</span>
             )}
+          </span>
+          <h1 className="text-2xl font-bold">Sign in to AbiaConnect</h1>
+          <p className="text-sm text-muted-foreground text-center">
+            Sign in to continue to AbiaConnect
+          </p>
+        </div>
+
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="identifier">Email</Label>
+            <Input
+              id="identifier"
+              type="email"
+              required
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              autoComplete="email"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+            <div className="relative">
+              <Input
+                id="password"
+                type={show ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShow((s) => !s)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={show ? 'Hide password' : 'Show password'}
+              >
+                {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? 'Signing in…' : 'Sign In'}
           </Button>
 
-          <div className="rounded-[1.4rem] border border-white/10 bg-slate-950/35 p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-100">
-              <Fingerprint className="size-4" style={{ color: MOBILE_BRAND.gold }} />
-              Quick unlock on supported devices
-            </div>
-            <BiometricLoginButton onSuccess={() => navigate('/', { replace: true })} />
-          </div>
-
-          <p className="text-center text-sm text-slate-300/72">
+          <p className="text-sm text-center text-muted-foreground">
             New here?{' '}
-            <Link to="/register" className="font-bold transition-opacity hover:opacity-80" style={{ color: MOBILE_BRAND.gold }}>
-              Create your AbiaConnect account
+            <Link to="/register" className="text-primary font-medium hover:underline">
+              Join Free
             </Link>
           </p>
         </form>
-      </PremiumAuthShell>
+      </div>
+    </div>
     </>
   )
 }

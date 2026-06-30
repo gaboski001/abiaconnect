@@ -1,11 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { MainLayout } from '@/components/layout/MainLayout'
-import { NativeOnboardingGate } from '@/components/mobile/NativeOnboardingGate'
-import { ConnectivityStatus } from '@/components/ConnectivityStatus'
 import { ScrollToTop } from '@/components/ScrollToTop'
-import { RecoveryRedirect } from '@/components/auth/RecoveryRedirect'
-import { CallProvider } from '@/components/call/CallProvider'
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute'
 import Home from '@/pages/Home'
 import Login from '@/pages/Login'
@@ -15,7 +11,6 @@ import Register from '@/pages/Register'
 // most common landing destinations; everything else streams in on navigation.
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'))
-const AuthConfirm = lazy(() => import('@/pages/AuthConfirm'))
 const CategoryPage = lazy(() => import('@/pages/Category'))
 const Thread = lazy(() => import('@/pages/Thread'))
 const CreateThread = lazy(() => import('@/pages/CreateThread'))
@@ -69,10 +64,6 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
-      <RecoveryRedirect />
-      <ConnectivityStatus />
-      <NativeOnboardingGate />
-      <CallProvider />
       <Routes>
       <Route element={<MainLayout />}>
         <Route index element={<Home />} />
@@ -86,7 +77,6 @@ export default function App() {
               <Routes>
                 <Route path="forgot-password" element={<ForgotPassword />} />
                 <Route path="reset-password" element={<ResetPassword />} />
-                <Route path="auth/confirm" element={<AuthConfirm />} />
                 <Route path="category/:categoryId" element={<CategoryPage />} />
                 <Route path="thread/:threadId" element={<Thread />} />
                 <Route path="about/lgas" element={<LgasGuide />} />

@@ -17,12 +17,10 @@ import {
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
-import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 
 // Lazy-load Textarea — only needed when user opens a reply form.
 const Textarea = lazy(() =>
@@ -110,25 +108,25 @@ const ReplyItem = memo(function ReplyItem({
   const isOpen = replyingTo === r.id
   return (
     <li
-      className={`rounded-[1.5rem] border border-slate-200/80 bg-white/96 p-4 text-slate-950 shadow-[0_18px_50px_-34px_rgba(15,23,42,0.18)] transition-opacity dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)] dark:text-white dark:shadow-none ${
+      className={`rounded-2xl border border-border bg-card p-4 transition-opacity ${
         r.parent_reply_id ? 'ml-8' : ''
       } ${isOptimistic ? 'opacity-60' : ''}`}
       aria-busy={isOptimistic ? 'true' : undefined}
     >
-      <div className="mb-2 flex items-center gap-2">
+      <div className="flex items-center gap-2 mb-2">
         <Avatar name={name} url={r.profiles?.avatar_url} />
-        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{name}</span>
-        <span className="text-xs text-slate-500 dark:text-slate-400">
+        <span className="font-medium text-sm">{name}</span>
+        <span className="text-xs text-muted-foreground">
           {isOptimistic
             ? 'Sending…'
             : formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
         </span>
       </div>
       <div
-        className="prose prose-sm max-w-none prose-p:text-slate-700 prose-p:leading-7 prose-strong:text-slate-950 dark:prose-invert dark:prose-p:text-slate-300 dark:prose-strong:text-white"
+        className="prose prose-sm dark:prose-invert max-w-none"
         dangerouslySetInnerHTML={{ __html: safeHtml }}
       />
-      <div className="mt-3 flex items-center gap-1">
+      <div className="flex items-center gap-1 mt-2">
         <Button
           size="sm"
           variant="ghost"
@@ -168,7 +166,6 @@ const ReplyItem = memo(function ReplyItem({
               rows={3}
               maxLength={5000}
               autoFocus
-              className="rounded-2xl border-slate-200/80 bg-white text-slate-950 placeholder:text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-400"
             />
           </Suspense>
           <div className="flex justify-end gap-2">
@@ -188,26 +185,20 @@ const ReplyItem = memo(function ReplyItem({
 export default function ThreadPage() {
   const { user, loading } = useAuth()
   if (loading) {
-    return <div className="p-8 text-sm text-slate-600 dark:text-slate-300/74">Loading…</div>
+    return <div className="p-8 text-sm text-muted-foreground">Loading…</div>
   }
   if (!user) {
     return (
-      <div className="mx-auto mt-16 max-w-xl space-y-4 rounded-[2rem] border border-slate-200/80 bg-white/96 p-8 text-center shadow-[0_24px_80px_-42px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)] dark:shadow-none">
-        <div
-          className="mx-auto inline-flex items-center gap-2 rounded-full border border-slate-200/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700 dark:border-white/10 dark:text-slate-200/80"
-          style={{ background: GOLD_GRADIENT_SOFT }}
-        >
-          Thread access
-        </div>
-        <h1 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">Sign in to view this thread</h1>
-        <p className="text-slate-600 dark:text-slate-300/76">
+      <div className="max-w-xl mx-auto mt-16 rounded-2xl border border-border bg-card p-8 text-center space-y-4">
+        <h1 className="text-2xl font-bold">Sign in to view this thread</h1>
+        <p className="text-muted-foreground">
           Join AbiaConnect to read full discussions, vote, and participate in the conversation.
         </p>
         <div className="flex justify-center gap-3 pt-2">
-          <Link to="/login" className="inline-flex items-center justify-center rounded-2xl px-5 py-2.5 text-sm font-bold text-slate-950 hover:opacity-95" style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
+          <Link to="/login" className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-5 py-2 text-sm font-semibold hover:opacity-90">
             Sign in
           </Link>
-          <Link to="/register" className="inline-flex items-center justify-center rounded-2xl border border-slate-200/80 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/[0.06]">
+          <Link to="/register" className="inline-flex items-center justify-center rounded-md border border-border px-5 py-2 text-sm font-semibold hover:bg-muted">
             Create account
           </Link>
         </div>
@@ -380,46 +371,41 @@ function Thread() {
 
 
 
-  // Realtime subscription — migrated to useRealtimeChannel for consistency.
-  // Keeps setQueryData behavior (no invalidation) and proper cleanup.
-  const handleReplyInsert = useCallback(
-    async (payload: { new: Record<string, unknown> }) => {
-      const next = payload.new as unknown as Reply
-      let withProfile: Reply = next
-      if (next.user_id) {
-        const { data: profs } = await supabase.rpc('get_public_profiles', { _ids: [next.user_id] })
-        const prof = ((profs ?? []) as Array<{ display_name: string | null; avatar_url: string | null }>)[0]
-        if (prof) withProfile = { ...next, profiles: { display_name: prof.display_name, avatar_url: prof.avatar_url } }
-      }
-      qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
-        if (!prev) return prev
-        const exists = prev.pages.some((p) => p.rows.some((r) => r.id === withProfile.id))
-        if (exists) return prev
-        const pages = prev.pages.map((p, i) =>
-          i === prev.pages.length - 1
-            ? { ...p, rows: [...p.rows, withProfile], total: p.total + 1 }
-            : { ...p, total: p.total + 1 },
-        )
-        return { ...prev, pages }
-      })
-    },
-    [qc, threadId],
-  )
+  // Realtime subscription
+  useEffect(() => {
+    if (!threadId) return
+    const channel = supabase
+      .channel(`thread:${threadId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'replies', filter: `thread_id=eq.${threadId}` },
+        async (payload) => {
+          const next = payload.new as Reply
+          let withProfile: Reply = next
+          if (next.user_id) {
+            const { data: profs } = await supabase.rpc('get_public_profiles', { _ids: [next.user_id] })
+            const prof = ((profs ?? []) as Array<{ display_name: string | null; avatar_url: string | null }>)[0]
+            if (prof) withProfile = { ...next, profiles: { display_name: prof.display_name, avatar_url: prof.avatar_url } }
+          }
+          qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
+            if (!prev) return prev
+            const exists = prev.pages.some((p) => p.rows.some((r) => r.id === withProfile.id))
+            if (exists) return prev
+            const pages = prev.pages.map((p, i) =>
+              i === prev.pages.length - 1
+                ? { ...p, rows: [...p.rows, withProfile], total: p.total + 1 }
+                : { ...p, total: p.total + 1 },
+            )
+            return { ...prev, pages }
+          })
+        },
 
-  useRealtimeChannel({
-    enabled: !!threadId,
-    channelName: `thread-replies:${threadId ?? 'none'}`,
-    deps: [threadId],
-    subscriptions: threadId
-      ? [
-          {
-            filter: { event: 'INSERT', schema: 'public', table: 'replies', filter: `thread_id=eq.${threadId}` },
-            handler: handleReplyInsert,
-          },
-        ]
-      : [],
-  })
-
+      )
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [threadId, qc])
 
   const vote = useMutation({
     mutationFn: async (value: 1 | -1) => {
@@ -764,43 +750,43 @@ function Thread() {
           },
         ]}
       />
-    <div className="mx-auto max-w-4xl space-y-6">
-      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+    <div className="space-y-6 max-w-3xl mx-auto">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <ChevronLeft className="size-4" />
         {thread.categories ? (
-          <Link to={`/category/${thread.categories.id}`} className="hover:text-slate-900 dark:hover:text-white">
+          <Link to={`/category/${thread.categories.id}`} className="hover:text-primary">
             {thread.categories.name}
           </Link>
         ) : (
-          <Link to="/" className="hover:text-slate-900 dark:hover:text-white">All Forums</Link>
+          <Link to="/" className="hover:text-primary">All Forums</Link>
         )}
       </div>
 
-      <article className="space-y-5 rounded-[2rem] border border-slate-200/80 bg-white/96 p-6 text-slate-950 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)] dark:text-white dark:shadow-none" style={{ boxShadow: PREMIUM_SHADOW }}>
+      <article className="rounded-2xl border border-border bg-card p-6 space-y-5">
         <div className="flex flex-wrap items-center gap-2">
           {thread.is_pinned && (
-            <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-slate-950" style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
+            <span className="inline-flex items-center gap-1 rounded-full bg-secondary/20 text-secondary-foreground px-2 py-0.5 text-xs font-semibold">
               <Pin className="size-3" /> Pinned
             </span>
           )}
-          <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
             <Eye className="size-3.5" /> {thread.view_count ?? 0} views
           </span>
         </div>
-        <h1 className="text-3xl font-black tracking-tight text-slate-950 dark:text-white">{thread.title}</h1>
+        <h1 className="text-3xl font-bold">{thread.title}</h1>
 
         <div className="flex items-start gap-3">
           <Avatar name={authorName} url={thread.profiles?.avatar_url} size={10} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-900 dark:text-slate-100">{authorName}</span>
+              <span className="font-semibold">{authorName}</span>
               {thread.profiles?.role && (
-                <span className="rounded-full border border-slate-200/80 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200">
+                <span className="text-xs rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">
                   {thread.profiles.role}
                 </span>
               )}
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">
+            <div className="text-xs text-muted-foreground">
               {thread.profiles?.created_at &&
                 `Joined ${formatDistanceToNow(new Date(thread.profiles.created_at), { addSuffix: true })} · `}
               Posted {formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}
@@ -809,11 +795,11 @@ function Thread() {
         </div>
 
         <div
-          className="prose prose-sm max-w-none prose-p:text-slate-700 prose-p:leading-7 prose-strong:text-slate-950 dark:prose-invert dark:prose-p:text-slate-300 dark:prose-strong:text-white"
+          className="prose prose-sm dark:prose-invert max-w-none"
           dangerouslySetInnerHTML={{ __html: safeBody }}
         />
 
-        <div className="flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-2 dark:border-white/10">
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
           <Button
             size="sm"
             variant="outline"
@@ -832,36 +818,26 @@ function Thread() {
           >
             <ThumbsDown /> {thread.downvotes ?? 0}
           </Button>
-          <Button size="sm" variant="ghost" className="rounded-xl" onClick={() => bookmark.mutate()} disabled={!user}>
+          <Button size="sm" variant="ghost" onClick={() => bookmark.mutate()} disabled={!user}>
             <Bookmark /> Bookmark
           </Button>
-          <Button size="sm" variant="ghost" className="rounded-xl" onClick={share}>
+          <Button size="sm" variant="ghost" onClick={share}>
             <Share2 /> Share
           </Button>
         </div>
       </article>
 
-      <section className="space-y-4 rounded-[2rem] border border-slate-200/80 bg-white/96 p-5 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[rgba(8,14,26,0.92)] dark:shadow-none">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700 dark:border-white/10 dark:text-slate-200/80" style={{ background: GOLD_GRADIENT_SOFT }}>
-              Discussion replies
-            </div>
-            <h2 className="mt-3 text-xl font-black tracking-tight text-slate-950 dark:text-white">
-              {totalReplies} {totalReplies === 1 ? 'Reply' : 'Replies'}
-            </h2>
-          </div>
-          <div className="rounded-full border border-slate-200/80 bg-slate-50/90 px-4 py-2 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300/76">
-            Live conversation
-          </div>
-        </div>
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold">
+          {totalReplies} {totalReplies === 1 ? 'Reply' : 'Replies'}
+        </h2>
 
         {repliesQ.isLoading ? (
           <ul className="space-y-3" aria-busy="true">
             {[0, 1, 2].map((i) => (
               <li
                 key={i}
-                className="space-y-2 rounded-[1.5rem] border border-slate-200/80 bg-slate-50/90 p-4 animate-pulse dark:border-white/10 dark:bg-white/[0.04]"
+                className="rounded-2xl border border-border bg-card p-4 space-y-2 animate-pulse"
               >
                 <div className="flex items-center gap-2">
                   <div className="size-8 rounded-full bg-muted" />
@@ -875,13 +851,13 @@ function Thread() {
           </ul>
         ) : repliesQ.isError ? (
           <div className="text-sm space-y-2">
-            <p className="text-slate-600 dark:text-slate-300/74">Failed to load replies.</p>
+            <p className="text-muted-foreground">Failed to load replies.</p>
             <Button size="sm" variant="outline" onClick={() => repliesQ.refetch()}>
               Retry
             </Button>
           </div>
         ) : replies.length === 0 ? (
-          <p className="text-sm text-slate-600 dark:text-slate-300/74">No replies yet.</p>
+          <p className="text-sm text-muted-foreground">No replies yet.</p>
         ) : (
           <>
             <ul className="space-y-3">
@@ -909,7 +885,6 @@ function Thread() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-2xl border-slate-200/80 text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/[0.06]"
                   onClick={() => repliesQ.fetchNextPage()}
                   disabled={repliesQ.isFetchingNextPage}
                 >
@@ -943,21 +918,20 @@ function Thread() {
                   placeholder="Write a reply…"
                   rows={4}
                   maxLength={5000}
-                  className="rounded-2xl border-slate-200/80 bg-white text-slate-950 placeholder:text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-400"
                 />
               </Suspense>
               <div className="flex justify-end">
-                <Button type="submit" disabled={submitReply.isPending || !reply.trim()} className="rounded-2xl border-0 font-bold text-slate-950" style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
+                <Button type="submit" disabled={submitReply.isPending || !reply.trim()}>
                   {submitReply.isPending ? 'Posting…' : 'Post Reply'}
                 </Button>
               </div>
             </form>
           ) : (
-            <p className="text-sm text-slate-600 dark:text-slate-300/74">Commenting is currently disabled.</p>
+            <p className="text-sm text-muted-foreground">Commenting is currently disabled.</p>
           )
         ) : (
-          <div className="rounded-[1.5rem] border border-slate-200/80 bg-slate-50/90 p-4 text-center text-sm text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200">
-            <Link to="/login" className="font-semibold hover:underline" style={{ color: MOBILE_BRAND.goldWarm }}>
+          <div className="rounded-2xl border border-border bg-muted/40 p-4 text-center text-sm">
+            <Link to="/login" className="text-primary font-medium hover:underline">
               Sign in
             </Link>{' '}
             to reply.

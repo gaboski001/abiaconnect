@@ -1,49 +1,55 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { toWebP } from '@/lib/image'
 import { Link, useNavigate } from 'react-router-dom'
-import { formatDistanceToNow, startOfDay, subDays, format } from 'date-fns'
+import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { formatDistanceToNow, startOfDay, subDays, format } from 'date-fns'
+
+const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
 import {
-  AlertCircle,
   Bell,
   Bookmark,
-  ChevronRight,
   FileText,
   LayoutDashboard,
   LogOut,
   Mail,
-  MessageSquareText,
   Settings as SettingsIcon,
-  ShieldCheck,
-  Sparkles,
-  TrendingUp,
   Trash2,
-  UserRound,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { SEO } from '@/components/SEO'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { supabase } from '@/lib/supabase'
+import { saveProfile } from '@/lib/profileUpdate'
+import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { BLUE_GOLD_GRADIENT, GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
-import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
-import { useThrottledCallback } from '@/hooks/useThrottledCallback'
+import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
 
-const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
-const SettingsPanel = lazy(() => import('@/pages/dashboard/SettingsPanel'))
-
-
+import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
 
-const NAV: Array<{ id: Tab; label: string; mobileLabel: string; icon: ComponentType<{ className?: string }> }> = [
-  { id: 'overview', label: 'Overview', mobileLabel: 'Home', icon: LayoutDashboard },
-  { id: 'posts', label: 'My Posts', mobileLabel: 'Posts', icon: FileText },
-  { id: 'saved', label: 'Saved', mobileLabel: 'Saved', icon: Bookmark },
-  { id: 'messages', label: 'Messages', mobileLabel: 'Inbox', icon: Mail },
-  { id: 'notifications', label: 'Notifications', mobileLabel: 'Alerts', icon: Bell },
-  { id: 'settings', label: 'Settings', mobileLabel: 'Settings', icon: SettingsIcon },
+const NAV: Array<{ id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'posts', label: 'My Posts', icon: FileText },
+  { id: 'saved', label: 'Saved Posts', icon: Bookmark },
+  { id: 'messages', label: 'Messages', icon: Mail },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ]
 
 interface Profile {
@@ -62,34 +68,18 @@ export default function Dashboard() {
   const qc = useQueryClient()
   const [tab, setTab] = useState<Tab>('overview')
 
-  const [cachedProfile, setCachedProfile] = useState<Profile>(() => {
-    try {
-      const raw = localStorage.getItem(`abia_profile_${user?.id}`)
-      return raw ? JSON.parse(raw) : {}
-    } catch {
-      return {}
-    }
-  })
-
   const profileQ = useQuery({
     queryKey: ['profile', user?.id],
     enabled: !!user,
-    staleTime: 60_000,
-    initialData: Object.keys(cachedProfile).length > 0 ? cachedProfile : undefined,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_my_profile')
       if (error) throw error
       const row = Array.isArray(data) ? data[0] : data
-      const result = (row ?? {}) as Profile
-      if (user?.id) localStorage.setItem(`abia_profile_${user.id}`, JSON.stringify(result))
-      setCachedProfile(result)
-      return result
+      return (row ?? {}) as Profile
     },
   })
-
-  const profile = profileQ.data || cachedProfile || {}
+  const profile = profileQ.data ?? {}
   const displayName = profile.display_name || user?.email?.split('@')[0] || 'You'
-  const heroSubtitle = profile.lga ? `Representing ${profile.lga}` : 'Connecting Abians Worldwide'
 
   const handleSignOut = async () => {
     await signOut()
@@ -97,161 +87,87 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="relative pb-24 lg:pb-0">
+    <div className="grid lg:grid-cols-[16rem_1fr] gap-6">
       <SEO title="Your Dashboard" description="Track your posts, replies, bookmarks, and reputation on AbiaConnect." path="/dashboard" />
-
-      <div className="absolute inset-x-0 top-0 -z-10 h-80 rounded-[2rem] blur-3xl opacity-40" style={{ background: 'radial-gradient(circle at top, rgba(28,169,217,0.28), transparent 55%), radial-gradient(circle at 70% 20%, rgba(248,195,1,0.22), transparent 42%)' }} />
-
-      <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0B1424] p-5 text-white shadow-2xl sm:p-6" style={{ boxShadow: PREMIUM_SHADOW }}>
-        <div className="absolute inset-0 opacity-90" style={{ background: 'linear-gradient(135deg, rgba(7,17,31,0.96) 15%, rgba(12,24,43,0.94) 46%, rgba(9,18,32,0.98) 100%)' }} />
-        <div className="absolute -right-16 top-[-3rem] h-48 w-48 rounded-full blur-3xl" style={{ background: 'rgba(248,195,1,0.20)' }} />
-        <div className="absolute left-[-4rem] top-16 h-44 w-44 rounded-full blur-3xl" style={{ background: 'rgba(28,169,217,0.18)' }} />
-
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-[1.8rem] blur-2xl" style={{ background: 'rgba(248,195,1,0.25)' }} />
-              <div className="relative rounded-[1.8rem] border border-white/10 bg-white/10 p-2.5 backdrop-blur-xl">
-                <UserAvatar avatarUrl={profile.avatar_url} displayName={displayName} size="xl" className="h-20 w-20 border border-white/15" />
-              </div>
+      {/* Sidebar - desktop */}
+      <aside className="hidden lg:block">
+        <div className="rounded-2xl border border-border bg-card p-5 sticky top-24 space-y-4">
+          <div className="flex flex-col items-center text-center gap-2">
+            <UserAvatar avatarUrl={profile.avatar_url} displayName={displayName} size="xl" />
+            <div>
+              <div className="font-bold">{displayName}</div>
+              {profile.username && (
+                <div className="text-xs text-muted-foreground">@{profile.username}</div>
+              )}
             </div>
-
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-slate-200/76" style={{ background: GOLD_GRADIENT_SOFT }}>
-                <Sparkles className="size-3.5" style={{ color: MOBILE_BRAND.gold }} />
-                Your AbiaConnect profile
-              </div>
-              <div>
-                <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Welcome back, {displayName}</h1>
-                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300/70">{heroSubtitle}</p>
-                {profile.bio?.trim() ? (
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-200/85 sm:text-base">
-                    {profile.bio}
-                  </p>
-                ) : (
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300/70 sm:text-base italic">
-                    Add a short bio so fellow Abians know who you are and what you contribute to the community.
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs font-semibold text-slate-100">{role}</span>
-                {profile.username ? <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs font-semibold text-slate-300/86">@{profile.username}</span> : null}
-                <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-xs font-semibold text-emerald-200">Realtime sync ready</span>
-              </div>
-            </div>
+            <span className="text-xs rounded-full bg-primary/10 text-primary px-2 py-0.5 font-semibold">
+              {role}
+            </span>
           </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
-            <HeroAction to="/messages" icon={MessageSquareText} label="Messages" description="Reply faster" />
-            <HeroAction to="/notifications" icon={Bell} label="Alerts" description="Stay updated" />
-            <HeroAction to="/profile" icon={UserRound} label="Profile" description="Review identity" />
+          <nav className="space-y-1">
+            {NAV.map((n) => {
+              const active = tab === n.id
+              return (
+                <button
+                  key={n.id}
+                  onClick={() => setTab(n.id)}
+                  className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors border-l-4 ${
+                    active
+                      ? 'border-secondary bg-muted text-foreground'
+                      : 'border-transparent text-muted-foreground hover:bg-muted/60'
+                  }`}
+                >
+                  <n.icon className="size-4" />
+                  {n.label}
+                </button>
+              )
+            })}
             <button
               onClick={handleSignOut}
-              className="flex min-w-[10rem] items-center gap-3 rounded-[1.4rem] border border-white/10 bg-white/6 px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/10"
+              className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/60 border-l-4 border-transparent"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10"><LogOut className="size-4" /></span>
-              <span>
-                <span className="block">Sign out</span>
-                <span className="block text-xs font-medium text-slate-300/72">Back to onboarding</span>
-              </span>
+              <LogOut className="size-4" /> Sign Out
             </button>
-          </div>
+          </nav>
         </div>
-      </section>
+      </aside>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[18rem_1fr]">
-        <aside className="hidden lg:block">
-          <div className="sticky top-24 space-y-4 rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-4 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
-            <div className="rounded-[1.6rem] border border-white/10 p-4" style={{ background: BLUE_GOLD_GRADIENT }}>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-950/72">Dashboard control</p>
-              <h2 className="mt-3 text-xl font-black text-slate-950">Everything important, one tap away</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-950/76">
-                Jump between discussions, saved posts, direct messages, alerts, and settings with a cleaner native-style sidebar.
-              </p>
-            </div>
-            <nav className="space-y-2">
-              {NAV.map((n) => {
-                const active = tab === n.id
-                return (
-                  <button
-                    key={n.id}
-                    onClick={() => setTab(n.id)}
-                    className={`flex w-full items-center gap-3 rounded-[1.2rem] px-4 py-3 text-sm font-semibold transition ${active ? 'text-slate-950' : 'text-slate-200/82 hover:bg-white/[0.06]'}`}
-                    style={active ? { backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW } : undefined}
-                  >
-                    <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${active ? 'bg-black/10' : 'bg-white/[0.06]'}`}>
-                      <n.icon className="size-4" />
-                    </span>
-                    <span className="flex-1 text-left">{n.label}</span>
-                    <ChevronRight className="size-4 opacity-70" />
-                  </button>
-                )
-              })}
-            </nav>
-          </div>
-        </aside>
-
-        <div className="space-y-4 lg:hidden">
-          <div className="rounded-[1.6rem] border border-white/10 bg-[rgba(10,18,32,0.92)] p-2 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
-            <div className="-mx-1 overflow-x-auto px-1 scrollbar-none">
-              <div className="flex gap-2 pb-1">
-                {NAV.map((n) => (
-                  <button
-                    key={n.id}
-                    onClick={() => setTab(n.id)}
-                    className="whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition"
-                    style={tab === n.id ? { backgroundImage: GOLD_GRADIENT, color: MOBILE_BRAND.ink, borderColor: 'transparent', boxShadow: GOLD_SHADOW } : { background: 'rgba(255,255,255,0.06)', color: '#F8FAFC', borderColor: 'rgba(255,255,255,0.12)' }}
-                  >
-                    {n.mobileLabel}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+      {/* Mobile tabs */}
+      <div className="lg:hidden -mx-3 px-3 overflow-x-auto">
+        <div className="flex gap-2 pb-2">
+          {NAV.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => setTab(n.id)}
+              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium border ${
+                tab === n.id
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card text-muted-foreground border-border'
+              }`}
+            >
+              {n.label}
+            </button>
+          ))}
         </div>
-
-        <main className="min-w-0">
-          {tab === 'overview' && <Overview displayName={displayName} />}
-          {tab === 'posts' && <MyPosts onDeleted={() => qc.invalidateQueries({ queryKey: ['my-threads'] })} />}
-          {tab === 'saved' && <SavedPosts />}
-          {tab === 'messages' && <LinkCard to="/messages" label="Open Messages" description="Jump into direct conversations with a more focused native card layout." icon={Mail} />}
-          {tab === 'notifications' && <LinkCard to="/notifications" label="Open Notifications" description="Review the latest mentions, replies, and system alerts from one place." icon={Bell} />}
-          {tab === 'settings' && (
-            <Suspense fallback={<PanelState label="Loading settings…" />}>
-              <SettingsPanel profile={profile} onSaved={() => profileQ.refetch()} />
-            </Suspense>
-          )}
-
-        </main>
       </div>
 
+      <main className="min-w-0">
+        {tab === 'overview' && <Overview displayName={displayName} />}
+        {tab === 'posts' && <MyPosts onDeleted={() => qc.invalidateQueries({ queryKey: ['my-threads'] })} />}
+        {tab === 'saved' && <SavedPosts />}
+        {tab === 'messages' && (
+          <LinkCard to="/messages" label="Open Messages" description="View and reply to your conversations." icon={Mail} />
+        )}
+        {tab === 'notifications' && (
+          <LinkCard to="/notifications" label="Open Notifications" description="See your latest alerts." icon={Bell} />
+        )}
+        {tab === 'settings' && <SettingsPanel profile={profile} onSaved={() => profileQ.refetch()} />}
+      </main>
     </div>
   )
 }
 
-function HeroAction({
-  to,
-  icon: Icon,
-  label,
-  description,
-}: {
-  to: string
-  icon: ComponentType<{ className?: string }>
-  label: string
-  description: string
-}) {
-  return (
-    <Link to={to} className="flex min-w-[10rem] items-center gap-3 rounded-[1.4rem] border border-white/10 bg-white/6 px-4 py-3 text-left transition hover:bg-white/10">
-      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10"><Icon className="size-4" /></span>
-      <span>
-        <span className="block text-sm font-semibold text-white">{label}</span>
-        <span className="block text-xs font-medium text-slate-300/72">{description}</span>
-      </span>
-    </Link>
-  )
-}
-
+/* ----------------- Overview ----------------- */
 function Overview({ displayName }: { displayName: string }) {
   const { user } = useAuth()
   const qc = useQueryClient()
@@ -323,154 +239,83 @@ function Overview({ displayName }: { displayName: string }) {
     },
   })
 
-  const uid = user?.id
-  // Coalesce realtime bursts so back-to-back inserts trigger at most one
-  // refetch every 600ms — keeps the dashboard live but never flooded.
-  const invalidate = useThrottledCallback(
-    useCallback(() => {
-      if (!uid) return
+  // Realtime: refresh stats/activity/recent when the user's data changes
+  useEffect(() => {
+    if (!user) return
+    const uid = user.id
+    const invalidate = () => {
       qc.invalidateQueries({ queryKey: ['dash-stats', uid] })
       qc.invalidateQueries({ queryKey: ['dash-activity', uid] })
       qc.invalidateQueries({ queryKey: ['my-recent-threads', uid] })
-    }, [qc, uid]),
-    600,
-  )
-
-  useRealtimeChannel({
-    enabled: !!uid,
-    channelName: `dash-overview:${uid ?? 'anon'}`,
-    deps: [uid],
-    subscriptions: uid
-      ? [
-          { filter: { event: '*', schema: 'public', table: 'threads', filter: `user_id=eq.${uid}` }, handler: invalidate },
-          { filter: { event: '*', schema: 'public', table: 'replies', filter: `user_id=eq.${uid}` }, handler: invalidate },
-          { filter: { event: '*', schema: 'public', table: 'bookmarks', filter: `user_id=eq.${uid}` }, handler: invalidate },
-        ]
-      : [],
-  })
+    }
+    const channel = supabase
+      .channel(`dash-overview:${uid}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: `user_id=eq.${uid}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'replies', filter: `user_id=eq.${uid}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmarks', filter: `user_id=eq.${uid}` }, invalidate)
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [user, qc])
 
 
   const cards = [
-    { label: 'Posts', value: stats.data?.posts ?? 0, icon: FileText, accent: 'rgba(28,169,217,0.18)' },
-    { label: 'Replies', value: stats.data?.replies ?? 0, icon: MessageSquareText, accent: 'rgba(248,195,1,0.16)' },
-    { label: 'Reputation', value: stats.data?.reputation ?? 0, icon: TrendingUp, accent: 'rgba(52,211,153,0.14)' },
-    { label: 'Bookmarks', value: stats.data?.bookmarks ?? 0, icon: Bookmark, accent: 'rgba(232,112,21,0.16)' },
+    { label: 'My Posts', value: stats.data?.posts ?? 0 },
+    { label: 'Replies', value: stats.data?.replies ?? 0 },
+    { label: 'Reputation', value: stats.data?.reputation ?? 0 },
+    { label: 'Bookmarks', value: stats.data?.bookmarks ?? 0 },
   ]
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Your AbiaConnect hub</p>
-              <h2 className="mt-2 text-2xl font-black text-white">Stay close to your community</h2>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300/72">
-                Welcome back, {displayName}. Track your contributions across Abia's 17 LGAs, follow live discussions, and respond to neighbours, leaders, and groups you care about — all from one place.
-              </p>
-            </div>
-            <div className="rounded-[1.4rem] border border-white/10 px-4 py-3 text-sm text-slate-300/74" style={{ background: GOLD_GRADIENT_SOFT }}>
-              <span className="font-semibold text-white">Tip:</span> jump into Messages or Notifications to keep conversations with your LGA moving in real time.
-            </div>
-          </div>
+      <h1 className="text-2xl font-bold">Welcome back, {displayName}!</h1>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
-            {cards.map((c) => (
-              <div key={c.label} className="rounded-[1.5rem] border border-white/10 p-4" style={{ background: `linear-gradient(180deg, ${c.accent}, rgba(255,255,255,0.02))` }}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{c.label}</div>
-                    <div className="mt-2 text-3xl font-black text-white">{c.value}</div>
-                  </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/8">
-                    <c.icon className="size-5 text-white" />
-                  </div>
-                </div>
-              </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {cards.map((c) => (
+          <div key={c.label} className="rounded-2xl border border-border bg-card p-4">
+            <div className="text-xs text-muted-foreground uppercase">{c.label}</div>
+            <div className="text-2xl font-bold mt-1">{c.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="font-bold mb-4">Recent Activity</h2>
+        <div className="h-56">
+          <Suspense fallback={<div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />}>
+            <ActivityChart data={chartData} />
+          </Suspense>
+        </div>
+
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="font-bold mb-4">My Recent Threads</h2>
+        {recent.isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : !recent.data?.length ? (
+          <p className="text-sm text-muted-foreground">No threads yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {recent.data.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-3">
+                <Link to={`/thread/${t.id}`} className="text-sm font-medium hover:text-primary truncate">
+                  {t.title}
+                </Link>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
+                </span>
+              </li>
             ))}
-          </div>
-        </div>
-
-        <div className="rounded-[1.8rem] border border-white/10 p-5 text-slate-950" style={{ background: BLUE_GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-950/70">Your AbiaConnect hub</p>
-          <h3 className="mt-2 text-2xl font-black">Everything that matters, in one place</h3>
-          <p className="mt-3 text-sm leading-6 text-slate-950/76">
-            Track your conversations, contributions and community reach across Abia State's 17 LGAs — without leaving your dashboard.
-          </p>
-          <div className="mt-5 space-y-3">
-            {[
-              'Pick up unread messages and replies the moment they arrive',
-              'Manage your profile, privacy and notification preferences in one tap',
-              'Follow your threads, bookmarks and reputation as they grow',
-            ].map((item) => (
-              <div key={item} className="flex items-start gap-3 rounded-2xl bg-black/8 px-3 py-3 text-sm font-medium text-slate-950/82">
-                <ShieldCheck className="mt-0.5 size-4 shrink-0" />
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
-        <div className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-black text-white">Posting activity</h3>
-              <p className="text-sm text-slate-300/68">The last 7 days of thread creation activity.</p>
-            </div>
-            <div className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-slate-300/74">Live refresh</div>
-          </div>
-          <div className="h-64 rounded-[1.4rem] border border-white/8 bg-black/12 p-2">
-            <Suspense fallback={<div className="h-full w-full animate-pulse rounded-[1.2rem] bg-white/5" />}>
-              <ActivityChart data={chartData} />
-            </Suspense>
-          </div>
-        </div>
-
-        <div className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-black text-white">Recent threads</h3>
-              <p className="text-sm text-slate-300/68">Your latest discussions, ready to reopen.</p>
-            </div>
-            <Link to="/" className="text-sm font-semibold" style={{ color: MOBILE_BRAND.gold }}>
-              Explore forum
-            </Link>
-          </div>
-
-          {recent.isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((row) => <div key={row} className="h-16 animate-pulse rounded-2xl bg-white/5" />)}
-            </div>
-          ) : !recent.data?.length ? (
-            <div className="rounded-[1.5rem] border border-dashed border-white/12 bg-white/[0.03] p-5 text-center">
-              <AlertCircle className="mx-auto size-8 text-slate-400" />
-              <p className="mt-3 text-sm text-slate-300/72">No threads yet. Start a new conversation and your recent activity will appear here.</p>
-            </div>
-          ) : (
-            <ul className="space-y-3">
-              {recent.data.map((t) => (
-                <li key={t.id} className="rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 transition hover:bg-white/[0.05]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <Link to={`/thread/${t.id}`} className="line-clamp-2 text-sm font-semibold text-white hover:opacity-80">
-                        {t.title}
-                      </Link>
-                      <p className="mt-2 text-xs text-slate-400">{formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}</p>
-                    </div>
-                    <ChevronRight className="mt-1 size-4 shrink-0 text-slate-400" />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
+          </ul>
+        )}
+      </div>
     </div>
   )
 }
 
+/* ----------------- My Posts ----------------- */
 function MyPosts({ onDeleted }: { onDeleted: () => void }) {
   const { user } = useAuth()
   const qc = useQueryClient()
@@ -501,7 +346,7 @@ function MyPosts({ onDeleted }: { onDeleted: () => void }) {
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Delete failed'),
   })
 
-  if (q.isLoading) return <PanelState label="Loading your posts…" />
+  if (q.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>
   const items = (q.data ?? []) as Array<{
     id: string
     title: string
@@ -509,36 +354,29 @@ function MyPosts({ onDeleted }: { onDeleted: () => void }) {
     categories?: { name?: string | null } | null
     replies?: { count: number }[]
   }>
-  if (!items.length) return <PanelState label="You have not posted yet. Start your first discussion to populate this screen." />
+  if (!items.length) return <p className="text-sm text-muted-foreground">You haven't posted yet.</p>
 
   return (
-    <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-black text-white">My posts</h2>
-          <p className="text-sm text-slate-300/68">Manage every thread you created from a cleaner, card-based list.</p>
-        </div>
-      </div>
-      <ul className="space-y-3">
-        {items.map((t) => (
-          <li key={t.id} className="flex items-start justify-between gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
-            <div className="min-w-0">
-              <Link to={`/thread/${t.id}`} className="font-semibold text-white hover:opacity-80">{t.title}</Link>
-              <div className="mt-2 text-xs text-slate-400">
-                {t.categories?.name && <span className="mr-2">in {t.categories.name}</span>}
-                {format(new Date(t.created_at), 'PPP')} · {t.replies?.[0]?.count ?? 0} replies
-              </div>
+    <ul className="space-y-3">
+      {items.map((t) => (
+        <li key={t.id} className="flex items-start justify-between gap-3 rounded-2xl border border-border bg-card p-4">
+          <div className="min-w-0">
+            <Link to={`/thread/${t.id}`} className="font-medium hover:text-primary">{t.title}</Link>
+            <div className="text-xs text-muted-foreground mt-1">
+              {t.categories?.name && <span className="mr-2">in {t.categories.name}</span>}
+              {format(new Date(t.created_at), 'PPP')} · {t.replies?.[0]?.count ?? 0} replies
             </div>
-            <Button size="icon" variant="ghost" onClick={() => del.mutate(t.id)} aria-label="Delete" className="rounded-2xl text-slate-300 hover:bg-white/10 hover:text-white">
-              <Trash2 className="size-4" />
-            </Button>
-          </li>
-        ))}
-      </ul>
-    </section>
+          </div>
+          <Button size="icon" variant="ghost" onClick={() => del.mutate(t.id)} aria-label="Delete">
+            <Trash2 className="size-4" />
+          </Button>
+        </li>
+      ))}
+    </ul>
   )
 }
 
+/* ----------------- Saved ----------------- */
 function SavedPosts() {
   const { user } = useAuth()
   const qc = useQueryClient()
@@ -564,40 +402,205 @@ function SavedPosts() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['bookmarks'] }),
   })
 
-  if (q.isLoading) return <PanelState label="Loading your saved posts…" />
+  if (q.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>
   const items = (q.data ?? []) as unknown as Array<{
     id: string
     thread_id: string
     threads?: { id: string; title: string; categories?: { name?: string | null } | null } | null
   }>
-  if (!items.length) return <PanelState label="No saved posts yet. Bookmark important threads and they will appear here." />
+  if (!items.length) return <p className="text-sm text-muted-foreground">No saved posts yet.</p>
 
   return (
-    <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
-      <div className="mb-4">
-        <h2 className="text-lg font-black text-white">Saved posts</h2>
-        <p className="text-sm text-slate-300/68">Your personal reading list in a cleaner mobile layout.</p>
-      </div>
-      <ul className="space-y-3">
-        {items.map((b) => (
-          <li key={b.id} className="flex items-center justify-between gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
-            <div className="min-w-0 flex-1">
-              <Link to={`/thread/${b.threads?.id ?? b.thread_id}`} className="block truncate font-semibold text-white hover:opacity-80">
-                {b.threads?.title ?? 'Thread'}
-              </Link>
-              {b.threads?.categories?.name ? <div className="mt-1 text-xs text-slate-400 truncate">in {b.threads.categories.name}</div> : null}
-            </div>
-            <Button size="sm" variant="ghost" className="shrink-0 rounded-2xl text-slate-300 hover:bg-white/10 hover:text-white" onClick={() => remove.mutate(b.id)}>Remove</Button>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <ul className="space-y-3">
+      {items.map((b) => (
+        <li key={b.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
+          <div className="min-w-0 flex-1">
+            <Link to={`/thread/${b.threads?.id ?? b.thread_id}`} className="block font-medium hover:text-primary truncate">
+              {b.threads?.title ?? 'Thread'}
+            </Link>
+            {b.threads?.categories?.name && (
+              <div className="text-xs text-muted-foreground truncate">in {b.threads.categories.name}</div>
+            )}
+          </div>
+          <Button size="sm" variant="ghost" className="shrink-0" onClick={() => remove.mutate(b.id)}>Remove</Button>
+        </li>
+      ))}
+    </ul>
   )
 }
 
+/* ----------------- Settings ----------------- */
+function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
+  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
+  const [form, setForm] = useState({
+    display_name: profile.display_name ?? '',
+    username: profile.username ?? '',
+    bio: profile.bio ?? '',
+    lga: profile.lga ?? '',
+  })
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [uploading, setUploading] = useState(false)
 
+  useEffect(() => {
+    setForm({
+      display_name: profile.display_name ?? '',
+      username: profile.username ?? '',
+      bio: profile.bio ?? '',
+      lga: profile.lga ?? '',
+    })
+  }, [profile.display_name, profile.username, profile.bio, profile.lga])
 
+  const save = async () => {
+    if (!user) return
+    const { error } = await saveProfile(user.id, form)
+    if (error) return toast.error(error.message)
+    toast.success('Profile updated')
+    onSaved()
+  }
 
+  const updatePassword = async () => {
+    if (password.length < 8) return toast.error('Password must be at least 8 characters')
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) return toast.error(error.message)
+    setPassword('')
+    toast.success('Password updated')
+  }
+
+  const uploadAvatar = async (file: File) => {
+    if (!user) return
+    setUploading(true)
+    const webp = await toWebP(file)
+    const ext = webp.name.split('.').pop() || 'webp'
+    const path = `${user.id}/${Date.now()}.${ext}`
+    const { uploadAndScan } = await import('@/lib/scanAttachment')
+    const res = await uploadAndScan('avatars', path, webp, {
+      contentType: webp.type,
+      upsert: true,
+    })
+    if (!res.uploaded) {
+      setUploading(false)
+      return toast.error(res.error || 'Avatar blocked by security scan')
+    }
+    const { error } = await supabase.from('profiles').update({ avatar_url: path }).eq('id', user.id)
+    setUploading(false)
+    if (error) return toast.error(error.message)
+    toast.success('Avatar updated')
+    onSaved()
+  }
+
+  const deleteAccount = async () => {
+    if (confirm !== 'DELETE' || !user) return
+    const { error } = await supabase.from('profiles').delete().eq('id', user.id)
+    if (error) return toast.error(error.message)
+    await signOut()
+    toast.success('Account deleted')
+    navigate('/')
+  }
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <h2 className="font-bold">Profile</h2>
+
+        <div className="flex items-center gap-4">
+          <UserAvatar avatarUrl={profile.avatar_url} displayName={form.display_name || user?.email || 'User'} size="lg" className="h-16 w-16" />
+          <label className="text-sm">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => e.target.files?.[0] && uploadAvatar(e.target.files[0])}
+            />
+            <span className="inline-block cursor-pointer rounded-lg border border-border bg-background px-3 py-1.5 hover:bg-muted">
+              {uploading ? 'Uploading…' : 'Change avatar'}
+            </span>
+          </label>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>Display Name</Label>
+            <Input value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Username</Label>
+            <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+          </div>
+          <div className="sm:col-span-2">
+            <BioField
+              value={form.bio}
+              onChange={(v: string) => setForm({ ...form, bio: v })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>LGA</Label>
+            <Input value={form.lga} onChange={(e) => setForm({ ...form, lga: e.target.value })} />
+          </div>
+        </div>
+        <Button onClick={save} disabled={!profile.id}>
+          Save Changes
+        </Button>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <h2 className="font-bold">Notifications</h2>
+        <NotificationSoundToggle />
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <h2 className="font-bold">App</h2>
+        <NativeAppDownload />
+        
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <h2 className="font-bold">Change Password</h2>
+        <Input
+          type="password"
+          placeholder="New password (min 8 chars)"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <Button variant="secondary" onClick={updatePassword}>Update Password</Button>
+      </section>
+
+      <section className="rounded-2xl border border-destructive/40 bg-destructive/5 p-5 space-y-3">
+        <h2 className="font-bold text-destructive">Danger Zone</h2>
+        <p className="text-sm text-muted-foreground">
+          Permanently delete your account and all associated data.
+        </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive">Delete Account</Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete account?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This cannot be undone. Type <strong>DELETE</strong> below to confirm.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="DELETE" />
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setConfirm('')}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={confirm !== 'DELETE'}
+                onClick={deleteAccount}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </section>
+    </div>
+  )
+}
+
+/* ----------------- Helpers ----------------- */
 function LinkCard({
   to,
   label,
@@ -607,29 +610,15 @@ function LinkCard({
   to: string
   label: string
   description: string
-  icon: ComponentType<{ className?: string }>
+  icon: React.ComponentType<{ className?: string }>
 }) {
   return (
-    <div className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-6 text-center backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[1.2rem] bg-white/8">
-        <Icon className="size-6 text-white" />
-      </div>
-      <h2 className="mt-4 text-lg font-black text-white">{label}</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-300/72">{description}</p>
-      <Button asChild className="mt-5 rounded-2xl text-slate-950" style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
+    <div className="rounded-2xl border border-border bg-card p-6 text-center space-y-3">
+      <Icon className="size-8 mx-auto text-primary" />
+      <p className="text-sm text-muted-foreground">{description}</p>
+      <Button asChild>
         <Link to={to}>{label}</Link>
       </Button>
     </div>
   )
 }
-
-function PanelState({ label }: { label: string }) {
-  return (
-    <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-6 text-center text-sm text-slate-300/72 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
-      {label}
-    </section>
-  )
-}
-
-
-
