@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
+
+const CHANGELOG_COLLAPSE_CHARS = 240
+const CHANGELOG_COLLAPSE_LINES = 6
 import { supabase } from '@/lib/supabase'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
