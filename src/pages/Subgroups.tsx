@@ -67,6 +67,24 @@ export default function Subgroups() {
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
+  const ACCORDION_KEY = 'abia:subgroups:expanded'
+  const [expanded, setExpanded] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const raw = window.localStorage.getItem(ACCORDION_KEY)
+      return raw ? (JSON.parse(raw) as string[]) : []
+    } catch {
+      return []
+    }
+  })
+  const persistExpanded = (next: string[]) => {
+    setExpanded(next)
+    try {
+      window.localStorage.setItem(ACCORDION_KEY, JSON.stringify(next))
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }
 
   const groupsQ = useQuery({
     queryKey: ['subgroups'],
