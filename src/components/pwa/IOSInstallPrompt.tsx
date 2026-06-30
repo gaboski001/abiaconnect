@@ -57,7 +57,7 @@ export function IOSInstallPrompt() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (Capacitor.isNativePlatform()) return
-    if (!isIOS()) return
+    if (!isIOSSafari()) return
     if (isStandalone()) return
 
     const existingDevice = localStorage.getItem(DEVICE_KEY)
