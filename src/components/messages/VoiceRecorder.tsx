@@ -125,32 +125,44 @@ export function VoiceRecorderButton({ disabled, onSend }: Props) {
     )
   }
 
+  const MIN_MS = 500
+  const tooShort = elapsed < MIN_MS
+
   return (
-    <div className="flex items-center gap-2 flex-1 rounded-md bg-muted/50 px-2 py-1.5">
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label={`Recording voice note, ${formatDuration(elapsed)}`}
+      className="flex items-center gap-2 flex-1 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 ring-1 ring-destructive/30"
+    >
       <Button
         type="button"
         variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-destructive"
+        size="sm"
+        className="h-8 px-2 gap-1 text-destructive hover:bg-destructive/15"
         onClick={cancel}
-        aria-label="Cancel recording"
+        disabled={busy}
+        aria-label="Cancel recording and discard"
       >
         <Trash2 className="h-4 w-4" />
+        <span className="text-xs font-medium">Cancel</span>
       </Button>
-      <div className="flex items-center gap-1 flex-1">
-        <span className="relative flex h-2.5 w-2.5">
+      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+        <span className="relative flex h-2.5 w-2.5 shrink-0">
           <span className="absolute inset-0 rounded-full bg-destructive animate-ping opacity-75" />
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive" />
         </span>
-        <span className="text-xs tabular-nums font-medium">{formatDuration(elapsed)}</span>
-        <div className="flex items-end gap-[2px] h-6 flex-1 px-2">
+        <span className="text-xs tabular-nums font-semibold text-destructive">
+          REC {formatDuration(elapsed)}
+        </span>
+        <div className="flex items-end gap-[2px] h-6 flex-1 px-2 min-w-0">
           {Array.from({ length: 24 }).map((_, i) => {
             const phase = (Date.now() / 120 + i) % 24
             const h = Math.max(3, Math.round((level * 18 + Math.sin(phase) * 4 + 4)))
             return (
               <span
                 key={i}
-                className="w-[2px] rounded bg-primary/70"
+                className="w-[2px] rounded bg-destructive/70"
                 style={{ height: `${h}px` }}
               />
             )
@@ -162,8 +174,9 @@ export function VoiceRecorderButton({ disabled, onSend }: Props) {
         size="icon"
         className="h-8 w-8"
         onClick={stopAndSend}
-        disabled={busy}
-        aria-label="Send voice note"
+        disabled={busy || tooShort}
+        aria-label={tooShort ? 'Keep recording, too short to send' : 'Send voice note'}
+        title={tooShort ? 'Hold longer to record' : 'Send voice note'}
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
       </Button>
