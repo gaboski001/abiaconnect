@@ -31,9 +31,25 @@ export class VoiceRecorder {
   private audioCtx: AudioContext | null = null
 
   async start(onLevel?: (level: number) => void) {
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    })
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      throw new MicError(
+        'unsupported',
+        'Voice recording is not supported in this browser. Try the latest Chrome, Safari, or Firefox.',
+      )
+    }
+    if (typeof window !== 'undefined' && window.isSecureContext === false) {
+      throw new MicError(
+        'insecure',
+        'Microphone access requires a secure (HTTPS) connection.',
+      )
+    }
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      })
+    } catch (err: any) {
+      throw toMicError(err)
+    }
     this.mimeType = pickMimeType()
     this.recorder = new MediaRecorder(
       this.stream,
