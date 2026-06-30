@@ -513,6 +513,7 @@ function Thread() {
       if (trimmed.length === 0 || trimmed.length > 5000) throw new Error('Reply must be 1–5000 characters')
       const mod = await moderateContent('reply', trimmed)
       if (!mod.allowed) {
+        showModerationBlocked({ surface: 'reply', ...mod })
         throw new Error(mod.reason || 'Reply blocked by AI moderation.')
       }
       const { data, error } = await supabase
