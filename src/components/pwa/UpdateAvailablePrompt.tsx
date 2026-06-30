@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
+
+const CHANGELOG_COLLAPSE_CHARS = 240
+const CHANGELOG_COLLAPSE_LINES = 6
 import { supabase } from '@/lib/supabase'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -44,6 +47,17 @@ async function getCurrentNativeVersion(): Promise<string | null> {
 export function UpdateAvailablePrompt() {
   const [release, setRelease] = useState<Release | null>(null)
   const [open, setOpen] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  const { isLong, preview } = useMemo(() => {
+    const text = release?.changelog ?? ''
+    const lines = text.split('\n')
+    const long = text.length > CHANGELOG_COLLAPSE_CHARS || lines.length > CHANGELOG_COLLAPSE_LINES
+    const previewText = long
+      ? lines.slice(0, CHANGELOG_COLLAPSE_LINES).join('\n').slice(0, CHANGELOG_COLLAPSE_CHARS).trimEnd() + '…'
+      : text
+    return { isLong: long, preview: previewText }
+  }, [release?.changelog])
 
   useEffect(() => {
     let cancelled = false
@@ -152,9 +166,25 @@ export function UpdateAvailablePrompt() {
             What's new in v{release.version}
           </p>
           {release.changelog ? (
-            <pre className="text-xs whitespace-pre-wrap text-foreground bg-muted/40 rounded p-3 max-h-48 overflow-auto border">
-              {release.changelog}
-            </pre>
+            <>
+              <pre
+                className={`text-xs whitespace-pre-wrap text-foreground bg-muted/40 rounded p-3 border ${
+                  expanded ? 'max-h-72 overflow-auto' : 'overflow-hidden'
+                }`}
+              >
+                {expanded || !isLong ? release.changelog : preview}
+              </pre>
+              {isLong && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded((v) => !v)}
+                  className="text-xs font-medium text-primary hover:underline"
+                  aria-expanded={expanded}
+                >
+                  {expanded ? 'Show less' : 'Show more'}
+                </button>
+              )}
+            </>
           ) : (
             <p className="text-xs italic text-muted-foreground bg-muted/40 rounded p-3 border">
               No release notes were provided for this update.
