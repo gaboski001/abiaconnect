@@ -39,6 +39,7 @@ import {
 } from '@/lib/chatAttachments'
 import { cn } from '@/lib/utils'
 import { VoiceBubble } from '@/components/messages/VoiceBubble'
+import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { VoiceRecorderButton } from '@/components/messages/VoiceRecorder'
 
 import { uploadQueue } from '@/lib/uploadQueue'
