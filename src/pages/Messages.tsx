@@ -76,6 +76,7 @@ interface Message {
   is_read?: boolean
   read_at?: string | null
   attachment_url?: string | null
+  attachment_path?: string | null
   attachment_type?: string | null
   attachment_name?: string | null
   attachment_size?: number | null
