@@ -511,6 +511,10 @@ function Thread() {
       if (!user || !threadId) throw new Error('Sign in to reply')
       const trimmed = content.trim()
       if (trimmed.length === 0 || trimmed.length > 5000) throw new Error('Reply must be 1–5000 characters')
+      const mod = await moderateContent('reply', trimmed)
+      if (!mod.allowed) {
+        throw new Error(mod.reason || 'Reply blocked by AI moderation.')
+      }
       const { data, error } = await supabase
         .from('replies')
         .insert({ thread_id: threadId, user_id: user.id, content: trimmed, parent_reply_id: parentId ?? null })
