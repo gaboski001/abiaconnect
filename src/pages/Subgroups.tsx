@@ -67,6 +67,24 @@ export default function Subgroups() {
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
+  const ACCORDION_KEY = 'abia:subgroups:expanded'
+  const [expanded, setExpanded] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const raw = window.localStorage.getItem(ACCORDION_KEY)
+      return raw ? (JSON.parse(raw) as string[]) : []
+    } catch {
+      return []
+    }
+  })
+  const persistExpanded = (next: string[]) => {
+    setExpanded(next)
+    try {
+      window.localStorage.setItem(ACCORDION_KEY, JSON.stringify(next))
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }
 
   const groupsQ = useQuery({
     queryKey: ['subgroups'],
@@ -221,13 +239,17 @@ export default function Subgroups() {
             groups.get(key)!.push(s)
           }
           const entries = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]))
-          // When user is searching, auto-expand all to show matches
-          const defaultOpen = search.trim() ? entries.map(([k]) => k) : []
+          const searching = !!search.trim()
+          // When searching, force-open all categories so matches are visible;
+          // otherwise honor the user's persisted choice.
+          const value = searching ? entries.map(([k]) => k) : expanded
           return (
             <Accordion
               type="multiple"
-              defaultValue={defaultOpen}
-              key={search.trim() ? 'open' : 'closed'}
+              value={value}
+              onValueChange={(v) => {
+                if (!searching) persistExpanded(v)
+              }}
               className="space-y-3"
             >
               {entries.map(([category, items]) => (
