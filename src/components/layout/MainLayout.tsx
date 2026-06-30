@@ -62,7 +62,7 @@ export function MainLayout() {
       </main>
 
       {!isAuthPage && <Footer />}
-      {!isAuthPage && <MobileBottomNav />}
+      
       {!isAuthPage && <InstallAppPrompt />}
       {!isAuthPage && <IOSInstallPrompt />}
       {!isAuthPage && <UpdateAvailablePrompt />}
