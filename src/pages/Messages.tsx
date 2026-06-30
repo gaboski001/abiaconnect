@@ -499,6 +499,16 @@ function ConversationView({
       }
       qc.setQueryData<Message[]>(queryKey, (prev) => [...(prev ?? []), optimistic])
       ;(async () => {
+        // AI moderation — block abusive chat content before persisting.
+        const mod = await moderateContent('message', text)
+        if (!mod.allowed) {
+          qc.setQueryData<Message[]>(queryKey, (prev) =>
+            (prev ?? []).filter((m) => m.id !== optimistic.id),
+          )
+          toast.error(mod.reason || 'Message blocked by AI moderation.')
+          setDraft((d) => d || text)
+          return
+        }
         const { error } = await supabase.from('messages').insert({
           conversation_id: conversationId,
           sender_id: user.id,
