@@ -166,9 +166,25 @@ export function UpdateAvailablePrompt() {
             What's new in v{release.version}
           </p>
           {release.changelog ? (
-            <pre className="text-xs whitespace-pre-wrap text-foreground bg-muted/40 rounded p-3 max-h-48 overflow-auto border">
-              {release.changelog}
-            </pre>
+            <>
+              <pre
+                className={`text-xs whitespace-pre-wrap text-foreground bg-muted/40 rounded p-3 border ${
+                  expanded ? 'max-h-72 overflow-auto' : 'overflow-hidden'
+                }`}
+              >
+                {expanded || !isLong ? release.changelog : preview}
+              </pre>
+              {isLong && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded((v) => !v)}
+                  className="text-xs font-medium text-primary hover:underline"
+                  aria-expanded={expanded}
+                >
+                  {expanded ? 'Show less' : 'Show more'}
+                </button>
+              )}
+            </>
           ) : (
             <p className="text-xs italic text-muted-foreground bg-muted/40 rounded p-3 border">
               No release notes were provided for this update.
