@@ -6,6 +6,7 @@ import { Footer } from './Footer'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
 import { MobileTopBar } from '@/components/mobile/MobileTopBar'
 import { InstallAppPrompt } from '@/components/pwa/InstallAppPrompt'
+import { IOSInstallPrompt } from '@/components/pwa/IOSInstallPrompt'
 import { UpdateAvailablePrompt } from '@/components/pwa/UpdateAvailablePrompt'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 
@@ -63,6 +64,7 @@ export function MainLayout() {
       {!isAuthPage && <Footer />}
       {!isAuthPage && <MobileBottomNav />}
       {!isAuthPage && <InstallAppPrompt />}
+      {!isAuthPage && <IOSInstallPrompt />}
       {!isAuthPage && <UpdateAvailablePrompt />}
     </div>
   )
