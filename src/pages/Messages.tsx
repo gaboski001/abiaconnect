@@ -813,6 +813,19 @@ function ConversationView({
           >
             <Paperclip className="h-5 w-5" />
           </Button>
+          {user && (
+            <VoiceRecorderButton
+              disabled={!conversationId}
+              onSend={(file) => {
+                uploadQueue.enqueue({
+                  conversationId,
+                  senderId: user.id,
+                  content: '',
+                  file,
+                })
+              }}
+            />
+          )}
           <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
             <PopoverTrigger asChild>
               <Button type="button" variant="ghost" size="icon" aria-label="Add emoji">
