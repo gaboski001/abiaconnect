@@ -34,8 +34,17 @@ function fmt(ts: string) {
 }
 
 export default function ModerationLog() {
+  const { isAdmin, loading: authLoading } = useAuth()
   const [filter, setFilter] = useState<Filter>('blocked')
   const qc = useQueryClient()
+
+  if (authLoading) {
+    return <div className="container mx-auto max-w-5xl py-12 flex justify-center"><Loader2 className="animate-spin" /></div>
+  }
+  if (!isAdmin) {
+    return <Navigate to="/" replace />
+  }
+
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['moderation-log', filter],
