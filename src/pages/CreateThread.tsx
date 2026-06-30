@@ -197,6 +197,23 @@ export default function CreateThread() {
       toast.error('Your post was flagged for review and not published. Please revise and try again.')
       return
     }
+
+    // AI moderation — blocks abusive content before publishing.
+    const moderating = toast.loading('Checking your post…')
+    try {
+      const { data: mod, error: modErr } = await supabase.functions.invoke('moderate-thread', {
+        body: { title: values.title, content: values.content },
+      })
+      toast.dismiss(moderating)
+      if (!modErr && mod && mod.allowed === false) {
+        toast.error(mod.reason || 'Your post was flagged by our AI moderator. Please revise and try again.')
+        return
+      }
+    } catch {
+      toast.dismiss(moderating)
+      // fail-open on network error — don't block legitimate users
+    }
+
     const finalTags = values.flair && !tags.includes(values.flair) ? [values.flair, ...tags] : tags
     const { data, error } = await supabase
       .from('threads')
