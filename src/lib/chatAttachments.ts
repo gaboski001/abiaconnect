@@ -3,7 +3,10 @@
 // - Final payload must be <= 2MB after compression.
 
 export const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024 // 2 MB
-export const ATTACHMENT_TTL_HOURS = 48
+// Short signed-URL window. The renderer re-mints fresh URLs on demand from
+// the stored `attachment_path`, so we don't persist long-lived tokens that
+// could leak the backend host or be shared outside the app.
+export const ATTACHMENT_TTL_HOURS = 1
 
 const MAX_IMAGE_DIM = 1600
 
