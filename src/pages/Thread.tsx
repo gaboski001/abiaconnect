@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
+import { moderateContent } from '@/lib/moderateContent'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
