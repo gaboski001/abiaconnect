@@ -38,16 +38,9 @@ export default function ModerationLog() {
   const [filter, setFilter] = useState<Filter>('blocked')
   const qc = useQueryClient()
 
-  if (authLoading) {
-    return <div className="container mx-auto max-w-5xl py-12 flex justify-center"><Loader2 className="animate-spin" /></div>
-  }
-  if (!isAdmin) {
-    return <Navigate to="/" replace />
-  }
-
-
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['moderation-log', filter],
+    enabled: isAdmin,
     queryFn: async () => {
       let q = supabase
         .from('moderation_log')
@@ -65,7 +58,7 @@ export default function ModerationLog() {
   const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean))) as string[]
   const { data: profiles = [] } = useQuery({
     queryKey: ['moderation-log-profiles', userIds.sort().join(',')],
-    enabled: userIds.length > 0,
+    enabled: isAdmin && userIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_public_profiles', { _ids: userIds })
       if (error) throw error
