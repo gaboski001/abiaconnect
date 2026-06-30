@@ -44,6 +44,7 @@ import { VoiceRecorderButton } from '@/components/messages/VoiceRecorder'
 import { uploadQueue } from '@/lib/uploadQueue'
 import { useUploadQueue } from '@/hooks/useUploadQueue'
 import { moderateContent } from '@/lib/moderateContent'
+import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'))
 
