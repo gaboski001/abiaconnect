@@ -1,7 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Users, Plus, Search, MessageSquare, Lock } from 'lucide-react'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { SEO } from '@/components/SEO'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -156,6 +162,21 @@ export default function Subgroups() {
     return list.filter((s) => s.name.toLowerCase().includes(q))
   }, [groupsQ.data, search])
 
+  const grouped = useMemo(() => {
+    const map = new Map<string, Subgroup[]>()
+    filtered.forEach((s) => {
+      const key = s.category?.trim() || 'Uncategorized'
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(s)
+    })
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+  }, [filtered])
+
+  const [openCategories, setOpenCategories] = useState<string[]>([])
+  useEffect(() => {
+    setOpenCategories(grouped.map(([cat]) => cat))
+  }, [grouped])
+
   return (
     <div className="container mx-auto px-4 py-8">
       <SEO title="Community Subgroups" description="Discover and join subgroups of like-minded Abians on AbiaConnect." path="/subgroups" />
@@ -207,93 +228,112 @@ export default function Subgroups() {
           No subgroups found.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((s) => {
-            const joined = myMembershipsQ.data?.has(s.id) ?? false
-            return (
-              <div
-                key={s.id}
-                className="rounded-2xl border bg-card overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
-              >
-                <Link to={`/subgroups/${s.id}`} className="block">
-                  <div
-                    className={`h-28 bg-gradient-to-br ${gradientFor(s.name)} relative`}
-                    style={
-                      s.cover_image_url
-                        ? {
-                            backgroundImage: `url(${s.cover_image_url})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                          }
-                        : undefined
-                    }
-                  >
-                    {s.is_private && (
-                      <Badge className="absolute top-2 right-2 bg-black/60 border-secondary/40 text-secondary">
-                        <Lock className="h-3 w-3 mr-1" /> Private
-                      </Badge>
-                    )}
-                  </div>
-                </Link>
-                <div className="p-4 flex-1 flex flex-col">
-                  <div className="flex items-start justify-between gap-2">
-                    <Link to={`/subgroups/${s.id}`}>
-                      <h3 className="font-bold text-lg hover:text-secondary transition-colors">
-                        {s.name}
-                      </h3>
-                    </Link>
-                    {s.category && (
-                      <Badge variant="outline" className="shrink-0">
-                        {s.category}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                    {s.description || 'No description provided.'}
-                  </p>
-                  <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5" /> {s.member_count} members
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MessageSquare className="h-3.5 w-3.5" /> {s.thread_count} threads
-                    </span>
-                  </div>
-                  <div className="mt-4">
-                    {!user ? (
-                      <Button asChild variant="outline" size="sm" className="w-full">
-                        <Link to="/login">Sign in to join</Link>
-                      </Button>
-                    ) : joined ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        disabled={leaveMut.isPending}
-                        onClick={() => leaveMut.mutate(s.id)}
-                      >
-                        Leave
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        className="w-full"
-                        disabled={joinMut.isPending}
-                        onClick={() => joinMut.mutate(s.id)}
-                      >
-                        Join
-                      </Button>
-                    )}
-                  </div>
+        <Accordion
+          type="multiple"
+          value={openCategories}
+          onValueChange={setOpenCategories}
+          className="space-y-3"
+        >
+          {grouped.map(([category, items]) => (
+            <AccordionItem
+              key={category}
+              value={category}
+              className="border rounded-2xl bg-card overflow-hidden"
+            >
+              <AccordionTrigger className="px-4 hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-base">{category}</span>
+                  <Badge variant="secondary" className="rounded-full">
+                    {items.length}
+                  </Badge>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {items.map((s) => {
+                    const joined = myMembershipsQ.data?.has(s.id) ?? false
+                    return (
+                      <div
+                        key={s.id}
+                        className="rounded-2xl border bg-background overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
+                      >
+                        <Link to={`/subgroups/${s.id}`} className="block">
+                          <div
+                            className={`h-28 bg-gradient-to-br ${gradientFor(s.name)} relative`}
+                            style={
+                              s.cover_image_url
+                                ? {
+                                    backgroundImage: `url(${s.cover_image_url})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                  }
+                                : undefined
+                            }
+                          >
+                            {s.is_private && (
+                              <Badge className="absolute top-2 right-2 bg-black/60 border-secondary/40 text-secondary">
+                                <Lock className="h-3 w-3 mr-1" /> Private
+                              </Badge>
+                            )}
+                          </div>
+                        </Link>
+                        <div className="p-4 flex-1 flex flex-col">
+                          <Link to={`/subgroups/${s.id}`}>
+                            <h3 className="font-bold text-lg hover:text-secondary transition-colors">
+                              {s.name}
+                            </h3>
+                          </Link>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                            {s.description || 'No description provided.'}
+                          </p>
+                          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Users className="h-3.5 w-3.5" /> {s.member_count} members
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MessageSquare className="h-3.5 w-3.5" /> {s.thread_count} threads
+                            </span>
+                          </div>
+                          <div className="mt-4">
+                            {!user ? (
+                              <Button asChild variant="outline" size="sm" className="w-full">
+                                <Link to="/login">Sign in to join</Link>
+                              </Button>
+                            ) : joined ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                disabled={leaveMut.isPending}
+                                onClick={() => leaveMut.mutate(s.id)}
+                              >
+                                Leave
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                className="w-full"
+                                disabled={joinMut.isPending}
+                                onClick={() => joinMut.mutate(s.id)}
+                              >
+                                Join
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       )}
     </div>
   )
 }
+
 
 function CreateSubgroupDialog({
   onClose,
