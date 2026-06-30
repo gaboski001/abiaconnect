@@ -141,8 +141,11 @@ export function IOSInstallPrompt() {
           Make sure you're using <strong>Safari</strong>. Other iOS browsers can't install web apps.
         </p>
 
-        <Button onClick={dismiss} variant="outline" className="w-full">
-          Got it
+        <Button onClick={accept} className="w-full">
+          I've added it
+        </Button>
+        <Button onClick={dismiss} variant="ghost" className="w-full">
+          Maybe later
         </Button>
 
         <button
