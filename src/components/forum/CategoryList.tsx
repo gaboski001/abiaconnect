@@ -98,9 +98,11 @@ export function CategoryList() {
 
 function CategoryCard({ category }: { category: Category }) {
   const color = category.color ?? '#013220'
+  const isRelationship = (category.name ?? '').toLowerCase() === 'relationship'
+  const href = isRelationship ? '/relationship' : `/category/${category.id}`
   return (
     <Link
-      to={`/category/${category.id}`}
+      to={href}
       className="group relative bg-card border border-border rounded-2xl p-5 cursor-pointer transition-all duration-300 hover:border-secondary/60 hover:shadow-lg hover:shadow-secondary/10 hover:-translate-y-1 flex flex-col h-full"
     >
       <div className="flex items-start justify-between">

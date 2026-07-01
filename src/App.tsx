@@ -47,6 +47,9 @@ const CookiePolicy = lazy(() => import('@/pages/static/CookiePolicy'))
 const CommunityStandards = lazy(() => import('@/pages/static/CommunityStandards'))
 const Unsubscribe = lazy(() => import('@/pages/Unsubscribe'))
 const Version = lazy(() => import('@/pages/Version'))
+const Relationship = lazy(() => import('@/pages/Relationship'))
+const RelationshipEdit = lazy(() => import('@/pages/RelationshipEdit'))
+const RelationshipProfilePage = lazy(() => import('@/pages/RelationshipProfile'))
 
 
 const RouteFallback = () => (
@@ -115,6 +118,9 @@ export default function App() {
                   <Route path="create-thread" element={<CreateThread />} />
                   <Route path="messages" element={<Messages />} />
                   <Route path="messages/:conversationId" element={<Messages />} />
+                  <Route path="relationship" element={<Relationship />} />
+                  <Route path="relationship/edit" element={<RelationshipEdit />} />
+                  <Route path="relationship/:userId" element={<RelationshipProfilePage />} />
 
                   <Route element={<AdminRoute />}>
                     <Route path="admin/dashboard" element={<AdminDashboard />} />
