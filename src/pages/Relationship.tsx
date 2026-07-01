@@ -344,6 +344,38 @@ export default function Relationship() {
         </div>
       )}
 
+      {user && hasActiveFilters && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Active:
+          </span>
+          {filters.lookingFor !== 'all' && (
+            <button
+              onClick={() => setFilters((f) => ({ ...f, lookingFor: 'all' }))}
+              className="inline-flex items-center gap-1.5 rounded-full bg-pink-600/10 text-pink-700 dark:text-pink-300 border border-pink-500/30 px-3 py-1 text-xs font-semibold hover:bg-pink-600/20 transition"
+            >
+              {LOOKING_FOR_LABELS[filters.lookingFor as LookingFor]}
+              <X className="size-3" />
+            </button>
+          )}
+          {filters.lga !== 'all' && (
+            <button
+              onClick={() => setFilters((f) => ({ ...f, lga: 'all' }))}
+              className="inline-flex items-center gap-1.5 rounded-full bg-pink-600/10 text-pink-700 dark:text-pink-300 border border-pink-500/30 px-3 py-1 text-xs font-semibold hover:bg-pink-600/20 transition"
+            >
+              <MapPin className="size-3" /> {filters.lga}
+              <X className="size-3" />
+            </button>
+          )}
+          <button
+            onClick={clearFilters}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground underline underline-offset-2"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
       {user && !error && cards.length > 0 && (
         <>
           {mode === 'grid' ? <GridView cards={cards} /> : <DiscoverView cards={cards} />}
