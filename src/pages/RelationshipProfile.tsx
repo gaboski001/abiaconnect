@@ -106,7 +106,9 @@ export default function RelationshipProfilePage() {
   const age = calcAge(card.dob)
   const [coverBroken, setCoverBroken] = useState(false)
   const rawCover = card.photos?.[0] ?? null
-  const cover = !coverBroken && isValidHttpUrl(rawCover) ? rawCover : null
+  const signedAvatar = useSignedUrl(card.avatar_url, 'avatars')
+  const avatarFallback = signedAvatar || (isValidHttpUrl(card.avatar_url) ? card.avatar_url : null)
+  const cover = !coverBroken ? (isValidHttpUrl(rawCover) ? rawCover : avatarFallback) : null
   const gallery = (card.photos ?? []).slice(1).filter(isValidHttpUrl)
 
   return (
