@@ -107,17 +107,20 @@ export default function RelationshipEdit() {
 
   const setProfilePhoto = () => {
     const url = photoInput.trim()
-    if (!url) return
+    if (!url) {
+      setForm((f) => ({ ...f, photos: [] }))
+      return
+    }
     try {
       const u = new URL(url)
       if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error()
     } catch {
       return toast.error('Enter a valid http(s) image URL')
     }
-    if (form.photos.length >= 6) return toast.error('Max 6 photos')
-    setForm((f) => ({ ...f, photos: [...f.photos, url] }))
+    setForm((f) => ({ ...f, photos: [url] }))
     setPhotoInput('')
   }
+
 
   const save = async () => {
     if (!user) return
