@@ -56,4 +56,38 @@ describe('CategoryList', () => {
     const generalCard = screen.getByText('General Discussion').closest('a')
     expect(generalCard).toHaveAttribute('href', '/category/gen-id')
   })
+
+  it('keeps Active and Viewing pills readable and non-overlapping on small screens', async () => {
+    renderList('/relationship')
+
+    await waitFor(() => {
+      expect(screen.getByText('Relationship')).toBeInTheDocument()
+    })
+
+    const relCard = screen.getByText('Relationship').closest('a')!
+    expect(relCard).toHaveAttribute('aria-current', 'page')
+
+    // Active pill and Popular badge share a wrapping flex container so they
+    // stack instead of overlapping on narrow widths.
+    const activePill = within(relCard).getByText('Active')
+    const popularPill = within(relCard).getByText(/Popular/)
+    const pillsRow = activePill.parentElement!
+    expect(pillsRow).toBe(popularPill.parentElement)
+    expect(pillsRow.className).toMatch(/flex-wrap/)
+    expect(pillsRow.className).toMatch(/gap-/)
+
+    // Viewing pill stays on its own line-end with shrink-0, and its parent
+    // uses justify-between + gap so it can't overlap the thread count.
+    const viewingPill = within(relCard).getByText('Viewing')
+    expect(viewingPill.className).toMatch(/shrink-0/)
+    expect(viewingPill.className).toMatch(/rounded-full/)
+    const footer = viewingPill.parentElement!
+    expect(footer.className).toMatch(/justify-between/)
+    expect(footer.className).toMatch(/gap-/)
+    const threadCount = within(footer).getByText(/threads/)
+    expect(threadCount.className).toMatch(/truncate/)
+
+    // Long description is hidden on mobile to preserve vertical space.
+    // (Relationship has no description here; verify the class contract on cards that do.)
+  })
 })
