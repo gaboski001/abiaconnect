@@ -33,8 +33,29 @@ export interface SettingsProfile {
   username?: string | null
   bio?: string | null
   lga?: string | null
+  current_location?: string | null
+  occupation?: string | null
+  sex?: string | null
+  marital_status?: string | null
   avatar_url?: string | null
   reputation?: number | null
+}
+
+const SEX_LABELS: Record<string, string> = {
+  male: 'Male',
+  female: 'Female',
+  other: 'Other',
+  prefer_not_to_say: 'Prefer not to say',
+}
+const MARITAL_LABELS: Record<string, string> = {
+  single: 'Single',
+  married: 'Married',
+  in_relationship: 'In a relationship',
+  engaged: 'Engaged',
+  divorced: 'Divorced',
+  widowed: 'Widowed',
+  separated: 'Separated',
+  prefer_not_to_say: 'Prefer not to say',
 }
 
 export default function SettingsPanel({
@@ -51,6 +72,10 @@ export default function SettingsPanel({
     username: profile.username ?? '',
     bio: profile.bio ?? '',
     lga: profile.lga ?? '',
+    current_location: profile.current_location ?? '',
+    occupation: profile.occupation ?? '',
+    sex: profile.sex ?? '',
+    marital_status: profile.marital_status ?? '',
   })
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -62,8 +87,21 @@ export default function SettingsPanel({
       username: profile.username ?? '',
       bio: profile.bio ?? '',
       lga: profile.lga ?? '',
+      current_location: profile.current_location ?? '',
+      occupation: profile.occupation ?? '',
+      sex: profile.sex ?? '',
+      marital_status: profile.marital_status ?? '',
     })
-  }, [profile.display_name, profile.username, profile.bio, profile.lga])
+  }, [
+    profile.display_name,
+    profile.username,
+    profile.bio,
+    profile.lga,
+    profile.current_location,
+    profile.occupation,
+    profile.sex,
+    profile.marital_status,
+  ])
 
   const save = async () => {
     if (!user) return
