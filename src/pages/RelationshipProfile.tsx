@@ -242,22 +242,18 @@ function CoverImage({ rawCover, avatarUrl, name }: { rawCover: string | null; av
   const avatarFallback = signedAvatar || (isValidHttpUrl(avatarUrl) ? (avatarUrl as string) : null)
   const src = !broken ? (isValidHttpUrl(rawCover) ? rawCover : avatarFallback) : null
 
-  // Reset when candidate src changes (photos updated in realtime)
   useEffect(() => {
     setBroken(false)
     setLoaded(false)
   }, [src])
 
-  // Show a shimmering skeleton while we resolve/load the image
+  // Only show shimmer while we actually have a candidate URL loading.
   const showSkeleton = !!src && !loaded
 
   return (
     <>
       {showSkeleton && (
         <div className="absolute inset-0 bg-gradient-to-r from-muted via-muted/60 to-muted animate-pulse" />
-      )}
-      {!src && !avatarUrl && (
-        <div className="absolute inset-0 bg-gradient-to-r from-muted/40 via-muted/20 to-muted/40 animate-pulse" />
       )}
       {src && (
         <img
