@@ -431,8 +431,10 @@ function CardTile({ card }: { card: RelationshipCard }) {
   const age = calcAge(card.dob)
   const name = card.display_name || card.username || 'Member'
   const [broken, setBroken] = useState(false)
-  const raw = card.photos?.[0] ?? null
-  const cover = !broken && isValidHttpUrl(raw) ? raw : null
+  const rawPhoto = card.photos?.[0] ?? null
+  const signedAvatar = useSignedUrl(card.avatar_url, 'avatars')
+  const fallback = signedAvatar || (isValidHttpUrl(card.avatar_url) ? card.avatar_url : null)
+  const cover = !broken ? (isValidHttpUrl(rawPhoto) ? rawPhoto : fallback) : null
   return (
     <Link
       to={`/relationship/${card.user_id}`}
