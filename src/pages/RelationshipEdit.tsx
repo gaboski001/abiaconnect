@@ -112,10 +112,7 @@ export default function RelationshipEdit() {
       setForm((f) => ({ ...f, photos: [] }))
       return
     }
-    try {
-      const u = new URL(url)
-      if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error()
-    } catch {
+    if (!isValidHttpUrl(url)) {
       return toast.error('Enter a valid http(s) image URL')
     }
     setForm((f) => ({ ...f, photos: [url] }))
