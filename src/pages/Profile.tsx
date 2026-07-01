@@ -39,6 +39,10 @@ interface Profile {
   username?: string | null
   bio?: string | null
   lga?: string | null
+  current_location?: string | null
+  occupation?: string | null
+  sex?: string | null
+  marital_status?: string | null
   avatar_url?: string | null
   reputation?: number | null
   created_at?: string | null
