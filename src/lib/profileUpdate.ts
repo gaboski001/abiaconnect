@@ -31,7 +31,16 @@ export const profileEditSchema = z.object({
 
 export type ProfileEditInput = z.infer<typeof profileEditSchema>
 
-const editableProfileFields = ['display_name', 'username', 'bio', 'lga'] as const
+const editableProfileFields = [
+  'display_name',
+  'username',
+  'bio',
+  'lga',
+  'current_location',
+  'occupation',
+  'sex',
+  'marital_status',
+] as const
 
 type EditableProfileField = (typeof editableProfileFields)[number]
 type ProfileUpdatePayload = Partial<Record<EditableProfileField, string | null>>
