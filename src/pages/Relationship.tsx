@@ -502,11 +502,12 @@ function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
   const name = current.display_name || current.username || 'Member'
   const [broken, setBroken] = useState(false)
   useEffect(() => { setBroken(false) }, [current?.id])
-  const cover = !broken ? current.photos?.[0] ?? null : null
+  const raw = current.photos?.[0] ?? null
+  const cover = !broken && isValidHttpUrl(raw) ? raw : null
 
   return (
     <div className="mx-auto max-w-md">
-      <div className="relative aspect-[3/4] rounded-3xl overflow-hidden bg-muted border border-border shadow-2xl">
+      <div className="relative aspect-[3/4] rounded-3xl overflow-hidden bg-gradient-to-br from-pink-500/20 to-rose-600/20 border border-border shadow-2xl">
         <AnimatePresence mode="wait">
           <motion.div
             key={current.id}
@@ -516,12 +517,8 @@ function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
             transition={{ duration: 0.25 }}
             className="absolute inset-0"
           >
-            {cover ? (
+            {cover && (
               <img src={cover} alt={name} onError={() => setBroken(true)} className="absolute inset-0 h-full w-full object-cover" />
-            ) : (
-              <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-pink-500/20 to-rose-600/20">
-                <Heart className="size-16 text-pink-500/60" />
-              </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
             <Link
