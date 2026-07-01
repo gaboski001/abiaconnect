@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, MessageCircle, Sparkles, X, LayoutGrid, Layers, MapPin, Pencil } from 'lucide-react'
+import { Heart, MessageCircle, Sparkles, X, LayoutGrid, Layers, MapPin, Pencil, Filter, RefreshCw, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from '@/lib/toast'
@@ -12,10 +12,19 @@ import { UserAvatar } from '@/components/ui/UserAvatar'
 import {
   calcAge,
   LOOKING_FOR_LABELS,
+  LookingFor,
   RelationshipCard,
   RelationshipProfile,
   startConversationWith,
 } from '@/lib/relationship'
+
+const PAGE_SIZE = 24
+
+interface FeedFilters {
+  lookingFor: LookingFor | 'all'
+  lga: string | 'all'
+}
+
 
 /**
  * Rank a candidate card for Tinder/Badoo-style ordering.
@@ -64,21 +73,34 @@ function scoreCard(c: RelationshipCard, me?: RelationshipProfile | null): number
   return recency + freshBoost + photoScore + completeness + mutual + jitter
 }
 
-async function fetchFeed(
+interface FeedPage {
+  cards: RelationshipCard[]
+  nextPage: number | null
+}
+
+async function fetchFeedPage(
+  page: number,
+  filters: FeedFilters,
   myId?: string,
   me?: RelationshipProfile | null,
-): Promise<RelationshipCard[]> {
-  const { data, error } = await supabase
+): Promise<FeedPage> {
+  const from = page * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+  let q = supabase
     .from('relationship_profiles' as never)
     .select('*')
     .eq('is_active', true)
     .order('updated_at', { ascending: false })
-    .limit(120)
+    .range(from, to)
+  if (filters.lookingFor !== 'all') q = q.eq('looking_for', filters.lookingFor)
+  if (filters.lga !== 'all') q = q.eq('lga', filters.lga)
+  const { data, error } = await q
   if (error) throw error
   const rows = ((data ?? []) as unknown as RelationshipProfile[]).filter(
     (r) => r.user_id !== myId,
   )
-  if (rows.length === 0) return []
+  const nextPage = (data?.length ?? 0) < PAGE_SIZE ? null : page + 1
+  if (rows.length === 0) return { cards: [], nextPage }
   const ids = rows.map((r) => r.user_id)
   const { data: profiles } = await supabase.rpc('get_public_profiles', { _ids: ids })
   const map = new Map<string, { display_name: string | null; username: string | null; avatar_url: string | null }>()
@@ -91,8 +113,26 @@ async function fetchFeed(
     username: map.get(r.user_id)?.username ?? null,
     avatar_url: map.get(r.user_id)?.avatar_url ?? null,
   }))
-  return cards.sort((a, b) => scoreCard(b, me) - scoreCard(a, me)).slice(0, 60)
+  cards.sort((a, b) => scoreCard(b, me) - scoreCard(a, me))
+  return { cards, nextPage }
 }
+
+async function fetchLgaOptions(): Promise<string[]> {
+  const { data } = await supabase
+    .from('relationship_profiles' as never)
+    .select('lga')
+    .eq('is_active', true)
+    .not('lga', 'is', null)
+    .limit(500)
+  const set = new Set<string>()
+  ;((data ?? []) as any[]).forEach((r) => {
+    const v = (r.lga ?? '').toString().trim()
+    if (v) set.add(v)
+  })
+  return Array.from(set).sort((a, b) => a.localeCompare(b))
+}
+
+
 
 export default function Relationship() {
   const { user } = useAuth()
@@ -111,11 +151,54 @@ export default function Relationship() {
     },
   })
 
-  const { data: cards = [], isLoading } = useQuery({
-    queryKey: ['relationship-feed', user?.id, myProfile?.id ?? null],
-    queryFn: () => fetchFeed(user?.id, myProfile),
+  const [filters, setFilters] = useState<FeedFilters>({ lookingFor: 'all', lga: 'all' })
+
+  const { data: lgaOptions = [] } = useQuery({
+    queryKey: ['relationship-lga-options'],
+    queryFn: fetchLgaOptions,
+    enabled: !!user,
+    staleTime: 5 * 60_000,
   })
 
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    error,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ['relationship-feed', user?.id, myProfile?.id ?? null, filters.lookingFor, filters.lga],
+    enabled: !!user,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => fetchFeedPage(pageParam as number, filters, user?.id, myProfile),
+    getNextPageParam: (last) => last.nextPage,
+  })
+
+  const cards = useMemo(
+    () => (data?.pages ?? []).flatMap((p) => p.cards),
+    [data],
+  )
+
+  // Infinite scroll sentinel
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !hasNextPage) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isFetchingNextPage) fetchNextPage()
+      },
+      { rootMargin: '400px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
+  const clearFilters = () => setFilters({ lookingFor: 'all', lga: 'all' })
+  const hasActiveFilters = filters.lookingFor !== 'all' || filters.lga !== 'all'
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -125,7 +208,7 @@ export default function Relationship() {
         path="/relationship"
       />
 
-      <header className="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <header className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 grid place-items-center shadow-lg shadow-pink-500/25">
             <Heart className="size-5 text-white" fill="white" />
@@ -166,13 +249,71 @@ export default function Relationship() {
         </div>
       </header>
 
+      {user && (
+        <div className="flex flex-wrap items-center gap-2 mb-5 rounded-2xl border border-border bg-card/60 p-3">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground pl-1 pr-2">
+            <Filter className="size-3.5" /> Filters
+          </div>
+          <select
+            aria-label="Looking for"
+            value={filters.lookingFor}
+            onChange={(e) =>
+              setFilters((f) => ({ ...f, lookingFor: e.target.value as FeedFilters['lookingFor'] }))
+            }
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+          >
+            <option value="all">Looking for — Any</option>
+            {(Object.keys(LOOKING_FOR_LABELS) as LookingFor[]).map((k) => (
+              <option key={k} value={k}>{LOOKING_FOR_LABELS[k]}</option>
+            ))}
+          </select>
+          <select
+            aria-label="LGA"
+            value={filters.lga}
+            onChange={(e) => setFilters((f) => ({ ...f, lga: e.target.value }))}
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+          >
+            <option value="all">LGA — Any</option>
+            {lgaOptions.map((l) => (
+              <option key={l} value={l}>{l}</option>
+            ))}
+          </select>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-xs font-medium text-pink-600 hover:underline inline-flex items-center gap-1"
+            >
+              <X className="size-3" /> Clear
+            </button>
+          )}
+          {isFetching && !isFetchingNextPage && (
+            <span className="ml-auto text-[11px] text-muted-foreground inline-flex items-center gap-1">
+              <RefreshCw className="size-3 animate-spin" /> Updating…
+            </span>
+          )}
+        </div>
+      )}
+
       {!user && (
         <div className="rounded-2xl border border-border bg-card p-6 text-center">
           <p className="text-sm text-muted-foreground">Sign in to browse and chat.</p>
         </div>
       )}
 
-      {user && isLoading && (
+      {user && error && (
+        <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6 text-center">
+          <AlertCircle className="size-6 mx-auto text-destructive mb-2" />
+          <p className="font-semibold">Couldn't load profiles</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {(error as Error).message || 'Please check your connection and try again.'}
+          </p>
+          <Button className="mt-4 rounded-full" onClick={() => refetch()}>
+            <RefreshCw className="size-4" /> Retry
+          </Button>
+        </div>
+      )}
+
+      {user && !error && isLoading && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="aspect-[3/4] rounded-2xl bg-muted animate-pulse" />
@@ -180,23 +321,56 @@ export default function Relationship() {
         </div>
       )}
 
-      {user && !isLoading && cards.length === 0 && (
+      {user && !error && !isLoading && cards.length === 0 && (
         <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
           <Heart className="size-8 mx-auto text-pink-500 mb-3" />
-          <p className="font-semibold">No profiles yet</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Be the first — create your relationship profile and get discovered.
+          <p className="font-semibold">
+            {hasActiveFilters ? 'No profiles match your filters' : 'No profiles yet'}
           </p>
-          <Button asChild className="mt-4 rounded-full">
-            <Link to="/relationship/edit">Create my profile</Link>
-          </Button>
+          <p className="text-sm text-muted-foreground mt-1">
+            {hasActiveFilters
+              ? 'Try widening your search or clearing filters.'
+              : 'Be the first — create your relationship profile and get discovered.'}
+          </p>
+          {hasActiveFilters ? (
+            <Button className="mt-4 rounded-full" onClick={clearFilters} variant="secondary">
+              Clear filters
+            </Button>
+          ) : (
+            <Button asChild className="mt-4 rounded-full">
+              <Link to="/relationship/edit">Create my profile</Link>
+            </Button>
+          )}
         </div>
       )}
 
-      {user && cards.length > 0 && (mode === 'grid' ? <GridView cards={cards} /> : <DiscoverView cards={cards} />)}
+      {user && !error && cards.length > 0 && (
+        <>
+          {mode === 'grid' ? <GridView cards={cards} /> : <DiscoverView cards={cards} />}
+
+          {mode === 'grid' && (
+            <>
+              <div ref={sentinelRef} className="h-8" aria-hidden />
+              {isFetchingNextPage && (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="aspect-[3/4] rounded-2xl bg-muted animate-pulse" />
+                  ))}
+                </div>
+              )}
+              {!hasNextPage && cards.length >= PAGE_SIZE && (
+                <p className="text-center text-xs text-muted-foreground mt-6">
+                  You've reached the end — check back soon for new profiles.
+                </p>
+              )}
+            </>
+          )}
+        </>
+      )}
     </div>
   )
 }
+
 
 function GridView({ cards }: { cards: RelationshipCard[] }) {
   return (
