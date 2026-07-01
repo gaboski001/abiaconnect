@@ -178,10 +178,26 @@ export default function Relationship() {
     getNextPageParam: (last) => last.nextPage,
   })
 
-  const cards = useMemo(
-    () => (data?.pages ?? []).flatMap((p) => p.cards),
-    [data],
-  )
+  const hasActiveFilters = filters.lookingFor !== 'all' || filters.lga !== 'all'
+
+  // Stable per-mount seed so the "random 10" order doesn't reshuffle on every render
+  const shuffleSeedRef = useRef(Math.random())
+  const cards = useMemo(() => {
+    const all = (data?.pages ?? []).flatMap((p) => p.cards)
+    if (hasActiveFilters) return all
+    // No filters → show up to 10 randomised profiles (Fisher–Yates with seeded RNG)
+    const seed = shuffleSeedRef.current
+    const rng = (i: number) => {
+      const x = Math.sin((i + 1) * 9999 * seed) * 10000
+      return x - Math.floor(x)
+    }
+    const arr = [...all]
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(rng(i) * (i + 1))
+      ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+    return arr.slice(0, 10)
+  }, [data, hasActiveFilters])
 
   // Infinite scroll sentinel
   const sentinelRef = useRef<HTMLDivElement | null>(null)
@@ -199,7 +215,6 @@ export default function Relationship() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   const clearFilters = () => setFilters({ lookingFor: 'all', lga: 'all' })
-  const hasActiveFilters = filters.lookingFor !== 'all' || filters.lga !== 'all'
 
   return (
     <div className="max-w-6xl mx-auto">
