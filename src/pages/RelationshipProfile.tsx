@@ -104,8 +104,9 @@ export default function RelationshipProfilePage() {
   const name = card.display_name || card.username || 'Member'
   const age = calcAge(card.dob)
   const [coverBroken, setCoverBroken] = useState(false)
-  const cover = !coverBroken ? card.photos?.[0] ?? null : null
-  const gallery = (card.photos ?? []).slice(1)
+  const rawCover = card.photos?.[0] ?? null
+  const cover = !coverBroken && isValidHttpUrl(rawCover) ? rawCover : null
+  const gallery = (card.photos ?? []).slice(1).filter(isValidHttpUrl)
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -114,13 +115,9 @@ export default function RelationshipProfilePage() {
         <Link to="/relationship"><ArrowLeft className="size-4" /> Back to discover</Link>
       </Button>
 
-      <div className="relative w-full aspect-[16/10] sm:aspect-[16/8] rounded-3xl overflow-hidden bg-muted border border-border">
-        {cover ? (
+      <div className="relative w-full aspect-[16/10] sm:aspect-[16/8] rounded-3xl overflow-hidden bg-gradient-to-br from-pink-500/20 to-rose-600/20 border border-border">
+        {cover && (
           <img src={cover} alt={name} onError={() => setCoverBroken(true)} className="absolute inset-0 h-full w-full object-cover" />
-        ) : (
-          <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-pink-500/20 to-rose-600/20">
-            <Heart className="size-16 text-pink-500/60" />
-          </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
         <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3 text-white">
