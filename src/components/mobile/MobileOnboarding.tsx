@@ -16,7 +16,7 @@ import {
   Rocket,
   Globe2,
   Heart,
-  Sparkles,
+  Sparkles as _Sparkles,
   Target,
   Eye,
   HandHeart,
