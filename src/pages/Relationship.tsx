@@ -424,7 +424,7 @@ function GridView({ cards }: { cards: RelationshipCard[] }) {
 function CardTile({ card }: { card: RelationshipCard }) {
   const age = calcAge(card.dob)
   const name = card.display_name || card.username || 'Member'
-  const cover = card.photos?.[0] || card.avatar_url
+  const cover = card.photos?.[0] ?? null
   return (
     <Link
       to={`/relationship/${card.user_id}`}
