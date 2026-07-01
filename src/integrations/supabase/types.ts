@@ -782,6 +782,7 @@ export type Database = {
           bio: string | null
           call_ringtone_settings: Json | null
           created_at: string
+          current_location: string | null
           display_name: string | null
           dob: string | null
           email: string | null
@@ -789,9 +790,12 @@ export type Database = {
           is_banned: boolean
           is_deleted: boolean
           lga: string | null
+          marital_status: string | null
           notification_mode: string
+          occupation: string | null
           reputation: number
           role: string | null
+          sex: string | null
           updated_at: string
           username: string | null
         }
@@ -800,6 +804,7 @@ export type Database = {
           bio?: string | null
           call_ringtone_settings?: Json | null
           created_at?: string
+          current_location?: string | null
           display_name?: string | null
           dob?: string | null
           email?: string | null
@@ -807,9 +812,12 @@ export type Database = {
           is_banned?: boolean
           is_deleted?: boolean
           lga?: string | null
+          marital_status?: string | null
           notification_mode?: string
+          occupation?: string | null
           reputation?: number
           role?: string | null
+          sex?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -818,6 +826,7 @@ export type Database = {
           bio?: string | null
           call_ringtone_settings?: Json | null
           created_at?: string
+          current_location?: string | null
           display_name?: string | null
           dob?: string | null
           email?: string | null
@@ -825,9 +834,12 @@ export type Database = {
           is_banned?: boolean
           is_deleted?: boolean
           lga?: string | null
+          marital_status?: string | null
           notification_mode?: string
+          occupation?: string | null
           reputation?: number
           role?: string | null
+          sex?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -1528,6 +1540,7 @@ export type Database = {
           bio: string | null
           call_ringtone_settings: Json | null
           created_at: string
+          current_location: string | null
           display_name: string | null
           dob: string | null
           email: string | null
@@ -1535,9 +1548,12 @@ export type Database = {
           is_banned: boolean
           is_deleted: boolean
           lga: string | null
+          marital_status: string | null
           notification_mode: string
+          occupation: string | null
           reputation: number
           role: string | null
+          sex: string | null
           updated_at: string
           username: string | null
         }[]

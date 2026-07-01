@@ -3,17 +3,35 @@ import { Link } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Award, MapPin, Pencil } from 'lucide-react'
+import { Award, Briefcase, Heart, MapPin, Navigation, Pencil, User as UserIcon } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { supabase } from '@/lib/supabase'
-import { saveProfile } from '@/lib/profileUpdate'
+import { saveProfile, SEX_OPTIONS, MARITAL_STATUS_OPTIONS } from '@/lib/profileUpdate'
 import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+
+const SEX_LABELS: Record<string, string> = {
+  male: 'Male',
+  female: 'Female',
+  other: 'Other',
+  prefer_not_to_say: 'Prefer not to say',
+}
+const MARITAL_LABELS: Record<string, string> = {
+  single: 'Single',
+  married: 'Married',
+  in_relationship: 'In a relationship',
+  engaged: 'Engaged',
+  divorced: 'Divorced',
+  widowed: 'Widowed',
+  separated: 'Separated',
+  prefer_not_to_say: 'Prefer not to say',
+}
 
 interface Profile {
   id?: string
@@ -21,6 +39,10 @@ interface Profile {
   username?: string | null
   bio?: string | null
   lga?: string | null
+  current_location?: string | null
+  occupation?: string | null
+  sex?: string | null
+  marital_status?: string | null
   avatar_url?: string | null
   reputation?: number | null
   created_at?: string | null
@@ -86,6 +108,10 @@ export default function Profile() {
       username: profile.username ?? '',
       bio: profile.bio ?? '',
       lga: profile.lga ?? '',
+      current_location: profile.current_location ?? '',
+      occupation: profile.occupation ?? '',
+      sex: profile.sex ?? '',
+      marital_status: profile.marital_status ?? '',
     })
     setEditing(true)
   }
@@ -97,6 +123,10 @@ export default function Profile() {
       username: form.username ?? undefined,
       bio: form.bio ?? undefined,
       lga: form.lga ?? undefined,
+      current_location: form.current_location ?? undefined,
+      occupation: form.occupation ?? undefined,
+      sex: (form.sex as string) ?? undefined,
+      marital_status: (form.marital_status as string) ?? undefined,
     })
     if (error) return toast.error(error.message)
     toast.success('Profile updated')
@@ -128,10 +158,30 @@ export default function Profile() {
             {!editing ? (
               <>
                 {profile.bio && <p className="mt-3 text-sm">{profile.bio}</p>}
-                <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
                   {profile.lga && (
                     <span className="inline-flex items-center gap-1">
                       <MapPin className="size-3" /> {profile.lga}
+                    </span>
+                  )}
+                  {profile.current_location && (
+                    <span className="inline-flex items-center gap-1">
+                      <Navigation className="size-3" /> {profile.current_location}
+                    </span>
+                  )}
+                  {profile.occupation && (
+                    <span className="inline-flex items-center gap-1">
+                      <Briefcase className="size-3" /> {profile.occupation}
+                    </span>
+                  )}
+                  {profile.sex && (
+                    <span className="inline-flex items-center gap-1">
+                      <UserIcon className="size-3" /> {SEX_LABELS[profile.sex] ?? profile.sex}
+                    </span>
+                  )}
+                  {profile.marital_status && (
+                    <span className="inline-flex items-center gap-1">
+                      <Heart className="size-3" /> {MARITAL_LABELS[profile.marital_status] ?? profile.marital_status}
                     </span>
                   )}
                   {profile.created_at && (
@@ -171,6 +221,48 @@ export default function Profile() {
                       value={form.lga ?? ''}
                       onChange={(e) => setForm({ ...form, lga: e.target.value })}
                     />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Current location</Label>
+                    <Input
+                      placeholder="City, Country"
+                      value={form.current_location ?? ''}
+                      onChange={(e) => setForm({ ...form, current_location: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Occupation</Label>
+                    <Input
+                      placeholder="e.g. Software Engineer"
+                      value={form.occupation ?? ''}
+                      onChange={(e) => setForm({ ...form, occupation: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Sex</Label>
+                    <Select
+                      value={(form.sex as string) || 'unset'}
+                      onValueChange={(v) => setForm({ ...form, sex: v === 'unset' ? '' : v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unset">Not specified</SelectItem>
+                        {SEX_OPTIONS.map((o) => <SelectItem key={o} value={o}>{SEX_LABELS[o]}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Marital status</Label>
+                    <Select
+                      value={(form.marital_status as string) || 'unset'}
+                      onValueChange={(v) => setForm({ ...form, marital_status: v === 'unset' ? '' : v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unset">Not specified</SelectItem>
+                        {MARITAL_STATUS_OPTIONS.map((o) => <SelectItem key={o} value={o}>{MARITAL_LABELS[o]}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="flex gap-2">

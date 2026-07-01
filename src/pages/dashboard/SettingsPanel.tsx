@@ -16,7 +16,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { supabase } from '@/lib/supabase'
-import { saveProfile } from '@/lib/profileUpdate'
+import { saveProfile, SEX_OPTIONS, MARITAL_STATUS_OPTIONS } from '@/lib/profileUpdate'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
@@ -32,8 +33,29 @@ export interface SettingsProfile {
   username?: string | null
   bio?: string | null
   lga?: string | null
+  current_location?: string | null
+  occupation?: string | null
+  sex?: string | null
+  marital_status?: string | null
   avatar_url?: string | null
   reputation?: number | null
+}
+
+const SEX_LABELS: Record<string, string> = {
+  male: 'Male',
+  female: 'Female',
+  other: 'Other',
+  prefer_not_to_say: 'Prefer not to say',
+}
+const MARITAL_LABELS: Record<string, string> = {
+  single: 'Single',
+  married: 'Married',
+  in_relationship: 'In a relationship',
+  engaged: 'Engaged',
+  divorced: 'Divorced',
+  widowed: 'Widowed',
+  separated: 'Separated',
+  prefer_not_to_say: 'Prefer not to say',
 }
 
 export default function SettingsPanel({
@@ -50,6 +72,10 @@ export default function SettingsPanel({
     username: profile.username ?? '',
     bio: profile.bio ?? '',
     lga: profile.lga ?? '',
+    current_location: profile.current_location ?? '',
+    occupation: profile.occupation ?? '',
+    sex: profile.sex ?? '',
+    marital_status: profile.marital_status ?? '',
   })
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -61,8 +87,21 @@ export default function SettingsPanel({
       username: profile.username ?? '',
       bio: profile.bio ?? '',
       lga: profile.lga ?? '',
+      current_location: profile.current_location ?? '',
+      occupation: profile.occupation ?? '',
+      sex: profile.sex ?? '',
+      marital_status: profile.marital_status ?? '',
     })
-  }, [profile.display_name, profile.username, profile.bio, profile.lga])
+  }, [
+    profile.display_name,
+    profile.username,
+    profile.bio,
+    profile.lga,
+    profile.current_location,
+    profile.occupation,
+    profile.sex,
+    profile.marital_status,
+  ])
 
   const save = async () => {
     if (!user) return
@@ -134,6 +173,26 @@ export default function SettingsPanel({
             <BioField value={form.bio} onChange={(v: string) => setForm({ ...form, bio: v })} />
           </div>
           <Field label="LGA"><Input value={form.lga} onChange={(e) => setForm({ ...form, lga: e.target.value })} className="h-12 rounded-2xl border-white/10 bg-slate-950/40 text-white" /></Field>
+          <Field label="Current location"><Input placeholder="City, Country" value={form.current_location} onChange={(e) => setForm({ ...form, current_location: e.target.value })} className="h-12 rounded-2xl border-white/10 bg-slate-950/40 text-white" /></Field>
+          <Field label="Occupation"><Input placeholder="e.g. Software Engineer" value={form.occupation} onChange={(e) => setForm({ ...form, occupation: e.target.value })} className="h-12 rounded-2xl border-white/10 bg-slate-950/40 text-white" /></Field>
+          <Field label="Sex">
+            <Select value={form.sex || 'unset'} onValueChange={(v) => setForm({ ...form, sex: v === 'unset' ? '' : v })}>
+              <SelectTrigger className="h-12 rounded-2xl border-white/10 bg-slate-950/40 text-white"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">Not specified</SelectItem>
+                {SEX_OPTIONS.map((o) => <SelectItem key={o} value={o}>{SEX_LABELS[o]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Marital status">
+            <Select value={form.marital_status || 'unset'} onValueChange={(v) => setForm({ ...form, marital_status: v === 'unset' ? '' : v })}>
+              <SelectTrigger className="h-12 rounded-2xl border-white/10 bg-slate-950/40 text-white"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">Not specified</SelectItem>
+                {MARITAL_STATUS_OPTIONS.map((o) => <SelectItem key={o} value={o}>{MARITAL_LABELS[o]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
         </div>
         <Button onClick={save} disabled={!profile.id} className="mt-5 rounded-2xl text-slate-950" style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
           Save changes
