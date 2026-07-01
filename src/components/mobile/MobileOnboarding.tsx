@@ -457,12 +457,10 @@ const AboutView = ({ slide }: { slide: AboutSlide }) => (
 
 const FeaturesView = ({ slide }: { slide: FeaturesSlide }) => (
   <div className="w-full max-w-md">
-    <h2 className="text-4xl font-black mb-3 tracking-tight" style={{ color: BRAND.text }}>
+    <h2 className="text-4xl font-black mb-8 tracking-tight" style={{ color: BRAND.text }}>
       {slide.title}
     </h2>
-    <p className="text-lg font-bold mb-10" style={{ color: BRAND.gold }}>
-      Built for community & progress
-    </p>
+
     <div className="grid grid-cols-2 gap-4">
       {slide.features.map((f, i) => (
         <motion.div
