@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Briefcase, Heart, MapPin, MessageCircle, Ruler, ShieldAlert, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -53,6 +53,7 @@ export default function RelationshipProfilePage() {
   const { userId } = useParams<{ userId: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [chatting, setChatting] = useState(false)
 
   const { data: card, isLoading, error } = useQuery({
@@ -60,6 +61,24 @@ export default function RelationshipProfilePage() {
     enabled: !!userId,
     queryFn: () => loadProfile(userId!),
   })
+
+  // Realtime: refresh when this user's relationship profile changes (photos, etc.)
+  useEffect(() => {
+    if (!userId) return
+    const channel = supabase
+      .channel(`relationship-profile-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'relationship_profiles', filter: `user_id=eq.${userId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['relationship-profile', userId] })
+        },
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [userId, queryClient])
 
   const startChat = async () => {
     if (!user || !card) return
@@ -105,11 +124,7 @@ export default function RelationshipProfilePage() {
 
   const name = card.display_name || card.username || 'Member'
   const age = calcAge(card.dob)
-  const [coverBroken, setCoverBroken] = useState(false)
   const rawCover = card.photos?.[0] ?? null
-  const signedAvatar = useSignedUrl(card.avatar_url, 'avatars')
-  const avatarFallback = signedAvatar || (isValidHttpUrl(card.avatar_url) ? card.avatar_url : null)
-  const cover = !coverBroken ? (isValidHttpUrl(rawCover) ? rawCover : avatarFallback) : null
   const gallery = (card.photos ?? []).slice(1).filter(isValidHttpUrl)
 
   return (
@@ -120,10 +135,8 @@ export default function RelationshipProfilePage() {
       </Button>
 
       <div className="relative w-full aspect-[16/10] sm:aspect-[16/8] rounded-3xl overflow-hidden bg-gradient-to-br from-pink-500/20 to-rose-600/20 border border-border">
-        {cover && (
-          <img src={cover} alt={name} onError={() => setCoverBroken(true)} className="absolute inset-0 h-full w-full object-cover" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+        <CoverImage rawCover={rawCover} avatarUrl={card.avatar_url} name={name} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent pointer-events-none" />
         <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3 text-white">
           <div className="min-w-0">
             <div className="flex items-center gap-3">
@@ -205,13 +218,7 @@ export default function RelationshipProfilePage() {
           {gallery.length > 0 && (
             <div className="grid grid-cols-3 gap-2">
               {gallery.map((p) => (
-                <img
-                  key={p}
-                  src={p}
-                  alt=""
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden' }}
-                  className="aspect-square object-cover rounded-xl border border-border bg-muted"
-                />
+                <GalleryImage key={p} src={p} />
               ))}
             </div>
           )}
@@ -224,6 +231,62 @@ export default function RelationshipProfilePage() {
           <InfoRow icon={<Ruler className="size-4" />} label="Height" value={card.height_cm ? `${card.height_cm} cm` : null} />
         </aside>
       </div>
+    </div>
+  )
+}
+
+function CoverImage({ rawCover, avatarUrl, name }: { rawCover: string | null; avatarUrl: string | null | undefined; name: string }) {
+  const [broken, setBroken] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const signedAvatar = useSignedUrl(avatarUrl, 'avatars')
+  const avatarFallback = signedAvatar || (isValidHttpUrl(avatarUrl) ? (avatarUrl as string) : null)
+  const src = !broken ? (isValidHttpUrl(rawCover) ? rawCover : avatarFallback) : null
+
+  // Reset when candidate src changes (photos updated in realtime)
+  useEffect(() => {
+    setBroken(false)
+    setLoaded(false)
+  }, [src])
+
+  // Show a shimmering skeleton while we resolve/load the image
+  const showSkeleton = !!src && !loaded
+
+  return (
+    <>
+      {showSkeleton && (
+        <div className="absolute inset-0 bg-gradient-to-r from-muted via-muted/60 to-muted animate-pulse" />
+      )}
+      {!src && !avatarUrl && (
+        <div className="absolute inset-0 bg-gradient-to-r from-muted/40 via-muted/20 to-muted/40 animate-pulse" />
+      )}
+      {src && (
+        <img
+          src={src}
+          alt={name}
+          onLoad={() => setLoaded(true)}
+          onError={() => setBroken(true)}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        />
+      )}
+    </>
+  )
+}
+
+function GalleryImage({ src }: { src: string }) {
+  const [loaded, setLoaded] = useState(false)
+  const [hidden, setHidden] = useState(false)
+  if (hidden) return null
+  return (
+    <div className="relative aspect-square rounded-xl overflow-hidden border border-border bg-muted">
+      {!loaded && <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-muted via-muted/60 to-muted" />}
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        onLoad={() => setLoaded(true)}
+        onError={() => setHidden(true)}
+        className={`h-full w-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+      />
     </div>
   )
 }
