@@ -291,21 +291,7 @@ export default function CreateThread() {
           </div>
         )}
 
-        {isRelationship && !presetSubgroup && (
-          <div className="rounded-xl border border-pink-500/30 bg-pink-500/5 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex-1 text-sm">
-              <p className="font-semibold text-foreground flex items-center gap-2">
-                <Heart className="size-4 text-pink-500" /> Relationship category
-              </p>
-              <p className="text-muted-foreground mt-0.5">
-                Publish your profile so other members can get to know you. We pull your bio, location, occupation, sex and marital status from your profile — you can edit before posting.
-              </p>
-            </div>
-            <Button type="button" variant="secondary" onClick={fillFromProfile} className="shrink-0">
-              Fill from my profile
-            </Button>
-          </div>
-        )}
+
 
         {presetSubgroup && (
           <div className="space-y-1.5">
