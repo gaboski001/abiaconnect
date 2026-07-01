@@ -17,6 +17,7 @@ import {
   RelationshipProfile,
   startConversationWith,
 } from '@/lib/relationship'
+import { isValidHttpUrl } from '@/lib/images'
 
 const PAGE_SIZE = 24
 
