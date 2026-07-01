@@ -110,48 +110,64 @@ function CategoryCard({ category }: { category: Category }) {
       to={href}
       aria-current={isActive ? 'page' : undefined}
       data-active={isActive ? 'true' : undefined}
-      className={`group relative rounded-2xl p-5 cursor-pointer transition-all duration-300 flex flex-col h-full border ${
+      className={`group relative rounded-2xl p-4 sm:p-5 cursor-pointer transition-all duration-300 flex flex-col h-full border ${
         isActive
-          ? 'bg-secondary/10 border-secondary shadow-lg shadow-secondary/20 -translate-y-0.5 ring-2 ring-secondary/40'
+          ? 'bg-secondary/10 border-secondary shadow-md shadow-secondary/20 sm:-translate-y-0.5 ring-1 sm:ring-2 ring-secondary/40'
           : 'bg-card border-border hover:border-secondary/60 hover:shadow-lg hover:shadow-secondary/10 hover:-translate-y-1'
       }`}
     >
-      {isActive && (
-        <span className="absolute top-3 right-3 h-2 w-2 rounded-full bg-secondary shadow-[0_0_0_4px_hsl(var(--secondary)/0.2)]" />
-      )}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-2">
         <span
-          className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl border"
+          className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-2xl border shrink-0"
           style={{
             backgroundColor: `${color}26`,
             borderColor: `${color}4D`,
           }}
         >
           {category.icon ?? '💬'}
+          {isActive && (
+            <span
+              aria-hidden
+              className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-secondary ring-2 ring-card"
+            />
+          )}
         </span>
-        {category.is_popular && (
-          <span className="bg-secondary/15 text-secondary text-xs font-semibold px-2 py-0.5 rounded-full">
-            🔥 Popular
-          </span>
-        )}
+        <div className="flex flex-wrap items-center justify-end gap-1">
+          {isActive && (
+            <span className="bg-secondary text-secondary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide">
+              Active
+            </span>
+          )}
+          {category.is_popular && (
+            <span className="bg-secondary/15 text-secondary text-xs font-semibold px-2 py-0.5 rounded-full">
+              🔥 Popular
+            </span>
+          )}
+        </div>
       </div>
       <h3
-        className={`font-bold text-base mt-3 transition-colors ${
+        className={`font-bold text-sm sm:text-base mt-3 transition-colors line-clamp-2 ${
           isActive ? 'text-secondary' : 'text-foreground group-hover:text-secondary'
         }`}
       >
         {category.name}
       </h3>
       {category.description && (
-        <p className="text-muted-foreground text-sm mt-1 line-clamp-2">
+        <p className="text-muted-foreground text-sm mt-1 line-clamp-2 hidden sm:block">
           {category.description}
         </p>
       )}
-      <div className="mt-auto pt-3 border-t border-border flex items-center justify-between">
-        <span className="text-muted-foreground text-xs">
+      <div className="mt-auto pt-3 border-t border-border flex items-center justify-between gap-2">
+        <span className="text-muted-foreground text-xs truncate">
           {category.thread_count ?? 0} threads
         </span>
-        <span className="text-secondary text-xs font-semibold">
+        <span
+          className={`text-xs font-semibold shrink-0 ${
+            isActive
+              ? 'bg-secondary/15 text-secondary px-2 py-0.5 rounded-full'
+              : 'text-secondary'
+          }`}
+        >
           {isActive ? 'Viewing' : 'Browse →'}
         </span>
       </div>
