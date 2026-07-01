@@ -204,7 +204,13 @@ export default function RelationshipProfilePage() {
           {gallery.length > 0 && (
             <div className="grid grid-cols-3 gap-2">
               {gallery.map((p) => (
-                <img key={p} src={p} alt="" className="aspect-square object-cover rounded-xl border border-border" />
+                <img
+                  key={p}
+                  src={p}
+                  alt=""
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden' }}
+                  className="aspect-square object-cover rounded-xl border border-border bg-muted"
+                />
               ))}
             </div>
           )}
