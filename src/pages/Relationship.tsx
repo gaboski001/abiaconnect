@@ -18,6 +18,7 @@ import {
   startConversationWith,
 } from '@/lib/relationship'
 import { isValidHttpUrl } from '@/lib/images'
+import { selectRelationshipCards } from '@/lib/relationshipFeed'
 
 const PAGE_SIZE = 24
 
@@ -184,19 +185,7 @@ export default function Relationship() {
   const shuffleSeedRef = useRef(Math.random())
   const cards = useMemo(() => {
     const all = (data?.pages ?? []).flatMap((p) => p.cards)
-    if (hasActiveFilters) return all
-    // No filters → show up to 10 randomised profiles (Fisher–Yates with seeded RNG)
-    const seed = shuffleSeedRef.current
-    const rng = (i: number) => {
-      const x = Math.sin((i + 1) * 9999 * seed) * 10000
-      return x - Math.floor(x)
-    }
-    const arr = [...all]
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(rng(i) * (i + 1))
-      ;[arr[i], arr[j]] = [arr[j], arr[i]]
-    }
-    return arr.slice(0, 10)
+    return selectRelationshipCards(all, hasActiveFilters, shuffleSeedRef.current)
   }, [data, hasActiveFilters])
 
   // Infinite scroll sentinel
