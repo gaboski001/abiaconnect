@@ -17,13 +17,63 @@ import {
   startConversationWith,
 } from '@/lib/relationship'
 
-async function fetchFeed(myId?: string): Promise<RelationshipCard[]> {
+/**
+ * Rank a candidate card for Tinder/Badoo-style ordering.
+ * Blends recency, activity, profile quality, and mutual interest with the viewer.
+ * Higher score = shown earlier.
+ */
+function scoreCard(c: RelationshipCard, me?: RelationshipProfile | null): number {
+  const now = Date.now()
+  const updatedAt = new Date(c.updated_at).getTime()
+  const createdAt = new Date(c.created_at).getTime()
+  const daysSinceUpdate = Math.max(0, (now - updatedAt) / 86_400_000)
+  const daysSinceCreate = Math.max(0, (now - createdAt) / 86_400_000)
+
+  // Recency: exponential decay with 7-day half-life (max ~40)
+  const recency = 40 * Math.exp(-daysSinceUpdate / 7)
+
+  // "New joiner" boost for first 3 days
+  const freshBoost = daysSinceCreate < 3 ? 12 * (1 - daysSinceCreate / 3) : 0
+
+  // Profile quality / activity signals
+  const photos = c.photos?.length ?? 0
+  const photoScore = Math.min(photos, 4) * 4 // up to 16
+  const completeness =
+    (c.headline ? 3 : 0) +
+    (c.about ? 4 : 0) +
+    (c.dob ? 2 : 0) +
+    (c.occupation ? 2 : 0) +
+    (c.height_cm ? 1 : 0) +
+    (c.looking_for ? 3 : 0) +
+    ((c.interests?.length ?? 0) > 0 ? 3 : 0)
+
+  // Mutual interest signals vs viewer
+  let mutual = 0
+  if (me) {
+    if (me.looking_for && c.looking_for && me.looking_for === c.looking_for) mutual += 18
+    if (me.lga && c.lga && me.lga === c.lga) mutual += 8
+    if (me.current_location && c.current_location && me.current_location === c.current_location) mutual += 6
+    const mine = new Set((me.interests ?? []).map((i) => i.toLowerCase()))
+    const shared = (c.interests ?? []).filter((i) => mine.has(i.toLowerCase())).length
+    mutual += Math.min(shared, 5) * 3 // up to 15
+  }
+
+  // Small deterministic jitter so equal scores don't lock the same order
+  const jitter = (parseInt(c.id.replace(/\D/g, '').slice(0, 6) || '0', 10) % 100) / 100
+
+  return recency + freshBoost + photoScore + completeness + mutual + jitter
+}
+
+async function fetchFeed(
+  myId?: string,
+  me?: RelationshipProfile | null,
+): Promise<RelationshipCard[]> {
   const { data, error } = await supabase
     .from('relationship_profiles' as never)
     .select('*')
     .eq('is_active', true)
     .order('updated_at', { ascending: false })
-    .limit(60)
+    .limit(120)
   if (error) throw error
   const rows = ((data ?? []) as unknown as RelationshipProfile[]).filter(
     (r) => r.user_id !== myId,
@@ -35,12 +85,13 @@ async function fetchFeed(myId?: string): Promise<RelationshipCard[]> {
   ;(profiles ?? []).forEach((p: any) => {
     map.set(p.id, { display_name: p.display_name, username: p.username, avatar_url: p.avatar_url })
   })
-  return rows.map((r) => ({
+  const cards: RelationshipCard[] = rows.map((r) => ({
     ...r,
     display_name: map.get(r.user_id)?.display_name ?? null,
     username: map.get(r.user_id)?.username ?? null,
     avatar_url: map.get(r.user_id)?.avatar_url ?? null,
   }))
+  return cards.sort((a, b) => scoreCard(b, me) - scoreCard(a, me)).slice(0, 60)
 }
 
 export default function Relationship() {
@@ -61,9 +112,10 @@ export default function Relationship() {
   })
 
   const { data: cards = [], isLoading } = useQuery({
-    queryKey: ['relationship-feed', user?.id],
-    queryFn: () => fetchFeed(user?.id),
+    queryKey: ['relationship-feed', user?.id, myProfile?.id ?? null],
+    queryFn: () => fetchFeed(user?.id, myProfile),
   })
+
 
   return (
     <div className="max-w-6xl mx-auto">
