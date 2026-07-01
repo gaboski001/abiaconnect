@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 interface Category {
   id: string
   name: string
-  description: string | null
+  slug: string | null
   icon: string | null
   color: string | null
   thread_count: number
