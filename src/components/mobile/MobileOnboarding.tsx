@@ -576,15 +576,5 @@ const StartView = ({
       </Button>
     </motion.div>
 
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 0.5 }}
-      transition={{ delay: 1, duration: 1 }}
-      className="mt-10 pt-6 border-t border-white/5"
-    >
-      <p className="text-[11px] uppercase tracking-widest font-bold opacity-60" style={{ color: BRAND.textDim }}>
-        AbiaConnect &copy; 2026 • One People. One Voice.
-      </p>
-    </motion.div>
   </div>
 );
