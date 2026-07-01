@@ -11,6 +11,7 @@ import {
   Loader2,
   Underline as UnderlineIcon,
   X,
+  Heart,
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import DOMPurify from 'dompurify'
