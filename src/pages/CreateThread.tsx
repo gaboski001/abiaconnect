@@ -11,7 +11,6 @@ import {
   Loader2,
   Underline as UnderlineIcon,
   X,
-  Heart,
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import DOMPurify from 'dompurify'
@@ -149,36 +148,11 @@ export default function CreateThread() {
 
   const title = form.watch('title')
   const currentCategoryId = form.watch('category_id')
-  const currentCategory = categories.find((c) => c.id === currentCategoryId)
-  const isRelationship = (currentCategory?.name ?? '').toLowerCase() === 'relationship'
+  void currentCategoryId
 
-  const fillFromProfile = async () => {
-    if (!user) return toast.error('Please sign in')
-    const { data, error } = await supabase.rpc('get_my_profile')
-    if (error) return toast.error(error.message)
-    const p = Array.isArray(data) ? data[0] : data
-    if (!p) return toast.error('Profile not found')
-    const name = p.display_name || p.username || 'Abia member'
-    const rows: Array<[string, string | null | undefined]> = [
-      ['Location', p.current_location],
-      ['LGA', p.lga],
-      ['Occupation', p.occupation],
-      ['Sex', p.sex],
-      ['Marital status', p.marital_status ? String(p.marital_status).replace(/_/g, ' ') : null],
-    ]
-    const details = rows
-      .filter(([, v]) => v && String(v).trim().length > 0)
-      .map(([k, v]) => `<li><strong>${k}:</strong> ${DOMPurify.sanitize(String(v))}</li>`)
-      .join('')
-    const bio = p.bio ? `<p>${DOMPurify.sanitize(String(p.bio))}</p>` : ''
-    const html = `<p>Hi, I'm <strong>${DOMPurify.sanitize(name)}</strong> — sharing my profile so we can connect.</p>${bio}<ul>${details}</ul><p><em>Feel free to reach out via chat.</em></p>`
-    const nextTitle = `Meet ${name}${p.lga ? ` from ${p.lga}` : ''} — let's connect`
-    form.setValue('title', nextTitle.slice(0, 200), { shouldValidate: true })
-    if (editorRef.current) editorRef.current.innerHTML = html
-    form.setValue('content', DOMPurify.sanitize(html), { shouldValidate: true })
-    setTags((prev) => Array.from(new Set([...prev, 'relationship', 'introduction'])).slice(0, 10))
-    toast.success('Profile added — review and post')
-  }
+
+
+
 
   const exec = (cmd: 'bold' | 'italic' | 'underline') => {
     document.execCommand(cmd)
@@ -318,21 +292,7 @@ export default function CreateThread() {
           </div>
         )}
 
-        {isRelationship && !presetSubgroup && (
-          <div className="rounded-xl border border-pink-500/30 bg-pink-500/5 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex-1 text-sm">
-              <p className="font-semibold text-foreground flex items-center gap-2">
-                <Heart className="size-4 text-pink-500" /> Relationship category
-              </p>
-              <p className="text-muted-foreground mt-0.5">
-                Publish your profile so other members can get to know you. We pull your bio, location, occupation, sex and marital status from your profile — you can edit before posting.
-              </p>
-            </div>
-            <Button type="button" variant="secondary" onClick={fillFromProfile} className="shrink-0">
-              Fill from my profile
-            </Button>
-          </div>
-        )}
+
 
         {presetSubgroup && (
           <div className="space-y-1.5">

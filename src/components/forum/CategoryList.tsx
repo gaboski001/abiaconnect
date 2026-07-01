@@ -98,8 +98,7 @@ export function CategoryList() {
 
 function CategoryCard({ category }: { category: Category }) {
   const color = category.color ?? '#013220'
-  const isRelationship = (category.name ?? '').toLowerCase() === 'relationship'
-  const href = isRelationship ? '/relationship' : `/category/${category.id}`
+  const href = `/category/${category.id}`
   return (
     <Link
       to={href}
