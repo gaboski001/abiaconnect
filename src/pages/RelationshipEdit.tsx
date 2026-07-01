@@ -269,30 +269,31 @@ export default function RelationshipEdit() {
         </div>
 
         <div>
-          <Label>Photos (URLs)</Label>
+          <Label>Profile picture (URL)</Label>
           <div className="flex gap-2">
-            <Input value={photoInput} onChange={(e) => setPhotoInput(e.target.value)} placeholder="https://..." />
-            <Button type="button" onClick={addPhoto} variant="secondary">Add</Button>
+            <Input
+              value={photoInput || form.photos[0] || ''}
+              onChange={(e) => setPhotoInput(e.target.value)}
+              placeholder="https://..."
+            />
+            <Button type="button" onClick={setProfilePhoto} variant="secondary">Set</Button>
           </div>
-          {form.photos.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              {form.photos.map((p, i) => (
-                <div key={p} className="relative">
-                  <img src={p} alt="" className="aspect-square object-cover w-full rounded-lg border border-border" />
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, photos: f.photos.filter((_, ix) => ix !== i) }))}
-                    className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-0.5"
-                    aria-label="Remove photo"
-                  >
-                    <X className="size-3" />
-                  </button>
-                </div>
-              ))}
+          {form.photos[0] && (
+            <div className="mt-2 relative w-32">
+              <img src={form.photos[0]} alt="" className="aspect-square object-cover w-32 rounded-lg border border-border" />
+              <button
+                type="button"
+                onClick={() => { setForm((f) => ({ ...f, photos: [] })); setPhotoInput('') }}
+                className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-0.5"
+                aria-label="Remove photo"
+              >
+                <X className="size-3" />
+              </button>
             </div>
           )}
-          <p className="text-xs text-muted-foreground mt-1">First photo is used as your cover. Max 6.</p>
+          <p className="text-xs text-muted-foreground mt-1">One profile picture only. Use "Fill from my profile" to pull your account avatar.</p>
         </div>
+
 
         <label className="flex items-center gap-3 text-sm">
           <Switch checked={form.is_active} onCheckedChange={(v) => setForm((f) => ({ ...f, is_active: v }))} />
