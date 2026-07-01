@@ -102,6 +102,29 @@ export default function Profile() {
   const profile = profileQ.data ?? {}
   const name = profile.display_name || user?.email?.split('@')[0] || 'You'
 
+  const completenessFields: Array<keyof Profile> = [
+    'display_name',
+    'username',
+    'bio',
+    'avatar_url',
+    'lga',
+    'current_location',
+    'occupation',
+    'sex',
+    'marital_status',
+  ]
+  const filledCount = completenessFields.filter((f) => {
+    const v = profile[f]
+    return typeof v === 'string' && v.trim().length > 0
+  }).length
+  const completeness = Math.round((filledCount / completenessFields.length) * 100)
+  const completenessColor =
+    completeness >= 80
+      ? 'bg-emerald-500'
+      : completeness >= 50
+        ? 'bg-amber-500'
+        : 'bg-destructive'
+
   const startEdit = () => {
     setForm({
       display_name: profile.display_name ?? '',
@@ -190,6 +213,29 @@ export default function Profile() {
                   <span className="inline-flex items-center gap-1">
                     <Award className="size-3" /> {profile.reputation ?? 0} reputation
                   </span>
+                </div>
+                <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
+                  <div className="flex items-center justify-between text-xs font-medium">
+                    <span>Profile completeness</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {filledCount}/{completenessFields.length} · {completeness}%
+                    </span>
+                  </div>
+                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-border">
+                    <div
+                      className={`h-full ${completenessColor} transition-all duration-500`}
+                      style={{ width: `${completeness}%` }}
+                      role="progressbar"
+                      aria-valuenow={completeness}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                    />
+                  </div>
+                  {completeness < 100 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Add more details to reach 100% and help others recognise you.
+                    </p>
+                  )}
                 </div>
               </>
             ) : (
