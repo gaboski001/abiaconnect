@@ -17,6 +17,7 @@ import {
   RelationshipProfile,
   startConversationWith,
 } from '@/lib/relationship'
+import { isValidHttpUrl } from '@/lib/images'
 
 const PAGE_SIZE = 24
 
@@ -425,13 +426,14 @@ function CardTile({ card }: { card: RelationshipCard }) {
   const age = calcAge(card.dob)
   const name = card.display_name || card.username || 'Member'
   const [broken, setBroken] = useState(false)
-  const cover = !broken ? card.photos?.[0] ?? null : null
+  const raw = card.photos?.[0] ?? null
+  const cover = !broken && isValidHttpUrl(raw) ? raw : null
   return (
     <Link
       to={`/relationship/${card.user_id}`}
-      className="group relative block aspect-[3/4] rounded-2xl overflow-hidden bg-muted border border-border hover:border-pink-500/50 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-pink-500/10"
+      className="group relative block aspect-[3/4] rounded-2xl overflow-hidden bg-gradient-to-br from-pink-500/20 to-rose-600/20 border border-border hover:border-pink-500/50 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-pink-500/10"
     >
-      {cover ? (
+      {cover && (
         <img
           src={cover}
           alt={name}
@@ -439,10 +441,6 @@ function CardTile({ card }: { card: RelationshipCard }) {
           onError={() => setBroken(true)}
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-      ) : (
-        <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-pink-500/20 to-rose-600/20">
-          <Heart className="size-10 text-pink-500/60" />
-        </div>
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
       {card.looking_for && (
@@ -504,11 +502,12 @@ function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
   const name = current.display_name || current.username || 'Member'
   const [broken, setBroken] = useState(false)
   useEffect(() => { setBroken(false) }, [current?.id])
-  const cover = !broken ? current.photos?.[0] ?? null : null
+  const raw = current.photos?.[0] ?? null
+  const cover = !broken && isValidHttpUrl(raw) ? raw : null
 
   return (
     <div className="mx-auto max-w-md">
-      <div className="relative aspect-[3/4] rounded-3xl overflow-hidden bg-muted border border-border shadow-2xl">
+      <div className="relative aspect-[3/4] rounded-3xl overflow-hidden bg-gradient-to-br from-pink-500/20 to-rose-600/20 border border-border shadow-2xl">
         <AnimatePresence mode="wait">
           <motion.div
             key={current.id}
@@ -518,12 +517,8 @@ function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
             transition={{ duration: 0.25 }}
             className="absolute inset-0"
           >
-            {cover ? (
+            {cover && (
               <img src={cover} alt={name} onError={() => setBroken(true)} className="absolute inset-0 h-full w-full object-cover" />
-            ) : (
-              <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-pink-500/20 to-rose-600/20">
-                <Heart className="size-16 text-pink-500/60" />
-              </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
             <Link

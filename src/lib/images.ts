@@ -34,6 +34,19 @@ export function getAvatarFallback(displayName: string | null | undefined): strin
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
 }
 
+/** Lightweight sync check that a value is a plausible http(s) image URL. */
+export function isValidHttpUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  const v = value.trim()
+  if (!v) return false
+  try {
+    const u = new URL(v)
+    return u.protocol === 'http:' || u.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 export async function validateImageUrl(url: string): Promise<boolean> {
   try {
     const res = await fetch(url, { method: 'HEAD' })
