@@ -73,21 +73,34 @@ function scoreCard(c: RelationshipCard, me?: RelationshipProfile | null): number
   return recency + freshBoost + photoScore + completeness + mutual + jitter
 }
 
-async function fetchFeed(
+interface FeedPage {
+  cards: RelationshipCard[]
+  nextPage: number | null
+}
+
+async function fetchFeedPage(
+  page: number,
+  filters: FeedFilters,
   myId?: string,
   me?: RelationshipProfile | null,
-): Promise<RelationshipCard[]> {
-  const { data, error } = await supabase
+): Promise<FeedPage> {
+  const from = page * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+  let q = supabase
     .from('relationship_profiles' as never)
     .select('*')
     .eq('is_active', true)
     .order('updated_at', { ascending: false })
-    .limit(120)
+    .range(from, to)
+  if (filters.lookingFor !== 'all') q = q.eq('looking_for', filters.lookingFor)
+  if (filters.lga !== 'all') q = q.eq('lga', filters.lga)
+  const { data, error } = await q
   if (error) throw error
   const rows = ((data ?? []) as unknown as RelationshipProfile[]).filter(
     (r) => r.user_id !== myId,
   )
-  if (rows.length === 0) return []
+  const nextPage = (data?.length ?? 0) < PAGE_SIZE ? null : page + 1
+  if (rows.length === 0) return { cards: [], nextPage }
   const ids = rows.map((r) => r.user_id)
   const { data: profiles } = await supabase.rpc('get_public_profiles', { _ids: ids })
   const map = new Map<string, { display_name: string | null; username: string | null; avatar_url: string | null }>()
@@ -100,8 +113,26 @@ async function fetchFeed(
     username: map.get(r.user_id)?.username ?? null,
     avatar_url: map.get(r.user_id)?.avatar_url ?? null,
   }))
-  return cards.sort((a, b) => scoreCard(b, me) - scoreCard(a, me)).slice(0, 60)
+  cards.sort((a, b) => scoreCard(b, me) - scoreCard(a, me))
+  return { cards, nextPage }
 }
+
+async function fetchLgaOptions(): Promise<string[]> {
+  const { data } = await supabase
+    .from('relationship_profiles' as never)
+    .select('lga')
+    .eq('is_active', true)
+    .not('lga', 'is', null)
+    .limit(500)
+  const set = new Set<string>()
+  ;((data ?? []) as any[]).forEach((r) => {
+    const v = (r.lga ?? '').toString().trim()
+    if (v) set.add(v)
+  })
+  return Array.from(set).sort((a, b) => a.localeCompare(b))
+}
+
+
 
 export default function Relationship() {
   const { user } = useAuth()
