@@ -148,8 +148,9 @@ export default function CreateThread() {
 
   const title = form.watch('title')
   const currentCategoryId = form.watch('category_id')
-  const currentCategory = categories.find((c) => c.id === currentCategoryId)
-  void currentCategory
+  void currentCategoryId
+
+
 
 
 
