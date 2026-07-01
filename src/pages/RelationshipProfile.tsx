@@ -27,6 +27,7 @@ import {
   RelationshipProfile,
   startConversationWith,
 } from '@/lib/relationship'
+import { isValidHttpUrl } from '@/lib/images'
 
 async function loadProfile(userId: string): Promise<RelationshipCard | null> {
   const { data, error } = await supabase
