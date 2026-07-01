@@ -872,6 +872,87 @@ export type Database = {
         }
         Relationships: []
       }
+      relationship_blocks: {
+        Row: {
+          blocked_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          blocked_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          blocked_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      relationship_profiles: {
+        Row: {
+          about: string | null
+          created_at: string
+          current_location: string | null
+          dob: string | null
+          headline: string | null
+          height_cm: number | null
+          id: string
+          interests: string[]
+          is_active: boolean
+          lga: string | null
+          looking_for: string | null
+          marital_status: string | null
+          occupation: string | null
+          photos: string[]
+          sex: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          about?: string | null
+          created_at?: string
+          current_location?: string | null
+          dob?: string | null
+          headline?: string | null
+          height_cm?: number | null
+          id?: string
+          interests?: string[]
+          is_active?: boolean
+          lga?: string | null
+          looking_for?: string | null
+          marital_status?: string | null
+          occupation?: string | null
+          photos?: string[]
+          sex?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          about?: string | null
+          created_at?: string
+          current_location?: string | null
+          dob?: string | null
+          headline?: string | null
+          height_cm?: number | null
+          id?: string
+          interests?: string[]
+          is_active?: boolean
+          lga?: string | null
+          looking_for?: string | null
+          marital_status?: string | null
+          occupation?: string | null
+          photos?: string[]
+          sex?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       replies: {
         Row: {
           content: string
