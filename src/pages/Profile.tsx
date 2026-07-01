@@ -222,6 +222,48 @@ export default function Profile() {
                       onChange={(e) => setForm({ ...form, lga: e.target.value })}
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label>Current location</Label>
+                    <Input
+                      placeholder="City, Country"
+                      value={form.current_location ?? ''}
+                      onChange={(e) => setForm({ ...form, current_location: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Occupation</Label>
+                    <Input
+                      placeholder="e.g. Software Engineer"
+                      value={form.occupation ?? ''}
+                      onChange={(e) => setForm({ ...form, occupation: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Sex</Label>
+                    <Select
+                      value={(form.sex as string) || 'unset'}
+                      onValueChange={(v) => setForm({ ...form, sex: v === 'unset' ? '' : v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unset">Not specified</SelectItem>
+                        {SEX_OPTIONS.map((o) => <SelectItem key={o} value={o}>{SEX_LABELS[o]}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Marital status</Label>
+                    <Select
+                      value={(form.marital_status as string) || 'unset'}
+                      onValueChange={(v) => setForm({ ...form, marital_status: v === 'unset' ? '' : v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unset">Not specified</SelectItem>
+                        {MARITAL_STATUS_OPTIONS.map((o) => <SelectItem key={o} value={o}>{MARITAL_LABELS[o]}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={save}>Save</Button>
