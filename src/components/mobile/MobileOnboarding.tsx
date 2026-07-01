@@ -16,7 +16,7 @@ import {
   Rocket,
   Globe2,
   Heart,
-  Sparkles,
+  
   Target,
   Eye,
   HandHeart,
@@ -406,19 +406,8 @@ const WelcomeView = ({ slide }: { slide: WelcomeSlide }) => (
     >
       {slide.subtitle}
     </motion.p>
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.8 }}
-      className="mt-10 inline-flex items-center gap-2 px-5 py-2.5 rounded-full shadow-lg"
-      style={{ background: `${BRAND.gold}20`, border: `1px solid ${BRAND.gold}40` }}
-    >
-      <Sparkles className="size-4" style={{ color: BRAND.gold }} />
-      <span className="text-sm font-bold tracking-wide" style={{ color: BRAND.gold }}>
-        Connecting Abians Worldwide
-      </span>
-    </motion.div>
   </>
+
 );
 
 const AboutView = ({ slide }: { slide: AboutSlide }) => (
@@ -429,12 +418,10 @@ const AboutView = ({ slide }: { slide: AboutSlide }) => (
     >
       <ShieldCheck className="size-10" />
     </div>
-    <h2 className="text-4xl font-black mb-3 tracking-tight" style={{ color: BRAND.text }}>
+    <h2 className="text-4xl font-black mb-6 tracking-tight" style={{ color: BRAND.text }}>
       {slide.title}
     </h2>
-    <p className="text-lg font-bold mb-8" style={{ color: BRAND.gold }}>
-      The digital home of indigenous Abians
-    </p>
+
     <div className="space-y-4 text-left">
       {slide.cards.map((c, i) => (
         <motion.div
@@ -470,12 +457,10 @@ const AboutView = ({ slide }: { slide: AboutSlide }) => (
 
 const FeaturesView = ({ slide }: { slide: FeaturesSlide }) => (
   <div className="w-full max-w-md">
-    <h2 className="text-4xl font-black mb-3 tracking-tight" style={{ color: BRAND.text }}>
+    <h2 className="text-4xl font-black mb-8 tracking-tight" style={{ color: BRAND.text }}>
       {slide.title}
     </h2>
-    <p className="text-lg font-bold mb-10" style={{ color: BRAND.gold }}>
-      Built for community & progress
-    </p>
+
     <div className="grid grid-cols-2 gap-4">
       {slide.features.map((f, i) => (
         <motion.div
@@ -591,15 +576,5 @@ const StartView = ({
       </Button>
     </motion.div>
 
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 0.5 }}
-      transition={{ delay: 1, duration: 1 }}
-      className="mt-10 pt-6 border-t border-white/5"
-    >
-      <p className="text-[11px] uppercase tracking-widest font-bold opacity-60" style={{ color: BRAND.textDim }}>
-        AbiaConnect &copy; 2026 • One People. One Voice.
-      </p>
-    </motion.div>
   </div>
 );
