@@ -502,7 +502,9 @@ function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
 
   const age = calcAge(current.dob)
   const name = current.display_name || current.username || 'Member'
-  const cover = current.photos?.[0] ?? null
+  const [broken, setBroken] = useState(false)
+  useEffect(() => { setBroken(false) }, [current?.id])
+  const cover = !broken ? current.photos?.[0] ?? null : null
 
   return (
     <div className="mx-auto max-w-md">
@@ -517,7 +519,7 @@ function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
             className="absolute inset-0"
           >
             {cover ? (
-              <img src={cover} alt={name} className="absolute inset-0 h-full w-full object-cover" />
+              <img src={cover} alt={name} onError={() => setBroken(true)} className="absolute inset-0 h-full w-full object-cover" />
             ) : (
               <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-pink-500/20 to-rose-600/20">
                 <Heart className="size-16 text-pink-500/60" />
