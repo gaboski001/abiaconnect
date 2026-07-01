@@ -16,7 +16,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { supabase } from '@/lib/supabase'
-import { saveProfile } from '@/lib/profileUpdate'
+import { saveProfile, SEX_OPTIONS, MARITAL_STATUS_OPTIONS } from '@/lib/profileUpdate'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
