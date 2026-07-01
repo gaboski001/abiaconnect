@@ -98,7 +98,7 @@ export function CategoryList() {
 
 function CategoryCard({ category }: { category: Category }) {
   const color = category.color ?? '#013220'
-  const href = `/category/${category.id}`
+  const href = category.slug === 'relationship' ? '/relationship' : `/category/${category.id}`
   return (
     <Link
       to={href}
