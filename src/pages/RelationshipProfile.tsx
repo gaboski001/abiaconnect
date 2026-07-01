@@ -103,7 +103,8 @@ export default function RelationshipProfilePage() {
 
   const name = card.display_name || card.username || 'Member'
   const age = calcAge(card.dob)
-  const cover = card.photos?.[0] || card.avatar_url
+  const [coverBroken, setCoverBroken] = useState(false)
+  const cover = !coverBroken ? card.photos?.[0] ?? null : null
   const gallery = (card.photos ?? []).slice(1)
 
   return (
@@ -115,7 +116,7 @@ export default function RelationshipProfilePage() {
 
       <div className="relative w-full aspect-[16/10] sm:aspect-[16/8] rounded-3xl overflow-hidden bg-muted border border-border">
         {cover ? (
-          <img src={cover} alt={name} className="absolute inset-0 h-full w-full object-cover" />
+          <img src={cover} alt={name} onError={() => setCoverBroken(true)} className="absolute inset-0 h-full w-full object-cover" />
         ) : (
           <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-pink-500/20 to-rose-600/20">
             <Heart className="size-16 text-pink-500/60" />
