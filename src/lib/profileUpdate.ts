@@ -1,6 +1,18 @@
 import { z } from 'zod'
 import { supabase } from '@/integrations/supabase/client'
 
+export const SEX_OPTIONS = ['male', 'female', 'other', 'prefer_not_to_say'] as const
+export const MARITAL_STATUS_OPTIONS = [
+  'single',
+  'married',
+  'in_relationship',
+  'engaged',
+  'divorced',
+  'widowed',
+  'separated',
+  'prefer_not_to_say',
+] as const
+
 export const profileEditSchema = z.object({
   display_name: z.string().trim().max(80, 'Display name is too long').optional(),
   username: z
@@ -11,6 +23,10 @@ export const profileEditSchema = z.object({
     .optional(),
   bio: z.string().trim().max(500, 'Bio must be 500 characters or less').optional(),
   lga: z.string().trim().max(60, 'LGA is too long').optional(),
+  current_location: z.string().trim().max(120, 'Current location is too long').optional(),
+  occupation: z.string().trim().max(120, 'Occupation is too long').optional(),
+  sex: z.enum(['', ...SEX_OPTIONS] as [string, ...string[]]).optional(),
+  marital_status: z.enum(['', ...MARITAL_STATUS_OPTIONS] as [string, ...string[]]).optional(),
 })
 
 export type ProfileEditInput = z.infer<typeof profileEditSchema>
