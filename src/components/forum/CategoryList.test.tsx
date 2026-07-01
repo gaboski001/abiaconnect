@@ -23,11 +23,11 @@ vi.mock('@/lib/supabase', () => ({
 
 import { CategoryList } from './CategoryList'
 
-function renderList() {
+function renderList(initialPath = '/') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialPath]}>
         <CategoryList />
       </MemoryRouter>
     </QueryClientProvider>,
