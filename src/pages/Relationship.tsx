@@ -19,6 +19,7 @@ import {
 } from '@/lib/relationship'
 import { isValidHttpUrl } from '@/lib/images'
 import { selectRelationshipCards } from '@/lib/relationshipFeed'
+import { useSignedUrl } from '@/hooks/useSignedUrl'
 
 const PAGE_SIZE = 24
 
