@@ -19,6 +19,7 @@ import {
 } from '@/lib/relationship'
 import { isValidHttpUrl } from '@/lib/images'
 import { selectRelationshipCards } from '@/lib/relationshipFeed'
+import { useSignedUrl } from '@/hooks/useSignedUrl'
 
 const PAGE_SIZE = 24
 
@@ -430,8 +431,10 @@ function CardTile({ card }: { card: RelationshipCard }) {
   const age = calcAge(card.dob)
   const name = card.display_name || card.username || 'Member'
   const [broken, setBroken] = useState(false)
-  const raw = card.photos?.[0] ?? null
-  const cover = !broken && isValidHttpUrl(raw) ? raw : null
+  const rawPhoto = card.photos?.[0] ?? null
+  const signedAvatar = useSignedUrl(card.avatar_url, 'avatars')
+  const fallback = signedAvatar || (isValidHttpUrl(card.avatar_url) ? card.avatar_url : null)
+  const cover = !broken ? (isValidHttpUrl(rawPhoto) ? rawPhoto : fallback) : null
   return (
     <Link
       to={`/relationship/${card.user_id}`}
@@ -506,8 +509,10 @@ function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
   const name = current.display_name || current.username || 'Member'
   const [broken, setBroken] = useState(false)
   useEffect(() => { setBroken(false) }, [current?.id])
-  const raw = current.photos?.[0] ?? null
-  const cover = !broken && isValidHttpUrl(raw) ? raw : null
+  const rawPhoto = current.photos?.[0] ?? null
+  const signedAvatar = useSignedUrl(current.avatar_url, 'avatars')
+  const fallback = signedAvatar || (isValidHttpUrl(current.avatar_url) ? current.avatar_url : null)
+  const cover = !broken ? (isValidHttpUrl(rawPhoto) ? rawPhoto : fallback) : null
 
   return (
     <div className="mx-auto max-w-md">
