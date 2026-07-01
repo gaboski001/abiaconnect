@@ -3,17 +3,35 @@ import { Link } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Award, MapPin, Pencil } from 'lucide-react'
+import { Award, Briefcase, Heart, MapPin, Navigation, Pencil, User as UserIcon } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { supabase } from '@/lib/supabase'
-import { saveProfile } from '@/lib/profileUpdate'
+import { saveProfile, SEX_OPTIONS, MARITAL_STATUS_OPTIONS } from '@/lib/profileUpdate'
 import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+
+const SEX_LABELS: Record<string, string> = {
+  male: 'Male',
+  female: 'Female',
+  other: 'Other',
+  prefer_not_to_say: 'Prefer not to say',
+}
+const MARITAL_LABELS: Record<string, string> = {
+  single: 'Single',
+  married: 'Married',
+  in_relationship: 'In a relationship',
+  engaged: 'Engaged',
+  divorced: 'Divorced',
+  widowed: 'Widowed',
+  separated: 'Separated',
+  prefer_not_to_say: 'Prefer not to say',
+}
 
 interface Profile {
   id?: string
