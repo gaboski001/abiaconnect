@@ -424,7 +424,8 @@ function GridView({ cards }: { cards: RelationshipCard[] }) {
 function CardTile({ card }: { card: RelationshipCard }) {
   const age = calcAge(card.dob)
   const name = card.display_name || card.username || 'Member'
-  const cover = card.photos?.[0] ?? null
+  const [broken, setBroken] = useState(false)
+  const cover = !broken ? card.photos?.[0] ?? null : null
   return (
     <Link
       to={`/relationship/${card.user_id}`}
@@ -435,6 +436,7 @@ function CardTile({ card }: { card: RelationshipCard }) {
           src={cover}
           alt={name}
           loading="lazy"
+          onError={() => setBroken(true)}
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
       ) : (
