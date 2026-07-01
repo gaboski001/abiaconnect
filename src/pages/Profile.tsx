@@ -102,6 +102,29 @@ export default function Profile() {
   const profile = profileQ.data ?? {}
   const name = profile.display_name || user?.email?.split('@')[0] || 'You'
 
+  const completenessFields: Array<keyof Profile> = [
+    'display_name',
+    'username',
+    'bio',
+    'avatar_url',
+    'lga',
+    'current_location',
+    'occupation',
+    'sex',
+    'marital_status',
+  ]
+  const filledCount = completenessFields.filter((f) => {
+    const v = profile[f]
+    return typeof v === 'string' && v.trim().length > 0
+  }).length
+  const completeness = Math.round((filledCount / completenessFields.length) * 100)
+  const completenessColor =
+    completeness >= 80
+      ? 'bg-emerald-500'
+      : completeness >= 50
+        ? 'bg-amber-500'
+        : 'bg-destructive'
+
   const startEdit = () => {
     setForm({
       display_name: profile.display_name ?? '',
