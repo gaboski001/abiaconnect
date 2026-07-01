@@ -280,7 +280,15 @@ export default function RelationshipEdit() {
           </div>
           {form.photos[0] && (
             <div className="mt-2 relative w-32">
-              <img src={form.photos[0]} alt="" className="aspect-square object-cover w-32 rounded-lg border border-border" />
+              <img
+                src={form.photos[0]}
+                alt=""
+                onError={(e) => {
+                  ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+                  toast.error("That image URL couldn't be loaded")
+                }}
+                className="aspect-square object-cover w-32 rounded-lg border border-border bg-muted"
+              />
               <button
                 type="button"
                 onClick={() => { setForm((f) => ({ ...f, photos: [] })); setPhotoInput('') }}
