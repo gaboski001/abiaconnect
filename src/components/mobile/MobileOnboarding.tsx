@@ -406,7 +406,8 @@ const WelcomeView = ({ slide }: { slide: WelcomeSlide }) => (
     >
       {slide.subtitle}
     </motion.p>
-  
+  </>
+
 );
 
 const AboutView = ({ slide }: { slide: AboutSlide }) => (
