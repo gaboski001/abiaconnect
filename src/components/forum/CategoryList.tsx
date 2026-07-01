@@ -100,11 +100,25 @@ export function CategoryList() {
 function CategoryCard({ category }: { category: Category }) {
   const color = category.color ?? '#013220'
   const href = category.slug === 'relationship' ? '/relationship' : `/category/${category.id}`
+  const { pathname } = useLocation()
+  const isActive =
+    pathname === href ||
+    (href.startsWith('/category/') && pathname.startsWith(href)) ||
+    (href === '/relationship' && pathname.startsWith('/relationship'))
   return (
     <Link
       to={href}
-      className="group relative bg-card border border-border rounded-2xl p-5 cursor-pointer transition-all duration-300 hover:border-secondary/60 hover:shadow-lg hover:shadow-secondary/10 hover:-translate-y-1 flex flex-col h-full"
+      aria-current={isActive ? 'page' : undefined}
+      data-active={isActive ? 'true' : undefined}
+      className={`group relative rounded-2xl p-5 cursor-pointer transition-all duration-300 flex flex-col h-full border ${
+        isActive
+          ? 'bg-secondary/10 border-secondary shadow-lg shadow-secondary/20 -translate-y-0.5 ring-2 ring-secondary/40'
+          : 'bg-card border-border hover:border-secondary/60 hover:shadow-lg hover:shadow-secondary/10 hover:-translate-y-1'
+      }`}
     >
+      {isActive && (
+        <span className="absolute top-3 right-3 h-2 w-2 rounded-full bg-secondary shadow-[0_0_0_4px_hsl(var(--secondary)/0.2)]" />
+      )}
       <div className="flex items-start justify-between">
         <span
           className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl border"
@@ -121,7 +135,11 @@ function CategoryCard({ category }: { category: Category }) {
           </span>
         )}
       </div>
-      <h3 className="text-foreground font-bold text-base mt-3 group-hover:text-secondary transition-colors">
+      <h3
+        className={`font-bold text-base mt-3 transition-colors ${
+          isActive ? 'text-secondary' : 'text-foreground group-hover:text-secondary'
+        }`}
+      >
         {category.name}
       </h3>
       {category.description && (
@@ -133,7 +151,9 @@ function CategoryCard({ category }: { category: Category }) {
         <span className="text-muted-foreground text-xs">
           {category.thread_count ?? 0} threads
         </span>
-        <span className="text-secondary text-xs font-semibold">Browse →</span>
+        <span className="text-secondary text-xs font-semibold">
+          {isActive ? 'Viewing' : 'Browse →'}
+        </span>
       </div>
     </Link>
   )
