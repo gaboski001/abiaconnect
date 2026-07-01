@@ -406,19 +406,7 @@ const WelcomeView = ({ slide }: { slide: WelcomeSlide }) => (
     >
       {slide.subtitle}
     </motion.p>
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.8 }}
-      className="mt-10 inline-flex items-center gap-2 px-5 py-2.5 rounded-full shadow-lg"
-      style={{ background: `${BRAND.gold}20`, border: `1px solid ${BRAND.gold}40` }}
-    >
-      <Sparkles className="size-4" style={{ color: BRAND.gold }} />
-      <span className="text-sm font-bold tracking-wide" style={{ color: BRAND.gold }}>
-        Connecting Abians Worldwide
-      </span>
-    </motion.div>
-  </>
+  
 );
 
 const AboutView = ({ slide }: { slide: AboutSlide }) => (
