@@ -215,7 +215,6 @@ export default function Relationship() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   const clearFilters = () => setFilters({ lookingFor: 'all', lga: 'all' })
-  const hasActiveFilters = filters.lookingFor !== 'all' || filters.lga !== 'all'
 
   return (
     <div className="max-w-6xl mx-auto">
