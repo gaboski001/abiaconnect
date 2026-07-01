@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SEO } from '@/components/SEO'
 import { LOOKING_FOR_LABELS, LookingFor, RelationshipProfile } from '@/lib/relationship'
+import { isValidHttpUrl } from '@/lib/images'
 
 const SEX = ['male', 'female', 'other', 'prefer_not_to_say'] as const
 const MARITAL = ['single', 'in_relationship', 'engaged', 'married', 'divorced', 'widowed', 'complicated', 'prefer_not_to_say'] as const
