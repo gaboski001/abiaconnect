@@ -158,10 +158,30 @@ export default function Profile() {
             {!editing ? (
               <>
                 {profile.bio && <p className="mt-3 text-sm">{profile.bio}</p>}
-                <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
                   {profile.lga && (
                     <span className="inline-flex items-center gap-1">
                       <MapPin className="size-3" /> {profile.lga}
+                    </span>
+                  )}
+                  {profile.current_location && (
+                    <span className="inline-flex items-center gap-1">
+                      <Navigation className="size-3" /> {profile.current_location}
+                    </span>
+                  )}
+                  {profile.occupation && (
+                    <span className="inline-flex items-center gap-1">
+                      <Briefcase className="size-3" /> {profile.occupation}
+                    </span>
+                  )}
+                  {profile.sex && (
+                    <span className="inline-flex items-center gap-1">
+                      <UserIcon className="size-3" /> {SEX_LABELS[profile.sex] ?? profile.sex}
+                    </span>
+                  )}
+                  {profile.marital_status && (
+                    <span className="inline-flex items-center gap-1">
+                      <Heart className="size-3" /> {MARITAL_LABELS[profile.marital_status] ?? profile.marital_status}
                     </span>
                   )}
                   {profile.created_at && (
