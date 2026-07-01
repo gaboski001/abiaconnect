@@ -148,6 +148,37 @@ export default function CreateThread() {
   }, [presetCategory, form])
 
   const title = form.watch('title')
+  const currentCategoryId = form.watch('category_id')
+  const currentCategory = categories.find((c) => c.id === currentCategoryId)
+  const isRelationship = (currentCategory?.name ?? '').toLowerCase() === 'relationship'
+
+  const fillFromProfile = async () => {
+    if (!user) return toast.error('Please sign in')
+    const { data, error } = await supabase.rpc('get_my_profile')
+    if (error) return toast.error(error.message)
+    const p = Array.isArray(data) ? data[0] : data
+    if (!p) return toast.error('Profile not found')
+    const name = p.display_name || p.username || 'Abia member'
+    const rows: Array<[string, string | null | undefined]> = [
+      ['Location', p.current_location],
+      ['LGA', p.lga],
+      ['Occupation', p.occupation],
+      ['Sex', p.sex],
+      ['Marital status', p.marital_status ? String(p.marital_status).replace(/_/g, ' ') : null],
+    ]
+    const details = rows
+      .filter(([, v]) => v && String(v).trim().length > 0)
+      .map(([k, v]) => `<li><strong>${k}:</strong> ${DOMPurify.sanitize(String(v))}</li>`)
+      .join('')
+    const bio = p.bio ? `<p>${DOMPurify.sanitize(String(p.bio))}</p>` : ''
+    const html = `<p>Hi, I'm <strong>${DOMPurify.sanitize(name)}</strong> — sharing my profile so we can connect.</p>${bio}<ul>${details}</ul><p><em>Feel free to reach out via chat.</em></p>`
+    const nextTitle = `Meet ${name}${p.lga ? ` from ${p.lga}` : ''} — let's connect`
+    form.setValue('title', nextTitle.slice(0, 200), { shouldValidate: true })
+    if (editorRef.current) editorRef.current.innerHTML = html
+    form.setValue('content', DOMPurify.sanitize(html), { shouldValidate: true })
+    setTags((prev) => Array.from(new Set([...prev, 'relationship', 'introduction'])).slice(0, 10))
+    toast.success('Profile added — review and post')
+  }
 
   const exec = (cmd: 'bold' | 'italic' | 'underline') => {
     document.execCommand(cmd)
