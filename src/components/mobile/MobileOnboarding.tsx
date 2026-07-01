@@ -418,12 +418,10 @@ const AboutView = ({ slide }: { slide: AboutSlide }) => (
     >
       <ShieldCheck className="size-10" />
     </div>
-    <h2 className="text-4xl font-black mb-3 tracking-tight" style={{ color: BRAND.text }}>
+    <h2 className="text-4xl font-black mb-6 tracking-tight" style={{ color: BRAND.text }}>
       {slide.title}
     </h2>
-    <p className="text-lg font-bold mb-8" style={{ color: BRAND.gold }}>
-      The digital home of indigenous Abians
-    </p>
+
     <div className="space-y-4 text-left">
       {slide.cards.map((c, i) => (
         <motion.div
