@@ -173,6 +173,26 @@ export default function SettingsPanel({
             <BioField value={form.bio} onChange={(v: string) => setForm({ ...form, bio: v })} />
           </div>
           <Field label="LGA"><Input value={form.lga} onChange={(e) => setForm({ ...form, lga: e.target.value })} className="h-12 rounded-2xl border-white/10 bg-slate-950/40 text-white" /></Field>
+          <Field label="Current location"><Input placeholder="City, Country" value={form.current_location} onChange={(e) => setForm({ ...form, current_location: e.target.value })} className="h-12 rounded-2xl border-white/10 bg-slate-950/40 text-white" /></Field>
+          <Field label="Occupation"><Input placeholder="e.g. Software Engineer" value={form.occupation} onChange={(e) => setForm({ ...form, occupation: e.target.value })} className="h-12 rounded-2xl border-white/10 bg-slate-950/40 text-white" /></Field>
+          <Field label="Sex">
+            <Select value={form.sex || 'unset'} onValueChange={(v) => setForm({ ...form, sex: v === 'unset' ? '' : v })}>
+              <SelectTrigger className="h-12 rounded-2xl border-white/10 bg-slate-950/40 text-white"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">Not specified</SelectItem>
+                {SEX_OPTIONS.map((o) => <SelectItem key={o} value={o}>{SEX_LABELS[o]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Marital status">
+            <Select value={form.marital_status || 'unset'} onValueChange={(v) => setForm({ ...form, marital_status: v === 'unset' ? '' : v })}>
+              <SelectTrigger className="h-12 rounded-2xl border-white/10 bg-slate-950/40 text-white"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">Not specified</SelectItem>
+                {MARITAL_STATUS_OPTIONS.map((o) => <SelectItem key={o} value={o}>{MARITAL_LABELS[o]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
         </div>
         <Button onClick={save} disabled={!profile.id} className="mt-5 rounded-2xl text-slate-950" style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}>
           Save changes
