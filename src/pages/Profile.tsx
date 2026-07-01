@@ -108,6 +108,10 @@ export default function Profile() {
       username: profile.username ?? '',
       bio: profile.bio ?? '',
       lga: profile.lga ?? '',
+      current_location: profile.current_location ?? '',
+      occupation: profile.occupation ?? '',
+      sex: profile.sex ?? '',
+      marital_status: profile.marital_status ?? '',
     })
     setEditing(true)
   }
@@ -119,6 +123,10 @@ export default function Profile() {
       username: form.username ?? undefined,
       bio: form.bio ?? undefined,
       lga: form.lga ?? undefined,
+      current_location: form.current_location ?? undefined,
+      occupation: form.occupation ?? undefined,
+      sex: (form.sex as string) ?? undefined,
+      marital_status: (form.marital_status as string) ?? undefined,
     })
     if (error) return toast.error(error.message)
     toast.success('Profile updated')
