@@ -276,13 +276,13 @@ export default function RelationshipEdit() {
             />
             <Button type="button" onClick={setProfilePhoto} variant="secondary">Set</Button>
           </div>
-          {form.photos[0] && (
+          {isValidHttpUrl(form.photos[0]) && (
             <div className="mt-2 relative w-32">
               <img
                 src={form.photos[0]}
                 alt=""
-                onError={(e) => {
-                  ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+                onError={() => {
+                  setForm((f) => ({ ...f, photos: [] }))
                   toast.error("That image URL couldn't be loaded")
                 }}
                 className="aspect-square object-cover w-32 rounded-lg border border-border bg-muted"
