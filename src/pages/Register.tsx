@@ -20,6 +20,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
+import { NativeAuthLayout, isNativeApp } from '@/components/mobile/NativeAuthLayout'
 
 const ABIA_LGAS = [
   'Aba North', 'Aba South', 'Arochukwu', 'Bende', 'Ikwuano',
@@ -146,11 +147,89 @@ export default function Register() {
     [],
   )
 
+  const stepContent = (
+    <>
+      <StepDots step={step} />
+      <AnimatePresence mode="wait" custom={direction}>
+        {step === 1 && (
+          <motion.div key="s1" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
+            <h2 className="text-lg font-bold mb-1 text-center">Create your account</h2>
+            <p className="text-sm text-muted-foreground text-center mb-6">Tell us a bit about yourself.</p>
+            <form onSubmit={onStep1} className="space-y-4">
+              <Field label="Full Name" error={form.formState.errors.name?.message}><Input {...form.register('name')} /></Field>
+              <Field label="Username" error={form.formState.errors.username?.message}><Input {...form.register('username')} /></Field>
+              <Field label="Email" error={form.formState.errors.email?.message}><Input type="email" {...form.register('email')} /></Field>
+              <Field label="Password" error={form.formState.errors.password?.message}><Input type="password" {...form.register('password')} /></Field>
+              <Field label="Date of Birth" error={form.formState.errors.dob?.message}><Input type="date" {...form.register('dob')} /></Field>
+              <Field label="LGA of Origin" error={form.formState.errors.lga?.message}>
+                <Select value={form.watch('lga')} onValueChange={(v) => form.setValue('lga', v as FormValues['lga'], { shouldValidate: true })}>
+                  <SelectTrigger><SelectValue placeholder="Select your LGA" /></SelectTrigger>
+                  <SelectContent>{LGA_OPTIONS.map((l) => (<SelectItem key={l} value={l}>{l}</SelectItem>))}</SelectContent>
+                </Select>
+              </Field>
+              <Button type="submit" className="w-full">Continue to Verification →</Button>
+              <p className="text-sm text-center text-muted-foreground">Already have an account? <Link to="/login" className="text-primary font-medium hover:underline">Sign In</Link></p>
+            </form>
+          </motion.div>
+        )}
+        {step === 2 && (
+          <motion.div key="s2" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
+            <h2 className="text-lg font-bold mb-1 text-center">Verify Your Abia Roots</h2>
+            <p className="text-sm text-muted-foreground text-center mb-6">Select the LGA that belongs to Abia State.</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {quiz.options.map((opt) => (
+                <button key={opt} type="button" onClick={() => onQuizAnswer(opt)} className="rounded-xl border border-border bg-background p-4 text-left font-medium hover:border-primary hover:bg-primary/5 transition-colors">{opt}</button>
+              ))}
+            </div>
+            <Button variant="ghost" className="w-full mt-6" onClick={() => goTo(1)}>← Back</Button>
+          </motion.div>
+        )}
+        {step === 3 && (
+          <motion.div key="s3" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }} className="text-center py-6">
+            {!done ? (
+              <>
+                <Loader2 className="size-10 mx-auto animate-spin text-primary mb-4" />
+                <p className="text-sm text-muted-foreground">Creating your account…</p>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="size-14 mx-auto text-primary mb-4" />
+                <h2 className="text-xl font-bold mb-2">You're all set!</h2>
+                <p className="text-sm text-muted-foreground mb-6">Check your email to verify your account, then sign in.</p>
+                <Button className="w-full" onClick={() => navigate('/login')}>Go to Sign In</Button>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  )
+
+  if (isNativeApp()) {
+    return (
+      <>
+        <SEO title="Create your AbiaConnect account" description="Join AbiaConnect." path="/register" />
+        <NativeAuthLayout title="Create account" subtitle="Join the community in a few taps." logoUrl={logoUrl} siteName={settings.site_name || 'AbiaConnect'}>
+          {stepContent}
+        </NativeAuthLayout>
+      </>
+    )
+  }
+
   return (
     <>
       <SEO title="Create your AbiaConnect account" description="Join AbiaConnect — the community forum connecting Abians worldwide. Register in seconds." path="/register" />
     <div className="min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 rounded-3xl p-6">
       <div className="w-full max-w-lg rounded-3xl border border-border bg-card shadow-xl p-8 overflow-hidden">
+        <div className="flex justify-center mb-4">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground overflow-hidden">
+            {logoUrl ? (
+              <img src={logoUrl} alt={settings.site_name || 'AbiaConnect'} className="h-full w-full object-contain" />
+            ) : (
+              <span className="text-lg font-bold">{(settings.site_name || 'A').charAt(0)}</span>
+            )}
+          </span>
+        </div>
         <div className="flex justify-center mb-4">
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground overflow-hidden">
             {logoUrl ? (
