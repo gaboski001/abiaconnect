@@ -90,7 +90,7 @@ export default function RelationshipEdit() {
         sex: f.sex || p.sex || '',
         marital_status: f.marital_status || p.marital_status || '',
         lga: f.lga || p.lga || '',
-        photos: f.photos.length ? f.photos : (p.avatar_url ? [p.avatar_url] : []),
+        photos: p.avatar_url ? [p.avatar_url] : f.photos,
       }))
       toast.success('Filled from your profile')
     } finally {
@@ -105,7 +105,7 @@ export default function RelationshipEdit() {
     setTagInput('')
   }
 
-  const addPhoto = () => {
+  const setProfilePhoto = () => {
     const url = photoInput.trim()
     if (!url) return
     try {
