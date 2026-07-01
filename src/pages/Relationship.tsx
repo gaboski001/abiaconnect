@@ -500,7 +500,7 @@ function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
 
   const age = calcAge(current.dob)
   const name = current.display_name || current.username || 'Member'
-  const cover = current.photos?.[0] || current.avatar_url
+  const cover = current.photos?.[0] ?? null
 
   return (
     <div className="mx-auto max-w-md">
