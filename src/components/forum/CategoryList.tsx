@@ -10,6 +10,7 @@ interface Category {
   id: string
   name: string
   slug: string | null
+  description: string | null
   icon: string | null
   color: string | null
   thread_count: number
