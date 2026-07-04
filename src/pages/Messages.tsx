@@ -692,6 +692,19 @@ function ConversationView({
               {g.items.map((m) => {
                 const mine = m.sender_id === user?.id
                 const hasAttachment = !!(m.attachment_path || m.attachment_url)
+                const callInfo = parseCallLog(m.content)
+                if (callInfo) {
+                  // Hide call activity entirely on the web project.
+                  if (!isNativeApp()) return null
+                  return (
+                    <CallLogRow
+                      key={m.id}
+                      mine={mine}
+                      info={callInfo}
+                      createdAt={m.created_at}
+                    />
+                  )
+                }
                 return (
                   <div
                     key={m.id}
