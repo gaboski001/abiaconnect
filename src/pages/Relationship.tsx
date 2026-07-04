@@ -335,6 +335,27 @@ export default function Relationship() {
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
+          <select
+            aria-label="Gender"
+            value={filters.sex}
+            onChange={(e) => setFilters((f) => ({ ...f, sex: e.target.value as SexFilter }))}
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+          >
+            <option value="all">Gender — Any</option>
+            <option value="male">Men</option>
+            <option value="female">Women</option>
+          </select>
+          <select
+            aria-label="Age"
+            value={filters.age}
+            onChange={(e) => setFilters((f) => ({ ...f, age: e.target.value as AgeBracket }))}
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+          >
+            <option value="all">Age — Any</option>
+            {(Object.keys(AGE_BRACKETS) as Exclude<AgeBracket, 'all'>[]).map((k) => (
+              <option key={k} value={k}>{k}</option>
+            ))}
+          </select>
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
