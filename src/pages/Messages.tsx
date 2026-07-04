@@ -643,7 +643,7 @@ function ConversationView({
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <Avatar profile={other} size="sm" />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-semibold text-sm truncate">
             {other?.display_name || other?.username || 'Conversation'}
           </p>
@@ -651,6 +651,29 @@ function ConversationView({
             <p className="text-xs text-muted-foreground truncate">@{other.username}</p>
           )}
         </div>
+        {/* Native-only WhatsApp-style call button. Hidden on the web project. */}
+        {isNativeApp() && other?.id && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+            aria-label={`Call ${other.display_name || other.username || 'user'}`}
+            onClick={() => {
+              try {
+                callManager.startCall({
+                  id: other.id,
+                  name: other.display_name || other.username || 'User',
+                  avatarUrl: other.avatar_url ?? null,
+                  conversationId,
+                })
+              } catch (e) {
+                toast.error((e as Error).message || 'Could not start call')
+              }
+            }}
+          >
+            <Phone className="h-5 w-5" />
+          </Button>
+        )}
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
