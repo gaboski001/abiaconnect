@@ -24,9 +24,34 @@ import { useSignedUrl } from '@/hooks/useSignedUrl'
 
 const PAGE_SIZE = 24
 
+type SexFilter = 'all' | 'male' | 'female'
+type AgeBracket = 'all' | '18-24' | '25-34' | '35-44' | '45-54' | '55+'
+
+const AGE_BRACKETS: Record<Exclude<AgeBracket, 'all'>, { min: number; max: number }> = {
+  '18-24': { min: 18, max: 24 },
+  '25-34': { min: 25, max: 34 },
+  '35-44': { min: 35, max: 44 },
+  '45-54': { min: 45, max: 54 },
+  '55+':   { min: 55, max: 120 },
+}
+
+/** Convert an age bracket into a `dob` date range (inclusive). */
+function ageBracketToDobRange(bracket: Exclude<AgeBracket, 'all'>) {
+  const { min, max } = AGE_BRACKETS[bracket]
+  const now = new Date()
+  // Someone aged `min` was born on or before today - min years.
+  const dobMax = new Date(now.getFullYear() - min, now.getMonth(), now.getDate())
+  // Someone aged `max` was born after today - (max+1) years.
+  const dobMin = new Date(now.getFullYear() - max - 1, now.getMonth(), now.getDate() + 1)
+  const fmt = (d: Date) => d.toISOString().slice(0, 10)
+  return { dobMin: fmt(dobMin), dobMax: fmt(dobMax) }
+}
+
 interface FeedFilters {
   lookingFor: LookingFor | 'all'
   lga: string | 'all'
+  sex: SexFilter
+  age: AgeBracket
 }
 
 
@@ -98,6 +123,11 @@ async function fetchFeedPage(
     .range(from, to)
   if (filters.lookingFor !== 'all') q = q.eq('looking_for', filters.lookingFor)
   if (filters.lga !== 'all') q = q.eq('lga', filters.lga)
+  if (filters.sex !== 'all') q = q.eq('sex', filters.sex)
+  if (filters.age !== 'all') {
+    const { dobMin, dobMax } = ageBracketToDobRange(filters.age)
+    q = q.gte('dob', dobMin).lte('dob', dobMax)
+  }
   const { data, error } = await q
   if (error) throw error
   const rows = ((data ?? []) as unknown as RelationshipProfile[]).filter(
@@ -156,7 +186,7 @@ export default function Relationship() {
     },
   })
 
-  const [filters, setFilters] = useState<FeedFilters>({ lookingFor: 'all', lga: 'all' })
+  const [filters, setFilters] = useState<FeedFilters>({ lookingFor: 'all', lga: 'all', sex: 'all', age: 'all' })
 
   const { data: lgaOptions = [] } = useQuery({
     queryKey: ['relationship-lga-options'],
@@ -175,7 +205,7 @@ export default function Relationship() {
     error,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ['relationship-feed', user?.id, myProfile?.id ?? null, filters.lookingFor, filters.lga],
+    queryKey: ['relationship-feed', user?.id, myProfile?.id ?? null, filters.lookingFor, filters.lga, filters.sex, filters.age],
     enabled: !!user,
     initialPageParam: 0,
     queryFn: ({ pageParam }) => fetchFeedPage(pageParam as number, filters, user?.id, myProfile),
@@ -200,7 +230,8 @@ export default function Relationship() {
     ],
   })
 
-  const hasActiveFilters = filters.lookingFor !== 'all' || filters.lga !== 'all'
+  const hasActiveFilters =
+    filters.lookingFor !== 'all' || filters.lga !== 'all' || filters.sex !== 'all' || filters.age !== 'all'
 
   // Stable per-mount seed so the "random 10" order doesn't reshuffle on every render
   const shuffleSeedRef = useRef(Math.random())
@@ -224,7 +255,7 @@ export default function Relationship() {
     return () => io.disconnect()
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  const clearFilters = () => setFilters({ lookingFor: 'all', lga: 'all' })
+  const clearFilters = () => setFilters({ lookingFor: 'all', lga: 'all', sex: 'all', age: 'all' })
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -302,6 +333,27 @@ export default function Relationship() {
             <option value="all">LGA — Any</option>
             {lgaOptions.map((l) => (
               <option key={l} value={l}>{l}</option>
+            ))}
+          </select>
+          <select
+            aria-label="Gender"
+            value={filters.sex}
+            onChange={(e) => setFilters((f) => ({ ...f, sex: e.target.value as SexFilter }))}
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+          >
+            <option value="all">Gender — Any</option>
+            <option value="male">Men</option>
+            <option value="female">Women</option>
+          </select>
+          <select
+            aria-label="Age"
+            value={filters.age}
+            onChange={(e) => setFilters((f) => ({ ...f, age: e.target.value as AgeBracket }))}
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+          >
+            <option value="all">Age — Any</option>
+            {(Object.keys(AGE_BRACKETS) as Exclude<AgeBracket, 'all'>[]).map((k) => (
+              <option key={k} value={k}>{k}</option>
             ))}
           </select>
           {hasActiveFilters && (
@@ -390,6 +442,24 @@ export default function Relationship() {
               className="inline-flex items-center gap-1.5 rounded-full bg-pink-600/10 text-pink-700 dark:text-pink-300 border border-pink-500/30 px-3 py-1 text-xs font-semibold hover:bg-pink-600/20 transition"
             >
               <MapPin className="size-3" /> {filters.lga}
+              <X className="size-3" />
+            </button>
+          )}
+          {filters.sex !== 'all' && (
+            <button
+              onClick={() => setFilters((f) => ({ ...f, sex: 'all' }))}
+              className="inline-flex items-center gap-1.5 rounded-full bg-pink-600/10 text-pink-700 dark:text-pink-300 border border-pink-500/30 px-3 py-1 text-xs font-semibold hover:bg-pink-600/20 transition"
+            >
+              {filters.sex === 'male' ? 'Men' : 'Women'}
+              <X className="size-3" />
+            </button>
+          )}
+          {filters.age !== 'all' && (
+            <button
+              onClick={() => setFilters((f) => ({ ...f, age: 'all' }))}
+              className="inline-flex items-center gap-1.5 rounded-full bg-pink-600/10 text-pink-700 dark:text-pink-300 border border-pink-500/30 px-3 py-1 text-xs font-semibold hover:bg-pink-600/20 transition"
+            >
+              Age {filters.age}
               <X className="size-3" />
             </button>
           )}
