@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Heart, MessageCircle, Sparkles, X, LayoutGrid, Layers, MapPin, Pencil, Filter, RefreshCw, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -139,6 +140,7 @@ async function fetchLgaOptions(): Promise<string[]> {
 
 export default function Relationship() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [mode, setMode] = useState<'grid' | 'discover'>('grid')
 
   const { data: myProfile } = useQuery({
@@ -178,6 +180,24 @@ export default function Relationship() {
     initialPageParam: 0,
     queryFn: ({ pageParam }) => fetchFeedPage(pageParam as number, filters, user?.id, myProfile),
     getNextPageParam: (last) => last.nextPage,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  })
+
+  // Realtime: keep the feed fresh without polling. Any insert/update/delete on
+  // relationship_profiles invalidates the cached pages so React Query refetches
+  // in the background (no full-page spinner).
+  useRealtimeChannel({
+    channelName: 'relationship-feed',
+    enabled: !!user,
+    subscriptions: [
+      {
+        filter: { event: '*', schema: 'public', table: 'relationship_profiles' },
+        handler: () => {
+          queryClient.invalidateQueries({ queryKey: ['relationship-feed'] })
+        },
+      },
+    ],
   })
 
   const hasActiveFilters = filters.lookingFor !== 'all' || filters.lga !== 'all'
@@ -427,7 +447,7 @@ function GridView({ cards }: { cards: RelationshipCard[] }) {
   )
 }
 
-function CardTile({ card }: { card: RelationshipCard }) {
+const CardTile = memo(function CardTile({ card }: { card: RelationshipCard }) {
   const age = calcAge(card.dob)
   const name = card.display_name || card.username || 'Member'
   const [broken, setBroken] = useState(false)
@@ -445,6 +465,7 @@ function CardTile({ card }: { card: RelationshipCard }) {
           src={cover}
           alt={name}
           loading="lazy"
+          decoding="async"
           onError={() => setBroken(true)}
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
@@ -470,7 +491,7 @@ function CardTile({ card }: { card: RelationshipCard }) {
       </div>
     </Link>
   )
-}
+}, (prev, next) => prev.card.id === next.card.id && prev.card.updated_at === next.card.updated_at)
 
 function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
   const { user } = useAuth()
