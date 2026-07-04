@@ -356,6 +356,16 @@ export default function Relationship() {
               <option key={k} value={k}>{k}</option>
             ))}
           </select>
+          {(filters.sex !== 'all' || filters.age !== 'all') && (
+            <button
+              type="button"
+              onClick={() => setFilters((f) => ({ ...f, sex: 'all', age: 'all' }))}
+              className="inline-flex items-center gap-1 rounded-full border border-pink-500/40 bg-pink-600/10 text-pink-700 dark:text-pink-300 px-3 py-1.5 text-xs font-semibold hover:bg-pink-600/20 transition"
+              aria-label="Reset gender and age filters"
+            >
+              <RefreshCw className="size-3" /> Reset gender & age
+            </button>
+          )}
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
