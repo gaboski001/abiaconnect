@@ -180,6 +180,24 @@ export default function Relationship() {
     initialPageParam: 0,
     queryFn: ({ pageParam }) => fetchFeedPage(pageParam as number, filters, user?.id, myProfile),
     getNextPageParam: (last) => last.nextPage,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  })
+
+  // Realtime: keep the feed fresh without polling. Any insert/update/delete on
+  // relationship_profiles invalidates the cached pages so React Query refetches
+  // in the background (no full-page spinner).
+  useRealtimeChannel({
+    channelName: 'relationship-feed',
+    enabled: !!user,
+    subscriptions: [
+      {
+        filter: { event: '*', schema: 'public', table: 'relationship_profiles' },
+        handler: () => {
+          queryClient.invalidateQueries({ queryKey: ['relationship-feed'] })
+        },
+      },
+    ],
   })
 
   const hasActiveFilters = filters.lookingFor !== 'all' || filters.lga !== 'all'
