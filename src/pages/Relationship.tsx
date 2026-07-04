@@ -447,7 +447,7 @@ function GridView({ cards }: { cards: RelationshipCard[] }) {
   )
 }
 
-function CardTile({ card }: { card: RelationshipCard }) {
+const CardTile = memo(function CardTile({ card }: { card: RelationshipCard }) {
   const age = calcAge(card.dob)
   const name = card.display_name || card.username || 'Member'
   const [broken, setBroken] = useState(false)
@@ -465,6 +465,7 @@ function CardTile({ card }: { card: RelationshipCard }) {
           src={cover}
           alt={name}
           loading="lazy"
+          decoding="async"
           onError={() => setBroken(true)}
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
@@ -490,7 +491,7 @@ function CardTile({ card }: { card: RelationshipCard }) {
       </div>
     </Link>
   )
-}
+}, (prev, next) => prev.card.id === next.card.id && prev.card.updated_at === next.card.updated_at)
 
 function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
   const { user } = useAuth()
