@@ -181,7 +181,7 @@ export default function Relationship() {
     },
   })
 
-  const [filters, setFilters] = useState<FeedFilters>({ lookingFor: 'all', lga: 'all' })
+  const [filters, setFilters] = useState<FeedFilters>({ lookingFor: 'all', lga: 'all', sex: 'all', age: 'all' })
 
   const { data: lgaOptions = [] } = useQuery({
     queryKey: ['relationship-lga-options'],
@@ -249,7 +249,7 @@ export default function Relationship() {
     return () => io.disconnect()
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  const clearFilters = () => setFilters({ lookingFor: 'all', lga: 'all' })
+  const clearFilters = () => setFilters({ lookingFor: 'all', lga: 'all', sex: 'all', age: 'all' })
 
   return (
     <div className="max-w-6xl mx-auto">
