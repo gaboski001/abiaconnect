@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Heart, MessageCircle, Sparkles, X, LayoutGrid, Layers, MapPin, Pencil, Filter, RefreshCw, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
