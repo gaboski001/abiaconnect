@@ -13,7 +13,13 @@ import {
   X,
   FileText,
   Download,
+  Phone,
+  PhoneIncoming,
+  PhoneOutgoing,
+  PhoneMissed,
 } from 'lucide-react'
+import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
+import { callManager } from '@/lib/webrtcCall'
 import { SEO } from '@/components/SEO'
 import { toast } from '@/lib/toast'
 import { supabase } from '@/lib/supabase'
