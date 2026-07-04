@@ -140,6 +140,7 @@ async function fetchLgaOptions(): Promise<string[]> {
 
 export default function Relationship() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [mode, setMode] = useState<'grid' | 'discover'>('grid')
 
   const { data: myProfile } = useQuery({
