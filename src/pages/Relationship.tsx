@@ -24,9 +24,34 @@ import { useSignedUrl } from '@/hooks/useSignedUrl'
 
 const PAGE_SIZE = 24
 
+type SexFilter = 'all' | 'male' | 'female'
+type AgeBracket = 'all' | '18-24' | '25-34' | '35-44' | '45-54' | '55+'
+
+const AGE_BRACKETS: Record<Exclude<AgeBracket, 'all'>, { min: number; max: number }> = {
+  '18-24': { min: 18, max: 24 },
+  '25-34': { min: 25, max: 34 },
+  '35-44': { min: 35, max: 44 },
+  '45-54': { min: 45, max: 54 },
+  '55+':   { min: 55, max: 120 },
+}
+
+/** Convert an age bracket into a `dob` date range (inclusive). */
+function ageBracketToDobRange(bracket: Exclude<AgeBracket, 'all'>) {
+  const { min, max } = AGE_BRACKETS[bracket]
+  const now = new Date()
+  // Someone aged `min` was born on or before today - min years.
+  const dobMax = new Date(now.getFullYear() - min, now.getMonth(), now.getDate())
+  // Someone aged `max` was born after today - (max+1) years.
+  const dobMin = new Date(now.getFullYear() - max - 1, now.getMonth(), now.getDate() + 1)
+  const fmt = (d: Date) => d.toISOString().slice(0, 10)
+  return { dobMin: fmt(dobMin), dobMax: fmt(dobMax) }
+}
+
 interface FeedFilters {
   lookingFor: LookingFor | 'all'
   lga: string | 'all'
+  sex: SexFilter
+  age: AgeBracket
 }
 
 
