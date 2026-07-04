@@ -445,6 +445,24 @@ export default function Relationship() {
               <X className="size-3" />
             </button>
           )}
+          {filters.sex !== 'all' && (
+            <button
+              onClick={() => setFilters((f) => ({ ...f, sex: 'all' }))}
+              className="inline-flex items-center gap-1.5 rounded-full bg-pink-600/10 text-pink-700 dark:text-pink-300 border border-pink-500/30 px-3 py-1 text-xs font-semibold hover:bg-pink-600/20 transition"
+            >
+              {filters.sex === 'male' ? 'Men' : 'Women'}
+              <X className="size-3" />
+            </button>
+          )}
+          {filters.age !== 'all' && (
+            <button
+              onClick={() => setFilters((f) => ({ ...f, age: 'all' }))}
+              className="inline-flex items-center gap-1.5 rounded-full bg-pink-600/10 text-pink-700 dark:text-pink-300 border border-pink-500/30 px-3 py-1 text-xs font-semibold hover:bg-pink-600/20 transition"
+            >
+              Age {filters.age}
+              <X className="size-3" />
+            </button>
+          )}
           <button
             onClick={clearFilters}
             className="text-xs font-medium text-muted-foreground hover:text-foreground underline underline-offset-2"
