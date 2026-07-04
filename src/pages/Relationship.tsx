@@ -123,6 +123,11 @@ async function fetchFeedPage(
     .range(from, to)
   if (filters.lookingFor !== 'all') q = q.eq('looking_for', filters.lookingFor)
   if (filters.lga !== 'all') q = q.eq('lga', filters.lga)
+  if (filters.sex !== 'all') q = q.eq('sex', filters.sex)
+  if (filters.age !== 'all') {
+    const { dobMin, dobMax } = ageBracketToDobRange(filters.age)
+    q = q.gte('dob', dobMin).lte('dob', dobMax)
+  }
   const { data, error } = await q
   if (error) throw error
   const rows = ((data ?? []) as unknown as RelationshipProfile[]).filter(
