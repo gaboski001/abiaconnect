@@ -70,6 +70,9 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      {/* Native-only: voice/video calls (WhatsApp-style). Web never mounts this,
+          so web users neither see nor initiate calls. */}
+      {isNativeApp() && <CallProvider />}
       <Routes>
       <Route element={<MainLayout />}>
         <Route index element={<Home />} />
