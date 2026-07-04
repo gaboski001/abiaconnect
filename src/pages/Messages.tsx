@@ -1054,3 +1054,77 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
     </DialogContent>
   )
 }
+
+// -------- WhatsApp-style call log rendering (native only) --------
+//
+// The call manager writes conversation "call log" entries into the messages
+// table as content strings so both peers can see the same history without a
+// second table. Formats we recognise:
+//   `[call:ended] 42s`         -> completed voice call, duration in seconds
+//   `[call:missed] No answer`  -> missed / cancelled / rejected call
+//
+// `parseCallLog` returns null for regular chat messages so the normal bubble
+// path is used.
+export type CallLogInfo =
+  | { kind: 'ended'; durationSec: number }
+  | { kind: 'missed'; reason: string }
+
+export function parseCallLog(content: string | null | undefined): CallLogInfo | null {
+  if (!content) return null
+  const ended = /^\[call:ended\]\s+(\d+)s\s*$/i.exec(content)
+  if (ended) return { kind: 'ended', durationSec: parseInt(ended[1], 10) || 0 }
+  const missed = /^\[call:missed\]\s*(.*)$/i.exec(content)
+  if (missed) return { kind: 'missed', reason: missed[1]?.trim() || 'No answer' }
+  return null
+}
+
+function formatCallDuration(sec: number): string {
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  const s = sec % 60
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
+}
+
+function CallLogRow({
+  mine,
+  info,
+  createdAt,
+}: {
+  mine: boolean
+  info: CallLogInfo
+  createdAt: string
+}) {
+  const isMissed = info.kind === 'missed'
+  const Icon = isMissed ? PhoneMissed : mine ? PhoneOutgoing : PhoneIncoming
+  const tone = isMissed
+    ? 'text-rose-600 dark:text-rose-400'
+    : 'text-emerald-600 dark:text-emerald-400'
+  const label = isMissed
+    ? mine ? 'Cancelled call' : 'Missed voice call'
+    : mine ? 'Outgoing voice call' : 'Incoming voice call'
+  const detail = info.kind === 'ended' ? formatCallDuration(info.durationSec) : info.reason
+
+  return (
+    <div className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
+      <div
+        className={cn(
+          'flex items-center gap-2 rounded-2xl px-3 py-2 text-sm border',
+          mine
+            ? 'bg-secondary/60 text-secondary-foreground rounded-br-sm border-secondary'
+            : 'bg-muted text-foreground rounded-bl-sm border-border',
+        )}
+      >
+        <span className={cn('grid place-items-center h-8 w-8 rounded-full bg-background/60', tone)}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="font-medium leading-tight">{label}</p>
+          <p className="text-[11px] opacity-70">
+            {detail} · {format(new Date(createdAt), 'p')}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
