@@ -205,7 +205,7 @@ export default function Relationship() {
     error,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ['relationship-feed', user?.id, myProfile?.id ?? null, filters.lookingFor, filters.lga],
+    queryKey: ['relationship-feed', user?.id, myProfile?.id ?? null, filters.lookingFor, filters.lga, filters.sex, filters.age],
     enabled: !!user,
     initialPageParam: 0,
     queryFn: ({ pageParam }) => fetchFeedPage(pageParam as number, filters, user?.id, myProfile),
