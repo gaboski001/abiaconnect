@@ -230,7 +230,8 @@ export default function Relationship() {
     ],
   })
 
-  const hasActiveFilters = filters.lookingFor !== 'all' || filters.lga !== 'all'
+  const hasActiveFilters =
+    filters.lookingFor !== 'all' || filters.lga !== 'all' || filters.sex !== 'all' || filters.age !== 'all'
 
   // Stable per-mount seed so the "random 10" order doesn't reshuffle on every render
   const shuffleSeedRef = useRef(Math.random())
