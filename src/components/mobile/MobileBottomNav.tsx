@@ -51,20 +51,17 @@ export function MobileBottomNav() {
   const items = useMemo<Item[]>(() => {
     // ...
     const list: Item[] = [
-      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, match: (p) => p === '/dashboard' },
       { to: '/', label: 'Home', icon: Home, match: (p) => p === '/' },
-      { to: '/polls', label: 'Polls', icon: BarChart3, match: (p) => p.startsWith('/polls') },
+      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, match: (p) => p === '/dashboard' },
       {
         to: '/subgroups',
         label: 'Community',
-        icon: Compass,
+        icon: Users,
         match: (p) => p.startsWith('/subgroups'),
       },
-      { to: '/messages', label: 'Chats', icon: MessageCircleMore, match: (p) => p.startsWith('/messages') },
+      { to: '/messages', label: 'Messages', icon: MessageCircleMore, match: (p) => p.startsWith('/messages') },
+      { to: '/relationship', label: 'Relationship', icon: Heart, match: (p) => p.startsWith('/relationship') },
       { to: '/notifications', label: 'Alerts', icon: Bell, match: (p) => p.startsWith('/notifications') },
-      { to: '/profile', label: 'Profile', icon: UserRound, match: (p) => p.startsWith('/profile') },
-      { to: '/about', label: 'About', icon: Info, match: (p) => p.startsWith('/about') },
-      { to: '/donate', label: 'Donate', icon: Heart, match: (p) => p.startsWith('/donate') },
     ]
 
     if (!subgroupsEnabled) {

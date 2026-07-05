@@ -20,7 +20,6 @@ import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +39,8 @@ import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
 
 import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
+import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
+import { NativeDashboard } from '@/components/mobile/NativeDashboard'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
 
@@ -78,8 +79,86 @@ export default function Dashboard() {
       return (row ?? {}) as Profile
     },
   })
+
+  const statsQ = useQuery({
+    queryKey: ['dash-stats', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const uid = user!.id
+      const [posts, replies, bookmarks, profile] = await Promise.all([
+        supabase.from('threads').select('id', { count: 'exact', head: true }).eq('user_id', uid),
+        supabase.from('replies').select('id', { count: 'exact', head: true }).eq('user_id', uid),
+        supabase.from('bookmarks').select('id', { count: 'exact', head: true }).eq('user_id', uid),
+        supabase.from('profiles').select('reputation').eq('id', uid).maybeSingle(),
+      ])
+      return {
+        posts: posts.count ?? 0,
+        replies: replies.count ?? 0,
+        bookmarks: bookmarks.count ?? 0,
+        reputation: (profile.data as { reputation?: number } | null)?.reputation ?? 0,
+      }
+    },
+  })
+
+  const activityQ = useQuery({
+    queryKey: ['dash-activity', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const since = startOfDay(subDays(new Date(), 6)).toISOString()
+      const { data, error } = await supabase
+        .from('threads')
+        .select('created_at')
+        .eq('user_id', user!.id)
+        .gte('created_at', since)
+      if (error) throw error
+      return (data ?? []) as Array<{ created_at: string }>
+    },
+  })
+
+  const recentQ = useQuery({
+    queryKey: ['my-recent-threads', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('threads')
+        .select('id, title, created_at')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+      if (error) throw error
+      return (data ?? []) as Array<{ id: string; title: string; created_at: string }>
+    },
+  })
+
+  const chartData = useMemo(() => {
+    const days = Array.from({ length: 7 }, (_, i) => startOfDay(subDays(new Date(), 6 - i)))
+    const counts = new Map(days.map((d) => [format(d, 'yyyy-MM-dd'), 0]))
+    for (const row of activityQ.data ?? []) {
+      const key = format(startOfDay(new Date(row.created_at)), 'yyyy-MM-dd')
+      if (counts.has(key)) counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return days.map((d) => ({
+      label: format(d, 'EEE'),
+      posts: counts.get(format(d, 'yyyy-MM-dd')) ?? 0,
+    }))
+  }, [activityQ.data])
+
   const profile = profileQ.data ?? {}
   const displayName = profile.display_name || user?.email?.split('@')[0] || 'You'
+
+  if (isNativeApp()) {
+    return (
+      <div className="-mt-6 -mx-3 px-3 py-6 min-h-screen bg-[#F7F5EF] dark:bg-[#0B1220]">
+        <SEO title="Dashboard" description="Your AbiaConnect Dashboard" path="/dashboard" />
+        <NativeDashboard
+          profile={profile}
+          stats={statsQ.data ?? { posts: 0, replies: 0, bookmarks: 0, reputation: 0 }}
+          chartData={chartData}
+          recentThreads={recentQ.data ?? []}
+        />
+      </div>
+    )
+  }
 
   const handleSignOut = async () => {
     await signOut()
@@ -152,7 +231,7 @@ export default function Dashboard() {
       </div>
 
       <main className="min-w-0">
-        {tab === 'overview' && <Overview displayName={displayName} />}
+        {tab === 'overview' && <Overview displayName={displayName} stats={statsQ.data} chartData={chartData} recentThreads={recentQ.data} />}
         {tab === 'posts' && <MyPosts onDeleted={() => qc.invalidateQueries({ queryKey: ['my-threads'] })} />}
         {tab === 'saved' && <SavedPosts />}
         {tab === 'messages' && (
@@ -168,103 +247,17 @@ export default function Dashboard() {
 }
 
 /* ----------------- Overview ----------------- */
-function Overview({ displayName }: { displayName: string }) {
-  const { user } = useAuth()
-  const qc = useQueryClient()
-
-  const stats = useQuery({
-    queryKey: ['dash-stats', user?.id],
-    enabled: !!user,
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
-    queryFn: async () => {
-      const uid = user!.id
-      const [posts, replies, bookmarks, profile] = await Promise.all([
-        supabase.from('threads').select('id', { count: 'exact', head: true }).eq('user_id', uid),
-        supabase.from('replies').select('id', { count: 'exact', head: true }).eq('user_id', uid),
-        supabase.from('bookmarks').select('id', { count: 'exact', head: true }).eq('user_id', uid),
-        supabase.from('profiles').select('reputation').eq('id', uid).maybeSingle(),
-      ])
-      return {
-        posts: posts.count ?? 0,
-        replies: replies.count ?? 0,
-        bookmarks: bookmarks.count ?? 0,
-        reputation: (profile.data as { reputation?: number } | null)?.reputation ?? 0,
-      }
-    },
-  })
-
-  const activity = useQuery({
-    queryKey: ['dash-activity', user?.id],
-    enabled: !!user,
-    staleTime: 30_000,
-    queryFn: async () => {
-      const since = startOfDay(subDays(new Date(), 6)).toISOString()
-      const { data, error } = await supabase
-        .from('threads')
-        .select('created_at')
-        .eq('user_id', user!.id)
-        .gte('created_at', since)
-      if (error) throw error
-      return (data ?? []) as Array<{ created_at: string }>
-    },
-  })
-
-  const chartData = useMemo(() => {
-    const days = Array.from({ length: 7 }, (_, i) => startOfDay(subDays(new Date(), 6 - i)))
-    const counts = new Map(days.map((d) => [format(d, 'yyyy-MM-dd'), 0]))
-    for (const row of activity.data ?? []) {
-      const key = format(startOfDay(new Date(row.created_at)), 'yyyy-MM-dd')
-      if (counts.has(key)) counts.set(key, (counts.get(key) ?? 0) + 1)
-    }
-    return days.map((d) => ({
-      label: format(d, 'EEE'),
-      posts: counts.get(format(d, 'yyyy-MM-dd')) ?? 0,
-    }))
-  }, [activity.data])
-
-  const recent = useQuery({
-    queryKey: ['my-recent-threads', user?.id],
-    enabled: !!user,
-    staleTime: 30_000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('threads')
-        .select('id, title, created_at')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false })
-        .limit(5)
-      if (error) throw error
-      return (data ?? []) as Array<{ id: string; title: string; created_at: string }>
-    },
-  })
-
-  // Realtime: refresh stats/activity/recent when the user's data changes
-  useEffect(() => {
-    if (!user) return
-    const uid = user.id
-    const invalidate = () => {
-      qc.invalidateQueries({ queryKey: ['dash-stats', uid] })
-      qc.invalidateQueries({ queryKey: ['dash-activity', uid] })
-      qc.invalidateQueries({ queryKey: ['my-recent-threads', uid] })
-    }
-    const channel = supabase
-      .channel(`dash-overview:${uid}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'threads', filter: `user_id=eq.${uid}` }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'replies', filter: `user_id=eq.${uid}` }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmarks', filter: `user_id=eq.${uid}` }, invalidate)
-      .subscribe()
-    return () => {
-      void supabase.removeChannel(channel)
-    }
-  }, [user, qc])
-
-
+function Overview({ displayName, stats, chartData, recentThreads }: {
+  displayName: string
+  stats?: any
+  chartData: any[]
+  recentThreads?: any[]
+}) {
   const cards = [
-    { label: 'My Posts', value: stats.data?.posts ?? 0 },
-    { label: 'Replies', value: stats.data?.replies ?? 0 },
-    { label: 'Reputation', value: stats.data?.reputation ?? 0 },
-    { label: 'Bookmarks', value: stats.data?.bookmarks ?? 0 },
+    { label: 'My Posts', value: stats?.posts ?? 0 },
+    { label: 'Replies', value: stats?.replies ?? 0 },
+    { label: 'Reputation', value: stats?.reputation ?? 0 },
+    { label: 'Bookmarks', value: stats?.bookmarks ?? 0 },
   ]
 
   return (
@@ -292,13 +285,11 @@ function Overview({ displayName }: { displayName: string }) {
 
       <div className="rounded-2xl border border-border bg-card p-5">
         <h2 className="font-bold mb-4">My Recent Threads</h2>
-        {recent.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : !recent.data?.length ? (
+        {!recentThreads?.length ? (
           <p className="text-sm text-muted-foreground">No threads yet.</p>
         ) : (
           <ul className="space-y-2">
-            {recent.data.map((t) => (
+            {recentThreads.map((t) => (
               <li key={t.id} className="flex items-center justify-between gap-3">
                 <Link to={`/thread/${t.id}`} className="text-sm font-medium hover:text-primary truncate">
                   {t.title}
