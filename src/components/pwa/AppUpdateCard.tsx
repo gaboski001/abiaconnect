@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { Download, Sparkles, FileText, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
@@ -12,6 +13,43 @@ type Variant = 'premium' | 'plain'
 interface AppUpdateCardProps {
   variant?: Variant
   className?: string
+}
+
+/**
+ * Opens a URL in the OS-level browser/download manager. On Capacitor WebViews,
+ * assigning window.location.href just navigates the app view instead of
+ * triggering the system download for APK/IPA — we must hand it off to the OS.
+ */
+async function openExternal(url: string) {
+  if (Capacitor.isNativePlatform()) {
+    // Prefer @capacitor/browser if the app has it installed.
+    try {
+      const mod = '@capacitor/' + 'browser'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const m: any = await (new Function('x', 'return import(x)'))(mod)
+      if (m?.Browser?.open) {
+        await m.Browser.open({ url })
+        return
+      }
+    } catch {
+      /* fall through */
+    }
+    // Capacitor intercepts window.open with '_system' and hands the URL to the OS.
+    try {
+      const w = window.open(url, '_system')
+      if (w) return
+    } catch {
+      /* fall through */
+    }
+  }
+  // Web fallback / last resort.
+  const a = document.createElement('a')
+  a.href = url
+  a.target = '_blank'
+  a.rel = 'noopener noreferrer'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
 }
 
 /**
@@ -29,19 +67,28 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
   const sizeMb = release.file_size ? (release.file_size / 1024 / 1024).toFixed(1) : null
 
   const download = async () => {
+    if (downloading) return
     setDownloading(true)
     try {
       const { data, error } = await supabase.storage
         .from('app-releases')
         .createSignedUrl(release.file_path, 60 * 10, { download: true })
       if (error || !data?.signedUrl) {
-        toast.error('Could not generate download link')
+        toast.error('Could not generate download link. Please try again.')
         return
       }
-      window.location.href = data.signedUrl
+      await openExternal(data.signedUrl)
+      toast.success(
+        platform === 'ios'
+          ? 'Opening installer…'
+          : 'Download started. Check your notifications to install.',
+      )
       setModalOpen(false)
+    } catch (e) {
+      toast.error('Download failed. Please try again.')
     } finally {
-      setDownloading(false)
+      // Keep the spinner briefly so the tap feels responsive, then reset.
+      setTimeout(() => setDownloading(false), 800)
     }
   }
 
