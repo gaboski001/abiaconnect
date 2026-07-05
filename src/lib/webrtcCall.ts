@@ -11,6 +11,7 @@
 
 import { supabase } from '@/lib/supabase'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import { areCallsEnabled } from '@/lib/callPreferences'
 
 export type CallStatus =
   | 'idle'
