@@ -82,7 +82,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
-                  className="h-12 rounded-2xl border-white/10 bg-white/[0.04] text-white pr-10 placeholder:text-slate-500"
+                  className="h-12 rounded-2xl border-white/10 bg-white/[0.04] text-white pr-10 placeholder:text-slate-300/60"
                 />
                 <button
                   type="button"
