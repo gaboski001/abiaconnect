@@ -62,6 +62,18 @@ export default function AppReleasesSection() {
       })
       if (ins.error) throw ins.error
       toast.success('Release uploaded')
+
+      // Fire-and-forget: notify users with a push + in-app notification.
+      try {
+        const { data: notifyRes, error: notifyErr } = await supabase.functions.invoke('notify-release', {
+          body: { platform, version, changelog: changelog || null },
+        })
+        if (notifyErr) throw notifyErr
+        toast.success(`Notified ${notifyRes?.sent ?? 0} device(s) about v${version}`)
+      } catch (e) {
+        toast.error(`Release saved, but notification failed: ${e instanceof Error ? e.message : 'unknown error'}`)
+      }
+
       setFile(null); setVersion(''); setNotes(''); setChangelog('')
       qc.invalidateQueries({ queryKey: ['app-releases'] })
       qc.invalidateQueries({ queryKey: ['app-releases-public'] })
