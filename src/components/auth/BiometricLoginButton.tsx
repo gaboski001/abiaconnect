@@ -36,26 +36,45 @@ export const BiometricLoginButton = ({ onSuccess }: Props) => {
   if (!show) return null
 
   async function handleClick() {
-    // If not enabled in-app yet, we don't have credentials stored.
+    // If not enabled in-app yet, tell the user exactly what to do.
     if (!isBiometricEnabled()) {
-      toast.info('Please sign in with your email/password once to enable biometric login.')
+      toast.info('Biometric sign-in isn\'t set up yet', {
+        description:
+          'Sign in once with your email and password. You\'ll then get a prompt to enable fingerprint or face unlock.',
+        duration: 6000,
+      })
       return
     }
 
     setLoading(true)
     try {
-      const creds = await getBiometricCredentials()
-// ...
-      if (!creds) {
-        toast.error('Biometric verification cancelled')
+      const result = await getBiometricCredentials()
+      if (!result.ok) {
+        const { kind, message } = result.error
+        if (kind === 'cancelled') {
+          toast.error('Biometric verification cancelled', { description: message })
+        } else if (kind === 'not-enabled' || kind === 'no-credentials') {
+          toast.error('Sign in with your password', { description: message, duration: 7000 })
+        } else if (kind === 'hardware-unavailable') {
+          toast.error('Biometric unavailable', { description: message, duration: 7000 })
+        } else if (kind === 'unsupported') {
+          toast.error(message)
+        } else {
+          toast.error('Biometric sign-in failed', { description: message })
+        }
         return
       }
+
       const { error } = await supabase.auth.signInWithPassword({
-        email: creds.username,
-        password: creds.password,
+        email: result.creds.username,
+        password: result.creds.password,
       })
       if (error) {
-        toast.error('Stored credentials no longer work. Please sign in with your password.')
+        toast.error('Stored password no longer works', {
+          description:
+            'Your password changed since biometric was enabled. Sign in with your email and password to reset it.',
+          duration: 7000,
+        })
         return
       }
       toast.success('Welcome back!')
