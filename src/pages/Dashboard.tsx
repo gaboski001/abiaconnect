@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+const CallHistory = lazy(() => import('@/components/dashboard/CallHistory'))
 import { toWebP } from '@/lib/image'
 import { Link, useNavigate } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
@@ -13,6 +14,7 @@ import {
   LayoutDashboard,
   LogOut,
   Mail,
+  Phone,
   Settings as SettingsIcon,
   Trash2,
 } from 'lucide-react'
@@ -42,13 +44,14 @@ import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { NativeDashboard } from '@/components/mobile/NativeDashboard'
 
-type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
+type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'calls' | 'notifications' | 'settings'
 
 const NAV: Array<{ id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'posts', label: 'My Posts', icon: FileText },
   { id: 'saved', label: 'Saved Posts', icon: Bookmark },
   { id: 'messages', label: 'Messages', icon: Mail },
+  { id: 'calls', label: 'Calls', icon: Phone },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ]
@@ -236,6 +239,11 @@ export default function Dashboard() {
         {tab === 'saved' && <SavedPosts />}
         {tab === 'messages' && (
           <LinkCard to="/messages" label="Open Messages" description="View and reply to your conversations." icon={Mail} />
+        )}
+        {tab === 'calls' && (
+          <Suspense fallback={<div className="text-sm text-slate-300/70">Loading call history…</div>}>
+            <CallHistory />
+          </Suspense>
         )}
         {tab === 'notifications' && (
           <LinkCard to="/notifications" label="Open Notifications" description="See your latest alerts." icon={Bell} />
