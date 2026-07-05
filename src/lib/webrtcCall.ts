@@ -170,6 +170,23 @@ class CallManager {
 
   setRemoteAudioElement(el: HTMLAudioElement | null) {
     this.remoteAudio = el
+    // If a peer connection is already receiving remote audio when the sink
+    // element mounts (e.g. auth hydrated after the first invite arrived),
+    // rebind the live tracks so we don't play into the void.
+    if (el && this.pc) {
+      const remoteStream = new MediaStream()
+      for (const r of this.pc.getReceivers()) {
+        if (r.track && r.track.kind === 'audio') {
+          try { remoteStream.addTrack(r.track) } catch { /* ignore duplicates */ }
+        }
+      }
+      if (remoteStream.getAudioTracks().length > 0) {
+        el.srcObject = remoteStream
+        el.muted = false
+        el.volume = 1
+        el.play().catch(() => undefined)
+      }
+    }
   }
 
   /** Outgoing call to a peer. */
