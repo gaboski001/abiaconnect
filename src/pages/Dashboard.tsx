@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   LogOut,
   Mail,
+  Phone,
   Settings as SettingsIcon,
   Trash2,
 } from 'lucide-react'
