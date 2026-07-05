@@ -260,6 +260,7 @@ class CallManager {
   /** Outgoing call to a peer. */
   async startCall(target: CallPeer) {
     if (!this.userId || !this.selfPeer) throw new Error('Call manager not initialised')
+    if (!areCallsEnabled()) throw new Error('Calling is turned off in your settings')
     if (this.state.status !== 'idle' && this.state.status !== 'ended') return
     const callId = newId()
     this.wasConnected = false
