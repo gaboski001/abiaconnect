@@ -721,21 +721,6 @@ function Thread() {
   )
   const handleCancelNested = useCallback(() => setReplyingTo(null), [])
 
-  if (threadQ.isLoading) {
-    return (
-      <div className="py-16 text-center text-muted-foreground">
-        <Loader2 className="inline animate-spin mr-2" /> Loading…
-      </div>
-    )
-  }
-
-  const thread = threadQ.data
-  if (!thread) {
-    return <div className="py-16 text-center text-muted-foreground">Thread not found.</div>
-  }
-
-  const totalReplies = repliesQ.data?.pages[0]?.total ?? replies.length
-
   const clearReplies = useMutation({
     mutationFn: async () => {
       if (!threadId) throw new Error('Missing thread')
@@ -758,6 +743,22 @@ function Thread() {
     },
     onError: (e: Error) => toast.error(e.message || 'Failed to clear replies'),
   })
+
+  if (threadQ.isLoading) {
+    return (
+      <div className="py-16 text-center text-muted-foreground">
+        <Loader2 className="inline animate-spin mr-2" /> Loading…
+      </div>
+    )
+  }
+
+  const thread = threadQ.data
+  if (!thread) {
+    return <div className="py-16 text-center text-muted-foreground">Thread not found.</div>
+  }
+
+  const totalReplies = repliesQ.data?.pages[0]?.total ?? replies.length
+
 
 
   const authorName = thread.profiles?.display_name ?? 'Member'
