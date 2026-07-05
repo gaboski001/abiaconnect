@@ -150,6 +150,7 @@ export default function App() {
                   <Route path="relationship" element={<Relationship />} />
                   <Route path="relationship/edit" element={<RelationshipEdit />} />
                   <Route path="relationship/:userId" element={<RelationshipProfilePage />} />
+                  <Route path="settings/devices" element={<DeviceNotifications />} />
 
                   <Route element={<AdminRoute />}>
                     <Route path="admin/dashboard" element={<AdminDashboard />} />
