@@ -3,6 +3,17 @@ import { useAuth } from '@/contexts/AuthContext'
 import { callManager, type CallState } from '@/lib/webrtcCall'
 import { CallOverlay } from './CallOverlay'
 
+// Native Android bridge injected by MainActivity.CallJsBridge.
+// Safe to reference on web (undefined) or iOS (undefined) — calls are no-ops.
+declare global {
+  interface Window {
+    AbiaCallBridge?: {
+      startCall: (callerName: string, callId: string) => void
+      endCall: () => void
+    }
+  }
+}
+
 export function CallProvider() {
   const { user } = useAuth()
   const userId = user?.id ?? null
@@ -55,6 +66,64 @@ export function CallProvider() {
 
   useEffect(() => {
     callManager.setRemoteAudioElement(audioRef.current)
+  }, [])
+
+  // ── Native Android foreground-service sync ──────────────────────────────
+  // Start the phoneCall foreground service once the peer connection is
+  // actually connected (works for both incoming and outgoing calls); stop
+  // it as soon as the call goes back to ended/idle. This keeps the process
+  // — and WebRTC session — alive when the user backgrounds the app.
+  const fgActiveRef = useRef(false)
+  useEffect(() => {
+    const bridge = window.AbiaCallBridge
+    if (!bridge) return
+
+    if (state.status === 'connected' && !fgActiveRef.current) {
+      fgActiveRef.current = true
+      bridge.startCall(state.peer?.name || 'AbiaConnect call', state.callId || '')
+    } else if (
+      fgActiveRef.current &&
+      (state.status === 'idle' || state.status === 'ended')
+    ) {
+      fgActiveRef.current = false
+      bridge.endCall()
+    }
+  }, [state.status, state.callId, state.peer?.name])
+
+  // ── Notification action listeners ───────────────────────────────────────
+  // MainActivity dispatches these window events when the user taps Answer,
+  // Decline, or Hang-up on the system notification. Route each to the
+  // matching callManager method so the WebRTC session stays in sync with
+  // what the notification UI just did.
+  useEffect(() => {
+    const onAnswer = () => {
+      // Only accept if we actually have a ringing invite. If FCM arrived
+      // before the realtime `invite` event, callManager.accept() will no-op
+      // and the invite handler will pick it up on arrival.
+      if (callManager.getState().status === 'ringing') {
+        void callManager.accept()
+      }
+    }
+    const onDecline = () => {
+      if (callManager.getState().status === 'ringing') {
+        callManager.reject()
+      }
+    }
+    const onHangup = () => {
+      const s = callManager.getState().status
+      if (s === 'connected' || s === 'connecting' || s === 'calling') {
+        void callManager.endCall(true)
+      }
+    }
+
+    window.addEventListener('abiaconnect-native-call-answer', onAnswer)
+    window.addEventListener('abiaconnect-native-call-decline', onDecline)
+    window.addEventListener('abiaconnect-native-call-hangup', onHangup)
+    return () => {
+      window.removeEventListener('abiaconnect-native-call-answer', onAnswer)
+      window.removeEventListener('abiaconnect-native-call-decline', onDecline)
+      window.removeEventListener('abiaconnect-native-call-hangup', onHangup)
+    }
   }, [])
 
   if (!userId) return null
