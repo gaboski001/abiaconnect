@@ -49,11 +49,24 @@ interface NativeDashboardProps {
 
 export function NativeDashboard({ profile, stats, chartData, recentThreads }: NativeDashboardProps) {
   const displayName = profile.display_name || 'User'
+  const { user } = useAuth()
+  const [callsOn, setCallsOnState] = useState(() => areCallsEnabled())
+
+  useEffect(() => subscribeCallsEnabled(setCallsOnState), [])
+  useEffect(() => {
+    if (user?.id) void hydrateCallsEnabledFromProfile(user.id)
+  }, [user?.id])
+
+  const toggleCalls = (v: boolean) => {
+    void setCallsEnabled(v, { userId: user?.id })
+    toast.success(v ? 'Calls turned on' : 'Calls turned off')
+  }
 
   return (
     <div className="flex flex-col gap-6 pb-32 animate-in fade-in duration-500">
       {/* App update banner (only shows on native when a newer release exists) */}
       <AppUpdateCard />
+
 
       {/* Header Section */}
       <section className="relative overflow-hidden rounded-[2.5rem] bg-[#0B1220] p-6 text-white shadow-2xl">
