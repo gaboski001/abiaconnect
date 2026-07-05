@@ -21,7 +21,7 @@ export function PremiumAuthShell({
   footer,
 }: PremiumAuthShellProps) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0B1F0B] text-slate-50">
+    <div className="dark relative min-h-screen overflow-hidden bg-[#0B1F0B] text-slate-50">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -left-24 top-[-8rem] h-72 w-72 rounded-full blur-3xl opacity-40" style={{ background: 'rgba(28,169,217,0.35)' }} />
         <div className="absolute -right-16 top-1/4 h-80 w-80 rounded-full blur-3xl opacity-50" style={{ background: 'rgba(248,195,1,0.28)' }} />
