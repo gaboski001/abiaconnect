@@ -205,26 +205,38 @@ export type Database = {
       device_push_tokens: {
         Row: {
           created_at: string
+          device_label: string | null
           id: string
+          last_seen_at: string
+          notify_updates: boolean
           platform: string
           token: string
           updated_at: string
+          user_agent: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
+          device_label?: string | null
           id?: string
+          last_seen_at?: string
+          notify_updates?: boolean
           platform: string
           token: string
           updated_at?: string
+          user_agent?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
+          device_label?: string | null
           id?: string
+          last_seen_at?: string
+          notify_updates?: boolean
           platform?: string
           token?: string
           updated_at?: string
+          user_agent?: string | null
           user_id?: string
         }
         Relationships: []
