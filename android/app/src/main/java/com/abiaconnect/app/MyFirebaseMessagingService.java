@@ -37,7 +37,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String type = value(remoteMessage, "type", "general");
         String callId = value(remoteMessage, "callId", "");
         String conversationId = value(remoteMessage, "conversationId", "");
-        String url = value(remoteMessage, "url", TextUtils.isEmpty(conversationId) ? "/notifications" : "/messages/" + conversationId);
+        String defaultUrl;
+        if ("call".equals(type)) {
+            defaultUrl = TextUtils.isEmpty(callId) ? "/call" : "/call/" + callId;
+        } else {
+            defaultUrl = TextUtils.isEmpty(conversationId) ? "/notifications" : "/messages/" + conversationId;
+        }
+        String url = value(remoteMessage, "url", defaultUrl);
 
         if ("call".equals(type)) {
             showIncomingCallNotification(title, body, callId, url);
@@ -60,7 +66,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         return fallback;
     }
 
-    private PendingIntent buildContentIntent(int requestCode, String type, String url, String callId, int notificationId) {
+    private PendingIntent buildContentIntent(int requestCode, String type, String url, String callId, String callerName, int notificationId, String action) {
         Intent intent = new Intent(this, MainActivity.class);
         // NOTE: never add FLAG_ACTIVITY_CLEAR_TOP here — with launchMode="singleTask"
         // it destroys and recreates the activity (and the WebView), which kills an
@@ -69,7 +75,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         intent.putExtra("notification_type", type);
         intent.putExtra("url", url);
         intent.putExtra("call_id", callId);
+        intent.putExtra("caller_name", callerName);
         intent.putExtra("notification_id", notificationId);
+        intent.putExtra("call_action", action); // "answer" | "open" | ""
         return PendingIntent.getActivity(
             this,
             requestCode,
@@ -93,7 +101,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void showStandardNotification(String title, String body, String type, String url, String callId) {
         int notificationId = (int) System.currentTimeMillis();
-        PendingIntent contentIntent = buildContentIntent(notificationId, type, url, callId, notificationId);
+        PendingIntent contentIntent = buildContentIntent(notificationId, type, url, callId, null, notificationId, "open");
         Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CHANNEL_ID)
@@ -118,12 +126,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void showIncomingCallNotification(String title, String body, String callId, String url) {
         int notificationId = TextUtils.isEmpty(callId) ? (int) System.currentTimeMillis() : callId.hashCode();
-        PendingIntent answerIntent = buildContentIntent(notificationId + 1, "call", url, callId, notificationId);
-        PendingIntent declineIntent = buildDeclineIntent(notificationId + 2, callId, notificationId);
-        PendingIntent fullScreenIntent = buildContentIntent(notificationId, "call", url, callId, notificationId);
-        Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
-
         String callerName = TextUtils.isEmpty(title) ? "Incoming call" : title;
+        PendingIntent answerIntent = buildContentIntent(notificationId + 1, "call", url, callId, callerName, notificationId, "answer");
+        PendingIntent declineIntent = buildDeclineIntent(notificationId + 2, callId, notificationId);
+        // Tapping the notification body (full-screen intent) opens the incoming-call UI
+        // but does NOT auto-accept — user must still press Answer.
+        PendingIntent fullScreenIntent = buildContentIntent(notificationId, "call", url, callId, callerName, notificationId, "open");
+        Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CALL_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_abiaconnect)
