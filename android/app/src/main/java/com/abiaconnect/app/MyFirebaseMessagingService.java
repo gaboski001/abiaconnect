@@ -37,7 +37,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String type = value(remoteMessage, "type", "general");
         String callId = value(remoteMessage, "callId", "");
         String conversationId = value(remoteMessage, "conversationId", "");
-        String url = value(remoteMessage, "url", TextUtils.isEmpty(conversationId) ? "/notifications" : "/messages/" + conversationId);
+        String defaultUrl;
+        if ("call".equals(type)) {
+            defaultUrl = TextUtils.isEmpty(callId) ? "/call" : "/call/" + callId;
+        } else {
+            defaultUrl = TextUtils.isEmpty(conversationId) ? "/notifications" : "/messages/" + conversationId;
+        }
+        String url = value(remoteMessage, "url", defaultUrl);
 
         if ("call".equals(type)) {
             showIncomingCallNotification(title, body, callId, url);
