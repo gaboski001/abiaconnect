@@ -101,7 +101,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void showStandardNotification(String title, String body, String type, String url, String callId) {
         int notificationId = (int) System.currentTimeMillis();
-        PendingIntent contentIntent = buildContentIntent(notificationId, type, url, callId, notificationId);
+        PendingIntent contentIntent = buildContentIntent(notificationId, type, url, callId, null, notificationId, "open");
         Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CHANNEL_ID)
