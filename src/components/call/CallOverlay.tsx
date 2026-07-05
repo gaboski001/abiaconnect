@@ -132,10 +132,16 @@ export function CallOverlay({ state }: { state: CallState }) {
                 {callMeta.length > 0 ? callMeta.map((line) => <span key={line} className="rounded-full border border-white/10 px-3 py-1">{line}</span>) : <span className="rounded-full border border-white/10 px-3 py-1">Listening for network metrics</span>}
               </div>
 
-              <button type="button" onClick={() => setShowTimeline((v) => !v)} className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-slate-300/76 hover:text-white">
-                <Activity className="h-3.5 w-3.5" />
-                {showTimeline ? 'Hide' : 'Show'} quality timeline
-              </button>
+              <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-300/76">
+                <button type="button" onClick={() => setShowTimeline((v) => !v)} className="inline-flex items-center gap-2 hover:text-white">
+                  <Activity className="h-3.5 w-3.5" />
+                  {showTimeline ? 'Hide' : 'Show'} quality timeline
+                </button>
+                <button type="button" onClick={() => setShowDiag((v) => !v)} className="inline-flex items-center gap-2 hover:text-white">
+                  <Stethoscope className="h-3.5 w-3.5" />
+                  {showDiag ? 'Hide' : 'Show'} diagnostics
+                </button>
+              </div>
 
               {showTimeline ? (
                 <div className="mt-3 max-h-40 overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-3 text-[11px] font-mono">
