@@ -72,9 +72,8 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
-      {/* Native-only enhancements: always mount, they handle their own internal gating */}
+      {/* Native-only enhancements */}
       <NativeOnboardingGate />
-      <NativeDiagnostics />
       {isNativeApp() && <CallProvider />}
 
       <Routes>
