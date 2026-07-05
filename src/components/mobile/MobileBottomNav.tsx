@@ -74,9 +74,18 @@ export function MobileBottomNav() {
         {items.map((item) => {
           const active = item.match(location.pathname)
           const Icon = item.icon
+          const showUpdateDot = hasUpdate && item.to === '/version'
           const inner = (
             <>
-              <Icon className="size-[1.08rem] shrink-0" />
+              <span className="relative">
+                <Icon className="size-[1.08rem] shrink-0" />
+                {showUpdateDot && (
+                  <span
+                    aria-label="Update available"
+                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-[#050A12] animate-pulse"
+                  />
+                )}
+              </span>
               <span className="truncate text-[9px] uppercase tracking-[0.14em]">{item.label}</span>
             </>
           )
