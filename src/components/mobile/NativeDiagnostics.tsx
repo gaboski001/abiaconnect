@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useLocation } from 'react-router-dom';
+import { isBiometricAvailable } from '@/lib/biometric';
 
 export const NativeDiagnostics = () => {
   const [isNative, setIsNative] = useState(false);
   const [bridgeReady, setBridgeReady] = useState(false);
+  const [bioAvailable, setBioAvailable] = useState('Checking...');
   const [platform, setPlatform] = useState('');
   const [onboardingStatus, setOnboardingStatus] = useState('');
   const location = useLocation();
 
   useEffect(() => {
-    const checkBridge = () => {
+    const checkBridge = async () => {
       const native = Capacitor.isNativePlatform();
       const plat = Capacitor.getPlatform();
 
@@ -18,19 +20,22 @@ export const NativeDiagnostics = () => {
       setPlatform(plat);
       setOnboardingStatus(localStorage.getItem('hasSeenOnboarding') || 'false');
 
-      // In Capacitor, if platform is not 'web', the bridge is active
       if (plat !== 'web') {
         setBridgeReady(true);
+        const bio = await isBiometricAvailable();
+        setBioAvailable(bio ? 'YES' : 'NO');
+      } else {
+        setBioAvailable('N/A');
       }
     };
 
     checkBridge();
-    const timer = setInterval(checkBridge, 1000);
+    const timer = setInterval(checkBridge, 2000);
     return () => clearInterval(timer);
   }, []);
 
   return (
-    <div className="fixed bottom-24 left-4 z-[9999] flex flex-col gap-1 rounded-lg border border-amber-500/50 bg-black/90 p-2 text-[10px] font-mono text-amber-500 backdrop-blur-md shadow-2xl pointer-events-auto">
+    <div className="fixed bottom-24 left-4 z-[9999] flex flex-col gap-1 rounded-lg border border-amber-500/50 bg-black/80 p-2 text-[10px] font-mono text-amber-500 backdrop-blur-md shadow-2xl pointer-events-auto">
       <div className="flex items-center gap-2">
         <span className={`h-2 w-2 rounded-full ${bridgeReady ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
         <span className="font-bold">
@@ -39,6 +44,7 @@ export const NativeDiagnostics = () => {
       </div>
       <div>Platform: {platform}</div>
       <div>Route: {location.pathname}</div>
+      <div>Biometrics: {bioAvailable}</div>
       {bridgeReady && (
         <>
           <div>Onboarding: {onboardingStatus}</div>
@@ -52,9 +58,6 @@ export const NativeDiagnostics = () => {
             Reset Onboarding
           </button>
         </>
-      )}
-      {!bridgeReady && (
-        <div className="text-[8px] opacity-70">Waiting for Capacitor...</div>
       )}
     </div>
   );

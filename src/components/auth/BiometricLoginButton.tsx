@@ -25,7 +25,8 @@ export const BiometricLoginButton = ({ onSuccess }: Props) => {
     let cancelled = false
     void (async () => {
       const available = await isBiometricAvailable()
-      if (!cancelled) setShow(available && isBiometricEnabled())
+      // Show the button if hardware is available, even if not yet "enabled" in this app.
+      if (!cancelled) setShow(available)
     })()
     return () => {
       cancelled = true
@@ -35,9 +36,16 @@ export const BiometricLoginButton = ({ onSuccess }: Props) => {
   if (!show) return null
 
   async function handleClick() {
+    // If not enabled in-app yet, we don't have credentials stored.
+    if (!isBiometricEnabled()) {
+      toast.info('Please sign in with your email/password once to enable biometric login.')
+      return
+    }
+
     setLoading(true)
     try {
       const creds = await getBiometricCredentials()
+// ...
       if (!creds) {
         toast.error('Biometric verification cancelled')
         return
