@@ -44,13 +44,14 @@ import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { NativeDashboard } from '@/components/mobile/NativeDashboard'
 
-type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
+type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'calls' | 'notifications' | 'settings'
 
 const NAV: Array<{ id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'posts', label: 'My Posts', icon: FileText },
   { id: 'saved', label: 'Saved Posts', icon: Bookmark },
   { id: 'messages', label: 'Messages', icon: Mail },
+  { id: 'calls', label: 'Calls', icon: Phone },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ]
