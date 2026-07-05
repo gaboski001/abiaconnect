@@ -3,6 +3,7 @@
   "appName": "abiaconnect",
   "webDir": "dist",
   "server": {
+    "url": "https://abiaconnect.com",
     "androidScheme": "https",
     "allowNavigation": [
       "abiaconnect.com",
