@@ -15,9 +15,12 @@ import {
   LogOut,
   Mail,
   Phone,
+  PhoneOff,
   Settings as SettingsIcon,
   Trash2,
 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { areCallsEnabled, setCallsEnabled, subscribeCallsEnabled } from '@/lib/callPreferences'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
