@@ -44,19 +44,13 @@ function isAndroid(): boolean {
 export function InstallAppPrompt() {
   const [open, setOpen] = useState(false)
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
+  const androidWeb = isAndroid() && !Capacitor.isNativePlatform()
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-
-    // Android users get the packaged native APK — never surface the PWA
-    // install prompt on Android and actively suppress Chrome's own
-    // beforeinstallprompt mini-infobar / "Install app" banner.
-    if (isAndroid() && !Capacitor.isNativePlatform()) {
-      const swallow = (e: Event) => e.preventDefault()
-      window.addEventListener('beforeinstallprompt', swallow)
-      return () => window.removeEventListener('beforeinstallprompt', swallow)
-    }
-
+    // Android ships as a native APK — no PWA install UI, no
+    // beforeinstallprompt handling, no manifest. Do nothing here.
+    if (androidWeb) return
     if (Capacitor.isNativePlatform()) return
     if (isIOS()) return // iOS uses the dedicated IOSInstallPrompt
     if (isStandalone()) return
@@ -76,7 +70,12 @@ export function InstallAppPrompt() {
       window.clearTimeout(t)
       window.removeEventListener('beforeinstallprompt', onBeforeInstall)
     }
-  }, [])
+  }, [androidWeb])
+
+  // Android: never render the install modal.
+  if (androidWeb) return null
+
+
 
 
   const dismiss = () => {
