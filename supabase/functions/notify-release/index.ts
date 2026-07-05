@@ -109,8 +109,9 @@ Deno.serve(async (req) => {
     const targetPlatforms = platform === 'android' ? ['android', 'web'] : ['ios']
     const { data: rows, error } = await supa
       .from('device_push_tokens')
-      .select('token, user_id, platform')
+      .select('token, user_id, platform, notify_updates')
       .in('platform', targetPlatforms)
+      .eq('notify_updates', true)
     if (error) throw error
 
     // Also drop an in-app notification for every distinct user so web users
