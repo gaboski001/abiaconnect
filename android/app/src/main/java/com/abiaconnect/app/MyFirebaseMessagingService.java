@@ -60,13 +60,30 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         return fallback;
     }
 
-    private PendingIntent buildContentIntent(int requestCode, String type, String url, String callId) {
+    private PendingIntent buildContentIntent(int requestCode, String type, String url, String callId, int notificationId) {
         Intent intent = new Intent(this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        // NOTE: never add FLAG_ACTIVITY_CLEAR_TOP here — with launchMode="singleTask"
+        // it destroys and recreates the activity (and the WebView), which kills an
+        // in-progress call the moment the user taps Answer.
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         intent.putExtra("notification_type", type);
         intent.putExtra("url", url);
         intent.putExtra("call_id", callId);
+        intent.putExtra("notification_id", notificationId);
         return PendingIntent.getActivity(
+            this,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+    }
+
+    private PendingIntent buildDeclineIntent(int requestCode, String callId, int notificationId) {
+        Intent intent = new Intent(this, CallActionReceiver.class);
+        intent.setAction(CallActionReceiver.ACTION_DECLINE_CALL);
+        intent.putExtra("call_id", callId);
+        intent.putExtra("notification_id", notificationId);
+        return PendingIntent.getBroadcast(
             this,
             requestCode,
             intent,
@@ -76,7 +93,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void showStandardNotification(String title, String body, String type, String url, String callId) {
         int notificationId = (int) System.currentTimeMillis();
-        PendingIntent contentIntent = buildContentIntent(notificationId, type, url, callId);
+        PendingIntent contentIntent = buildContentIntent(notificationId, type, url, callId, notificationId);
         Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CHANNEL_ID)
@@ -101,9 +118,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void showIncomingCallNotification(String title, String body, String callId, String url) {
         int notificationId = TextUtils.isEmpty(callId) ? (int) System.currentTimeMillis() : callId.hashCode();
-        PendingIntent answerIntent = buildContentIntent(notificationId + 1, "call", url, callId);
-        PendingIntent declineIntent = buildContentIntent(notificationId + 2, "call-decline", url, callId);
-        PendingIntent fullScreenIntent = buildContentIntent(notificationId, "call", url, callId);
+        PendingIntent answerIntent = buildContentIntent(notificationId + 1, "call", url, callId, notificationId);
+        PendingIntent declineIntent = buildDeclineIntent(notificationId + 2, callId, notificationId);
+        PendingIntent fullScreenIntent = buildContentIntent(notificationId, "call", url, callId, notificationId);
         Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
 
         String callerName = TextUtils.isEmpty(title) ? "Incoming call" : title;
