@@ -14,6 +14,7 @@ import {
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { GOLD_GRADIENT, GOLD_SHADOW, PREMIUM_SHADOW } from '@/lib/mobileBrand'
+import { AppUpdateCard } from '@/components/pwa/AppUpdateCard'
 import { formatDistanceToNow } from 'date-fns'
 
 const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
