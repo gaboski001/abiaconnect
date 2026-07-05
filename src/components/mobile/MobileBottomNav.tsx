@@ -35,11 +35,20 @@ export function MobileBottomNav() {
   const { user, role, isAdmin } = useAuth()
   const { settings } = useSiteSettings()
   const scrollerRef = useRef<HTMLDivElement>(null)
+  const [isNative, setIsNative] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsNative(Capacitor.isNativePlatform());
+    check();
+    const t = setInterval(check, 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const subgroupsEnabled = settings.global_subgroups_enabled !== 'false'
   const storeLink = settings.store_link
 
   const items = useMemo<Item[]>(() => {
+    // ...
     const list: Item[] = [
       { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, match: (p) => p === '/dashboard' },
       { to: '/', label: 'Home', icon: Home, match: (p) => p === '/' },
@@ -91,6 +100,8 @@ export function MobileBottomNav() {
     if (!el) return
     el.scrollBy({ left: dir * Math.max(160, el.clientWidth * 0.7), behavior: 'smooth' })
   }
+
+  if (!isNative) return null;
 
   return (
     <nav

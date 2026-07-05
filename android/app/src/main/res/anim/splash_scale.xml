@@ -1,20 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <set xmlns:android="http://schemas.android.com/apk/res/android"
     android:ordering="together">
+
+    <!-- Scale entrance -->
     <objectAnimator
         android:propertyName="scaleX"
-        android:duration="1000"
-        android:valueFrom="0.8"
-        android:valueTo="1.1"
-        android:repeatCount="infinite"
-        android:repeatMode="reverse"
-        android:valueType="floatType" />
+        android:duration="900"
+        android:valueFrom="0.85"
+        android:valueTo="1.0"
+        android:valueType="floatType"
+        android:interpolator="@android:anim/decelerate_interpolator" />
+
     <objectAnimator
         android:propertyName="scaleY"
-        android:duration="1000"
-        android:valueFrom="0.8"
-        android:valueTo="1.1"
-        android:repeatCount="infinite"
-        android:repeatMode="reverse"
-        android:valueType="floatType" />
+        android:duration="900"
+        android:valueFrom="0.85"
+        android:valueTo="1.0"
+        android:valueType="floatType"
+        android:interpolator="@android:anim/decelerate_interpolator" />
+
+    <!-- Subtle Rise -->
+    <objectAnimator
+        android:propertyName="translateY"
+        android:duration="900"
+        android:valueFrom="20.0"
+        android:valueTo="0.0"
+        android:valueType="floatType"
+        android:interpolator="@android:anim/decelerate_interpolator" />
+
 </set>

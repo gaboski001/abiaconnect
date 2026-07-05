@@ -8,7 +8,26 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { Toaster } from '@/components/ui/sonner'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
+import { Capacitor } from '@capacitor/core'
 import './index.css'
+
+// Diagnostics for native bridge
+if (typeof window !== 'undefined') {
+  console.log('[NativeBridge] Initializing web bundle...');
+  console.log('[NativeBridge] Platform:', Capacitor.getPlatform());
+  console.log('[NativeBridge] isNative:', Capacitor.isNativePlatform());
+
+  // Expose to window for debugging via Chrome DevTools / Remote Debugging
+  (window as any).Capacitor = Capacitor;
+}
+
+// Diagnostics for native bridge
+if (typeof window !== 'undefined') {
+  console.log('[NativeBridge] Initializing web bundle...');
+  console.log('[NativeBridge] Platform:', Capacitor.getPlatform());
+  console.log('[NativeBridge] isNative:', Capacitor.isNativePlatform());
+  (window as any).Capacitor = Capacitor;
+}
 
 // Best-effort: unregister any previously installed PWA service workers so
 // returning browsers don't keep serving a stale app shell after we removed PWA.

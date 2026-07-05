@@ -23,28 +23,29 @@ export const NativeOnboardingGate = () => {
   const [startAtLast, setStartAtLast] = useState(false);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform() || loading) return;
+    const check = () => {
+      if (!Capacitor.isNativePlatform() || loading) return;
 
-    // Never cover real app screens. The native welcome gate is only allowed on
-    // the root route; otherwise login, chats, threads, and push deep-links stay
-    // immediately interactive instead of sitting behind a full-screen overlay.
-    if (location.pathname !== '/') {
-      setShow(false);
-      return;
-    }
+      // Never cover real app screens.
+      if (location.pathname !== '/') {
+        setShow(false);
+        return;
+      }
 
-    const hasSeen = localStorage.getItem(STORAGE_KEY) === 'true';
+      const hasSeen = localStorage.getItem(STORAGE_KEY) === 'true';
 
-    // If not logged in, we always show the gate on native.
-    if (!user) {
-      setShow(true);
-      // If they've seen the intro before, jump straight to the "Ready to join" slide.
-      setStartAtLast(hasSeen);
-    } else {
-      // If logged in, only show if they haven't finished onboarding yet.
-      setShow(!hasSeen);
-      setStartAtLast(false);
-    }
+      if (!user) {
+        setShow(true);
+        setStartAtLast(hasSeen);
+      } else {
+        setShow(!hasSeen);
+        setStartAtLast(false);
+      }
+    };
+
+    check();
+    const interval = setInterval(check, 1000);
+    return () => clearInterval(interval);
   }, [user, loading, location.pathname]);
 
   if (!show || loading) return null;

@@ -5,6 +5,8 @@ import { Navbar } from './Navbar'
 import { Footer } from './Footer'
 
 import { MobileTopBar } from '@/components/mobile/MobileTopBar'
+import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
+import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { InstallAppPrompt } from '@/components/pwa/InstallAppPrompt'
 import { IOSInstallPrompt } from '@/components/pwa/IOSInstallPrompt'
 import { UpdateAvailablePrompt } from '@/components/pwa/UpdateAvailablePrompt'
@@ -63,7 +65,10 @@ export function MainLayout() {
       </main>
 
       {!isAuthPage && <Footer />}
-      
+
+      {/* Native-only premium navigation shell */}
+      {!isAuthPage && <MobileBottomNav />}
+
       {!isAuthPage && <InstallAppPrompt />}
       {!isAuthPage && <IOSInstallPrompt />}
       {!isAuthPage && <UpdateAvailablePrompt />}

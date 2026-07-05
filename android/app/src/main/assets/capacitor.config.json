@@ -1,14 +1,25 @@
 {
-	"appId": "com.abiaconnect.app",
-	"appName": "AbiaConnect",
-	"webDir": "dist",
-	"plugins": {
-		"PushNotifications": {
-			"presentationOptions": [
-				"badge",
-				"sound",
-				"alert"
-			]
-		}
-	}
+  "appId": "com.abiaconnect.app",
+  "appName": "abiaconnect",
+  "webDir": "dist",
+  "server": {
+    "url": "https://abiaconnect.com",
+    "cleartext": false,
+    "androidScheme": "https",
+    "allowNavigation": [
+      "abiaconnect.com",
+      "*.abiaconnect.com",
+      "*.lovable.app",
+      "*.supabase.co"
+    ]
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    }
+  }
 }

@@ -2,6 +2,8 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { CallProvider } from '@/components/call/CallProvider'
+import { NativeOnboardingGate } from '@/components/mobile/NativeOnboardingGate'
+import { NativeDiagnostics } from '@/components/mobile/NativeDiagnostics'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute'
@@ -70,9 +72,11 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
-      {/* Native-only: voice/video calls (WhatsApp-style). Web never mounts this,
-          so web users neither see nor initiate calls. */}
+      {/* Native-only enhancements: always mount, they handle their own internal gating */}
+      <NativeOnboardingGate />
+      <NativeDiagnostics />
       {isNativeApp() && <CallProvider />}
+
       <Routes>
       <Route element={<MainLayout />}>
         <Route index element={<Home />} />

@@ -1,22 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Brand Palette -->
+    <color name="brand_blue">#1CA9D9</color>
+    <color name="brand_navy">#0B1220</color>
+    <color name="brand_light_bg">#F7F5EF</color>
     <color name="forest_green">#1B3D1B</color>
-    <color name="forest_green_dark">#013220</color>
-    <color name="gold_primary">#C8A951</color>
-    <color name="gold_gradient_start">#FBBF24</color>
-    <color name="gold_gradient_end">#CA8A04</color>
+
+    <!-- Gold Gradient -->
+    <color name="gold_primary">#F8C301</color>
+    <color name="gold_gradient_start">#E87015</color>
+    <color name="gold_gradient_end">#F8C301</color>
+    <color name="gold_highlight">#FFD65A</color>
     <color name="notification_color">#F8C301</color>
 
     <!-- App Theme Colors (Light Mode) -->
-    <color name="colorPrimary">#1B3D1B</color>
-    <color name="colorPrimaryDark">#013220</color>
-    <color name="colorAccent">#C8A951</color>
-    <color name="windowBackground">#FFFFFF</color>
+    <color name="colorPrimary">#1CA9D9</color>
+    <color name="colorPrimaryDark">#1CA9D9</color>
+    <color name="colorAccent">#F8C301</color>
+    <color name="windowBackground">#F7F5EF</color>
     <color name="navigationBarColor">#FFFFFF</color>
 
     <!-- UI Color Mapping -->
-    <color name="status_bar_color">#0D0D0D</color>
-    <color name="splash_background">#0D0D0D</color>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <color name="status_bar_color">#1CA9D9</color>
+    <color name="splash_background">#F7F5EF</color>
+    <color name="ic_launcher_background">#1CA9D9</color>
 </resources>

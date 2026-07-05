@@ -11,6 +11,7 @@ import { SEO } from '@/components/SEO'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { NativeAuthLayout, isNativeApp } from '@/components/mobile/NativeAuthLayout'
+import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -101,6 +102,9 @@ export default function Login() {
             >
               {loading ? 'Signing in…' : 'Sign In'}
             </Button>
+
+            <BiometricLoginButton onSuccess={() => navigate('/')} />
+
             <p className="pt-1 text-center text-sm text-slate-300/80">
               New here?{' '}
               <Link to="/register" className="font-semibold text-amber-300 hover:underline">Create account</Link>
