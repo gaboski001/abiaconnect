@@ -62,6 +62,9 @@ export interface CallDiagnostics {
   audioElementPaused: boolean
   audioElementMuted: boolean
   audioElementVolume: number
+}
+
+
 
 export interface CallState {
   status: CallStatus
