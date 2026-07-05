@@ -146,7 +146,7 @@ class CallManager {
     this.userId = self.id
     this.selfPeer = self
     const ch = supabase.channel(`call-user:${self.id}`, {
-      config: { broadcast: { ack: false, self: false } },
+      config: { broadcast: { ack: false, self: false }, private: true },
     })
     ch.on('broadcast', { event: 'invite' }, ({ payload }) => this.onInvite(payload))
     ch.on('broadcast', { event: 'cancel' }, ({ payload }) => this.onCancel(payload))
@@ -216,23 +216,33 @@ class CallManager {
   reject() {
     if (!this.pendingOffer) return
     const { from, callId } = this.pendingOffer
-    supabase
-      .channel(`call-user:${from.id}`)
-      .send({ type: 'broadcast', event: 'cancel', payload: { callId, reason: 'rejected' } })
-      .catch(() => undefined)
+    void this.broadcastToUser(from.id, 'cancel', { callId, reason: 'rejected' })
     this.clearInviteRetryLoop()
     this.pendingOffer = null
     this.patch({ status: 'idle', callId: null, direction: null, peer: null })
   }
 
+  private async broadcastToUser(userId: string, event: string, payload: any) {
+    const ch = supabase.channel(`call-user:${userId}`, {
+      config: { broadcast: { ack: false, self: false }, private: true },
+    })
+    try {
+      await new Promise<void>((resolve) => {
+        ch.subscribe((status) => {
+          if (status === 'SUBSCRIBED') resolve()
+        })
+        window.setTimeout(() => resolve(), 2000)
+      })
+      await ch.send({ type: 'broadcast', event, payload })
+    } finally {
+      supabase.removeChannel(ch).catch(() => undefined)
+    }
+  }
+
   private async sendInvite(target: CallPeer, callId: string) {
-    await supabase.channel(`call-user:${target.id}`).send({
-      type: 'broadcast',
-      event: 'invite',
-      payload: {
-        callId,
-        from: this.selfPeer,
-      },
+    await this.broadcastToUser(target.id, 'invite', {
+      callId,
+      from: this.selfPeer,
     })
   }
 
@@ -297,10 +307,7 @@ class CallManager {
     const wasConnected = this.wasConnected
     if (notifyPeer && peerId && callId) {
       await this.sessionSend('bye', { callId }).catch(() => undefined)
-      await supabase
-        .channel(`call-user:${peerId}`)
-        .send({ type: 'broadcast', event: 'cancel', payload: { callId } })
-        .catch(() => undefined)
+      await this.broadcastToUser(peerId, 'cancel', { callId }).catch(() => undefined)
     }
     // Log a call entry in the conversation (missed or completed).
     // Only the caller writes it (single source of truth — both peers see the same row).
@@ -382,10 +389,10 @@ class CallManager {
     if (!payload?.callId || !payload?.from) return
     // Busy: auto-reject.
     if (this.state.status !== 'idle' && this.state.status !== 'ended') {
-      supabase
-        .channel(`call-user:${payload.from.id}`)
-        .send({ type: 'broadcast', event: 'cancel', payload: { callId: payload.callId, reason: 'busy' } })
-        .catch(() => undefined)
+      void this.broadcastToUser(payload.from.id, 'cancel', {
+        callId: payload.callId,
+        reason: 'busy',
+      })
       return
     }
     this.pendingOffer = { from: payload.from, sdp: payload.sdp, callId: payload.callId }
@@ -405,7 +412,7 @@ class CallManager {
 
   private async openSessionChannel(callId: string, isCaller: boolean) {
     const ch = supabase.channel(`call-session:${callId}`, {
-      config: { broadcast: { ack: false, self: false } },
+      config: { broadcast: { ack: false, self: false }, private: true },
     })
     ch.on('broadcast', { event: 'accept' }, () => this.onAccept(isCaller))
     ch.on('broadcast', { event: 'sdp' }, ({ payload }) => this.onSdp(payload, isCaller))
