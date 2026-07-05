@@ -61,6 +61,23 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
   const { release, currentVersion, hasUpdate, platform, isLoading } = useAppUpdate()
   const [modalOpen, setModalOpen] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  type InstallStatus = 'idle' | 'preparing' | 'started' | 'failed'
+  const [status, setStatus] = useState<InstallStatus>('idle')
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  // When the app regains focus after the OS installer/browser handoff, the
+  // useAppUpdate query will refetch and hide this card if the user actually
+  // installed the new version. Until then, keep showing "started".
+  useEffect(() => {
+    if (status !== 'started') return
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        // Just nudge the UI — the outer query auto-refreshes on its own.
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [status])
 
   if (!hasUpdate || !release) return null
 
@@ -69,15 +86,20 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
   const download = async () => {
     if (downloading) return
     setDownloading(true)
+    setStatus('preparing')
+    setErrorMsg(null)
     try {
       const { data, error } = await supabase.storage
         .from('app-releases')
         .createSignedUrl(release.file_path, 60 * 10, { download: true })
       if (error || !data?.signedUrl) {
+        setStatus('failed')
+        setErrorMsg('Could not generate download link.')
         toast.error('Could not generate download link. Please try again.')
         return
       }
       await openExternal(data.signedUrl)
+      setStatus('started')
       toast.success(
         platform === 'ios'
           ? 'Opening installer…'
@@ -85,12 +107,25 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
       )
       setModalOpen(false)
     } catch (e) {
+      setStatus('failed')
+      setErrorMsg(e instanceof Error ? e.message : 'Download failed.')
       toast.error('Download failed. Please try again.')
     } finally {
-      // Keep the spinner briefly so the tap feels responsive, then reset.
       setTimeout(() => setDownloading(false), 800)
     }
   }
+
+  const statusStrip = status === 'idle' ? null : (
+    <InstallStatusStrip
+      status={status}
+      platform={platform}
+      version={release.version}
+      errorMsg={errorMsg}
+      onRetry={download}
+      tone={variant === 'premium' ? 'dark' : 'light'}
+    />
+  )
+
 
   const modal = (
     <ChangelogModal
