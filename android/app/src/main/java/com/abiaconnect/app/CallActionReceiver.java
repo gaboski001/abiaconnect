@@ -17,6 +17,7 @@ public class CallActionReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (intent == null || intent.getAction() == null) return;
         String action = intent.getAction();
+        String callId = intent.getStringExtra("call_id");
 
         if (ACTION_DECLINE_CALL.equals(action)) {
             int notificationId = intent.getIntExtra("notification_id", -1);
@@ -27,15 +28,20 @@ public class CallActionReceiver extends BroadcastReceiver {
             }
             // If a foreground call service somehow got started for this call, stop it too.
             CallForegroundService.stop(context);
+
+            // Tell the web layer to reject the call on the server (send hangup signal).
+            Intent broadcast = new Intent("com.abiaconnect.app.CALL_DECLINE");
+            broadcast.setPackage(context.getPackageName());
+            broadcast.putExtra("call_id", callId);
+            context.sendBroadcast(broadcast);
             return;
         }
 
         if (ACTION_HANGUP_CALL.equals(action)) {
             CallForegroundService.stop(context);
-            // Let the web layer know the user hung up from the notification,
-            // so it can tear down the WebRTC peer connection cleanly.
             Intent broadcast = new Intent("com.abiaconnect.app.CALL_HANGUP");
             broadcast.setPackage(context.getPackageName());
+            broadcast.putExtra("call_id", callId);
             context.sendBroadcast(broadcast);
         }
     }
