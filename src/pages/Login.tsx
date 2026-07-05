@@ -12,6 +12,13 @@ import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { NativeAuthLayout, isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton'
+import { BiometricOptInDialog } from '@/components/auth/BiometricOptInDialog'
+import {
+  isBiometricAvailable,
+  isBiometricEnabled,
+  hasDeclinedBiometric,
+  setBiometricDeclined,
+} from '@/lib/biometric'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -22,6 +29,9 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [optInOpen, setOptInOpen] = useState(false)
+  const [optInEmail, setOptInEmail] = useState('')
+  const [optInPassword, setOptInPassword] = useState('')
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -38,12 +48,36 @@ export default function Login() {
         return
       }
       toast.success('Welcome back!')
+
+      // Offer biometric opt-in on native devices where hardware is available
+      // and the user hasn't already enabled or explicitly declined it.
+      if (
+        isNativeApp() &&
+        !isBiometricEnabled() &&
+        !hasDeclinedBiometric() &&
+        (await isBiometricAvailable())
+      ) {
+        setOptInEmail(email)
+        setOptInPassword(password)
+        setOptInOpen(true)
+        return // wait for opt-in dialog to close before navigating
+      }
+
       navigate('/')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Sign in failed')
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleOptInClose(_enabled: boolean) {
+    // Whether they enabled or skipped, don't badger them again this session.
+    if (!_enabled) setBiometricDeclined(true)
+    setOptInOpen(false)
+    setOptInEmail('')
+    setOptInPassword('')
+    navigate('/')
   }
 
   if (isNativeApp()) {
@@ -113,6 +147,12 @@ export default function Login() {
         </NativeAuthLayout>
         {/* Admin fast path retained */}
         {isAdmin ? null : null}
+        <BiometricOptInDialog
+          open={optInOpen}
+          email={optInEmail}
+          password={optInPassword}
+          onClose={handleOptInClose}
+        />
       </>
     )
   }
