@@ -131,6 +131,8 @@ public class MainActivity extends BaseActivity {
     private void installCallJsBridge() {
         if (getBridge() == null || getBridge().getWebView() == null) return;
         getBridge().getWebView().addJavascriptInterface(new CallJsBridge(this), "AbiaCallBridge");
+        getBridge().getWebView().addJavascriptInterface(
+            new ApkInstallerBridge(this, getBridge()), "AbiaApkInstaller");
     }
 
     private void registerHangupReceiver() {
