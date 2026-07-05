@@ -871,9 +871,41 @@ function Thread() {
       </article>
 
       <section className="space-y-4">
-        <h2 className="text-xl font-bold">
-          {totalReplies} {totalReplies === 1 ? 'Reply' : 'Replies'}
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-bold">
+            {totalReplies} {totalReplies === 1 ? 'Reply' : 'Replies'}
+          </h2>
+          {isAdmin && totalReplies > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="destructive" disabled={clearReplies.isPending}>
+                  <Trash2 className="mr-1.5 h-4 w-4" />
+                  {clearReplies.isPending ? 'Clearing…' : 'Clear all replies'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Clear all replies on this thread?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete <strong>{totalReplies}</strong>{' '}
+                    {totalReplies === 1 ? 'reply' : 'replies'} and their votes from
+                    <em> {thread.title}</em>. The thread itself will stay. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => clearReplies.mutate()}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Yes, delete all replies
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
+
 
         {repliesQ.isLoading ? (
           <ul className="space-y-3" aria-busy="true">
