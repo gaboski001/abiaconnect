@@ -4,22 +4,35 @@ import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import {
+  disableBiometric,
   getBiometricCredentials,
   isBiometricAvailable,
   isBiometricEnabled,
+  type BiometricError,
 } from '@/lib/biometric'
+import { BiometricRecoveryDialog } from '@/components/auth/BiometricRecoveryDialog'
 
 interface Props {
   onSuccess: () => void
+  /**
+   * Called when the user picks "Sign in with email & password" or
+   * "Re-enable biometric with password" from the recovery dialog. Login
+   * uses this to focus the email field so the user doesn't have to hunt
+   * for it.
+   */
+  onFallbackToPassword?: (opts: { reEnable: boolean }) => void
 }
 
 /**
- * Native-only sign-in button. Renders nothing if biometric isn't
- * available on the device or the user hasn't enabled it yet.
+ * Native-only sign-in button. Renders nothing if biometric hardware isn't
+ * available. On failure it opens a guided recovery dialog with retry /
+ * re-enable / use-password actions.
  */
-export const BiometricLoginButton = ({ onSuccess }: Props) => {
+export const BiometricLoginButton = ({ onSuccess, onFallbackToPassword }: Props) => {
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [recoveryOpen, setRecoveryOpen] = useState(false)
+  const [lastError, setLastError] = useState<BiometricError | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -35,27 +48,27 @@ export const BiometricLoginButton = ({ onSuccess }: Props) => {
 
   if (!show) return null
 
-  async function handleClick() {
-    // If not enabled in-app yet, we don't have credentials stored.
-    if (!isBiometricEnabled()) {
-      toast.info('Please sign in with your email/password once to enable biometric login.')
-      return
-    }
-
+  async function attemptBiometric() {
     setLoading(true)
     try {
-      const creds = await getBiometricCredentials()
-// ...
-      if (!creds) {
-        toast.error('Biometric verification cancelled')
+      const result = await getBiometricCredentials()
+      if (!result.ok) {
+        setLastError(result.error)
+        setRecoveryOpen(true)
         return
       }
+
       const { error } = await supabase.auth.signInWithPassword({
-        email: creds.username,
-        password: creds.password,
+        email: result.creds.username,
+        password: result.creds.password,
       })
       if (error) {
-        toast.error('Stored credentials no longer work. Please sign in with your password.')
+        setLastError({
+          kind: 'no-credentials',
+          message:
+            'Your password changed since biometric was enabled. Sign in with your email and password to reset it.',
+        })
+        setRecoveryOpen(true)
         return
       }
       toast.success('Welcome back!')
@@ -65,16 +78,54 @@ export const BiometricLoginButton = ({ onSuccess }: Props) => {
     }
   }
 
+  async function handleClick() {
+    if (!isBiometricEnabled()) {
+      setLastError({
+        kind: 'not-enabled',
+        message:
+          'Biometric sign-in isn\'t set up yet on this device. Sign in once with your email and password to enable it.',
+      })
+      setRecoveryOpen(true)
+      return
+    }
+    await attemptBiometric()
+  }
+
   return (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={handleClick}
-      disabled={loading}
-      className="h-14 w-full gap-2 rounded-2xl border-white/10 bg-white/[0.03] text-slate-50 hover:bg-white/[0.06]"
-    >
-      <Fingerprint className="size-4 text-amber-300" />
-      {loading ? 'Verifying…' : 'Sign in with biometrics'}
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleClick}
+        disabled={loading}
+        className="h-14 w-full gap-2 rounded-2xl border-white/10 bg-white/[0.03] text-slate-50 hover:bg-white/[0.06]"
+      >
+        <Fingerprint className="size-4 text-amber-300" />
+        {loading ? 'Verifying…' : 'Sign in with biometrics'}
+      </Button>
+
+      <BiometricRecoveryDialog
+        open={recoveryOpen}
+        error={lastError}
+        busy={loading}
+        onRetry={() => {
+          setRecoveryOpen(false)
+          void attemptBiometric()
+        }}
+        onUsePassword={() => {
+          setRecoveryOpen(false)
+          onFallbackToPassword?.({ reEnable: false })
+        }}
+        onReEnable={async () => {
+          // Wipe the stale keystore entry + enabled flag so the next
+          // successful password sign-in re-triggers the opt-in dialog.
+          await disableBiometric()
+          setRecoveryOpen(false)
+          toast.info('Sign in with your password to re-enable biometric.')
+          onFallbackToPassword?.({ reEnable: true })
+        }}
+        onClose={() => setRecoveryOpen(false)}
+      />
+    </>
   )
 }

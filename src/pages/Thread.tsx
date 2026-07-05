@@ -16,6 +16,18 @@ import {
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { moderateContent } from '@/lib/moderateContent'
 import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
@@ -213,7 +225,7 @@ export default function ThreadPage() {
 function Thread() {
   const { threadId } = useParams<{ threadId: string }>()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   const { settings } = useSiteSettings()
   const qc = useQueryClient()
   const [reply, setReply] = useState('')
@@ -709,6 +721,29 @@ function Thread() {
   )
   const handleCancelNested = useCallback(() => setReplyingTo(null), [])
 
+  const clearReplies = useMutation({
+    mutationFn: async () => {
+      if (!threadId) throw new Error('Missing thread')
+      const { data: rows, error: fetchErr } = await supabase
+        .from('replies')
+        .select('id')
+        .eq('thread_id', threadId)
+      if (fetchErr) throw fetchErr
+      const ids = (rows ?? []).map((r) => r.id as string)
+      if (ids.length > 0) {
+        await supabase.from('reply_votes').delete().in('reply_id', ids)
+      }
+      const { error } = await supabase.from('replies').delete().eq('thread_id', threadId)
+      if (error) throw error
+      return ids.length
+    },
+    onSuccess: (count) => {
+      toast.success(count === 0 ? 'No replies to clear' : `Cleared ${count} ${count === 1 ? 'reply' : 'replies'}`)
+      qc.invalidateQueries({ queryKey: ['replies', threadId] })
+    },
+    onError: (e: Error) => toast.error(e.message || 'Failed to clear replies'),
+  })
+
   if (threadQ.isLoading) {
     return (
       <div className="py-16 text-center text-muted-foreground">
@@ -723,6 +758,8 @@ function Thread() {
   }
 
   const totalReplies = repliesQ.data?.pages[0]?.total ?? replies.length
+
+
 
   const authorName = thread.profiles?.display_name ?? 'Member'
 
@@ -835,9 +872,41 @@ function Thread() {
       </article>
 
       <section className="space-y-4">
-        <h2 className="text-xl font-bold">
-          {totalReplies} {totalReplies === 1 ? 'Reply' : 'Replies'}
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-bold">
+            {totalReplies} {totalReplies === 1 ? 'Reply' : 'Replies'}
+          </h2>
+          {isAdmin && totalReplies > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="destructive" disabled={clearReplies.isPending}>
+                  <Trash2 className="mr-1.5 h-4 w-4" />
+                  {clearReplies.isPending ? 'Clearing…' : 'Clear all replies'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Clear all replies on this thread?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete <strong>{totalReplies}</strong>{' '}
+                    {totalReplies === 1 ? 'reply' : 'replies'} and their votes from
+                    <em> {thread.title}</em>. The thread itself will stay. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => clearReplies.mutate()}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Yes, delete all replies
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
+
 
         {repliesQ.isLoading ? (
           <ul className="space-y-3" aria-busy="true">

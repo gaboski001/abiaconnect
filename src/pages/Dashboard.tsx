@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+const CallHistory = lazy(() => import('@/components/dashboard/CallHistory'))
 import { toWebP } from '@/lib/image'
 import { Link, useNavigate } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
@@ -13,9 +14,13 @@ import {
   LayoutDashboard,
   LogOut,
   Mail,
+  Phone,
+  PhoneOff,
   Settings as SettingsIcon,
   Trash2,
 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { areCallsEnabled, hydrateCallsEnabledFromProfile, setCallsEnabled, subscribeCallsEnabled } from '@/lib/callPreferences'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,13 +47,14 @@ import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { NativeDashboard } from '@/components/mobile/NativeDashboard'
 
-type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'notifications' | 'settings'
+type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'calls' | 'notifications' | 'settings'
 
 const NAV: Array<{ id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'posts', label: 'My Posts', icon: FileText },
   { id: 'saved', label: 'Saved Posts', icon: Bookmark },
   { id: 'messages', label: 'Messages', icon: Mail },
+  { id: 'calls', label: 'Calls', icon: Phone },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ]
@@ -236,6 +242,11 @@ export default function Dashboard() {
         {tab === 'saved' && <SavedPosts />}
         {tab === 'messages' && (
           <LinkCard to="/messages" label="Open Messages" description="View and reply to your conversations." icon={Mail} />
+        )}
+        {tab === 'calls' && (
+          <Suspense fallback={<div className="text-sm text-slate-300/70">Loading call history…</div>}>
+            <CallHistory />
+          </Suspense>
         )}
         {tab === 'notifications' && (
           <LinkCard to="/notifications" label="Open Notifications" description="See your latest alerts." icon={Bell} />
@@ -433,6 +444,13 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [callsOn, setCallsOn] = useState(areCallsEnabled())
+
+  useEffect(() => subscribeCallsEnabled(setCallsOn), [])
+
+  useEffect(() => {
+    if (user?.id) void hydrateCallsEnabledFromProfile(user.id)
+  }, [user?.id])
 
   useEffect(() => {
     setForm({
@@ -538,6 +556,34 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
         <h2 className="font-bold">Notifications</h2>
         <NotificationSoundToggle />
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <h2 className="font-bold">Calls</h2>
+        <p className="text-sm text-muted-foreground">
+          Turn voice calling on or off on this device. When off, you can't start calls and incoming calls are declined automatically.
+        </p>
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background p-4">
+          <div className="flex items-center gap-3">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-full ${callsOn ? 'bg-emerald-500/15 text-emerald-600' : 'bg-muted text-muted-foreground'}`}>
+              {callsOn ? <Phone className="h-5 w-5" /> : <PhoneOff className="h-5 w-5" />}
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Voice calls</p>
+              <p className="text-xs text-muted-foreground">
+                {callsOn ? 'Enabled — you can make and receive calls' : 'Disabled — calls are blocked'}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={callsOn}
+            onCheckedChange={(v) => {
+              void setCallsEnabled(v, { userId: user?.id })
+              toast.success(v ? 'Calls turned on' : 'Calls turned off')
+            }}
+            aria-label="Toggle voice calls"
+          />
+        </div>
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">

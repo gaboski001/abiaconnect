@@ -14,6 +14,7 @@ import {
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { GOLD_GRADIENT, GOLD_SHADOW, PREMIUM_SHADOW } from '@/lib/mobileBrand'
+import { AppUpdateCard } from '@/components/pwa/AppUpdateCard'
 import { formatDistanceToNow } from 'date-fns'
 
 const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
@@ -40,6 +41,9 @@ export function NativeDashboard({ profile, stats, chartData, recentThreads }: Na
 
   return (
     <div className="flex flex-col gap-6 pb-32 animate-in fade-in duration-500">
+      {/* App update banner (only shows on native when a newer release exists) */}
+      <AppUpdateCard />
+
       {/* Header Section */}
       <section className="relative overflow-hidden rounded-[2.5rem] bg-[#0B1220] p-6 text-white shadow-2xl">
         {/* Glow effect */}
