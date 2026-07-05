@@ -458,6 +458,16 @@ class CallManager {
   }
 
   private async setupPeer(isCaller: boolean) {
+    // Fully release any prior audio binding before wiring a new session —
+    // stale srcObject from a previous call has been observed to cause the
+    // local mic loopback ("hears himself") on Android WebView.
+    if (this.remoteAudio) {
+      try { this.remoteAudio.pause() } catch { /* ignore */ }
+      this.remoteAudio.srcObject = null
+      this.remoteAudio.muted = false
+      this.remoteAudio.volume = 1
+    }
+
     const pc = new RTCPeerConnection({ iceServers: getIceServers() })
     this.pc = pc
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -477,10 +487,21 @@ class CallManager {
     this.currentTargetBitrateKbps = 32
     this.applyBitrate(this.currentTargetBitrateKbps).catch(() => undefined)
 
+    // Build a dedicated remote MediaStream so we only ever attach REMOTE
+    // tracks to the playback element — never the local mic — regardless of
+    // what the browser's ontrack event hands us.
+    const remoteStream = new MediaStream()
+    if (this.remoteAudio) this.remoteAudio.srcObject = remoteStream
+
     pc.ontrack = (e) => {
-      const [remote] = e.streams
-      if (this.remoteAudio && remote) {
-        this.remoteAudio.srcObject = remote
+      if (e.track.kind !== 'audio') return
+      try { remoteStream.addTrack(e.track) } catch { /* ignore duplicates */ }
+      if (this.remoteAudio) {
+        // Re-bind in case the element was reset elsewhere.
+        if (this.remoteAudio.srcObject !== remoteStream) {
+          this.remoteAudio.srcObject = remoteStream
+        }
+        this.remoteAudio.muted = false
         this.remoteAudio.play().catch(() => undefined)
       }
       // Hint a small jitter buffer for low-latency speech (Chromium experimental).
