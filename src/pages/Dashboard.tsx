@@ -555,6 +555,34 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <h2 className="font-bold">Calls</h2>
+        <p className="text-sm text-muted-foreground">
+          Turn voice calling on or off on this device. When off, you can't start calls and incoming calls are declined automatically.
+        </p>
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background p-4">
+          <div className="flex items-center gap-3">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-full ${callsOn ? 'bg-emerald-500/15 text-emerald-600' : 'bg-muted text-muted-foreground'}`}>
+              {callsOn ? <Phone className="h-5 w-5" /> : <PhoneOff className="h-5 w-5" />}
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Voice calls</p>
+              <p className="text-xs text-muted-foreground">
+                {callsOn ? 'Enabled — you can make and receive calls' : 'Disabled — calls are blocked'}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={callsOn}
+            onCheckedChange={(v) => {
+              setCallsEnabled(v)
+              toast.success(v ? 'Calls turned on' : 'Calls turned off')
+            }}
+            aria-label="Toggle voice calls"
+          />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
         <h2 className="font-bold">App</h2>
         <NativeAppDownload />
         
