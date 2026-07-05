@@ -109,6 +109,30 @@ export type Database = {
           },
         ]
       }
+      call_sessions: {
+        Row: {
+          call_id: string
+          callee_id: string
+          caller_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          call_id: string
+          callee_id: string
+          caller_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          call_id?: string
+          callee_id?: string
+          caller_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string | null
