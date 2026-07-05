@@ -216,10 +216,7 @@ class CallManager {
   reject() {
     if (!this.pendingOffer) return
     const { from, callId } = this.pendingOffer
-    supabase
-      .channel(`call-user:${from.id}`)
-      .send({ type: 'broadcast', event: 'cancel', payload: { callId, reason: 'rejected' } })
-      .catch(() => undefined)
+    void this.broadcastToUser(from.id, 'cancel', { callId, reason: 'rejected' })
     this.clearInviteRetryLoop()
     this.pendingOffer = null
     this.patch({ status: 'idle', callId: null, direction: null, peer: null })
