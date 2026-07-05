@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
-import { Download, Sparkles, FileText, Loader2 } from 'lucide-react'
+import { CheckCircle2, Download, FileText, Loader2, RefreshCw, Sparkles, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { toast } from '@/lib/toast'
@@ -61,6 +61,23 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
   const { release, currentVersion, hasUpdate, platform, isLoading } = useAppUpdate()
   const [modalOpen, setModalOpen] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  type InstallStatus = 'idle' | 'preparing' | 'started' | 'failed'
+  const [status, setStatus] = useState<InstallStatus>('idle')
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  // When the app regains focus after the OS installer/browser handoff, the
+  // useAppUpdate query will refetch and hide this card if the user actually
+  // installed the new version. Until then, keep showing "started".
+  useEffect(() => {
+    if (status !== 'started') return
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        // Just nudge the UI — the outer query auto-refreshes on its own.
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [status])
 
   if (!hasUpdate || !release) return null
 
@@ -69,15 +86,20 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
   const download = async () => {
     if (downloading) return
     setDownloading(true)
+    setStatus('preparing')
+    setErrorMsg(null)
     try {
       const { data, error } = await supabase.storage
         .from('app-releases')
         .createSignedUrl(release.file_path, 60 * 10, { download: true })
       if (error || !data?.signedUrl) {
+        setStatus('failed')
+        setErrorMsg('Could not generate download link.')
         toast.error('Could not generate download link. Please try again.')
         return
       }
       await openExternal(data.signedUrl)
+      setStatus('started')
       toast.success(
         platform === 'ios'
           ? 'Opening installer…'
@@ -85,12 +107,25 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
       )
       setModalOpen(false)
     } catch (e) {
+      setStatus('failed')
+      setErrorMsg(e instanceof Error ? e.message : 'Download failed.')
       toast.error('Download failed. Please try again.')
     } finally {
-      // Keep the spinner briefly so the tap feels responsive, then reset.
       setTimeout(() => setDownloading(false), 800)
     }
   }
+
+  const statusStrip = status === 'idle' ? null : (
+    <InstallStatusStrip
+      status={status}
+      platform={platform}
+      version={release.version}
+      errorMsg={errorMsg}
+      onRetry={download}
+      tone={variant === 'premium' ? 'dark' : 'light'}
+    />
+  )
+
 
   const modal = (
     <ChangelogModal
@@ -144,6 +179,7 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
                   <FileText className="size-3.5" /> What's new
                 </Button>
               </div>
+              {statusStrip}
             </div>
           </div>
         </div>
@@ -205,9 +241,85 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
             <FileText className="size-4" /> Notes
           </Button>
         </div>
+        {statusStrip}
       </section>
       {modal}
     </>
+  )
+}
+
+interface InstallStatusStripProps {
+  status: 'preparing' | 'started' | 'failed'
+  platform: 'android' | 'ios' | 'web'
+  version: string
+  errorMsg: string | null
+  onRetry: () => void
+  tone: 'dark' | 'light'
+}
+
+function InstallStatusStrip({ status, platform, version, errorMsg, onRetry, tone }: InstallStatusStripProps) {
+  const dark = tone === 'dark'
+  const base = dark
+    ? 'mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5'
+    : 'mt-3 rounded-xl border px-3 py-2.5'
+
+  if (status === 'preparing') {
+    const cls = dark ? `${base}` : `${base} border-muted bg-muted/40`
+    return (
+      <div className={`${cls} flex items-center gap-2`} role="status" aria-live="polite">
+        <Loader2 className={`size-4 animate-spin ${dark ? 'text-[#F8C301]' : 'text-amber-600'}`} />
+        <p className={`text-xs ${dark ? 'text-white/80' : 'text-foreground'}`}>
+          Preparing secure download…
+        </p>
+      </div>
+    )
+  }
+
+  if (status === 'started') {
+    const cls = dark
+      ? `${base} border-emerald-400/25 bg-emerald-400/10`
+      : `${base} border-emerald-500/30 bg-emerald-500/5`
+    return (
+      <div className={`${cls} flex items-start gap-2`} role="status" aria-live="polite">
+        <CheckCircle2 className={`size-4 mt-0.5 ${dark ? 'text-emerald-300' : 'text-emerald-600'}`} />
+        <div className="min-w-0 flex-1">
+          <p className={`text-xs font-semibold ${dark ? 'text-emerald-100' : 'text-emerald-800'}`}>
+            {platform === 'ios' ? `Installer opened for v${version}` : `Downloading v${version}…`}
+          </p>
+          <p className={`mt-0.5 text-[11px] leading-snug ${dark ? 'text-white/60' : 'text-muted-foreground'}`}>
+            {platform === 'ios'
+              ? 'Follow the on-screen steps to install. This card will disappear once the new version is running.'
+              : 'Open the notification when it finishes and tap Install. This card will disappear once the new version is running.'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // failed
+  const cls = dark
+    ? `${base} border-red-400/30 bg-red-500/10`
+    : `${base} border-red-500/40 bg-red-500/5`
+  return (
+    <div className={`${cls} flex items-start gap-2`} role="alert">
+      <XCircle className={`size-4 mt-0.5 ${dark ? 'text-red-300' : 'text-red-600'}`} />
+      <div className="min-w-0 flex-1">
+        <p className={`text-xs font-semibold ${dark ? 'text-red-100' : 'text-red-800'}`}>
+          Update failed
+        </p>
+        <p className={`mt-0.5 text-[11px] leading-snug ${dark ? 'text-white/60' : 'text-muted-foreground'}`}>
+          {errorMsg ?? 'Something went wrong preparing the download.'}
+        </p>
+      </div>
+      <Button
+        size="sm"
+        variant={dark ? 'outline' : 'secondary'}
+        onClick={onRetry}
+        className={`h-7 gap-1 px-2 text-[11px] ${dark ? 'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white' : ''}`}
+      >
+        <RefreshCw className="size-3" /> Retry
+      </Button>
+    </div>
   )
 }
 
