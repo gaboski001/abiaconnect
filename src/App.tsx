@@ -134,6 +134,7 @@ export default function App() {
                 <Route path="donate" element={<Donate />} />
                 <Route path="unsubscribe" element={<Unsubscribe />} />
                 <Route path="version" element={<Version />} />
+                <Route path="download" element={<Download />} />
 
 
 
