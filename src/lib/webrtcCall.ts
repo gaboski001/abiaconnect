@@ -488,7 +488,15 @@ class CallManager {
 
   private onInvite(payload: any) {
     if (!payload?.callId || !payload?.from) return
-    // Dedupe: caller retries `invite` every 5s until connected. Ignore any
+    // User has disabled calls in settings — silently decline so the caller
+    // sees a normal "unavailable" cancel instead of an endless ring.
+    if (!areCallsEnabled()) {
+      void this.broadcastToUser(payload.from.id, 'cancel', {
+        callId: payload.callId,
+        reason: 'unavailable',
+      })
+      return
+    }
     // retry that matches the call we're already handling — otherwise once
     // the callee accepts (status becomes 'connecting'/'connected'), the next
     // retry would fall through to the "busy" branch and cancel the call.
