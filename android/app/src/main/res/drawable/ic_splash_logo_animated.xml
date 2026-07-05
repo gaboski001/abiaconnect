@@ -4,4 +4,7 @@
     <target
         android:name="logo_group"
         android:animation="@anim/splash_scale" />
+    <target
+        android:name="waves_group"
+        android:animation="@anim/waves_pulse" />
 </animated-vector>

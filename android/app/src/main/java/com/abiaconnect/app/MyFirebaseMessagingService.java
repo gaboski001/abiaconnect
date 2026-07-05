@@ -11,6 +11,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -76,7 +77,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_abiaconnect)
+            .setColor(ContextCompat.getColor(this, R.color.notification_color))
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
@@ -100,7 +102,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CALL_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_abiaconnect)
+            .setColor(ContextCompat.getColor(this, R.color.notification_color))
             .setContentTitle(TextUtils.isEmpty(title) ? "Incoming call" : title)
             .setContentText(TextUtils.isEmpty(body) ? "Open AbiaConnect to answer" : body)
             .setStyle(new NotificationCompat.BigTextStyle().bigText(TextUtils.isEmpty(body) ? "Open AbiaConnect to answer" : body))

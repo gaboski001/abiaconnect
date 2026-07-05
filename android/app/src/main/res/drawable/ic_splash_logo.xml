@@ -6,15 +6,15 @@
     android:viewportWidth="288"
     android:viewportHeight="288">
 
-    <!-- Outer Glow / Depth Shadow -->
+    <!-- Radial Background Glow -->
     <path
-        android:pathData="M144,144m-125,0a125,125 0,1 1,250 0a125,125 0,1 1,-250 0"
+        android:pathData="M144,144m-120,0a120,120 0,1 1,240 0a120,120 0,1 1,-240 0"
         android:fillAlpha="0.15">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:centerX="144"
                 android:centerY="144"
-                android:gradientRadius="125"
+                android:gradientRadius="120"
                 android:type="radial">
                 <item android:color="#1CA9D9" android:offset="0" />
                 <item android:color="#00000000" android:offset="1" />
@@ -22,66 +22,61 @@
         </aapt:attr>
     </path>
 
-    <!-- Main Branding Ring -->
-    <path
-        android:pathData="M144,144m-110,0a110,110 0,1 1,220 0a110,110 0,1 1,-220 0"
-        android:strokeWidth="1.5"
-        android:strokeAlpha="0.4">
-        <aapt:attr name="android:strokeColor">
-            <gradient
-                android:startX="34"
-                android:startY="34"
-                android:endX="254"
-                android:endY="254"
-                android:type="linear">
-                <item android:color="#FFD65A" android:offset="0" />
-                <item android:color="#1CA9D9" android:offset="1" />
-            </gradient>
-        </aapt:attr>
-    </path>
-
-    <!-- Logo Group for Animation -->
+    <!-- Logo and Text Group -->
     <group
         android:name="logo_group"
         android:pivotX="144"
         android:pivotY="144">
 
-        <!-- Bottom Shadow for 3D depth -->
-        <path
-            android:pathData="M144,80 L80,200 L144,180 L208,200 Z"
-            android:fillColor="#000000"
-            android:fillAlpha="0.2"
-            android:translateY="4"/>
+        <!-- Radio Tower -->
+        <group
+            android:translateX="114"
+            android:translateY="60">
+            <path
+                android:pathData="M30,0 L20,30 L40,30 Z M30,30 L0,110 L15,110 L30,75 L45,110 L60,110 L30,30 Z"
+                android:fillColor="#1CA9D9" />
+            <path
+                android:pathData="M15,75 L45,75 L45,80 L15,80 Z M22,50 L38,50 L38,55 L22,55 Z"
+                android:fillColor="#1CA9D9" />
+        </group>
 
-        <!-- Main Logo Mark (Stylized A) -->
-        <path
-            android:pathData="M144,80 L80,200 L144,180 L208,200 Z">
-            <aapt:attr name="android:fillColor">
-                <gradient
-                    android:startX="80"
-                    android:startY="80"
-                    android:endX="208"
-                    android:endY="200"
-                    android:type="linear">
-                    <item android:color="#E87015" android:offset="0" />
-                    <item android:color="#F8C301" android:offset="1" />
-                </gradient>
-            </aapt:attr>
-        </path>
+        <!-- Pulsing Radio Waves -->
+        <group android:name="waves_group" android:translateX="144" android:translateY="85">
+            <path
+                android:name="wave_1"
+                android:pathData="M-15,0 A15,15 0 0,0 -15,20 M15,0 A15,15 0 0,1 15,20"
+                android:strokeWidth="4"
+                android:strokeColor="#1CA9D9"
+                android:strokeLineCap="round" />
+            <path
+                android:name="wave_2"
+                android:pathData="M-28,-10 A30,30 0 0,0 -28,30 M28,-10 A30,30 0 0,1 28,30"
+                android:strokeWidth="4"
+                android:strokeColor="#1CA9D9"
+                android:strokeLineCap="round" />
+        </group>
 
-        <!-- Inner Highlight Sweep -->
-        <path
-            android:pathData="M144,80 L110,140 L144,130 L178,140 Z"
-            android:fillColor="#FFFFFF"
-            android:fillAlpha="0.25"/>
+        <!-- ABIA CONNECT Text -->
+        <group android:translateX="44" android:translateY="180">
+            <!-- ABIA -->
+            <group>
+                <path android:pathData="M10,0 L0,25 L8,25 L10,20 L20,20 L22,25 L30,25 Z M12,14 L15,5 L18,14 Z" android:fillColor="#E87015"/>
+                <path android:pathData="M35,0 L35,25 L45,25 A12,12 0 0,0 45,0 Z M43,6 L48,6 A5,5 0 0,1 48,19 L43,19 Z" android:fillColor="#F09B01"/>
+                <path android:pathData="M65,0 L75,0 L75,25 L65,25 Z" android:fillColor="#F4B401"/>
+                <path android:pathData="M100,0 L90,25 L98,25 L100,20 L110,20 L112,25 L120,25 Z M102,14 L105,5 L108,14 Z" android:fillColor="#F8C301"/>
+            </group>
 
-        <!-- Gloss Highlight -->
-        <path
-            android:pathData="M144,85 L85,195 L144,175 L203,195 Z"
-            android:strokeWidth="0.5"
-            android:strokeColor="#FFFFFF"
-            android:strokeAlpha="0.3"/>
-
+            <!-- CONNECT -->
+            <group android:translateY="35">
+                <path android:pathData="M20,0 A12.5,12.5 0 1,0 20,25 L28,25 L28,18 L18,18 L18,7 L28,7 L28,0 Z" android:fillColor="#E87015"/>
+                <path android:pathData="M45,12.5 A12.5,12.5 0 1,0 45,12.6 Z M45,7 A5.5,5.5 0 1,1 45,7.1 Z" android:fillColor="#EB8510"/>
+                <path android:pathData="M70,0 L70,25 L78,25 L78,10 L92,25 L92,0 L84,0 L84,15 L70,0 Z" android:fillColor="#EE9A0A"/>
+                <path android:pathData="M100,0 L100,25 L108,25 L108,10 L122,25 L122,0 L114,0 L114,15 L100,0 Z" android:fillColor="#F1AF06"/>
+                <path android:pathData="M130,0 L130,25 L155,25 L155,18 L138,18 L138,15 L150,15 L150,8 L138,8 L138,7 L155,7 L155,0 Z" android:fillColor="#F4C402"/>
+                <path android:pathData="M170,0 A12.5,12.5 0 1,0 170,25 L178,25 L178,18 L168,18 L168,7 L178,7 L178,0 Z" android:fillColor="#F8C301"/>
+                <path android:pathData="M185,7 L185,0 L210,0 L210,7 L201,7 L201,25 L194,25 L194,7 Z" android:fillColor="#F8C301"/>
+            </group>
+        </group>
     </group>
 
 </vector>

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { cleanupPushNotifications } from '@/lib/pushCleanup'
 
 export type Role = 'Super Admin' | 'Admin' | 'Member' | 'guest'
 
@@ -158,6 +159,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   async function signOut() {
+    try {
+      await cleanupPushNotifications()
+    } catch {}
+
     await supabase.auth.signOut()
     localStorage.removeItem(CACHE_KEY)
     setRole('guest')

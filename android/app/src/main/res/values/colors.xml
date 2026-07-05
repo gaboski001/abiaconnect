@@ -23,5 +23,5 @@
     <!-- UI Color Mapping -->
     <color name="status_bar_color">#1CA9D9</color>
     <color name="splash_background">#F7F5EF</color>
-    <color name="ic_launcher_background">#1CA9D9</color>
+    <color name="ic_launcher_background">#000000</color>
 </resources>

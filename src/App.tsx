@@ -1,8 +1,9 @@
-import { lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { CallProvider } from '@/components/call/CallProvider'
 import { NativeOnboardingGate } from '@/components/mobile/NativeOnboardingGate'
+import { BatteryOptimizationPrompt } from '@/components/mobile/BatteryOptimizationPrompt'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute'
@@ -68,12 +69,32 @@ const NotFound = () => (
 )
 
 export default function App() {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    // Listen for deep-links dispatched from MainActivity.java when a notification is tapped
+    const handleNativeNotify = (e: any) => {
+      const url = e.detail?.url
+      if (url) {
+        console.log('[NativeBridge] Deep linking to:', url)
+        navigate(url)
+      }
+    }
+    window.addEventListener('abiaconnect-native-notification' as any, handleNativeNotify)
+    return () => window.removeEventListener('abiaconnect-native-notification' as any, handleNativeNotify)
+  }, [navigate])
+
   return (
     <>
       <ScrollToTop />
       {/* Native-only enhancements */}
       <NativeOnboardingGate />
-      {isNativeApp() && <CallProvider />}
+      {isNativeApp() && (
+        <>
+          <CallProvider />
+          <BatteryOptimizationPrompt />
+        </>
+      )}
 
       <Routes>
       <Route element={<MainLayout />}>

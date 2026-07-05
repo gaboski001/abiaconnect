@@ -50,25 +50,37 @@ A community forum for Abians worldwide — built with React, Vite, Tailwind, and
 - `npm start` — build then serve in one step
 - `npm run cap:reset` — wipe `android/` & `ios/`, rebuild web, re-add Android, and sync Capacitor
 
-## Android (Capacitor) — Clean Rebuild
+## Push notifications — how it works and how to test
 
-Use this whenever the native Android project is out of sync or you hit Gradle / app-id errors.
+The app uses **Firebase Cloud Messaging (FCM)** for real-time delivery. 
 
-```bash
-# 1. Pull latest changes
-git pull
+### Implementation Details
+- **Payloads**: The backend (`send-push` edge function) sends **data-only** messages. This ensures the native `MyFirebaseMessagingService.java` always handles the display, allowing for premium heads-up banners and custom call handling even when the app is force-closed.
+- **Deep Linking**: Tapping a notification sends the `url` extra to `MainActivity`, which dispatches a `abiaconnect-native-notification` event to the React layer.
+- **Battery Optimization**: Android users are prompted once to disable battery optimization for AbiaConnect to prevent background service kills by OEMs.
 
-# 2. Install JS deps
-npm install
+### How to Test
 
-# 3. Nuke android/ios, build web, re-add Android, sync native plugins
-npm run cap:reset
+#### 1. Foreground / Background State
+1. Open the app or put it in the background.
+2. Trigger a test push (via Admin panel or Supabase console).
+3. **Verify**: Notification appears in tray with Gold icon and sound.
 
-# 4. Open the freshly generated project in Android Studio
-npx cap open android
-```
+#### 2. Killed / Force-Closed State
+1. Swipe the app away from the task switcher.
+2. Run this adb command to verify the service is ready:
+   ```bash
+   adb logcat | grep AbiaConnectFCM
+   ```
+3. Trigger a test push.
+4. **Verify**: `onMessageReceived` fires (see logcat) and notification appears in the system tray.
 
-In Android Studio: **File → Sync Project with Gradle Files**, then **Build → Make Project**, then run on a device/emulator.
+#### 3. Deep Link Test
+1. Tap the received notification.
+2. **Verify**: App opens and navigates directly to the target URL (e.g., `/messages/123`).
 
-> Requires Android Studio (with Android SDK + JDK 17) installed locally. iOS builds additionally require macOS + Xcode and `npx cap add ios`.
+#### 4. Incoming Call (Lockscreen)
+1. Lock the phone screen.
+2. Trigger a push with `type: "call"`.
+3. **Verify**: The phone wakes up, plays the ringtone, and shows the full-screen call UI.
 

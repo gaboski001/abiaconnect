@@ -160,23 +160,16 @@ Deno.serve(async (req) => {
       const body = {
         message: {
           token: r.token,
-          // Always delivered — app can act on it (deep links, badge, etc.)
+          // DATA-ONLY payload — required for reliable background delivery and
+          // to ensure onMessageReceived fires in the native app shell in all
+          // states (foreground, background, killed).
           data: payloadData,
-          // notification block lets the OS render the tray entry when the
-          // app is in background/killed. channel_id MUST match the channel
-          // created on-device by usePushNotifications.
-          notification: { title: String(title), body: String(message) },
           android: {
             priority: 'HIGH' as const,
-            notification: {
-              channel_id: 'abia_default',
-              default_sound: true,
-              default_vibrate_timings: true,
-            },
           },
           apns: {
             headers: { 'apns-priority': '10' },
-            payload: { aps: { sound: 'default', 'content-available': 1 } },
+            payload: { aps: { 'content-available': 1 } },
           },
         },
       }
