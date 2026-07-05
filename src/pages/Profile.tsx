@@ -235,29 +235,31 @@ export default function Profile() {
                     <Award className="size-3" /> {profile.reputation ?? 0} reputation
                   </span>
                 </div>
-                <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
-                  <div className="flex items-center justify-between text-xs font-medium">
-                    <span>Profile completeness</span>
-                    <span className="tabular-nums text-muted-foreground">
-                      {filledCount}/{completenessFields.length} · {completeness}%
-                    </span>
+                {isSelf && (
+                  <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
+                    <div className="flex items-center justify-between text-xs font-medium">
+                      <span>Profile completeness</span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {filledCount}/{completenessFields.length} · {completeness}%
+                      </span>
+                    </div>
+                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-border">
+                      <div
+                        className={`h-full ${completenessColor} transition-all duration-500`}
+                        style={{ width: `${completeness}%` }}
+                        role="progressbar"
+                        aria-valuenow={completeness}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      />
+                    </div>
+                    {completeness < 100 && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Add more details to reach 100% and help others recognise you.
+                      </p>
+                    )}
                   </div>
-                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-border">
-                    <div
-                      className={`h-full ${completenessColor} transition-all duration-500`}
-                      style={{ width: `${completeness}%` }}
-                      role="progressbar"
-                      aria-valuenow={completeness}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                    />
-                  </div>
-                  {completeness < 100 && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Add more details to reach 100% and help others recognise you.
-                    </p>
-                  )}
-                </div>
+                )}
               </>
             ) : (
               <div className="mt-4 space-y-3">
