@@ -160,7 +160,7 @@ export function useReleaseDownload() {
         }
       }
 
-      const blob = new Blob(chunks, {
+      const blob = new Blob(chunks as BlobPart[], {
         type:
           input.platform === 'android'
             ? 'application/vnd.android.package-archive'
