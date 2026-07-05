@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
@@ -57,14 +57,25 @@ interface Achievement {
 
 export default function Profile() {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+  const requestedId = searchParams.get('id')
+  const viewedId = requestedId || user?.id || null
+  const isSelf = !!user && !!viewedId && viewedId === user.id
+
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Partial<Profile>>({})
 
   const profileQ = useQuery({
-    queryKey: ['profile', user?.id],
-    enabled: !!user,
+    queryKey: ['profile', viewedId, isSelf],
+    enabled: !!viewedId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_my_profile')
+      if (isSelf) {
+        const { data, error } = await supabase.rpc('get_my_profile')
+        if (error) throw error
+        const row = Array.isArray(data) ? data[0] : data
+        return (row ?? {}) as Profile
+      }
+      const { data, error } = await supabase.rpc('get_public_profiles', { _ids: [viewedId as string] })
       if (error) throw error
       const row = Array.isArray(data) ? data[0] : data
       return (row ?? {}) as Profile
@@ -72,13 +83,13 @@ export default function Profile() {
   })
 
   const threadsQ = useQuery({
-    queryKey: ['profile-threads', user?.id],
-    enabled: !!user,
+    queryKey: ['profile-threads', viewedId],
+    enabled: !!viewedId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('threads')
         .select('id, title, created_at')
-        .eq('user_id', user!.id)
+        .eq('user_id', viewedId!)
         .order('created_at', { ascending: false })
         .limit(10)
       if (error) throw error
@@ -87,20 +98,20 @@ export default function Profile() {
   })
 
   const achievementsQ = useQuery({
-    queryKey: ['achievements', user?.id],
-    enabled: !!user,
+    queryKey: ['achievements', viewedId],
+    enabled: !!viewedId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('achievements')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', viewedId!)
       if (error) return []
       return (data ?? []) as Achievement[]
     },
   })
 
   const profile = profileQ.data ?? {}
-  const name = profile.display_name || user?.email?.split('@')[0] || 'You'
+  const name = profile.display_name || profile.username || (isSelf ? user?.email?.split('@')[0] || 'You' : 'User')
 
   const completenessFields: Array<keyof Profile> = [
     'display_name',
@@ -159,7 +170,16 @@ export default function Profile() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <SEO title="Your Profile" description="View and edit your AbiaConnect profile, achievements, and recent posts." path="/profile" />
+      <SEO
+        title={isSelf ? 'Your Profile' : `${name}'s Profile`}
+        description={isSelf ? 'View and edit your AbiaConnect profile, achievements, and recent posts.' : `${name}'s public AbiaConnect profile.`}
+        path="/profile"
+      />
+      {!isSelf && (
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-sm text-amber-100">
+          Viewing <strong>{name}</strong>'s profile. You're not editing your own account.
+        </div>
+      )}
       <section className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-start gap-4">
           <UserAvatar avatarUrl={profile.avatar_url} displayName={name} size="xl" className="h-24 w-24" />
@@ -171,12 +191,13 @@ export default function Profile() {
                   <p className="text-sm text-muted-foreground">@{profile.username}</p>
                 )}
               </div>
-              {!editing && (
+              {isSelf && !editing && (
                 <Button size="sm" variant="outline" onClick={startEdit}>
                   <Pencil className="size-4" /> Edit Profile
                 </Button>
               )}
             </div>
+
 
             {!editing ? (
               <>
@@ -214,29 +235,31 @@ export default function Profile() {
                     <Award className="size-3" /> {profile.reputation ?? 0} reputation
                   </span>
                 </div>
-                <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
-                  <div className="flex items-center justify-between text-xs font-medium">
-                    <span>Profile completeness</span>
-                    <span className="tabular-nums text-muted-foreground">
-                      {filledCount}/{completenessFields.length} · {completeness}%
-                    </span>
+                {isSelf && (
+                  <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
+                    <div className="flex items-center justify-between text-xs font-medium">
+                      <span>Profile completeness</span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {filledCount}/{completenessFields.length} · {completeness}%
+                      </span>
+                    </div>
+                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-border">
+                      <div
+                        className={`h-full ${completenessColor} transition-all duration-500`}
+                        style={{ width: `${completeness}%` }}
+                        role="progressbar"
+                        aria-valuenow={completeness}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      />
+                    </div>
+                    {completeness < 100 && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Add more details to reach 100% and help others recognise you.
+                      </p>
+                    )}
                   </div>
-                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-border">
-                    <div
-                      className={`h-full ${completenessColor} transition-all duration-500`}
-                      style={{ width: `${completeness}%` }}
-                      role="progressbar"
-                      aria-valuenow={completeness}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                    />
-                  </div>
-                  {completeness < 100 && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Add more details to reach 100% and help others recognise you.
-                    </p>
-                  )}
-                </div>
+                )}
               </>
             ) : (
               <div className="mt-4 space-y-3">
@@ -339,7 +362,7 @@ export default function Profile() {
       )}
 
       <section className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="font-bold mb-3">My Recent Posts</h2>
+        <h2 className="font-bold mb-3">{isSelf ? 'My Recent Posts' : 'Recent Posts'}</h2>
         {threadsQ.isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : !threadsQ.data?.length ? (
