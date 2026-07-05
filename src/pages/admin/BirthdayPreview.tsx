@@ -104,7 +104,9 @@ export default function BirthdayPreview() {
               title="Birthday email preview"
               srcDoc={html}
               sandbox=""
-              className="w-full h-[640px] rounded-md border bg-white"
+              /* bg-white is intentional — this iframe renders the actual
+                 email HTML, which is designed for a white inbox surface. */
+              className="w-full h-[640px] rounded-md border border-border bg-white"
             />
           ) : (
             <div className="text-sm text-muted-foreground">No preview loaded.</div>
