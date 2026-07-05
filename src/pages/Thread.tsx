@@ -225,7 +225,7 @@ export default function ThreadPage() {
 function Thread() {
   const { threadId } = useParams<{ threadId: string }>()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   const { settings } = useSiteSettings()
   const qc = useQueryClient()
   const [reply, setReply] = useState('')
