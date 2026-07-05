@@ -83,6 +83,9 @@ export default function SettingsPanel({
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [callsOn, setCallsOn] = useState(() => areCallsEnabled())
+
+  useEffect(() => subscribeCallsEnabled(setCallsOn), [])
 
   useEffect(() => {
     setForm({
