@@ -146,7 +146,7 @@ class CallManager {
     this.userId = self.id
     this.selfPeer = self
     const ch = supabase.channel(`call-user:${self.id}`, {
-      config: { broadcast: { ack: false, self: false } },
+      config: { broadcast: { ack: false, self: false }, private: true },
     })
     ch.on('broadcast', { event: 'invite' }, ({ payload }) => this.onInvite(payload))
     ch.on('broadcast', { event: 'cancel' }, ({ payload }) => this.onCancel(payload))
