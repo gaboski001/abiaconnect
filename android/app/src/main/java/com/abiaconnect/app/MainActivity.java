@@ -1,12 +1,16 @@
 package com.abiaconnect.app;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.webkit.JavascriptInterface;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -16,10 +20,14 @@ import org.json.JSONObject;
 public class MainActivity extends BaseActivity {
     private static final int NOTIFICATION_PERMISSION_CODE = 100;
 
+    private BroadcastReceiver hangupReceiver;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestNotificationPermission();
+        installCallJsBridge();
+        registerHangupReceiver();
         handleNotificationIntent(getIntent());
     }
 
@@ -28,6 +36,15 @@ public class MainActivity extends BaseActivity {
         super.onNewIntent(intent);
         setIntent(intent);
         handleNotificationIntent(intent);
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (hangupReceiver != null) {
+            try { unregisterReceiver(hangupReceiver); } catch (Exception ignored) {}
+            hangupReceiver = null;
+        }
+        super.onDestroy();
     }
 
     private void requestNotificationPermission() {
@@ -49,7 +66,7 @@ public class MainActivity extends BaseActivity {
         String type = intent.getStringExtra("notification_type");
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            if ("call".equals(type)) {
+            if ("call".equals(type) || "call_ongoing".equals(type)) {
                 setShowWhenLocked(true);
                 setTurnScreenOn(true);
             }
@@ -64,6 +81,13 @@ public class MainActivity extends BaseActivity {
                     (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
                 if (manager != null) manager.cancel(notificationId);
             }
+
+            // Promote the app to a foreground call session so Android keeps
+            // the process (and the WebRTC peer connection) alive even when
+            // the user backgrounds the activity mid-call.
+            String callId = intent.getStringExtra("call_id");
+            String callerName = intent.getStringExtra("caller_name");
+            CallForegroundService.start(this, callerName, callId);
         }
 
         final String route = intent.getStringExtra("url");
@@ -79,6 +103,59 @@ public class MainActivity extends BaseActivity {
             String script = "window.dispatchEvent(new CustomEvent('abiaconnect-native-notification', { detail: { url: " + safeRoute + " } }));";
             getBridge().getWebView().evaluateJavascript(script, null);
         } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Exposes window.AbiaCallBridge.startCall / endCall to the web layer,
+     * so the WebRTC code can start the foreground call service when a call
+     * actually connects (outgoing calls) and stop it when the call ends.
+     */
+    private void installCallJsBridge() {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        getBridge().getWebView().addJavascriptInterface(new CallJsBridge(this), "AbiaCallBridge");
+    }
+
+    private void registerHangupReceiver() {
+        hangupReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                // Notify the web layer that the user hung up from the
+                // system notification, so it can close the peer connection.
+                if (getBridge() != null && getBridge().getWebView() != null) {
+                    getBridge().getWebView().post(() ->
+                        getBridge().getWebView().evaluateJavascript(
+                            "window.dispatchEvent(new CustomEvent('abiaconnect-native-call-hangup'));",
+                            null
+                        )
+                    );
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter("com.abiaconnect.app.CALL_HANGUP");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(hangupReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(hangupReceiver, filter);
+        }
+    }
+
+    /** JS-facing bridge. Called from the web layer via window.AbiaCallBridge. */
+    public static class CallJsBridge {
+        private final Context context;
+
+        CallJsBridge(Context context) {
+            this.context = context.getApplicationContext();
+        }
+
+        @JavascriptInterface
+        public void startCall(String callerName, String callId) {
+            CallForegroundService.start(context, callerName, callId);
+        }
+
+        @JavascriptInterface
+        public void endCall() {
+            CallForegroundService.stop(context);
         }
     }
 }
