@@ -14,6 +14,8 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useReleaseDownload } from '@/hooks/useReleaseDownload'
+import { useAuth } from '@/hooks/useAuth'
+import { useProfile } from '@/hooks/useProfile'
 
 type Release = {
   id: string
