@@ -148,7 +148,7 @@ export function CallProvider() {
 
   return (
     <>
-      <audio ref={audioRef} autoPlay playsInline />
+      <audio ref={setAudioNode} autoPlay playsInline />
       {state.status !== 'idle' && state.peer && <CallOverlay state={state} />}
     </>
   )
