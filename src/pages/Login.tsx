@@ -137,7 +137,19 @@ export default function Login() {
               {loading ? 'Signing in…' : 'Sign In'}
             </Button>
 
-            <BiometricLoginButton onSuccess={() => navigate('/')} />
+            <BiometricLoginButton
+              onSuccess={() => navigate('/')}
+              onFallbackToPassword={() => {
+                // Focus the email field so the user can immediately type
+                // credentials — this is what makes the recovery flow feel
+                // "in one place".
+                setTimeout(() => {
+                  const el = document.getElementById('identifier-native') as HTMLInputElement | null
+                  el?.focus()
+                  el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }, 50)
+              }}
+            />
 
             <p className="pt-1 text-center text-sm text-slate-300/80">
               New here?{' '}
