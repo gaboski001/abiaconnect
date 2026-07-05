@@ -64,6 +64,9 @@ public class MainActivity extends BaseActivity {
         if (intent == null) return;
 
         String type = intent.getStringExtra("notification_type");
+        String callAction = intent.getStringExtra("call_action"); // "answer" | "open" | null
+        String callId = intent.getStringExtra("call_id");
+        String callerName = intent.getStringExtra("caller_name");
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             if ("call".equals(type) || "call_ongoing".equals(type)) {
@@ -72,28 +75,42 @@ public class MainActivity extends BaseActivity {
             }
         }
 
-        // Answering (or opening) a call must dismiss the ongoing ringing
-        // notification, otherwise it keeps ringing and blocks future calls.
+        // Any call interaction (Answer or opening the ringing UI) must clear the
+        // ringing notification so the ringtone/vibration stops immediately and
+        // future calls aren't blocked.
         if ("call".equals(type)) {
             int notificationId = intent.getIntExtra("notification_id", -1);
-            if (notificationId != -1) {
-                android.app.NotificationManager manager =
-                    (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-                if (manager != null) manager.cancel(notificationId);
+            android.app.NotificationManager manager =
+                (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            if (manager != null && notificationId != -1) {
+                manager.cancel(notificationId);
             }
 
-            // Promote the app to a foreground call session so Android keeps
-            // the process (and the WebRTC peer connection) alive even when
-            // the user backgrounds the activity mid-call.
-            String callId = intent.getStringExtra("call_id");
-            String callerName = intent.getStringExtra("caller_name");
-            CallForegroundService.start(this, callerName, callId);
+            if ("answer".equals(callAction)) {
+                // Promote to a foreground call session BEFORE routing so Android
+                // keeps the process (and WebRTC peer connection) alive.
+                CallForegroundService.start(this, callerName, callId);
+                // Tell the web layer to accept the call (SDP answer, etc.) and
+                // navigate to the in-call screen without a page reload.
+                dispatchCallAnswerToWeb(callId);
+            }
         }
 
         final String route = intent.getStringExtra("url");
         if (route == null || route.isEmpty()) return;
 
-        new Handler(Looper.getMainLooper()).postDelayed(() -> dispatchRouteToWeb(route), 900);
+        new Handler(Looper.getMainLooper()).postDelayed(() -> dispatchRouteToWeb(route), 300);
+    }
+
+    private void dispatchCallAnswerToWeb(String callId) {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        getBridge().getWebView().post(() -> {
+            try {
+                String safe = JSONObject.quote(callId == null ? "" : callId);
+                String script = "window.dispatchEvent(new CustomEvent('abiaconnect-native-call-answer', { detail: { callId: " + safe + " } }));";
+                getBridge().getWebView().evaluateJavascript(script, null);
+            } catch (Exception ignored) {}
+        });
     }
 
     private void dispatchRouteToWeb(String route) {
