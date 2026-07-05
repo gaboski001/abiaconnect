@@ -35,6 +35,10 @@ This document summarizes the architectural work performed to deliver a premium n
 - **Files:** `res/values/styles.xml`, `res/values-night/styles.xml`, `res/drawable/ic_stat_abiaconnect.xml`
 - **Rationale:** Configured status/navigation bar colors for Light/Dark themes and established a monochrome white notification icon with a gold (#F8C301) accent.
 
+### **Milestone 7 (Bonus) — Professional Native Dashboard**
+- **File:** `src/components/mobile/NativeDashboard.tsx`
+- **Rationale:** Implemented a high-end native-only dashboard UI with premium header cards, glassmorphism buttons, and a clean stats grid, matching the user's provided design mocks.
+
 ### **Milestone 5 — Production Build**
 - **Artifacts:** Generated APK and AAB.
 - **Rationale:** Verified all assets and configurations are correctly bundled for distribution.
