@@ -283,19 +283,23 @@ class CallManager {
 
   private async sendIncomingCallPush(target: CallPeer, callId: string) {
     try {
+      // FCM v1 rejects a `data` payload if any value is null/undefined — the
+      // whole push silently drops, so the callee never sees the heads-up when
+      // the app is closed. Build a strings-only object.
+      const data: Record<string, string> = {
+        type: 'call',
+        callId,
+        callerId: this.selfPeer?.id ?? '',
+        callerName: this.selfPeer?.name ?? 'Someone',
+        url: target.conversationId ? `/messages/${target.conversationId}` : '/messages',
+      }
+      if (target.conversationId) data.conversationId = target.conversationId
       await supabase.functions.invoke('send-push', {
         body: {
           userId: target.id,
           title: 'Incoming call',
           message: `${this.selfPeer?.name || 'Someone'} is calling you on AbiaConnect`,
-          data: {
-            type: 'call',
-            callId,
-            callerId: this.selfPeer?.id,
-            callerName: this.selfPeer?.name,
-            conversationId: target.conversationId || null,
-            url: target.conversationId ? `/messages/${target.conversationId}` : '/messages',
-          },
+          data,
         },
       })
     } catch {
