@@ -812,6 +812,9 @@ class CallManager {
 
   private async onAccept(isCaller: boolean) {
     if (!isCaller || !this.pc) return
+    // Callee has answered — stop retrying the invite so a late retry can't
+    // race with their new call state and get bounced back as "busy".
+    this.clearInviteRetryLoop()
     this.patch({ status: 'connecting' })
     const offer = await this.pc.createOffer({ offerToReceiveAudio: true })
     await this.pc.setLocalDescription(offer)
