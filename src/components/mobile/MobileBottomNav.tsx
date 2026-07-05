@@ -104,5 +104,3 @@ export function MobileBottomNav() {
 }
 
 export default MobileBottomNav
-
-export default MobileBottomNav
