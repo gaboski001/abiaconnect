@@ -16,6 +16,18 @@ import {
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { moderateContent } from '@/lib/moderateContent'
 import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
