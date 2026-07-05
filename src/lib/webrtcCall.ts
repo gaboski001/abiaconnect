@@ -389,10 +389,10 @@ class CallManager {
     if (!payload?.callId || !payload?.from) return
     // Busy: auto-reject.
     if (this.state.status !== 'idle' && this.state.status !== 'ended') {
-      supabase
-        .channel(`call-user:${payload.from.id}`)
-        .send({ type: 'broadcast', event: 'cancel', payload: { callId: payload.callId, reason: 'busy' } })
-        .catch(() => undefined)
+      void this.broadcastToUser(payload.from.id, 'cancel', {
+        callId: payload.callId,
+        reason: 'busy',
+      })
       return
     }
     this.pendingOffer = { from: payload.from, sdp: payload.sdp, callId: payload.callId }
