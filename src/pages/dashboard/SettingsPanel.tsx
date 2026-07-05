@@ -214,6 +214,13 @@ export default function SettingsPanel({
         <div className="mt-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
           <CallRingtoneSettings />
         </div>
+        <div className="mt-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-white">App update alerts</p>
+            <p className="text-xs text-slate-300/68">Register this device and manage which of your devices get pop-up notifications for new app releases.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => navigate('/settings/devices')}>Manage devices</Button>
+        </div>
       </section>
 
       <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
