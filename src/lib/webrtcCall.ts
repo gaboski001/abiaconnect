@@ -222,14 +222,27 @@ class CallManager {
     this.patch({ status: 'idle', callId: null, direction: null, peer: null })
   }
 
+  private async broadcastToUser(userId: string, event: string, payload: any) {
+    const ch = supabase.channel(`call-user:${userId}`, {
+      config: { broadcast: { ack: false, self: false }, private: true },
+    })
+    try {
+      await new Promise<void>((resolve) => {
+        ch.subscribe((status) => {
+          if (status === 'SUBSCRIBED') resolve()
+        })
+        window.setTimeout(() => resolve(), 2000)
+      })
+      await ch.send({ type: 'broadcast', event, payload })
+    } finally {
+      supabase.removeChannel(ch).catch(() => undefined)
+    }
+  }
+
   private async sendInvite(target: CallPeer, callId: string) {
-    await supabase.channel(`call-user:${target.id}`).send({
-      type: 'broadcast',
-      event: 'invite',
-      payload: {
-        callId,
-        from: this.selfPeer,
-      },
+    await this.broadcastToUser(target.id, 'invite', {
+      callId,
+      from: this.selfPeer,
     })
   }
 
