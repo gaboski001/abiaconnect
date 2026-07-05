@@ -12,6 +12,8 @@
  */
 import { Capacitor } from '@capacitor/core'
 
+import { NativeBiometric } from '@capgo/capacitor-native-biometric'
+
 const SERVER = 'com.abiaconnect.app'
 const ENABLED_KEY = 'abia:biometric-enabled'
 const DECLINED_KEY = 'abia:biometric-declined'
@@ -35,21 +37,10 @@ export function setBiometricDeclined(declined: boolean): void {
 
 type StoredCreds = { username: string; password: string }
 
-async function loadPlugin() {
-  if (!Capacitor.isNativePlatform()) return null
-  try {
-    const mod = await import('@capgo/capacitor-native-biometric')
-    return mod.NativeBiometric
-  } catch {
-    return null
-  }
-}
-
 export async function isBiometricAvailable(): Promise<boolean> {
-  const plugin = await loadPlugin()
-  if (!plugin) return false
+  if (!Capacitor.isNativePlatform()) return false
   try {
-    const res = await plugin.isAvailable()
+    const res = await NativeBiometric.isAvailable()
     return res.isAvailable
   } catch {
     return false
@@ -65,16 +56,15 @@ export function isBiometricEnabled(): boolean {
 }
 
 export async function enableBiometric(email: string, password: string): Promise<boolean> {
-  const plugin = await loadPlugin()
-  if (!plugin) return false
+  if (!Capacitor.isNativePlatform()) return false
   try {
     // Verify once so the user explicitly consents.
-    await plugin.verifyIdentity({
+    await NativeBiometric.verifyIdentity({
       reason: 'Enable biometric sign-in for AbiaConnect',
       title: 'Confirm it\'s you',
       subtitle: 'Future sign-ins will use your fingerprint or face',
     })
-    await plugin.setCredentials({ username: email, password, server: SERVER })
+    await NativeBiometric.setCredentials({ username: email, password, server: SERVER })
     localStorage.setItem(ENABLED_KEY, 'true')
     return true
   } catch {
@@ -83,9 +73,9 @@ export async function enableBiometric(email: string, password: string): Promise<
 }
 
 export async function disableBiometric(): Promise<void> {
-  const plugin = await loadPlugin()
+  if (!Capacitor.isNativePlatform()) return
   try {
-    await plugin?.deleteCredentials({ server: SERVER })
+    await NativeBiometric.deleteCredentials({ server: SERVER })
   } catch {
     /* ignore */
   }
@@ -97,14 +87,13 @@ export async function disableBiometric(): Promise<void> {
 }
 
 export async function getBiometricCredentials(): Promise<StoredCreds | null> {
-  const plugin = await loadPlugin()
-  if (!plugin) return null
+  if (!Capacitor.isNativePlatform()) return null
   try {
-    await plugin.verifyIdentity({
+    await NativeBiometric.verifyIdentity({
       reason: 'Sign in to AbiaConnect',
       title: 'Confirm it\'s you',
     })
-    const creds = await plugin.getCredentials({ server: SERVER })
+    const creds = await NativeBiometric.getCredentials({ server: SERVER })
     if (!creds?.username || !creds?.password) return null
     return { username: creds.username, password: creds.password }
   } catch {
