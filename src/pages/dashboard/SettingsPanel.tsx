@@ -24,6 +24,9 @@ import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
 import { CallRingtoneSettings } from '@/components/notifications/CallRingtoneSettings'
 import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
+import { Switch } from '@/components/ui/switch'
+import { Phone, PhoneOff } from 'lucide-react'
+import { areCallsEnabled, setCallsEnabled, subscribeCallsEnabled } from '@/lib/callPreferences'
 import { toWebP } from '@/lib/image'
 import { GOLD_GRADIENT, GOLD_SHADOW, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 
@@ -80,6 +83,9 @@ export default function SettingsPanel({
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [callsOn, setCallsOn] = useState(() => areCallsEnabled())
+
+  useEffect(() => subscribeCallsEnabled(setCallsOn), [])
 
   useEffect(() => {
     setForm({
@@ -209,6 +215,31 @@ export default function SettingsPanel({
           <CallRingtoneSettings />
         </div>
       </section>
+
+      <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
+        <h2 className="text-lg font-black text-white">Calls</h2>
+        <p className="mt-1 text-sm text-slate-300/68">Turn voice calling on or off on this device. When off, you can't start calls and incoming calls are declined automatically.</p>
+        <div className="mt-4 flex items-center justify-between gap-4 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
+          <div className="flex items-center gap-3">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-full ${callsOn ? 'bg-emerald-500/15 text-emerald-300' : 'bg-slate-500/15 text-slate-400'}`}>
+              {callsOn ? <Phone className="h-5 w-5" /> : <PhoneOff className="h-5 w-5" />}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Voice calls</p>
+              <p className="text-xs text-slate-300/68">{callsOn ? 'Enabled — you can make and receive calls' : 'Disabled — calls are blocked'}</p>
+            </div>
+          </div>
+          <Switch
+            checked={callsOn}
+            onCheckedChange={(v) => {
+              setCallsEnabled(v)
+              toast.success(v ? 'Calls turned on' : 'Calls turned off')
+            }}
+            aria-label="Toggle voice calls"
+          />
+        </div>
+      </section>
+
 
       <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
         <h2 className="text-lg font-black text-white">App tools</h2>
