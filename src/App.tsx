@@ -73,6 +73,8 @@ const NotFound = () => (
 
 export default function App() {
   const navigate = useNavigate()
+  useReportNativeInstall()
+
 
   useEffect(() => {
     // Listen for deep-links dispatched from MainActivity.java when a notification is tapped
