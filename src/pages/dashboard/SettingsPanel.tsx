@@ -26,7 +26,7 @@ import { CallRingtoneSettings } from '@/components/notifications/CallRingtoneSet
 import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 import { Switch } from '@/components/ui/switch'
 import { Phone, PhoneOff } from 'lucide-react'
-import { areCallsEnabled, setCallsEnabled, subscribeCallsEnabled } from '@/lib/callPreferences'
+import { areCallsEnabled, hydrateCallsEnabledFromProfile, setCallsEnabled, subscribeCallsEnabled } from '@/lib/callPreferences'
 import { toWebP } from '@/lib/image'
 import { GOLD_GRADIENT, GOLD_SHADOW, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 
