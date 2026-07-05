@@ -6,12 +6,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Build;
 import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.Person;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.IconCompat;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -98,26 +101,48 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void showIncomingCallNotification(String title, String body, String callId, String url) {
         int notificationId = TextUtils.isEmpty(callId) ? (int) System.currentTimeMillis() : callId.hashCode();
+        PendingIntent answerIntent = buildContentIntent(notificationId + 1, "call", url, callId);
+        PendingIntent declineIntent = buildContentIntent(notificationId + 2, "call-decline", url, callId);
         PendingIntent fullScreenIntent = buildContentIntent(notificationId, "call", url, callId);
         Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+
+        String callerName = TextUtils.isEmpty(title) ? "Incoming call" : title;
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CALL_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_abiaconnect)
             .setColor(ContextCompat.getColor(this, R.color.notification_color))
-            .setContentTitle(TextUtils.isEmpty(title) ? "Incoming call" : title)
-            .setContentText(TextUtils.isEmpty(body) ? "Open AbiaConnect to answer" : body)
-            .setStyle(new NotificationCompat.BigTextStyle().bigText(TextUtils.isEmpty(body) ? "Open AbiaConnect to answer" : body))
+            .setColorized(true)
+            .setContentTitle(callerName)
+            .setContentText(TextUtils.isEmpty(body) ? "Incoming AbiaConnect call" : body)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setAutoCancel(false)
-            .setSound(sound)
-            .setVibrate(new long[]{0, 700, 350, 700, 350, 700})
             .setContentIntent(fullScreenIntent)
             .setFullScreenIntent(fullScreenIntent, true)
-            .setTimeoutAfter(45000)
-            .addAction(0, "Open", fullScreenIntent);
+            .setTimeoutAfter(45000);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // WhatsApp-style incoming call surface: big Answer/Decline buttons,
+            // caller identity, and full-screen presentation on the lockscreen.
+            Person caller = new Person.Builder()
+                .setName(callerName)
+                .setIcon(IconCompat.createWithResource(this, R.drawable.ic_stat_abiaconnect))
+                .setImportant(true)
+                .build();
+            builder.setStyle(
+                NotificationCompat.CallStyle.forIncomingCall(caller, declineIntent, answerIntent)
+            );
+        } else {
+            builder
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(
+                    TextUtils.isEmpty(body) ? "Tap to answer" : body))
+                .setSound(sound)
+                .setVibrate(new long[]{0, 700, 350, 700, 350, 700})
+                .addAction(R.drawable.ic_stat_abiaconnect, "Decline", declineIntent)
+                .addAction(R.drawable.ic_stat_abiaconnect, "Answer", answerIntent);
+        }
 
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) {

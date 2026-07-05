@@ -283,19 +283,23 @@ class CallManager {
 
   private async sendIncomingCallPush(target: CallPeer, callId: string) {
     try {
+      // FCM v1 rejects a `data` payload if any value is null/undefined — the
+      // whole push silently drops, so the callee never sees the heads-up when
+      // the app is closed. Build a strings-only object.
+      const data: Record<string, string> = {
+        type: 'call',
+        callId,
+        callerId: this.selfPeer?.id ?? '',
+        callerName: this.selfPeer?.name ?? 'Someone',
+        url: target.conversationId ? `/messages/${target.conversationId}` : '/messages',
+      }
+      if (target.conversationId) data.conversationId = target.conversationId
       await supabase.functions.invoke('send-push', {
         body: {
           userId: target.id,
           title: 'Incoming call',
           message: `${this.selfPeer?.name || 'Someone'} is calling you on AbiaConnect`,
-          data: {
-            type: 'call',
-            callId,
-            callerId: this.selfPeer?.id,
-            callerName: this.selfPeer?.name,
-            conversationId: target.conversationId || null,
-            url: target.conversationId ? `/messages/${target.conversationId}` : '/messages',
-          },
+          data,
         },
       })
     } catch {
@@ -398,7 +402,13 @@ class CallManager {
 
   private onInvite(payload: any) {
     if (!payload?.callId || !payload?.from) return
-    // Busy: auto-reject.
+    // Dedupe: caller retries `invite` every 5s until connected. Ignore any
+    // retry that matches the call we're already handling — otherwise once
+    // the callee accepts (status becomes 'connecting'/'connected'), the next
+    // retry would fall through to the "busy" branch and cancel the call.
+    if (this.state.callId === payload.callId) return
+    if (this.pendingOffer?.callId === payload.callId) return
+    // Busy: auto-reject a genuinely-different incoming call.
     if (this.state.status !== 'idle' && this.state.status !== 'ended') {
       void this.broadcastToUser(payload.from.id, 'cancel', {
         callId: payload.callId,
@@ -418,6 +428,10 @@ class CallManager {
   private onCancel(payload: any) {
     if (!payload?.callId) return
     if (this.state.callId !== payload.callId) return
+    // Ignore a stale "busy" cancel that arrives after we've already progressed
+    // past the calling phase (caused by our own retry pinging the peer after
+    // they accepted). Only honour it while we're still waiting for pickup.
+    if (payload?.reason === 'busy' && this.state.status !== 'calling') return
     void this.endCall(false, payload?.reason === 'busy' ? 'User is busy' : null)
   }
 
@@ -448,6 +462,16 @@ class CallManager {
   }
 
   private async setupPeer(isCaller: boolean) {
+    // Fully release any prior audio binding before wiring a new session —
+    // stale srcObject from a previous call has been observed to cause the
+    // local mic loopback ("hears himself") on Android WebView.
+    if (this.remoteAudio) {
+      try { this.remoteAudio.pause() } catch { /* ignore */ }
+      this.remoteAudio.srcObject = null
+      this.remoteAudio.muted = false
+      this.remoteAudio.volume = 1
+    }
+
     const pc = new RTCPeerConnection({ iceServers: getIceServers() })
     this.pc = pc
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -467,10 +491,21 @@ class CallManager {
     this.currentTargetBitrateKbps = 32
     this.applyBitrate(this.currentTargetBitrateKbps).catch(() => undefined)
 
+    // Build a dedicated remote MediaStream so we only ever attach REMOTE
+    // tracks to the playback element — never the local mic — regardless of
+    // what the browser's ontrack event hands us.
+    const remoteStream = new MediaStream()
+    if (this.remoteAudio) this.remoteAudio.srcObject = remoteStream
+
     pc.ontrack = (e) => {
-      const [remote] = e.streams
-      if (this.remoteAudio && remote) {
-        this.remoteAudio.srcObject = remote
+      if (e.track.kind !== 'audio') return
+      try { remoteStream.addTrack(e.track) } catch { /* ignore duplicates */ }
+      if (this.remoteAudio) {
+        // Re-bind in case the element was reset elsewhere.
+        if (this.remoteAudio.srcObject !== remoteStream) {
+          this.remoteAudio.srcObject = remoteStream
+        }
+        this.remoteAudio.muted = false
         this.remoteAudio.play().catch(() => undefined)
       }
       // Hint a small jitter buffer for low-latency speech (Chromium experimental).
@@ -802,6 +837,9 @@ class CallManager {
 
   private async onAccept(isCaller: boolean) {
     if (!isCaller || !this.pc) return
+    // Callee has answered — stop retrying the invite so a late retry can't
+    // race with their new call state and get bounced back as "busy".
+    this.clearInviteRetryLoop()
     this.patch({ status: 'connecting' })
     const offer = await this.pc.createOffer({ offerToReceiveAudio: true })
     await this.pc.setLocalDescription(offer)
