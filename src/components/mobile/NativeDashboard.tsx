@@ -123,6 +123,39 @@ export function NativeDashboard({ profile, stats, chartData, recentThreads }: Na
         </div>
       </section>
 
+      {/* Voice calls toggle */}
+      <section className="rounded-[2rem] border border-white/5 bg-[#161D2D] p-5 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+              callsOn ? 'bg-emerald-500/15 text-emerald-300' : 'bg-slate-500/15 text-slate-400'
+            }`}
+          >
+            {callsOn ? <Phone className="size-5" /> : <PhoneOff className="size-5" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#F8C301]">
+              Voice calls
+            </p>
+            <p className="mt-0.5 text-sm font-bold text-white">
+              {callsOn ? 'Enabled on this device' : 'Disabled on this device'}
+            </p>
+            <p className="mt-0.5 text-[11px] leading-snug text-white/60">
+              {callsOn
+                ? "You can make and receive voice calls."
+                : "You can't start calls and incoming calls are declined automatically."}
+            </p>
+          </div>
+          <Switch
+            checked={callsOn}
+            onCheckedChange={toggleCalls}
+            aria-label="Toggle voice calls"
+          />
+        </div>
+      </section>
+
+
+
       {/* Stats Grid */}
       <section className="grid grid-cols-2 gap-4">
         {[
