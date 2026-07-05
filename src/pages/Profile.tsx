@@ -362,7 +362,7 @@ export default function Profile() {
       )}
 
       <section className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="font-bold mb-3">My Recent Posts</h2>
+        <h2 className="font-bold mb-3">{isSelf ? 'My Recent Posts' : 'Recent Posts'}</h2>
         {threadsQ.isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : !threadsQ.data?.length ? (
