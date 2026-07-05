@@ -42,6 +42,27 @@ export interface QualityEvent {
   note?: string
 }
 
+export interface CallDiagnostics {
+  hasPeerConnection: boolean
+  peerConnectionState: RTCPeerConnectionState
+  iceConnectionState: RTCIceConnectionState
+
+  localMicPresent: boolean
+  localMicEnabled: boolean
+  localMicMuted: boolean
+  localMicLabel: string | null
+  localMicReadyState: MediaStreamTrack['readyState'] | null
+
+  remoteTrackCount: number
+  remoteTracksLive: number
+
+  audioElementBound: boolean
+  audioSrcObjectAttached: boolean
+  audioSinkTrackCount: number
+  audioElementPaused: boolean
+  audioElementMuted: boolean
+  audioElementVolume: number
+
 export interface CallState {
   status: CallStatus
   callId: string | null
