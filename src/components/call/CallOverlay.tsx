@@ -12,6 +12,7 @@ import {
   SignalLow,
   SignalMedium,
   Sparkles,
+  Stethoscope,
 } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
@@ -19,6 +20,7 @@ import { callManager, type CallQuality, type CallState } from '@/lib/webrtcCall'
 import { startRingtone, stopRingtone } from '@/lib/ringtone'
 import { cn } from '@/lib/utils'
 import { GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
+import { CallDiagnosticsPanel } from './CallDiagnosticsPanel'
 
 function fmt(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000))
@@ -38,6 +40,7 @@ const QUALITY_META: Record<CallQuality, { label: string; className: string; Icon
 export function CallOverlay({ state }: { state: CallState }) {
   const [now, setNow] = useState(Date.now())
   const [showTimeline, setShowTimeline] = useState(false)
+  const [showDiag, setShowDiag] = useState(false)
 
   useEffect(() => {
     if (state.status !== 'connected') return
@@ -129,10 +132,16 @@ export function CallOverlay({ state }: { state: CallState }) {
                 {callMeta.length > 0 ? callMeta.map((line) => <span key={line} className="rounded-full border border-white/10 px-3 py-1">{line}</span>) : <span className="rounded-full border border-white/10 px-3 py-1">Listening for network metrics</span>}
               </div>
 
-              <button type="button" onClick={() => setShowTimeline((v) => !v)} className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-slate-300/76 hover:text-white">
-                <Activity className="h-3.5 w-3.5" />
-                {showTimeline ? 'Hide' : 'Show'} quality timeline
-              </button>
+              <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-300/76">
+                <button type="button" onClick={() => setShowTimeline((v) => !v)} className="inline-flex items-center gap-2 hover:text-white">
+                  <Activity className="h-3.5 w-3.5" />
+                  {showTimeline ? 'Hide' : 'Show'} quality timeline
+                </button>
+                <button type="button" onClick={() => setShowDiag((v) => !v)} className="inline-flex items-center gap-2 hover:text-white">
+                  <Stethoscope className="h-3.5 w-3.5" />
+                  {showDiag ? 'Hide' : 'Show'} diagnostics
+                </button>
+              </div>
 
               {showTimeline ? (
                 <div className="mt-3 max-h-40 overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-3 text-[11px] font-mono">
@@ -155,7 +164,24 @@ export function CallOverlay({ state }: { state: CallState }) {
                   )}
                 </div>
               ) : null}
+
+              {showDiag ? <div className="mt-3"><CallDiagnosticsPanel /></div> : null}
             </div>
+          ) : showDiag ? (
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.05] p-4">
+              <CallDiagnosticsPanel />
+            </div>
+          ) : null}
+
+          {state.status !== 'connected' && state.status !== 'ended' ? (
+            <button
+              type="button"
+              onClick={() => setShowDiag((v) => !v)}
+              className="inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold text-slate-300/80 hover:text-white"
+            >
+              <Stethoscope className="h-3.5 w-3.5" />
+              {showDiag ? 'Hide' : 'Show'} diagnostics
+            </button>
           ) : null}
 
           {state.status === 'connected' && state.degraded ? (
