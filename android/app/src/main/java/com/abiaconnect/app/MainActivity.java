@@ -46,11 +46,23 @@ public class MainActivity extends BaseActivity {
     private void handleNotificationIntent(Intent intent) {
         if (intent == null) return;
 
+        String type = intent.getStringExtra("notification_type");
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            String type = intent.getStringExtra("notification_type");
             if ("call".equals(type)) {
                 setShowWhenLocked(true);
                 setTurnScreenOn(true);
+            }
+        }
+
+        // Answering (or opening) a call must dismiss the ongoing ringing
+        // notification, otherwise it keeps ringing and blocks future calls.
+        if ("call".equals(type)) {
+            int notificationId = intent.getIntExtra("notification_id", -1);
+            if (notificationId != -1) {
+                android.app.NotificationManager manager =
+                    (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                if (manager != null) manager.cancel(notificationId);
             }
         }
 
