@@ -88,6 +88,10 @@ export default function SettingsPanel({
   useEffect(() => subscribeCallsEnabled(setCallsOn), [])
 
   useEffect(() => {
+    if (user?.id) void hydrateCallsEnabledFromProfile(user.id)
+  }, [user?.id])
+
+  useEffect(() => {
     setForm({
       display_name: profile.display_name ?? '',
       username: profile.username ?? '',
