@@ -75,7 +75,7 @@ export default function Profile() {
         const row = Array.isArray(data) ? data[0] : data
         return (row ?? {}) as Profile
       }
-      const { data, error } = await supabase.rpc('get_public_profiles', { _ids: [viewedId] })
+      const { data, error } = await supabase.rpc('get_public_profiles', { _ids: [viewedId as string] })
       if (error) throw error
       const row = Array.isArray(data) ? data[0] : data
       return (row ?? {}) as Profile
