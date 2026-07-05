@@ -54,6 +54,7 @@ const Version = lazy(() => import('@/pages/Version'))
 const Relationship = lazy(() => import('@/pages/Relationship'))
 const RelationshipEdit = lazy(() => import('@/pages/RelationshipEdit'))
 const RelationshipProfilePage = lazy(() => import('@/pages/RelationshipProfile'))
+const DeviceNotifications = lazy(() => import('@/pages/DeviceNotifications'))
 
 
 const RouteFallback = () => (
@@ -149,6 +150,7 @@ export default function App() {
                   <Route path="relationship" element={<Relationship />} />
                   <Route path="relationship/edit" element={<RelationshipEdit />} />
                   <Route path="relationship/:userId" element={<RelationshipProfilePage />} />
+                  <Route path="settings/devices" element={<DeviceNotifications />} />
 
                   <Route element={<AdminRoute />}>
                     <Route path="admin/dashboard" element={<AdminDashboard />} />
