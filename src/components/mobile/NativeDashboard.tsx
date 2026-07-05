@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -9,12 +9,23 @@ import {
   Bell,
   TrendingUp,
   ChevronRight,
-  Plus
+  Plus,
+  Phone,
+  PhoneOff,
 } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import { GOLD_GRADIENT, GOLD_SHADOW, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 import { AppUpdateCard } from '@/components/pwa/AppUpdateCard'
+import { useAuth } from '@/contexts/AuthContext'
+import {
+  areCallsEnabled,
+  hydrateCallsEnabledFromProfile,
+  setCallsEnabled,
+  subscribeCallsEnabled,
+} from '@/lib/callPreferences'
+import { toast } from '@/lib/toast'
 import { formatDistanceToNow } from 'date-fns'
 
 const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
@@ -38,11 +49,24 @@ interface NativeDashboardProps {
 
 export function NativeDashboard({ profile, stats, chartData, recentThreads }: NativeDashboardProps) {
   const displayName = profile.display_name || 'User'
+  const { user } = useAuth()
+  const [callsOn, setCallsOnState] = useState(() => areCallsEnabled())
+
+  useEffect(() => subscribeCallsEnabled(setCallsOnState), [])
+  useEffect(() => {
+    if (user?.id) void hydrateCallsEnabledFromProfile(user.id)
+  }, [user?.id])
+
+  const toggleCalls = (v: boolean) => {
+    void setCallsEnabled(v, { userId: user?.id })
+    toast.success(v ? 'Calls turned on' : 'Calls turned off')
+  }
 
   return (
     <div className="flex flex-col gap-6 pb-32 animate-in fade-in duration-500">
       {/* App update banner (only shows on native when a newer release exists) */}
       <AppUpdateCard />
+
 
       {/* Header Section */}
       <section className="relative overflow-hidden rounded-[2.5rem] bg-[#0B1220] p-6 text-white shadow-2xl">
@@ -98,6 +122,39 @@ export function NativeDashboard({ profile, stats, chartData, recentThreads }: Na
           </Button>
         </div>
       </section>
+
+      {/* Voice calls toggle */}
+      <section className="rounded-[2rem] border border-white/5 bg-[#161D2D] p-5 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+              callsOn ? 'bg-emerald-500/15 text-emerald-300' : 'bg-slate-500/15 text-slate-400'
+            }`}
+          >
+            {callsOn ? <Phone className="size-5" /> : <PhoneOff className="size-5" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#F8C301]">
+              Voice calls
+            </p>
+            <p className="mt-0.5 text-sm font-bold text-white">
+              {callsOn ? 'Enabled on this device' : 'Disabled on this device'}
+            </p>
+            <p className="mt-0.5 text-[11px] leading-snug text-white/60">
+              {callsOn
+                ? "You can make and receive voice calls."
+                : "You can't start calls and incoming calls are declined automatically."}
+            </p>
+          </div>
+          <Switch
+            checked={callsOn}
+            onCheckedChange={toggleCalls}
+            aria-label="Toggle voice calls"
+          />
+        </div>
+      </section>
+
+
 
       {/* Stats Grid */}
       <section className="grid grid-cols-2 gap-4">
