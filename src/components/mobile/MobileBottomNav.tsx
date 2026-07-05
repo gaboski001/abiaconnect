@@ -30,6 +30,7 @@ export function MobileBottomNav() {
   const { user, role } = useAuth()
   const { settings } = useSiteSettings()
   const [isNative, setIsNative] = useState(false)
+  const { hasUpdate } = useAppUpdate()
 
   useEffect(() => {
     const check = () => setIsNative(Capacitor.isNativePlatform());
