@@ -178,6 +178,17 @@ class CallManager {
     if (this.state.status !== 'idle' && this.state.status !== 'ended') return
     const callId = newId()
     this.wasConnected = false
+    // Register the call session so realtime RLS grants both participants
+    // access to the private `call-session:{callId}` channel.
+    const { error: sessErr } = await supabase.from('call_sessions').insert({
+      call_id: callId,
+      caller_id: this.userId,
+      callee_id: target.id,
+    })
+    if (sessErr) {
+      this.patch({ status: 'idle', error: 'Could not start call' })
+      return
+    }
     this.patch({
       status: 'calling',
       callId,
