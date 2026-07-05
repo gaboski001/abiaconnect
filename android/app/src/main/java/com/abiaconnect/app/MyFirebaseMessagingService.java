@@ -126,12 +126,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void showIncomingCallNotification(String title, String body, String callId, String url) {
         int notificationId = TextUtils.isEmpty(callId) ? (int) System.currentTimeMillis() : callId.hashCode();
-        PendingIntent answerIntent = buildContentIntent(notificationId + 1, "call", url, callId, notificationId);
-        PendingIntent declineIntent = buildDeclineIntent(notificationId + 2, callId, notificationId);
-        PendingIntent fullScreenIntent = buildContentIntent(notificationId, "call", url, callId, notificationId);
-        Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
-
         String callerName = TextUtils.isEmpty(title) ? "Incoming call" : title;
+        PendingIntent answerIntent = buildContentIntent(notificationId + 1, "call", url, callId, callerName, notificationId, "answer");
+        PendingIntent declineIntent = buildDeclineIntent(notificationId + 2, callId, notificationId);
+        // Tapping the notification body (full-screen intent) opens the incoming-call UI
+        // but does NOT auto-accept — user must still press Answer.
+        PendingIntent fullScreenIntent = buildContentIntent(notificationId, "call", url, callId, callerName, notificationId, "open");
+        Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CALL_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_abiaconnect)
