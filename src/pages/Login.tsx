@@ -66,7 +66,7 @@ export default function Login() {
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 autoComplete="email"
-                className="h-12 rounded-2xl border-white/10 bg-white/[0.04] text-white placeholder:text-slate-500"
+                className="h-12 rounded-2xl border-white/10 bg-white/[0.04] text-white placeholder:text-slate-300/60"
               />
             </div>
             <div className="space-y-2">
