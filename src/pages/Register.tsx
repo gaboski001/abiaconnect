@@ -230,15 +230,6 @@ export default function Register() {
             )}
           </span>
         </div>
-        <div className="flex justify-center mb-4">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground overflow-hidden">
-            {logoUrl ? (
-              <img src={logoUrl} alt={settings.site_name || 'AbiaConnect'} className="h-full w-full object-contain" />
-            ) : (
-              <span className="text-lg font-bold">{(settings.site_name || 'A').charAt(0)}</span>
-            )}
-          </span>
-        </div>
         <StepDots step={step} />
 
         <AnimatePresence mode="wait" custom={direction}>
