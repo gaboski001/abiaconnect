@@ -170,7 +170,16 @@ export default function Profile() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <SEO title="Your Profile" description="View and edit your AbiaConnect profile, achievements, and recent posts." path="/profile" />
+      <SEO
+        title={isSelf ? 'Your Profile' : `${name}'s Profile`}
+        description={isSelf ? 'View and edit your AbiaConnect profile, achievements, and recent posts.' : `${name}'s public AbiaConnect profile.`}
+        path="/profile"
+      />
+      {!isSelf && (
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-sm text-amber-100">
+          Viewing <strong>{name}</strong>'s profile. You're not editing your own account.
+        </div>
+      )}
       <section className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-start gap-4">
           <UserAvatar avatarUrl={profile.avatar_url} displayName={name} size="xl" className="h-24 w-24" />
@@ -182,12 +191,13 @@ export default function Profile() {
                   <p className="text-sm text-muted-foreground">@{profile.username}</p>
                 )}
               </div>
-              {!editing && (
+              {isSelf && !editing && (
                 <Button size="sm" variant="outline" onClick={startEdit}>
                   <Pencil className="size-4" /> Edit Profile
                 </Button>
               )}
             </div>
+
 
             {!editing ? (
               <>
