@@ -95,22 +95,29 @@ export function CallProvider() {
   // Decline, or Hang-up on the system notification. Route each to the
   // matching callManager method so the WebRTC session stays in sync with
   // what the notification UI just did.
+  // Keep a ref of the latest status so the stable event handlers below
+  // can read it without re-subscribing on every state change.
+  const statusRef = useRef(state.status)
+  useEffect(() => {
+    statusRef.current = state.status
+  }, [state.status])
+
   useEffect(() => {
     const onAnswer = () => {
       // Only accept if we actually have a ringing invite. If FCM arrived
-      // before the realtime `invite` event, callManager.accept() will no-op
-      // and the invite handler will pick it up on arrival.
-      if (callManager.getState().status === 'ringing') {
+      // before the realtime `invite` event, this is a no-op and the invite
+      // handler will still surface the incoming-call UI on arrival.
+      if (statusRef.current === 'ringing') {
         void callManager.accept()
       }
     }
     const onDecline = () => {
-      if (callManager.getState().status === 'ringing') {
+      if (statusRef.current === 'ringing') {
         callManager.reject()
       }
     }
     const onHangup = () => {
-      const s = callManager.getState().status
+      const s = statusRef.current
       if (s === 'connected' || s === 'connecting' || s === 'calling') {
         void callManager.endCall(true)
       }
