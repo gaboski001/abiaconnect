@@ -93,7 +93,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void showStandardNotification(String title, String body, String type, String url, String callId) {
         int notificationId = (int) System.currentTimeMillis();
-        PendingIntent contentIntent = buildContentIntent(notificationId, type, url, callId);
+        PendingIntent contentIntent = buildContentIntent(notificationId, type, url, callId, notificationId);
         Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CHANNEL_ID)
@@ -118,9 +118,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void showIncomingCallNotification(String title, String body, String callId, String url) {
         int notificationId = TextUtils.isEmpty(callId) ? (int) System.currentTimeMillis() : callId.hashCode();
-        PendingIntent answerIntent = buildContentIntent(notificationId + 1, "call", url, callId);
-        PendingIntent declineIntent = buildContentIntent(notificationId + 2, "call-decline", url, callId);
-        PendingIntent fullScreenIntent = buildContentIntent(notificationId, "call", url, callId);
+        PendingIntent answerIntent = buildContentIntent(notificationId + 1, "call", url, callId, notificationId);
+        PendingIntent declineIntent = buildDeclineIntent(notificationId + 2, callId, notificationId);
+        PendingIntent fullScreenIntent = buildContentIntent(notificationId, "call", url, callId, notificationId);
         Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
 
         String callerName = TextUtils.isEmpty(title) ? "Incoming call" : title;
