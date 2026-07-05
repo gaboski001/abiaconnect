@@ -164,7 +164,24 @@ export function CallOverlay({ state }: { state: CallState }) {
                   )}
                 </div>
               ) : null}
+
+              {showDiag ? <div className="mt-3"><CallDiagnosticsPanel /></div> : null}
             </div>
+          ) : showDiag ? (
+            <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.05] p-4">
+              <CallDiagnosticsPanel />
+            </div>
+          ) : null}
+
+          {state.status !== 'connected' && state.status !== 'ended' ? (
+            <button
+              type="button"
+              onClick={() => setShowDiag((v) => !v)}
+              className="inline-flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold text-slate-300/80 hover:text-white"
+            >
+              <Stethoscope className="h-3.5 w-3.5" />
+              {showDiag ? 'Hide' : 'Show'} diagnostics
+            </button>
           ) : null}
 
           {state.status === 'connected' && state.degraded ? (
