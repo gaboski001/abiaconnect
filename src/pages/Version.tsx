@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { toast } from '@/lib/toast'
 import { AppUpdateCard } from '@/components/pwa/AppUpdateCard'
+import { ReleaseNotesAccordion } from '@/components/pwa/ReleaseNotesAccordion'
 
 type NativeInfo = { version: string; build: string; id: string; name: string } | null
 
@@ -87,6 +88,8 @@ export default function Version() {
           )}
         </CardContent>
       </Card>
+
+      <ReleaseNotesAccordion />
     </div>
   )
 }
