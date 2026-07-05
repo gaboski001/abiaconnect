@@ -88,6 +88,8 @@ export default function Version() {
           )}
         </CardContent>
       </Card>
+
+      <ReleaseNotesAccordion />
     </div>
   )
 }
