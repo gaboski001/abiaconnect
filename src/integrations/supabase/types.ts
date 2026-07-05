@@ -828,6 +828,9 @@ export type Database = {
           is_deleted: boolean
           lga: string | null
           marital_status: string | null
+          native_app_installed_at: string | null
+          native_app_platform: string | null
+          native_app_version: string | null
           notification_mode: string
           occupation: string | null
           reputation: number
@@ -851,6 +854,9 @@ export type Database = {
           is_deleted?: boolean
           lga?: string | null
           marital_status?: string | null
+          native_app_installed_at?: string | null
+          native_app_platform?: string | null
+          native_app_version?: string | null
           notification_mode?: string
           occupation?: string | null
           reputation?: number
@@ -874,6 +880,9 @@ export type Database = {
           is_deleted?: boolean
           lga?: string | null
           marital_status?: string | null
+          native_app_installed_at?: string | null
+          native_app_platform?: string | null
+          native_app_version?: string | null
           notification_mode?: string
           occupation?: string | null
           reputation?: number
@@ -1670,6 +1679,9 @@ export type Database = {
           is_deleted: boolean
           lga: string | null
           marital_status: string | null
+          native_app_installed_at: string | null
+          native_app_platform: string | null
+          native_app_version: string | null
           notification_mode: string
           occupation: string | null
           reputation: number
