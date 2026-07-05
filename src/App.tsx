@@ -55,6 +55,7 @@ const Relationship = lazy(() => import('@/pages/Relationship'))
 const RelationshipEdit = lazy(() => import('@/pages/RelationshipEdit'))
 const RelationshipProfilePage = lazy(() => import('@/pages/RelationshipProfile'))
 const DeviceNotifications = lazy(() => import('@/pages/DeviceNotifications'))
+const Download = lazy(() => import('@/pages/Download'))
 
 
 const RouteFallback = () => (
