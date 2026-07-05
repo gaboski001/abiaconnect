@@ -55,6 +55,7 @@ const Relationship = lazy(() => import('@/pages/Relationship'))
 const RelationshipEdit = lazy(() => import('@/pages/RelationshipEdit'))
 const RelationshipProfilePage = lazy(() => import('@/pages/RelationshipProfile'))
 const DeviceNotifications = lazy(() => import('@/pages/DeviceNotifications'))
+const Download = lazy(() => import('@/pages/Download'))
 
 
 const RouteFallback = () => (
@@ -133,6 +134,7 @@ export default function App() {
                 <Route path="donate" element={<Donate />} />
                 <Route path="unsubscribe" element={<Unsubscribe />} />
                 <Route path="version" element={<Version />} />
+                <Route path="download" element={<Download />} />
 
 
 
