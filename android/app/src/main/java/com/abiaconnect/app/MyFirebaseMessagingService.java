@@ -60,13 +60,30 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         return fallback;
     }
 
-    private PendingIntent buildContentIntent(int requestCode, String type, String url, String callId) {
+    private PendingIntent buildContentIntent(int requestCode, String type, String url, String callId, int notificationId) {
         Intent intent = new Intent(this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        // NOTE: never add FLAG_ACTIVITY_CLEAR_TOP here — with launchMode="singleTask"
+        // it destroys and recreates the activity (and the WebView), which kills an
+        // in-progress call the moment the user taps Answer.
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         intent.putExtra("notification_type", type);
         intent.putExtra("url", url);
         intent.putExtra("call_id", callId);
+        intent.putExtra("notification_id", notificationId);
         return PendingIntent.getActivity(
+            this,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+    }
+
+    private PendingIntent buildDeclineIntent(int requestCode, String callId, int notificationId) {
+        Intent intent = new Intent(this, CallActionReceiver.class);
+        intent.setAction(CallActionReceiver.ACTION_DECLINE_CALL);
+        intent.putExtra("call_id", callId);
+        intent.putExtra("notification_id", notificationId);
+        return PendingIntent.getBroadcast(
             this,
             requestCode,
             intent,
