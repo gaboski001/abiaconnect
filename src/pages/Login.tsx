@@ -147,6 +147,12 @@ export default function Login() {
         </NativeAuthLayout>
         {/* Admin fast path retained */}
         {isAdmin ? null : null}
+        <BiometricOptInDialog
+          open={optInOpen}
+          email={optInEmail}
+          password={optInPassword}
+          onClose={handleOptInClose}
+        />
       </>
     )
   }
