@@ -240,6 +240,11 @@ export default function Dashboard() {
         {tab === 'messages' && (
           <LinkCard to="/messages" label="Open Messages" description="View and reply to your conversations." icon={Mail} />
         )}
+        {tab === 'calls' && (
+          <Suspense fallback={<div className="text-sm text-slate-300/70">Loading call history…</div>}>
+            <CallHistory />
+          </Suspense>
+        )}
         {tab === 'notifications' && (
           <LinkCard to="/notifications" label="Open Notifications" description="See your latest alerts." icon={Bell} />
         )}
