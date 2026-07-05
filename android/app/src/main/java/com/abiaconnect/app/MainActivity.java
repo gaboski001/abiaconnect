@@ -39,7 +39,7 @@ public class MainActivity extends BaseActivity {
     }
 
     @Override
-    protected void onDestroy() {
+    public void onDestroy() {
         if (hangupReceiver != null) {
             try { unregisterReceiver(hangupReceiver); } catch (Exception ignored) {}
             hangupReceiver = null;
