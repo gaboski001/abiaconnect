@@ -111,7 +111,7 @@ export default function Profile() {
   })
 
   const profile = profileQ.data ?? {}
-  const name = profile.display_name || user?.email?.split('@')[0] || 'You'
+  const name = profile.display_name || profile.username || (isSelf ? user?.email?.split('@')[0] || 'You' : 'User')
 
   const completenessFields: Array<keyof Profile> = [
     'display_name',
