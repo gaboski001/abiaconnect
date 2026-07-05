@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
-import { Download, Sparkles, FileText, Loader2 } from 'lucide-react'
+import { CheckCircle2, Download, FileText, Loader2, RefreshCw, Sparkles, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { toast } from '@/lib/toast'
