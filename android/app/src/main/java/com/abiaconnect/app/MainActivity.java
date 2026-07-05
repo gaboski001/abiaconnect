@@ -137,19 +137,25 @@ public class MainActivity extends BaseActivity {
         hangupReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                // Notify the web layer that the user hung up from the
-                // system notification, so it can close the peer connection.
+                if (intent == null || intent.getAction() == null) return;
+                String eventName = "com.abiaconnect.app.CALL_DECLINE".equals(intent.getAction())
+                    ? "abiaconnect-native-call-decline"
+                    : "abiaconnect-native-call-hangup";
+                String callId = intent.getStringExtra("call_id");
                 if (getBridge() != null && getBridge().getWebView() != null) {
+                    final String safeId = JSONObject.quote(callId == null ? "" : callId);
+                    final String script =
+                        "window.dispatchEvent(new CustomEvent('" + eventName +
+                        "', { detail: { callId: " + safeId + " } }));";
                     getBridge().getWebView().post(() ->
-                        getBridge().getWebView().evaluateJavascript(
-                            "window.dispatchEvent(new CustomEvent('abiaconnect-native-call-hangup'));",
-                            null
-                        )
+                        getBridge().getWebView().evaluateJavascript(script, null)
                     );
                 }
             }
         };
-        IntentFilter filter = new IntentFilter("com.abiaconnect.app.CALL_HANGUP");
+        IntentFilter filter = new IntentFilter();
+        filter.addAction("com.abiaconnect.app.CALL_HANGUP");
+        filter.addAction("com.abiaconnect.app.CALL_DECLINE");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(hangupReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
