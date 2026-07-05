@@ -57,14 +57,25 @@ interface Achievement {
 
 export default function Profile() {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+  const requestedId = searchParams.get('id')
+  const viewedId = requestedId || user?.id || null
+  const isSelf = !!user && !!viewedId && viewedId === user.id
+
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Partial<Profile>>({})
 
   const profileQ = useQuery({
-    queryKey: ['profile', user?.id],
-    enabled: !!user,
+    queryKey: ['profile', viewedId, isSelf],
+    enabled: !!viewedId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_my_profile')
+      if (isSelf) {
+        const { data, error } = await supabase.rpc('get_my_profile')
+        if (error) throw error
+        const row = Array.isArray(data) ? data[0] : data
+        return (row ?? {}) as Profile
+      }
+      const { data, error } = await supabase.rpc('get_public_profiles', { _ids: [viewedId] })
       if (error) throw error
       const row = Array.isArray(data) ? data[0] : data
       return (row ?? {}) as Profile
@@ -72,13 +83,13 @@ export default function Profile() {
   })
 
   const threadsQ = useQuery({
-    queryKey: ['profile-threads', user?.id],
-    enabled: !!user,
+    queryKey: ['profile-threads', viewedId],
+    enabled: !!viewedId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('threads')
         .select('id, title, created_at')
-        .eq('user_id', user!.id)
+        .eq('user_id', viewedId!)
         .order('created_at', { ascending: false })
         .limit(10)
       if (error) throw error
@@ -87,13 +98,13 @@ export default function Profile() {
   })
 
   const achievementsQ = useQuery({
-    queryKey: ['achievements', user?.id],
-    enabled: !!user,
+    queryKey: ['achievements', viewedId],
+    enabled: !!viewedId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('achievements')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', viewedId!)
       if (error) return []
       return (data ?? []) as Achievement[]
     },
