@@ -817,6 +817,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           call_ringtone_settings: Json | null
+          calls_enabled: boolean
           created_at: string
           current_location: string | null
           display_name: string | null
@@ -839,6 +840,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           call_ringtone_settings?: Json | null
+          calls_enabled?: boolean
           created_at?: string
           current_location?: string | null
           display_name?: string | null
@@ -861,6 +863,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           call_ringtone_settings?: Json | null
+          calls_enabled?: boolean
           created_at?: string
           current_location?: string | null
           display_name?: string | null
@@ -1656,6 +1659,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           call_ringtone_settings: Json | null
+          calls_enabled: boolean
           created_at: string
           current_location: string | null
           display_name: string | null
