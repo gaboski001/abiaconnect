@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { toast } from '@/lib/toast'
+import { AppUpdateCard } from '@/components/pwa/AppUpdateCard'
 
 type NativeInfo = { version: string; build: string; id: string; name: string } | null
 
@@ -59,7 +60,8 @@ export default function Version() {
   )
 
   return (
-    <div className="container max-w-2xl py-8">
+    <div className="container max-w-2xl py-8 space-y-4">
+      <AppUpdateCard variant="plain" />
       <Card>
         <CardHeader>
           <CardTitle>Version info</CardTitle>
