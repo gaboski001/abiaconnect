@@ -121,9 +121,12 @@ export default function SubgroupDetail() {
   // 5e: Realtime presence — ephemeral active-member count
   const [activeCount, setActiveCount] = useState(0)
   useEffect(() => {
-    if (!subgroupId || !user) return
+    // Only members may join the presence channel. Combined with the
+    // Realtime Authorization policy on realtime.messages, non-members
+    // cannot observe who is active in a private subgroup.
+    if (!subgroupId || !user || !isMember) return
     const channel = supabase.channel(`subgroup-presence:${subgroupId}`, {
-      config: { presence: { key: user.id } },
+      config: { presence: { key: user.id }, private: true },
     })
     channel
       .on('presence', { event: 'sync' }, () => {
@@ -140,7 +143,7 @@ export default function SubgroupDetail() {
       supabase.removeChannel(channel)
       setActiveCount(0)
     }
-  }, [subgroupId, user])
+  }, [subgroupId, user, isMember])
 
   // Realtime: prepend newly inserted threads for THIS subgroup only (scoped filter, page 0 only)
   useEffect(() => {
