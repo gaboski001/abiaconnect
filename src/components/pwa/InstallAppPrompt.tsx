@@ -34,12 +34,29 @@ function isIOS(): boolean {
   return iOSClassic || iPadOS
 }
 
+function isAndroid(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /Android/i.test(navigator.userAgent || '')
+}
+
+
+
 export function InstallAppPrompt() {
   const [open, setOpen] = useState(false)
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // Android users get the packaged native APK — never surface the PWA
+    // install prompt on Android and actively suppress Chrome's own
+    // beforeinstallprompt mini-infobar / "Install app" banner.
+    if (isAndroid() && !Capacitor.isNativePlatform()) {
+      const swallow = (e: Event) => e.preventDefault()
+      window.addEventListener('beforeinstallprompt', swallow)
+      return () => window.removeEventListener('beforeinstallprompt', swallow)
+    }
+
     if (Capacitor.isNativePlatform()) return
     if (isIOS()) return // iOS uses the dedicated IOSInstallPrompt
     if (isStandalone()) return
@@ -60,6 +77,7 @@ export function InstallAppPrompt() {
       window.removeEventListener('beforeinstallprompt', onBeforeInstall)
     }
   }, [])
+
 
   const dismiss = () => {
     localStorage.setItem(DISMISS_KEY, String(Date.now()))
