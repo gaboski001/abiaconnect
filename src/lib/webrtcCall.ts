@@ -307,10 +307,7 @@ class CallManager {
     const wasConnected = this.wasConnected
     if (notifyPeer && peerId && callId) {
       await this.sessionSend('bye', { callId }).catch(() => undefined)
-      await supabase
-        .channel(`call-user:${peerId}`)
-        .send({ type: 'broadcast', event: 'cancel', payload: { callId } })
-        .catch(() => undefined)
+      await this.broadcastToUser(peerId, 'cancel', { callId }).catch(() => undefined)
     }
     // Log a call entry in the conversation (missed or completed).
     // Only the caller writes it (single source of truth — both peers see the same row).
