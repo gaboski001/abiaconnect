@@ -64,30 +64,40 @@
 }
 
 .dark {
-  --background:         oklch(0.13 0.02 145);
-  --foreground:         oklch(0.97 0.01 145);
-  --card:               oklch(0.17 0.025 145);
-  --card-foreground:    oklch(0.97 0.01 145);
-  --popover:            oklch(0.17 0.025 145);
-  --popover-foreground: oklch(0.97 0.01 145);
-  --primary:            oklch(0.82 0.14 85);
-  --primary-foreground: oklch(0.10 0.03 145);
-  --secondary:          oklch(0.30 0.08 145);
-  --secondary-foreground: oklch(0.95 0.02 145);
-  --muted:              oklch(0.22 0.04 145);
-  --muted-foreground:   oklch(0.72 0.05 145);
-  --accent:             oklch(0.30 0.08 145);
-  --accent-foreground:  oklch(0.95 0.02 145);
-  --destructive:        oklch(0.55 0.22 27);
-  --destructive-foreground: oklch(0.98 0.01 0);
-  --border:             oklch(0.95 0.01 145 / 18%);
-  --input:              oklch(0.95 0.01 145 / 14%);
-  --ring:               oklch(0.82 0.14 85);
+  /* Deep near-black with a subtle green cast — keeps AbiaConnect brand while
+     giving text far more contrast than the previous #1a2620-ish background. */
+  --background:         oklch(0.11 0.018 150);
+  --foreground:         oklch(0.985 0.005 145);   /* ~#f6f8f5, WCAG AAA on bg */
+  --card:               oklch(0.155 0.022 150);   /* +elevation over bg */
+  --card-foreground:    oklch(0.985 0.005 145);
+  --popover:            oklch(0.155 0.022 150);
+  --popover-foreground: oklch(0.985 0.005 145);
+
+  /* Gold primary — darkened text on it so the "Popular"/CTA pills read. */
+  --primary:            oklch(0.82 0.15 85);
+  --primary-foreground: oklch(0.16 0.05 145);     /* deep green-black on gold */
+
+  /* Secondary/accent surfaces now clearly separate from bg + readable text. */
+  --secondary:          oklch(0.24 0.045 150);
+  --secondary-foreground: oklch(0.97 0.008 145);
+  --muted:              oklch(0.20 0.035 150);
+  --muted-foreground:   oklch(0.80 0.025 145);    /* was 0.72 — meets AA */
+  --accent:             oklch(0.28 0.05 150);
+  --accent-foreground:  oklch(0.985 0.005 145);
+
+  --destructive:        oklch(0.62 0.22 27);
+  --destructive-foreground: oklch(0.99 0.01 0);
+
+  /* Borders/inputs visible on dark surfaces (was ~18% — too faint). */
+  --border:             oklch(0.95 0.01 145 / 26%);
+  --input:              oklch(0.95 0.01 145 / 20%);
+  --ring:               oklch(0.82 0.15 85);
+
   --chart-1:            oklch(0.82 0.14 85);
-  --chart-2:            oklch(0.65 0.15 145);
-  --chart-3:            oklch(0.55 0.12 200);
-  --chart-4:            oklch(0.75 0.18 70);
-  --chart-5:            oklch(0.60 0.20 30);
+  --chart-2:            oklch(0.70 0.15 165);
+  --chart-3:            oklch(0.65 0.14 210);
+  --chart-4:            oklch(0.78 0.18 70);
+  --chart-5:            oklch(0.65 0.20 30);
 }
 
 body {
@@ -104,40 +114,102 @@ body {
 }
 
 .dark .glass-card {
-  background: oklch(0.18 0.03 145 / 80%);
-  border: 1px solid oklch(0.95 0.01 145 / 15%);
+  background: oklch(0.17 0.028 150 / 82%);
+  border: 1px solid oklch(0.95 0.01 145 / 20%);
 }
 
-/* Dark-mode safety net for components that hardcoded light-only colors. */
+/* ------------------------------------------------------------------
+   Dark-mode legibility safety net
+   Rescues components that were built with hardcoded light-mode
+   colour classes (text-gray-*, text-slate-*, bg-white, etc.). Every
+   selector is scoped under `.dark` so light mode is untouched.
+   ------------------------------------------------------------------ */
+
 .dark input,
 .dark textarea,
 .dark select {
-  background-color: oklch(0.20 0.03 145);
-  color: oklch(0.97 0.01 145);
-  border-color: oklch(0.95 0.01 145 / 20%);
+  background-color: oklch(0.19 0.03 150);
+  color: var(--foreground);
+  border-color: oklch(0.95 0.01 145 / 24%);
 }
 
 .dark input::placeholder,
 .dark textarea::placeholder {
-  color: oklch(0.60 0.04 145);
+  color: oklch(0.66 0.03 145);
+}
+
+/* Common low-contrast text classes → readable muted foreground. */
+.dark .text-gray-400,
+.dark .text-gray-500,
+.dark .text-gray-600,
+.dark .text-gray-700,
+.dark .text-gray-800,
+.dark .text-gray-900,
+.dark .text-slate-400,
+.dark .text-slate-500,
+.dark .text-slate-600,
+.dark .text-slate-700,
+.dark .text-slate-800,
+.dark .text-slate-900,
+.dark .text-zinc-500,
+.dark .text-zinc-600,
+.dark .text-zinc-700,
+.dark .text-neutral-500,
+.dark .text-neutral-600,
+.dark .text-neutral-700 {
+  color: oklch(0.82 0.02 145) !important;
+}
+
+.dark .text-black {
+  color: var(--foreground) !important;
+}
+
+/* Hardcoded light backgrounds → dark card surface. */
+.dark .bg-white,
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .bg-slate-50,
+.dark .bg-slate-100,
+.dark .bg-neutral-50,
+.dark .bg-neutral-100 {
+  background-color: var(--card) !important;
+  color: var(--card-foreground);
+}
+
+/* Hardcoded light borders → visible dark border. */
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300,
+.dark .border-neutral-200 {
+  border-color: var(--border) !important;
 }
 
 .dark .prose,
 .dark .thread-content {
-  color: oklch(0.90 0.02 145);
+  color: oklch(0.92 0.015 145);
 }
 .dark .prose strong,
 .dark .thread-content strong {
-  color: oklch(0.97 0.01 145);
+  color: var(--foreground);
 }
 .dark .prose a,
 .dark .thread-content a {
-  color: oklch(0.82 0.14 85);
+  color: oklch(0.85 0.14 85);
 }
 .dark .prose h1,
 .dark .prose h2,
 .dark .prose h3,
 .dark .prose h4 {
-  color: oklch(0.97 0.01 145);
+  color: var(--foreground);
 }
+
+/* Badges/pills that use primary as background: force readable ink. */
+.dark [data-slot="badge"].bg-primary,
+.dark .bg-primary {
+  color: var(--primary-foreground);
+}
+
 
