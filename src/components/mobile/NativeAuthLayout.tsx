@@ -35,7 +35,7 @@ export function NativeAuthLayout({
 }: NativeAuthLayoutProps) {
   return (
     <div
-      className="relative min-h-screen overflow-hidden bg-[#0B1F0B] text-slate-50"
+      className="dark relative min-h-screen overflow-hidden bg-[#0B1F0B] text-slate-50"
       style={{
         paddingTop: 'max(env(safe-area-inset-top), 1rem)',
         paddingBottom: 'max(env(safe-area-inset-bottom), 1rem)',
