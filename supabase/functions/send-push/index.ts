@@ -11,6 +11,7 @@ const cors = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const PUSH_INTERNAL_SECRET = Deno.env.get('PUSH_INTERNAL_SECRET') || ''
 const FCM_SA = Deno.env.get('FCM_SERVICE_ACCOUNT')!
 
 interface ServiceAccount {
@@ -95,7 +96,10 @@ Deno.serve(async (req) => {
 
     const supa = createClient(SUPABASE_URL, SERVICE_ROLE)
 
-    if (token !== SERVICE_ROLE) {
+    const isInternalCaller =
+      token === SERVICE_ROLE ||
+      (PUSH_INTERNAL_SECRET.length > 0 && token === PUSH_INTERNAL_SECRET)
+    if (!isInternalCaller) {
       const { data: claimsData, error: claimsErr } = await supa.auth.getClaims(token)
       const callerId = claimsData?.claims?.sub as string | undefined
       if (claimsErr || !callerId) {
