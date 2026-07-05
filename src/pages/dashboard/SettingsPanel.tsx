@@ -26,7 +26,7 @@ import { CallRingtoneSettings } from '@/components/notifications/CallRingtoneSet
 import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 import { Switch } from '@/components/ui/switch'
 import { Phone, PhoneOff } from 'lucide-react'
-import { areCallsEnabled, setCallsEnabled, subscribeCallsEnabled } from '@/lib/callPreferences'
+import { areCallsEnabled, hydrateCallsEnabledFromProfile, setCallsEnabled, subscribeCallsEnabled } from '@/lib/callPreferences'
 import { toWebP } from '@/lib/image'
 import { GOLD_GRADIENT, GOLD_SHADOW, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 
@@ -86,6 +86,10 @@ export default function SettingsPanel({
   const [callsOn, setCallsOn] = useState(() => areCallsEnabled())
 
   useEffect(() => subscribeCallsEnabled(setCallsOn), [])
+
+  useEffect(() => {
+    if (user?.id) void hydrateCallsEnabledFromProfile(user.id)
+  }, [user?.id])
 
   useEffect(() => {
     setForm({
@@ -239,7 +243,7 @@ export default function SettingsPanel({
           <Switch
             checked={callsOn}
             onCheckedChange={(v) => {
-              setCallsEnabled(v)
+              void setCallsEnabled(v, { userId: user?.id })
               toast.success(v ? 'Calls turned on' : 'Calls turned off')
             }}
             aria-label="Toggle voice calls"

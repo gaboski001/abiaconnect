@@ -20,7 +20,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
-import { areCallsEnabled, setCallsEnabled, subscribeCallsEnabled } from '@/lib/callPreferences'
+import { areCallsEnabled, hydrateCallsEnabledFromProfile, setCallsEnabled, subscribeCallsEnabled } from '@/lib/callPreferences'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -449,6 +449,10 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
   useEffect(() => subscribeCallsEnabled(setCallsOn), [])
 
   useEffect(() => {
+    if (user?.id) void hydrateCallsEnabledFromProfile(user.id)
+  }, [user?.id])
+
+  useEffect(() => {
     setForm({
       display_name: profile.display_name ?? '',
       username: profile.username ?? '',
@@ -574,7 +578,7 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
           <Switch
             checked={callsOn}
             onCheckedChange={(v) => {
-              setCallsEnabled(v)
+              void setCallsEnabled(v, { userId: user?.id })
               toast.success(v ? 'Calls turned on' : 'Calls turned off')
             }}
             aria-label="Toggle voice calls"
