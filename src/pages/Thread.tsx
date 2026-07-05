@@ -736,6 +736,30 @@ function Thread() {
 
   const totalReplies = repliesQ.data?.pages[0]?.total ?? replies.length
 
+  const clearReplies = useMutation({
+    mutationFn: async () => {
+      if (!threadId) throw new Error('Missing thread')
+      const { data: rows, error: fetchErr } = await supabase
+        .from('replies')
+        .select('id')
+        .eq('thread_id', threadId)
+      if (fetchErr) throw fetchErr
+      const ids = (rows ?? []).map((r) => r.id as string)
+      if (ids.length > 0) {
+        await supabase.from('reply_votes').delete().in('reply_id', ids)
+      }
+      const { error } = await supabase.from('replies').delete().eq('thread_id', threadId)
+      if (error) throw error
+      return ids.length
+    },
+    onSuccess: (count) => {
+      toast.success(count === 0 ? 'No replies to clear' : `Cleared ${count} ${count === 1 ? 'reply' : 'replies'}`)
+      qc.invalidateQueries({ queryKey: ['replies', threadId] })
+    },
+    onError: (e: Error) => toast.error(e.message || 'Failed to clear replies'),
+  })
+
+
   const authorName = thread.profiles?.display_name ?? 'Member'
 
   const metaDesc = plainBody.slice(0, 160) || `Discussion by ${authorName} on AbiaConnect.`
