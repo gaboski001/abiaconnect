@@ -76,8 +76,10 @@ public class BaseActivity extends BridgeActivity {
         callChannel.enableLights(true);
         callChannel.setLightColor(ContextCompat.getColor(this, R.color.notification_color));
         callChannel.enableVibration(true);
+        callChannel.setVibrationPattern(new long[]{0, 800, 600, 800, 600, 800});
         callChannel.setShowBadge(false);
         callChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        callChannel.setBypassDnd(true);
         callChannel.setSound(ringtone, audioAttributes);
         notificationManager.createNotificationChannel(callChannel);
     }
