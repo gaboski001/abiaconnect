@@ -66,7 +66,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         return fallback;
     }
 
-    private PendingIntent buildContentIntent(int requestCode, String type, String url, String callId, int notificationId) {
+    private PendingIntent buildContentIntent(int requestCode, String type, String url, String callId, String callerName, int notificationId, String action) {
         Intent intent = new Intent(this, MainActivity.class);
         // NOTE: never add FLAG_ACTIVITY_CLEAR_TOP here — with launchMode="singleTask"
         // it destroys and recreates the activity (and the WebView), which kills an
@@ -75,7 +75,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         intent.putExtra("notification_type", type);
         intent.putExtra("url", url);
         intent.putExtra("call_id", callId);
+        intent.putExtra("caller_name", callerName);
         intent.putExtra("notification_id", notificationId);
+        intent.putExtra("call_action", action); // "answer" | "open" | ""
         return PendingIntent.getActivity(
             this,
             requestCode,
