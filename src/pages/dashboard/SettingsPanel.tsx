@@ -243,7 +243,7 @@ export default function SettingsPanel({
           <Switch
             checked={callsOn}
             onCheckedChange={(v) => {
-              setCallsEnabled(v)
+              void setCallsEnabled(v, { userId: user?.id })
               toast.success(v ? 'Calls turned on' : 'Calls turned off')
             }}
             aria-label="Toggle voice calls"
