@@ -349,7 +349,13 @@ function AccountFormImpl({
               <Field label="Wallet Address" value={walletAddress} onChange={setWalletAddress} required />
               {walletAddress && (
                 <div className="flex justify-center">
-                  <canvas ref={qrRef} className="rounded-md border border-border bg-white" />
+                  {/* bg-white is intentional — QR codes require a light
+                      background so scanners can read the dark modules;
+                      inverting in dark mode would break scanning.
+                      Wrapped in a themed padded surface for visual polish. */}
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <canvas ref={qrRef} className="rounded-md bg-white" />
+                  </div>
                 </div>
               )}
             </>
