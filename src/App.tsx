@@ -6,6 +6,7 @@ import { NativeOnboardingGate } from '@/components/mobile/NativeOnboardingGate'
 import { BatteryOptimizationPrompt } from '@/components/mobile/BatteryOptimizationPrompt'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { ScrollToTop } from '@/components/ScrollToTop'
+import { useReportNativeInstall } from '@/hooks/useReportNativeInstall'
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute'
 import Home from '@/pages/Home'
 import Login from '@/pages/Login'
@@ -72,6 +73,8 @@ const NotFound = () => (
 
 export default function App() {
   const navigate = useNavigate()
+  useReportNativeInstall()
+
 
   useEffect(() => {
     // Listen for deep-links dispatched from MainActivity.java when a notification is tapped
