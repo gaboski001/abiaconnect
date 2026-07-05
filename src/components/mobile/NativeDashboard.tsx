@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -9,12 +9,23 @@ import {
   Bell,
   TrendingUp,
   ChevronRight,
-  Plus
+  Plus,
+  Phone,
+  PhoneOff,
 } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import { GOLD_GRADIENT, GOLD_SHADOW, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 import { AppUpdateCard } from '@/components/pwa/AppUpdateCard'
+import { useAuth } from '@/contexts/AuthContext'
+import {
+  areCallsEnabled,
+  hydrateCallsEnabledFromProfile,
+  setCallsEnabled,
+  subscribeCallsEnabled,
+} from '@/lib/callPreferences'
+import { toast } from '@/lib/toast'
 import { formatDistanceToNow } from 'date-fns'
 
 const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
