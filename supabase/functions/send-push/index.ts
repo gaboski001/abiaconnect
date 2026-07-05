@@ -78,7 +78,58 @@ Deno.serve(async (req) => {
       })
     }
 
+    // --- Authentication & authorization ---------------------------------
+    // Callers must present a bearer token. We accept:
+    //   1. The service role key — used by DB triggers (push_on_new_message,
+    //      push_on_new_notification) and other trusted server code.
+    //   2. A signed-in user JWT, provided the caller is authorized to push
+    //      to `userId`: admins, self-tests, or an existing conversation
+    //      participant with the target user.
+    const authHeader = req.headers.get('Authorization') || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+    if (!token) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+
     const supa = createClient(SUPABASE_URL, SERVICE_ROLE)
+
+    if (token !== SERVICE_ROLE) {
+      const { data: claimsData, error: claimsErr } = await supa.auth.getClaims(token)
+      const callerId = claimsData?.claims?.sub as string | undefined
+      if (claimsErr || !callerId) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401, headers: { ...cors, 'Content-Type': 'application/json' },
+        })
+      }
+
+      let authorized = callerId === userId // self-test
+      if (!authorized) {
+        const { data: isAdmin } = await supa.rpc('is_admin', { _user_id: callerId })
+        if (isAdmin === true) authorized = true
+      }
+      if (!authorized) {
+        // Conversation participant with the target user?
+        const { data: convo } = await supa
+          .from('conversations')
+          .select('id')
+          .or(
+            `and(user1_id.eq.${callerId},user2_id.eq.${userId}),` +
+            `and(user1_id.eq.${userId},user2_id.eq.${callerId})`,
+          )
+          .limit(1)
+          .maybeSingle()
+        if (convo) authorized = true
+      }
+      if (!authorized) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403, headers: { ...cors, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+    // --------------------------------------------------------------------
+
     const { data: rows, error } = await supa
       .from('device_push_tokens')
       .select('token, platform')
