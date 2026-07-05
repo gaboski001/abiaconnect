@@ -62,10 +62,20 @@ export function usePushNotifications() {
 
         const regSub = await PushNotifications.addListener('registration', async (t) => {
           try {
+            const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent
+            const label = Capacitor.getPlatform() === 'ios' ? 'iOS app' : 'Android app'
             await supabase
               .from('device_push_tokens')
               .upsert(
-                { user_id: user.id, token: t.value, platform, updated_at: new Date().toISOString() },
+                {
+                  user_id: user.id,
+                  token: t.value,
+                  platform,
+                  device_label: label,
+                  user_agent: ua,
+                  updated_at: new Date().toISOString(),
+                  last_seen_at: new Date().toISOString(),
+                },
                 { onConflict: 'token' },
               )
           } catch {
