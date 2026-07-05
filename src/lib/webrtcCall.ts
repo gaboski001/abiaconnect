@@ -398,7 +398,13 @@ class CallManager {
 
   private onInvite(payload: any) {
     if (!payload?.callId || !payload?.from) return
-    // Busy: auto-reject.
+    // Dedupe: caller retries `invite` every 5s until connected. Ignore any
+    // retry that matches the call we're already handling — otherwise once
+    // the callee accepts (status becomes 'connecting'/'connected'), the next
+    // retry would fall through to the "busy" branch and cancel the call.
+    if (this.state.callId === payload.callId) return
+    if (this.pendingOffer?.callId === payload.callId) return
+    // Busy: auto-reject a genuinely-different incoming call.
     if (this.state.status !== 'idle' && this.state.status !== 'ended') {
       void this.broadcastToUser(payload.from.id, 'cancel', {
         callId: payload.callId,
@@ -418,6 +424,10 @@ class CallManager {
   private onCancel(payload: any) {
     if (!payload?.callId) return
     if (this.state.callId !== payload.callId) return
+    // Ignore a stale "busy" cancel that arrives after we've already progressed
+    // past the calling phase (caused by our own retry pinging the peer after
+    // they accepted). Only honour it while we're still waiting for pickup.
+    if (payload?.reason === 'busy' && this.state.status !== 'calling') return
     void this.endCall(false, payload?.reason === 'busy' ? 'User is busy' : null)
   }
 
