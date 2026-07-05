@@ -412,7 +412,7 @@ class CallManager {
 
   private async openSessionChannel(callId: string, isCaller: boolean) {
     const ch = supabase.channel(`call-session:${callId}`, {
-      config: { broadcast: { ack: false, self: false } },
+      config: { broadcast: { ack: false, self: false }, private: true },
     })
     ch.on('broadcast', { event: 'accept' }, () => this.onAccept(isCaller))
     ch.on('broadcast', { event: 'sdp' }, ({ payload }) => this.onSdp(payload, isCaller))
