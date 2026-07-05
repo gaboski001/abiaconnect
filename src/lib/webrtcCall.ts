@@ -42,6 +42,30 @@ export interface QualityEvent {
   note?: string
 }
 
+export interface CallDiagnostics {
+  hasPeerConnection: boolean
+  peerConnectionState: RTCPeerConnectionState
+  iceConnectionState: RTCIceConnectionState
+
+  localMicPresent: boolean
+  localMicEnabled: boolean
+  localMicMuted: boolean
+  localMicLabel: string | null
+  localMicReadyState: MediaStreamTrack['readyState'] | null
+
+  remoteTrackCount: number
+  remoteTracksLive: number
+
+  audioElementBound: boolean
+  audioSrcObjectAttached: boolean
+  audioSinkTrackCount: number
+  audioElementPaused: boolean
+  audioElementMuted: boolean
+  audioElementVolume: number
+}
+
+
+
 export interface CallState {
   status: CallStatus
   callId: string | null
@@ -170,6 +194,66 @@ class CallManager {
 
   setRemoteAudioElement(el: HTMLAudioElement | null) {
     this.remoteAudio = el
+    // If a peer connection is already receiving remote audio when the sink
+    // element mounts (e.g. auth hydrated after the first invite arrived),
+    // rebind the live tracks so we don't play into the void.
+    if (el && this.pc) {
+      const remoteStream = new MediaStream()
+      for (const r of this.pc.getReceivers()) {
+        if (r.track && r.track.kind === 'audio') {
+          try { remoteStream.addTrack(r.track) } catch { /* ignore duplicates */ }
+        }
+      }
+      if (remoteStream.getAudioTracks().length > 0) {
+        el.srcObject = remoteStream
+        el.muted = false
+        el.volume = 1
+        el.play().catch(() => undefined)
+      }
+    }
+  }
+
+  /**
+   * Snapshot of low-level media state for the in-app diagnostics panel.
+   * Safe to call at any time — returns sensible defaults when no call is
+   * active. Read-only; does not mutate the session.
+   */
+  getDiagnostics(): CallDiagnostics {
+    const local = this.localStream
+    const micTracks = local?.getAudioTracks() ?? []
+    const micTrack = micTracks[0] ?? null
+
+    const receivers = this.pc?.getReceivers() ?? []
+    const remoteAudioReceivers = receivers.filter((r) => r.track?.kind === 'audio')
+    const remoteTracks = remoteAudioReceivers
+      .map((r) => r.track)
+      .filter((t): t is MediaStreamTrack => Boolean(t))
+
+    const el = this.remoteAudio
+    const sinkStream = (el?.srcObject as MediaStream | null) ?? null
+    const sinkTracks = sinkStream?.getAudioTracks() ?? []
+
+    return {
+      hasPeerConnection: !!this.pc,
+      peerConnectionState: this.pc?.connectionState ?? 'closed',
+      iceConnectionState: this.pc?.iceConnectionState ?? 'closed',
+
+      localMicPresent: !!micTrack,
+      localMicEnabled: micTrack?.enabled ?? false,
+      localMicMuted: this.state.muted,
+      localMicLabel: micTrack?.label ?? null,
+      localMicReadyState: micTrack?.readyState ?? null,
+
+      remoteTrackCount: remoteTracks.length,
+      remoteTracksLive: remoteTracks.filter((t) => t.readyState === 'live').length,
+
+      audioElementBound: !!el,
+      audioSrcObjectAttached: !!sinkStream,
+      audioSinkTrackCount: sinkTracks.length,
+      audioElementPaused: el?.paused ?? true,
+      audioElementMuted: el?.muted ?? false,
+      audioElementVolume: el?.volume ?? 0,
+    }
   }
 
   /** Outgoing call to a peer. */

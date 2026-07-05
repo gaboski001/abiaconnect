@@ -37,6 +37,14 @@ export function CallProvider() {
 
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  // Callback ref: fires the instant React attaches (or detaches) the <audio>
+  // element, so the call manager always has a live sink for remote tracks —
+  // even when the element mounts after auth hydrates and the ref-effect below
+  // would otherwise miss it.
+  const setAudioNode = (node: HTMLAudioElement | null) => {
+    audioRef.current = node
+    callManager.setRemoteAudioElement(node)
+  }
 
   useEffect(() => {
     if (!userId) return
@@ -64,9 +72,12 @@ export function CallProvider() {
     }
   }, [])
 
+  // Re-bind the audio sink whenever userId flips (element mounts/unmounts
+  // with the early-return guard below). The callback ref above handles the
+  // first attach; this covers sign-out/sign-in cycles.
   useEffect(() => {
     callManager.setRemoteAudioElement(audioRef.current)
-  }, [])
+  }, [userId])
 
   // ── Native Android foreground-service sync ──────────────────────────────
   // Start the phoneCall foreground service once the peer connection is
@@ -137,7 +148,7 @@ export function CallProvider() {
 
   return (
     <>
-      <audio ref={audioRef} autoPlay playsInline />
+      <audio ref={setAudioNode} autoPlay playsInline />
       {state.status !== 'idle' && state.peer && <CallOverlay state={state} />}
     </>
   )
