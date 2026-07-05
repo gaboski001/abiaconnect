@@ -38,7 +38,7 @@ type StoredCreds = { username: string; password: string }
 async function loadPlugin() {
   if (!Capacitor.isNativePlatform()) return null
   try {
-    const mod = await import('capacitor-native-biometric')
+    const mod = await import('@capgo/capacitor-native-biometric')
     return mod.NativeBiometric
   } catch {
     return null
