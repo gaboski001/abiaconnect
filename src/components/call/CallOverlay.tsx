@@ -12,6 +12,7 @@ import {
   SignalLow,
   SignalMedium,
   Sparkles,
+  Stethoscope,
 } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
@@ -19,6 +20,7 @@ import { callManager, type CallQuality, type CallState } from '@/lib/webrtcCall'
 import { startRingtone, stopRingtone } from '@/lib/ringtone'
 import { cn } from '@/lib/utils'
 import { GOLD_GRADIENT, GOLD_GRADIENT_SOFT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
+import { CallDiagnosticsPanel } from './CallDiagnosticsPanel'
 
 function fmt(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000))
