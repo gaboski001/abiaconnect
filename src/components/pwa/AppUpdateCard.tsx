@@ -179,6 +179,7 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
                   <FileText className="size-3.5" /> What's new
                 </Button>
               </div>
+              {statusStrip}
             </div>
           </div>
         </div>
