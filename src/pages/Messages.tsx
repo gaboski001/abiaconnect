@@ -823,14 +823,23 @@ function ConversationView({
 
   const messagesQ = useQuery({
     queryKey,
-    enabled: !!conversationId,
+    enabled: !!conversationId && !deleting,
     queryFn: async () => {
+      // If deletion started while this fetch was queued, bail out and return
+      // whatever the cache already has (usually []). Never overwrite it.
+      if (deletingRef.current) {
+        return (qc.getQueryData<Message[]>(queryKey) ?? [])
+      }
       const { data, error } = await supabase
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true })
       if (error) throw error
+      // The RPC race: response landed after we started deleting. Drop it.
+      if (deletingRef.current) {
+        return (qc.getQueryData<Message[]>(queryKey) ?? [])
+      }
       const rows = (data ?? []) as Message[]
       // Re-hydrate client-only delivery state after a refetch. `is_read` is
       // persisted server-side so it survives on its own; `_status: 'delivered'`
