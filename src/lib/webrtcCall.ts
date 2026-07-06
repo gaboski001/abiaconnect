@@ -82,6 +82,13 @@ export interface CallState {
   reconnectAttempts: number
   maxReconnectAttempts: number
   timeline: QualityEvent[]
+  /**
+   * Outgoing calls only. True once the callee's device has received our
+   * invite and is displaying the incoming-call UI (i.e. their phone is
+   * actually ringing). Lets the caller UI distinguish "Calling…" (invite
+   * in flight) from "Ringing…" (peer notified).
+   */
+  remoteRinging: boolean
 }
 
 
@@ -124,6 +131,7 @@ class CallManager {
     reconnectAttempts: 0,
     maxReconnectAttempts: 3,
     timeline: [],
+    remoteRinging: false,
   }
 
   private userId: string | null = null
@@ -175,6 +183,7 @@ class CallManager {
     })
     ch.on('broadcast', { event: 'invite' }, ({ payload }) => this.onInvite(payload))
     ch.on('broadcast', { event: 'cancel' }, ({ payload }) => this.onCancel(payload))
+    ch.on('broadcast', { event: 'ringing' }, ({ payload }) => this.onRingingAck(payload))
     ch.subscribe()
     this.userChannel = ch
   }
@@ -282,6 +291,7 @@ class CallManager {
       peer: target,
       error: null,
       startedAt: null,
+      remoteRinging: false,
     })
     await this.openSessionChannel(callId, true)
     await this.setupPeer(true)
@@ -465,6 +475,7 @@ class CallManager {
       degraded: false,
       reconnecting: false,
       reconnectAttempts: 0,
+      remoteRinging: false,
       timeline: this.appendTimeline(this.state.timeline, 'unknown', error ?? 'Call ended'),
     })
 
@@ -517,6 +528,21 @@ class CallManager {
       direction: 'incoming',
       peer: payload.from,
     })
+    // Tell the caller their invite reached us and our device is now ringing,
+    // so their UI can flip from "Calling…" to "Ringing…".
+    void this.broadcastToUser(payload.from.id, 'ringing', {
+      callId: payload.callId,
+      from: this.selfPeer,
+    })
+  }
+
+  private onRingingAck(payload: any) {
+    if (!payload?.callId) return
+    if (this.state.callId !== payload.callId) return
+    if (this.state.direction !== 'outgoing') return
+    if (this.state.status !== 'calling') return
+    if (this.state.remoteRinging) return
+    this.patch({ remoteRinging: true })
   }
 
   private onCancel(payload: any) {
