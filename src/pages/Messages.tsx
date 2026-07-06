@@ -1669,12 +1669,16 @@ function ConversationView({
               onClick={async (e) => {
                 e.preventDefault()
                 if (deleting) return
+                // Flip the hard gate BEFORE anything async so realtime handlers
+                // and any in-flight queryFn resolutions can't write to the cache
+                // between here and the RPC returning.
+                deletingRef.current = true
                 setDeleting(true)
-                // Stop any in-flight message fetches so they don't repopulate
-                // the cache after we've cleared it.
+                // Abort any in-flight message fetches for this chat.
                 await qc.cancelQueries({ queryKey })
                 // Snapshot the current inbox so we can roll back on failure.
                 const inboxKey = ['conversations', user?.id]
+                const unreadKey = ['messages-unread', user?.id]
                 const prevInbox = qc.getQueryData<any[]>(inboxKey)
                 // Optimistic UI: remove from inbox + clear this chat's messages.
                 if (Array.isArray(prevInbox)) {
@@ -1690,6 +1694,7 @@ function ConversationView({
                 })
                 if (error) {
                   // Roll back optimistic changes and surface the failure.
+                  deletingRef.current = false
                   if (prevInbox !== undefined) qc.setQueryData(inboxKey, prevInbox)
                   qc.invalidateQueries({ queryKey })
                   qc.invalidateQueries({ queryKey: inboxKey })
@@ -1699,9 +1704,13 @@ function ConversationView({
                 }
                 // Drop the messages cache entirely so a revisit refetches clean.
                 qc.removeQueries({ queryKey })
-                qc.invalidateQueries({ queryKey: inboxKey })
+                // Refresh inbox ordering + unread badges immediately so the
+                // list stays consistent after deletion.
+                await Promise.all([
+                  qc.refetchQueries({ queryKey: inboxKey, exact: true }),
+                  qc.invalidateQueries({ queryKey: unreadKey }),
+                ])
                 setDeleteDialogOpen(false)
-                setDeleting(false)
                 toast.success('Chat deleted')
                 onBack()
               }}
