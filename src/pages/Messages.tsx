@@ -895,6 +895,7 @@ function ConversationView({
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          if (deletingRef.current) return
           const incoming = payload.new as Message
           qc.setQueryData<Message[]>(queryKey, (prev) => {
             const list = prev ?? []
