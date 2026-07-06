@@ -691,8 +691,16 @@ function ConversationView({
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [emojiOpen, setEmojiOpen] = useState(false)
   const [uploadPct, setUploadPct] = useState<number | null>(null)
+  const [replyTo, setReplyTo] = useState<Message | null>(null)
+  const [editing, setEditing] = useState<Message | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Reset reply/edit when switching conversations
+  useEffect(() => {
+    setReplyTo(null)
+    setEditing(null)
+  }, [conversationId])
 
   useEffect(() => {
     if (!pendingFile) {
