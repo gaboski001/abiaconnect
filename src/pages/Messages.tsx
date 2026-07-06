@@ -465,12 +465,68 @@ function ConversationView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, qc])
 
-  // Auto-scroll on new messages
+  // --- Auto-scroll that respects the user's manual scroll --------------------
+  // We only pin to the bottom when the user is already there. If they've
+  // scrolled up to read older messages, incoming messages must not yank the
+  // viewport back down. When they send a message themselves we *do* force a
+  // scroll — that's an explicit intent to see their new message.
+  const stickToBottomRef = useRef(true)
+  const lastMessageIdRef = useRef<string | null>(null)
+
+  const isNearBottom = (el: HTMLDivElement, threshold = 96) =>
+    el.scrollHeight - el.scrollTop - el.clientHeight < threshold
+
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior })
+    stickToBottomRef.current = true
+  }
+
+  // Track whether the user is pinned to the bottom.
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    const el = scrollRef.current
+    if (!el) return
+    const onScroll = () => {
+      stickToBottomRef.current = isNearBottom(el)
     }
-  }, [messagesQ.data?.length])
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Snap to bottom when the conversation first loads.
+  useEffect(() => {
+    if (!messagesQ.data?.length) return
+    if (lastMessageIdRef.current == null) {
+      scrollToBottom('auto')
+    }
+    lastMessageIdRef.current = messagesQ.data[messagesQ.data.length - 1]?.id ?? null
+    // Reset stickiness when the user switches conversations.
+    return () => {
+      lastMessageIdRef.current = null
+      stickToBottomRef.current = true
+    }
+  }, [conversationId])
+
+  // Auto-scroll on new messages, only if the user is still at the bottom.
+  useEffect(() => {
+    const list = messagesQ.data
+    if (!list?.length) return
+    const newestId = list[list.length - 1]?.id ?? null
+    const changed = newestId !== lastMessageIdRef.current
+    lastMessageIdRef.current = newestId
+    if (!changed) return
+    // Always follow our own outgoing (optimistic) messages; only follow
+    // incoming ones when the user hasn't scrolled up.
+    const newest = list[list.length - 1]
+    const mine = newest?.sender_id === user?.id
+    if (mine || stickToBottomRef.current) {
+      // Wait one frame so the newly-rendered bubble is in the DOM before we
+      // compute scrollHeight.
+      requestAnimationFrame(() => scrollToBottom(mine ? 'smooth' : 'smooth'))
+    }
+  }, [messagesQ.data, user?.id])
+
 
   // Viewport-based read receipts: mark each incoming message read only when it scrolls into view.
   const markedRef = useRef<Set<string>>(new Set())
