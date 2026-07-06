@@ -236,28 +236,32 @@ export function AppUpdateCard({ variant = 'premium', className, showWhenUpToDate
 }
 
 interface ProgressStripProps {
-  state: DownloadState
+  /**
+   * The full download controller returned by `useReleaseDownload`. Consuming
+   * the controller (instead of re-declaring individual callbacks/state fields)
+   * means future additions to the hook — new status branches, extra actions,
+   * more telemetry — flow into this component without changing its prop type.
+   */
+  controller: ReleaseDownloadController
   platform: 'android' | 'ios' | 'web'
   version: string
-  onCancel: () => void
+  /**
+   * Retry the download from scratch. Owned by the parent so it can rebuild
+   * the `DownloadInput` from the currently-selected release.
+   */
   onRetry: () => void
-  onInstallNow: () => void
-  onGrantPermission: () => void
-  hasCachedInstall: boolean
   tone: 'dark' | 'light'
 }
 
-function ProgressStrip({
-  state,
-  platform,
-  version,
-  onCancel,
-  onRetry,
-  onInstallNow,
-  onGrantPermission,
-  hasCachedInstall,
-  tone,
-}: ProgressStripProps) {
+function ProgressStrip({ controller, platform, version, onRetry, tone }: ProgressStripProps) {
+  const {
+    state,
+    cancel: onCancel,
+    installExisting: onInstallNow,
+    openInstallSettings: onGrantPermission,
+    hasCachedInstall,
+  } = controller
+  const hasCached = hasCachedInstall()
   const dark = tone === 'dark'
   const wrap = dark
     ? 'mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-3'
