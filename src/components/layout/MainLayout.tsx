@@ -68,7 +68,7 @@ export function MainLayout() {
         </AnimatePresence>
       </main>
 
-      {!isAuthPage && <Footer />}
+      {!hideFooter && <Footer />}
 
       {/* Native-only premium navigation shell */}
       {!isAuthPage && <MobileBottomNav />}
