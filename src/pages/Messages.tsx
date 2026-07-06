@@ -251,7 +251,8 @@ export default function Messages() {
     <>
       <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
     <div className="container mx-auto px-0 md:px-4 py-0 md:py-6">
-      <div className="md:rounded-2xl md:border md:bg-card overflow-hidden h-[calc(100vh-5rem)] md:h-[calc(100vh-8rem)] flex">
+      <div className="md:rounded-2xl md:border md:bg-card overflow-hidden h-[calc(100dvh-3.5rem)] md:h-[calc(100vh-8rem)] flex bg-gradient-to-b from-background to-muted/30">
+
         {/* LEFT */}
         <aside
           className={cn(
@@ -638,17 +639,17 @@ function ConversationView({
 
   return (
     <>
-      <div className="px-4 py-3 border-b flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={onBack}>
+      <div className="sticky top-0 z-10 px-3 md:px-4 py-2.5 border-b bg-background/85 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/70 flex items-center gap-2 shadow-[0_1px_0_0_hsl(var(--border))]">
+        <Button variant="ghost" size="icon" className="md:hidden -ml-1 rounded-full" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <Avatar profile={other} size="sm" />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 leading-tight">
           <p className="font-semibold text-sm truncate">
             {other?.display_name || other?.username || 'Conversation'}
           </p>
           {other?.username && (
-            <p className="text-xs text-muted-foreground truncate">@{other.username}</p>
+            <p className="text-[11px] text-muted-foreground truncate">@{other.username}</p>
           )}
         </div>
         {/* Native-only WhatsApp-style call button. Hidden on the web project. */}
@@ -656,7 +657,7 @@ function ConversationView({
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+            className="rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 active:scale-95 transition-transform"
             aria-label={`Call ${other.display_name || other.username || 'user'}`}
             onClick={() => {
               try {
@@ -676,7 +677,8 @@ function ConversationView({
         )}
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 md:px-4 py-4 space-y-5">
         {messagesQ.isLoading ? (
           <div className="text-sm text-muted-foreground">Loading…</div>
         ) : grouped.length === 0 ? (
@@ -686,9 +688,12 @@ function ConversationView({
         ) : (
           grouped.map((g) => (
             <div key={g.date} className="space-y-2">
-              <div className="text-center text-[11px] uppercase tracking-wide text-muted-foreground">
-                {g.date}
+              <div className="flex justify-center">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/60 px-2.5 py-0.5 rounded-full">
+                  {g.date}
+                </span>
               </div>
+
               {g.items.map((m) => {
                 const mine = m.sender_id === user?.id
                 const hasAttachment = !!(m.attachment_path || m.attachment_url)
@@ -714,13 +719,14 @@ function ConversationView({
                   >
                     <div
                       className={cn(
-                        'max-w-[75%] rounded-2xl px-3 py-2 text-sm space-y-2',
+                        'max-w-[78%] rounded-2xl px-3.5 py-2 text-sm space-y-2 shadow-sm ring-1',
                         mine
-                          ? 'bg-secondary text-secondary-foreground rounded-br-sm'
-                          : 'bg-muted text-foreground rounded-bl-sm',
+                          ? 'bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
+                          : 'bg-card text-foreground rounded-bl-md ring-border/60',
                         m._optimistic && 'opacity-70',
                       )}
                     >
+
                       {hasAttachment && <MessageAttachment m={m} mine={mine} />}
                       {m.content && (
                         <p className="whitespace-pre-wrap break-words">{m.content}</p>
@@ -824,7 +830,10 @@ function ConversationView({
       </div>
 
 
-      <form onSubmit={handleSend} className="p-3 border-t space-y-2">
+      <form
+        onSubmit={handleSend}
+        className="sticky bottom-0 z-10 p-3 border-t bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 space-y-2 shadow-[0_-1px_0_0_hsl(var(--border))] pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+      >
         {pendingFile && (
           <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-2">
             {filePreview ? (
@@ -936,9 +945,14 @@ function ConversationView({
             }}
             placeholder="Write a message..."
             rows={1}
-            className="resize-none min-h-[40px] max-h-32"
+            className="resize-none min-h-[40px] max-h-32 rounded-2xl bg-muted/60 border-muted focus-visible:bg-background transition-colors"
           />
-          <Button type="submit" size="icon" disabled={!canSend}>
+          <Button
+            type="submit"
+            size="icon"
+            disabled={!canSend}
+            className="rounded-full shadow-md active:scale-95 transition-transform disabled:opacity-40"
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
