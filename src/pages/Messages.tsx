@@ -920,16 +920,52 @@ function ConversationView({
   const handleSend = (e?: FormEvent) => {
     e?.preventDefault()
     const text = draft.trim()
+
+    // -------- EDIT PATH --------
+    if (editing && user) {
+      if (!text) {
+        toast.error('Message cannot be empty.')
+        return
+      }
+      const target = editing
+      // Optimistic patch
+      qc.setQueryData<Message[]>(queryKey, (prev) =>
+        (prev ?? []).map((m) =>
+          m.id === target.id ? { ...m, content: text, edited_at: new Date().toISOString() } : m,
+        ),
+      )
+      setDraft('')
+      setEditing(null)
+      ;(async () => {
+        const mod = await moderateContent('message', text)
+        if (!mod.allowed) {
+          qc.invalidateQueries({ queryKey })
+          showModerationBlocked({ surface: 'message', content: text, ...mod })
+          return
+        }
+        const { error } = await supabase.rpc('edit_message', {
+          _message_id: target.id,
+          _new_content: text,
+        })
+        if (error) {
+          toast.error(error.message || 'Could not edit')
+          qc.invalidateQueries({ queryKey })
+        }
+      })()
+      return
+    }
+
     if ((!text && !pendingFile) || !user) return
     const file = pendingFile
+    const reply = replyTo
     setDraft('')
     setPendingFile(null)
+    setReplyTo(null)
     if (fileRef.current) fileRef.current.value = ''
     // Sending is an explicit intent to see the newest message — re-pin the
     // viewport even if the user had scrolled up while reading.
     stickToBottomRef.current = true
     requestAnimationFrame(() => scrollToBottom('smooth'))
-
 
     // Text-only (incl. emoji): send instantly with optimistic update — no queue, no loading UI.
     if (!file && text) {
@@ -940,6 +976,7 @@ function ConversationView({
         content: text,
         created_at: new Date().toISOString(),
         is_read: false,
+        reply_to_id: reply?.id ?? null,
         _optimistic: true,
         _status: 'sent',
       }
@@ -960,6 +997,7 @@ function ConversationView({
           conversation_id: conversationId,
           sender_id: user.id,
           content: text,
+          reply_to_id: reply?.id ?? null,
         })
         if (error) {
           qc.setQueryData<Message[]>(queryKey, (prev) =>
