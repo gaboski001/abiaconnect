@@ -95,15 +95,21 @@ export function AppUpdateCard({ variant = 'premium', className, showWhenUpToDate
   const busy = state.status === 'preparing' || state.status === 'downloading'
   const showStrip = state.status !== 'idle'
 
-  const stripProps: ProgressStripProps = {
+  const controller: ReleaseDownloadController = {
     state,
+    download,
+    cancel,
+    reset,
+    installExisting,
+    openInstallSettings,
+    hasCachedInstall,
+  }
+
+  const stripProps: ProgressStripProps = {
+    controller,
     platform,
     version: release.version,
-    onCancel: cancel,
     onRetry: start,
-    onInstallNow: installExisting,
-    onGrantPermission: openInstallSettings,
-    hasCachedInstall: hasCachedInstall(),
     tone: variant === 'premium' ? 'dark' : 'light',
   }
 
