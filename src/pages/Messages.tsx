@@ -675,10 +675,12 @@ function ConversationView({
   conversationId,
   other,
   onBack,
+  onForward,
 }: {
   conversationId: string
   other?: Profile | null
   onBack: () => void
+  onForward: (m: Message) => void
 }) {
   const { user } = useAuth()
   const qc = useQueryClient()
