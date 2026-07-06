@@ -179,7 +179,16 @@ export function useReleaseDownload() {
     const onError = (e: Event) => {
       const detail = (e as CustomEvent).detail as { message?: string }
       const msg = detail?.message ?? 'Download failed'
-      setState((s) => ({ ...s, status: 'failed', error: msg }))
+      const permissionHint = /permiss|unknown app|install.*block|not allowed/i.test(msg)
+      setState((s) => ({
+        ...s,
+        status: 'failed',
+        error: msg,
+        // Preserve the cached filename so the failed strip can offer
+        // "Install now" without forcing a fresh download.
+        installFilename: s.installFilename ?? filename,
+        permissionRequired: permissionHint || s.permissionRequired,
+      }))
       toast.error(msg)
     }
 
@@ -429,5 +438,19 @@ export function useReleaseDownload() {
     }
   }, [])
 
-  return { state, download, cancel, reset, installExisting, openInstallSettings }
+  const hasCachedInstall = useCallback(() => {
+    const installer = getNativeInstaller()
+    const filename = state.installFilename ?? lastNativeFilenameRef.current
+    if (!installer || !filename) return false
+    if (typeof installer.hasDownloaded === 'function') {
+      try {
+        return !!installer.hasDownloaded(filename)
+      } catch {
+        return !!state.installFilename
+      }
+    }
+    return !!state.installFilename
+  }, [state.installFilename])
+
+  return { state, download, cancel, reset, installExisting, openInstallSettings, hasCachedInstall }
 }
