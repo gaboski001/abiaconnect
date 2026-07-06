@@ -49,23 +49,31 @@ export function CallOverlay({ state }: { state: CallState }) {
   }, [state.status])
 
   // Professional ringtone/ringback while ringing or calling.
+  // Caller only hears ringback once the callee's device has actually started
+  // ringing (remoteRinging), matching real phone behaviour.
   useEffect(() => {
     if (state.status === 'ringing' && state.direction === 'incoming') {
       startRingtone('incoming')
-    } else if (state.status === 'calling' && state.direction === 'outgoing') {
+    } else if (
+      state.status === 'calling' &&
+      state.direction === 'outgoing' &&
+      state.remoteRinging
+    ) {
       startRingtone('outgoing')
     } else {
       stopRingtone()
     }
     return () => stopRingtone()
-  }, [state.status, state.direction])
+  }, [state.status, state.direction, state.remoteRinging])
 
   const peer = state.peer!
   const elapsed = state.startedAt ? now - state.startedAt : 0
 
   const statusLabel =
     state.status === 'calling'
-      ? 'Calling…'
+      ? state.remoteRinging
+        ? 'Ringing…'
+        : 'Calling…'
       : state.status === 'ringing'
         ? 'Incoming voice call'
         : state.status === 'connecting'
