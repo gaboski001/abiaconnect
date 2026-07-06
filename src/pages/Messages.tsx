@@ -2017,6 +2017,7 @@ function MessageBubble({
   onDelete,
   onForward,
   onCopy,
+  onJumpToQuoted,
 }: {
   m: Message
   mine: boolean
@@ -2031,6 +2032,8 @@ function MessageBubble({
   onDelete: () => void
   onForward: () => void
   onCopy: () => void
+  onJumpToQuoted?: (id: string) => void
+
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirm, setConfirm] = useState(false)
