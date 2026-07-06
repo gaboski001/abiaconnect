@@ -67,6 +67,8 @@ import { uploadQueue } from '@/lib/uploadQueue'
 import { useUploadQueue } from '@/hooks/useUploadQueue'
 import { moderateContent } from '@/lib/moderateContent'
 import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
+import { useKeyboardInset } from '@/hooks/useKeyboardInset'
+
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'))
 
@@ -579,7 +581,7 @@ export default function Messages() {
     <>
       <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
     <div className={cn('container mx-auto px-0 md:px-4 py-0 md:py-6', isNativeApp() && conversationId && 'h-full max-w-full p-0')}>
-      <div className={cn('md:rounded-2xl md:border md:bg-card overflow-hidden flex bg-gradient-to-b from-background to-muted/30', isNativeApp() && conversationId ? 'h-full md:h-[calc(100vh-8rem)]' : 'h-[calc(100dvh-3.5rem)] md:h-[calc(100vh-8rem)]')}>
+      <div className={cn('md:rounded-2xl md:border md:bg-card overflow-hidden flex bg-gradient-to-b from-background to-muted/30 transition-[height] duration-150', isNativeApp() && conversationId ? 'h-full md:h-[calc(100vh-8rem)]' : 'h-[calc(100dvh-var(--kb-inset,0px)-3.5rem)] md:h-[calc(100vh-8rem)]')}>
 
 
         {/* LEFT */}
@@ -990,6 +992,16 @@ function ConversationView({
     el.scrollTo({ top: el.scrollHeight, behavior })
     stickToBottomRef.current = true
   }
+
+  // Keep the transcript pinned to the newest message whenever the on-screen
+  // keyboard opens or grows, on iOS and Android alike.
+  useKeyboardInset(() => {
+    if (stickToBottomRef.current) {
+      requestAnimationFrame(() => scrollToBottom('auto'))
+    }
+  })
+
+
 
   // Track whether the user is pinned to the bottom.
   useEffect(() => {
