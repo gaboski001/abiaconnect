@@ -1023,6 +1023,23 @@ function ConversationView({
     }
   })
 
+  // Scroll to a specific message (used when tapping a quoted reply preview).
+  // Flashes a ring around the target so the user's eye lands on it.
+  const jumpToMessage = (id: string) => {
+    const root = scrollRef.current
+    if (!root) return
+    const el = root.querySelector(`[data-mid="${CSS.escape(id)}"]`) as HTMLElement | null
+    if (!el) {
+      toast.info('Original message is no longer loaded')
+      return
+    }
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const flashClasses = ['ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-transparent', 'rounded-2xl']
+    el.classList.add(...flashClasses)
+    window.setTimeout(() => el.classList.remove(...flashClasses), 1500)
+  }
+
+
 
 
   // Track whether the user is pinned to the bottom.
@@ -1502,7 +1519,9 @@ function ConversationView({
                         )
                       }
                     }}
+                    onJumpToQuoted={jumpToMessage}
                   />
+
                 )
               })}
             </div>
@@ -1998,6 +2017,7 @@ function MessageBubble({
   onDelete,
   onForward,
   onCopy,
+  onJumpToQuoted,
 }: {
   m: Message
   mine: boolean
@@ -2012,6 +2032,8 @@ function MessageBubble({
   onDelete: () => void
   onForward: () => void
   onCopy: () => void
+  onJumpToQuoted?: (id: string) => void
+
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirm, setConfirm] = useState(false)
@@ -2063,24 +2085,28 @@ function MessageBubble({
           </div>
         )}
         {quoted && !deleted && (
-          <div
+          <button
+            type="button"
+            onClick={() => onJumpToQuoted?.(quoted.id)}
             className={cn(
-              'rounded-lg px-2 py-1.5 border-l-2 text-xs mb-1',
+              'w-full text-left rounded-lg px-2 py-1.5 border-l-2 text-xs mb-1 transition-colors cursor-pointer',
               native
                 ? mine
-                  ? 'bg-black/25 border-emerald-300/70 text-white/90'
-                  : 'bg-white/[0.06] border-emerald-400/70 text-white/90'
+                  ? 'bg-black/25 border-emerald-300/70 text-white/90 hover:bg-black/35 active:bg-black/45'
+                  : 'bg-white/[0.06] border-emerald-400/70 text-white/90 hover:bg-white/[0.10] active:bg-white/[0.14]'
                 : mine
-                  ? 'bg-secondary-foreground/10 border-secondary-foreground/40'
-                  : 'bg-muted border-primary/60',
+                  ? 'bg-secondary-foreground/10 border-secondary-foreground/40 hover:bg-secondary-foreground/15'
+                  : 'bg-muted border-primary/60 hover:bg-muted/80',
             )}
+            aria-label="Jump to quoted message"
           >
             <p className={cn('font-semibold text-[11px] mb-0.5', native ? 'text-emerald-300' : 'opacity-80')}>
               {quoted.sender_id === userId ? 'You' : otherName}
             </p>
             <p className={cn('truncate', native ? 'text-white/70' : 'opacity-80')}>{messagePreview(quoted)}</p>
-          </div>
+          </button>
         )}
+
         {deleted ? (
           <p className="whitespace-pre-wrap break-words flex items-center gap-1.5">
             <Ban className="h-3.5 w-3.5" />
