@@ -427,4 +427,56 @@ function ProgressStrip({
   )
 }
 
+interface UpToDateCardProps {
+  version: string
+  platform: 'android' | 'ios' | 'web'
+  variant: Variant
+  className?: string
+}
+
+function UpToDateCard({ version, platform, variant, className }: UpToDateCardProps) {
+  const platformLabel = platform === 'ios' ? 'iOS' : platform === 'android' ? 'Android' : 'Web'
+
+  if (variant === 'plain') {
+    return (
+      <div className={`rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 ${className ?? ''}`}>
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15">
+            <CheckCircle2 className="size-5 text-emerald-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">App is up to date</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Running v{version} · {platformLabel}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <section
+      className={`relative overflow-hidden rounded-[2rem] border border-emerald-400/25 bg-[#0B1220] p-5 text-white shadow-xl ${className ?? ''}`}
+    >
+      <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-400/20 blur-[70px]" />
+      <div className="relative flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-400/15">
+          <CheckCircle2 className="size-5 text-emerald-300" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">
+            App status
+          </p>
+          <h3 className="mt-0.5 text-base font-black leading-tight">You're on the latest version</h3>
+          <p className="mt-1 text-xs text-white/60">
+            Running v{version} · {platformLabel}
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default AppUpdateCard
+
