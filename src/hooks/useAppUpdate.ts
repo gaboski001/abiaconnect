@@ -56,10 +56,28 @@ export function useAppUpdate() {
       setReady(true)
       return
     }
-    getCurrentNativeVersion().then((v) => {
-      setCurrentVersion(v)
-      setReady(true)
-    })
+    let cancelled = false
+    const refreshNativeVersion = () => {
+      getCurrentNativeVersion().then((v) => {
+        if (cancelled) return
+        setCurrentVersion(v)
+        setReady(true)
+      })
+    }
+    refreshNativeVersion()
+    // After a self-update install completes, the app relaunches and this
+    // hook remounts, but on some Android OEMs the WebView is only resumed
+    // (not fully torn down). Re-read the installed version whenever the
+    // app returns to foreground so the update banner disappears as soon
+    // as the newer build is actually running.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refreshNativeVersion()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [])
 
   const q = useQuery({
