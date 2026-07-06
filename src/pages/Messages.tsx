@@ -1023,6 +1023,23 @@ function ConversationView({
     }
   })
 
+  // Scroll to a specific message (used when tapping a quoted reply preview).
+  // Flashes a ring around the target so the user's eye lands on it.
+  const jumpToMessage = (id: string) => {
+    const root = scrollRef.current
+    if (!root) return
+    const el = root.querySelector(`[data-mid="${CSS.escape(id)}"]`) as HTMLElement | null
+    if (!el) {
+      toast.info('Original message is no longer loaded')
+      return
+    }
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const flashClasses = ['ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-transparent', 'rounded-2xl']
+    el.classList.add(...flashClasses)
+    window.setTimeout(() => el.classList.remove(...flashClasses), 1500)
+  }
+
+
 
 
   // Track whether the user is pinned to the bottom.
