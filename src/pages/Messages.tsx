@@ -997,6 +997,11 @@ function ConversationView({
   // scroll — that's an explicit intent to see their new message.
   const stickToBottomRef = useRef(true)
   const lastMessageIdRef = useRef<string | null>(null)
+  // Drives the floating "Jump to latest" button. `atBottom` mirrors
+  // `stickToBottomRef` as reactive state; `unreadNew` counts incoming
+  // messages that landed while the user was scrolled up.
+  const [atBottom, setAtBottom] = useState(true)
+  const [unreadNew, setUnreadNew] = useState(0)
 
   const isNearBottom = (el: HTMLDivElement, threshold = 96) =>
     el.scrollHeight - el.scrollTop - el.clientHeight < threshold
@@ -1006,6 +1011,8 @@ function ConversationView({
     if (!el) return
     el.scrollTo({ top: el.scrollHeight, behavior })
     stickToBottomRef.current = true
+    setAtBottom(true)
+    setUnreadNew(0)
   }
 
   // Keep the transcript pinned to the newest message whenever the on-screen
@@ -1023,7 +1030,10 @@ function ConversationView({
     const el = scrollRef.current
     if (!el) return
     const onScroll = () => {
-      stickToBottomRef.current = isNearBottom(el)
+      const near = isNearBottom(el)
+      stickToBottomRef.current = near
+      setAtBottom((prev) => (prev === near ? prev : near))
+      if (near) setUnreadNew(0)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
@@ -1040,10 +1050,14 @@ function ConversationView({
     return () => {
       lastMessageIdRef.current = null
       stickToBottomRef.current = true
+      setAtBottom(true)
+      setUnreadNew(0)
     }
   }, [conversationId])
 
   // Auto-scroll on new messages, only if the user is still at the bottom.
+  // If the user has scrolled up, count the new incoming message so the
+  // floating "Jump to latest" pill can surface the backlog.
   useEffect(() => {
     const list = messagesQ.data
     if (!list?.length) return
@@ -1051,16 +1065,19 @@ function ConversationView({
     const changed = newestId !== lastMessageIdRef.current
     lastMessageIdRef.current = newestId
     if (!changed) return
-    // Always follow our own outgoing (optimistic) messages; only follow
-    // incoming ones when the user hasn't scrolled up.
     const newest = list[list.length - 1]
     const mine = newest?.sender_id === user?.id
     if (mine || stickToBottomRef.current) {
       // Wait one frame so the newly-rendered bubble is in the DOM before we
       // compute scrollHeight.
-      requestAnimationFrame(() => scrollToBottom(mine ? 'smooth' : 'smooth'))
+      requestAnimationFrame(() => scrollToBottom('smooth'))
+    } else {
+      // Incoming message arrived while the user was reading history — surface
+      // it on the jump-to-latest pill instead of yanking the viewport down.
+      setUnreadNew((n) => n + 1)
     }
   }, [messagesQ.data, user?.id])
+
 
 
   // Viewport-based read receipts: mark each incoming message read only when it scrolls into view.
@@ -1563,7 +1580,53 @@ function ConversationView({
             ))}
           </div>
         )}
+
+        {/* Floating "Jump to latest" pill — sticky within the scroller so it
+            hovers above the newest visible bubble without pinning to the
+            composer. Only shows when the user has scrolled up from the tail. */}
+        <div
+          className={cn(
+            'sticky bottom-2 z-20 flex justify-center pointer-events-none transition-opacity duration-150',
+            atBottom ? 'opacity-0' : 'opacity-100',
+          )}
+          aria-hidden={atBottom}
+        >
+          {!atBottom && (
+            <button
+              type="button"
+              onClick={() => scrollToBottom('smooth')}
+              className={cn(
+                'pointer-events-auto flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold shadow-lg active:scale-95 transition-transform',
+                native
+                  ? 'bg-[#005c4b] text-white ring-1 ring-emerald-300/40'
+                  : 'bg-primary text-primary-foreground ring-1 ring-primary/40',
+              )}
+              aria-label={
+                unreadNew > 0 ? `Jump to ${unreadNew} new message${unreadNew === 1 ? '' : 's'}` : 'Jump to latest'
+              }
+            >
+              <ArrowLeft className="h-3.5 w-3.5 -rotate-90" />
+              {unreadNew > 0 ? (
+                <>
+                  <span>{unreadNew} new</span>
+                  <span
+                    className={cn(
+                      'ml-0.5 inline-flex items-center justify-center rounded-full px-1.5 min-w-[1.1rem] text-[10px] font-bold',
+                      native ? 'bg-white text-[#005c4b]' : 'bg-primary-foreground text-primary',
+                    )}
+                  >
+                    {unreadNew > 99 ? '99+' : unreadNew}
+                  </span>
+                </>
+              ) : (
+                <span>Jump to latest</span>
+              )}
+            </button>
+          )}
+        </div>
       </div>
+
+
 
 
       <form
