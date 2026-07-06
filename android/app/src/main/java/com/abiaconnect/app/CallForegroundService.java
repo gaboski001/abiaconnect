@@ -195,6 +195,7 @@ public class CallForegroundService extends Service {
     @Override
     public void onDestroy() {
         Log.d(TAG, "CallForegroundService destroyed");
+        releaseProximityWakeLock();
         super.onDestroy();
     }
 }
