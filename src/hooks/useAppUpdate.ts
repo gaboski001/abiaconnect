@@ -139,10 +139,17 @@ export function useAppUpdate() {
   })
 
   const release = q.data ?? null
+  // Only surface an update when we can *prove* the installed native build is
+  // older than the latest active release. If we can't read the installed
+  // version (plugin missing, App.getInfo threw, etc.), stay silent — showing
+  // "Update available" against an unknown version leaves the banner stuck
+  // forever after the user has already installed the newest APK.
   const hasUpdate =
     isNative &&
     !!release &&
-    (!currentVersion || compareVersions(release.version, currentVersion) > 0)
+    !!currentVersion &&
+    compareVersions(release.version, currentVersion) > 0
+
 
   return {
     isNative,
