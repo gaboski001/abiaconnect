@@ -109,6 +109,12 @@ interface Message {
   deleted_at?: string | null
   forwarded_from_id?: string | null
   _optimistic?: boolean
+  /**
+   * Client-side delivery lifecycle:
+   *  - 'sent'      → single ✓, server has our row (or optimistic)
+   *  - 'delivered' → ✓✓ grey, recipient's client acknowledged over Realtime broadcast
+   *  is_read (from DB)  → ✓✓ blue, recipient actually saw the bubble
+   */
   _status?: 'sent' | 'delivered'
 }
 
