@@ -41,8 +41,16 @@ public class CallForegroundService extends Service {
      * a call, PROXIMITY_SCREEN_OFF_WAKE_LOCK turns the display off so the
      * user's cheek/skin can't accidentally trigger buttons on the screen.
      * Released when the call ends.
+     *
+     * This is a best-effort enhancement: if the device has no proximity
+     * sensor, the OEM restricts the wake-lock level, or a SecurityException
+     * is thrown (e.g. WAKE_LOCK permission revoked at runtime on some
+     * hardened builds), we log and continue without it. The call itself
+     * must never fail because proximity screen-off is unavailable.
      */
     @Nullable private PowerManager.WakeLock proximityWakeLock;
+    private boolean proximityUnavailable = false;
+
 
     public static void start(Context context, String callerName, String callId) {
         Intent intent = new Intent(context, CallForegroundService.class);
