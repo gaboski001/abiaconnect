@@ -740,6 +740,14 @@ function ConversationView({
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  // Hard gate — set the instant a delete starts so realtime handlers,
+  // read-acks, and queued cache writes can't resurrect a deleted chat.
+  const deletingRef = useRef(false)
+  // Reset the gate when switching conversations so a new chat starts clean.
+  useEffect(() => {
+    deletingRef.current = false
+    setDeleting(false)
+  }, [conversationId])
   const fileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -815,14 +823,23 @@ function ConversationView({
 
   const messagesQ = useQuery({
     queryKey,
-    enabled: !!conversationId,
+    enabled: !!conversationId && !deleting,
     queryFn: async () => {
+      // If deletion started while this fetch was queued, bail out and return
+      // whatever the cache already has (usually []). Never overwrite it.
+      if (deletingRef.current) {
+        return (qc.getQueryData<Message[]>(queryKey) ?? [])
+      }
       const { data, error } = await supabase
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true })
       if (error) throw error
+      // The RPC race: response landed after we started deleting. Drop it.
+      if (deletingRef.current) {
+        return (qc.getQueryData<Message[]>(queryKey) ?? [])
+      }
       const rows = (data ?? []) as Message[]
       // Re-hydrate client-only delivery state after a refetch. `is_read` is
       // persisted server-side so it survives on its own; `_status: 'delivered'`
@@ -878,6 +895,7 @@ function ConversationView({
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          if (deletingRef.current) return
           const incoming = payload.new as Message
           qc.setQueryData<Message[]>(queryKey, (prev) => {
             const list = prev ?? []
@@ -917,6 +935,7 @@ function ConversationView({
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          if (deletingRef.current) return
           const updated = payload.new as Message
           // Multi-device: if THIS user is the recipient and another of their
           // devices just flipped is_read → true, refresh inbox unread badges
@@ -1650,12 +1669,16 @@ function ConversationView({
               onClick={async (e) => {
                 e.preventDefault()
                 if (deleting) return
+                // Flip the hard gate BEFORE anything async so realtime handlers
+                // and any in-flight queryFn resolutions can't write to the cache
+                // between here and the RPC returning.
+                deletingRef.current = true
                 setDeleting(true)
-                // Stop any in-flight message fetches so they don't repopulate
-                // the cache after we've cleared it.
+                // Abort any in-flight message fetches for this chat.
                 await qc.cancelQueries({ queryKey })
                 // Snapshot the current inbox so we can roll back on failure.
                 const inboxKey = ['conversations', user?.id]
+                const unreadKey = ['messages-unread', user?.id]
                 const prevInbox = qc.getQueryData<any[]>(inboxKey)
                 // Optimistic UI: remove from inbox + clear this chat's messages.
                 if (Array.isArray(prevInbox)) {
@@ -1671,6 +1694,7 @@ function ConversationView({
                 })
                 if (error) {
                   // Roll back optimistic changes and surface the failure.
+                  deletingRef.current = false
                   if (prevInbox !== undefined) qc.setQueryData(inboxKey, prevInbox)
                   qc.invalidateQueries({ queryKey })
                   qc.invalidateQueries({ queryKey: inboxKey })
@@ -1680,9 +1704,13 @@ function ConversationView({
                 }
                 // Drop the messages cache entirely so a revisit refetches clean.
                 qc.removeQueries({ queryKey })
-                qc.invalidateQueries({ queryKey: inboxKey })
+                // Refresh inbox ordering + unread badges immediately so the
+                // list stays consistent after deletion.
+                await Promise.all([
+                  qc.refetchQueries({ queryKey: inboxKey, exact: true }),
+                  qc.invalidateQueries({ queryKey: unreadKey }),
+                ])
                 setDeleteDialogOpen(false)
-                setDeleting(false)
                 toast.success('Chat deleted')
                 onBack()
               }}
