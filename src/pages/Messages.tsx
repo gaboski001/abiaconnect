@@ -1029,6 +1029,9 @@ function ConversationView({
   const handleSend = (e?: FormEvent) => {
     e?.preventDefault()
     const text = draft.trim()
+    // Sending clears typing state immediately so the peer's "typing…" hides.
+    if (stopTypingTimerRef.current) clearTimeout(stopTypingTimerRef.current)
+    sendTyping(false)
 
     // -------- EDIT PATH --------
     if (editing && user) {
