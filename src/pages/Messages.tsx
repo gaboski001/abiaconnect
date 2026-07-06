@@ -30,7 +30,9 @@ import {
   MoreHorizontal,
   CheckCircle2,
   Ban,
+  Video,
 } from 'lucide-react'
+
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { callManager } from '@/lib/webrtcCall'
 import { SEO } from '@/components/SEO'
