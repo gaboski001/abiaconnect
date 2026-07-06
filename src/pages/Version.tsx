@@ -62,7 +62,10 @@ export default function Version() {
 
   return (
     <div className="container max-w-2xl py-8 space-y-4">
-      <AppUpdateCard variant="plain" showWhenUpToDate />
+      {/* Only surface the update card while a newer release exists. Once
+          the user is on the latest version, the More page shows just the
+          Version info and Release notes sections. */}
+      <AppUpdateCard variant="plain" />
       <Card>
         <CardHeader>
           <CardTitle>Version info</CardTitle>
