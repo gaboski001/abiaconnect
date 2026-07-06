@@ -49,14 +49,23 @@ function formatSpeed(bps: number | null) {
  * version is older than the latest published release. When the user is on
  * the latest version, `hasUpdate` is false and the card is hidden.
  */
-export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardProps) {
-  const { release, currentVersion, hasUpdate, platform, isLoading } = useAppUpdate()
+export function AppUpdateCard({ variant = 'premium', className, showWhenUpToDate = false }: AppUpdateCardProps) {
+  const { release, currentVersion, hasUpdate, platform, isLoading, isNative } = useAppUpdate()
   const [modalOpen, setModalOpen] = useState(false)
-  const { state, download, cancel, reset } = useReleaseDownload()
+  const { state, download, cancel, reset, installExisting, openInstallSettings } = useReleaseDownload()
 
-  // Auto-hide the transient "installing/done" states after the app regains
-  // focus — the useAppUpdate query will refetch and unmount this card if the
-  // new version is now installed.
+  // Once the installed version matches the latest release, aggressively clear
+  // any stale download/installing strip so the card collapses back to a clean
+  // "up to date" status — no lingering "Ready to install" notification.
+  useEffect(() => {
+    if (!hasUpdate && state.status !== 'idle') {
+      reset()
+    }
+  }, [hasUpdate, state.status, reset])
+
+  // Auto-clear the transient "installing/done" states when the app regains
+  // focus — the useAppUpdate query refetches and, if the new version is
+  // running, the effect above will collapse the strip.
   useEffect(() => {
     if (state.status !== 'installing') return
     const onVisible = () => {
@@ -66,7 +75,12 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [state.status, reset])
 
-  if (!hasUpdate || !release) return null
+  if (!hasUpdate || !release) {
+    if (showWhenUpToDate && isNative && !isLoading && currentVersion) {
+      return <UpToDateCard version={currentVersion} platform={platform} variant={variant} className={className} />
+    }
+    return null
+  }
 
   const sizeMb = release.file_size ? (release.file_size / 1024 / 1024).toFixed(1) : null
 
@@ -88,6 +102,8 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
       version={release.version}
       onCancel={cancel}
       onRetry={start}
+      onInstallNow={installExisting}
+      onGrantPermission={openInstallSettings}
       tone={variant === 'premium' ? 'dark' : 'light'}
     />
   ) : null
@@ -106,6 +122,7 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
       downloading={busy}
     />
   )
+
 
   if (variant === 'plain') {
     return (
