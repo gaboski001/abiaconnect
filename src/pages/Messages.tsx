@@ -1580,7 +1580,53 @@ function ConversationView({
             ))}
           </div>
         )}
+
+        {/* Floating "Jump to latest" pill — sticky within the scroller so it
+            hovers above the newest visible bubble without pinning to the
+            composer. Only shows when the user has scrolled up from the tail. */}
+        <div
+          className={cn(
+            'sticky bottom-2 z-20 flex justify-center pointer-events-none transition-opacity duration-150',
+            atBottom ? 'opacity-0' : 'opacity-100',
+          )}
+          aria-hidden={atBottom}
+        >
+          {!atBottom && (
+            <button
+              type="button"
+              onClick={() => scrollToBottom('smooth')}
+              className={cn(
+                'pointer-events-auto flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold shadow-lg active:scale-95 transition-transform',
+                native
+                  ? 'bg-[#005c4b] text-white ring-1 ring-emerald-300/40'
+                  : 'bg-primary text-primary-foreground ring-1 ring-primary/40',
+              )}
+              aria-label={
+                unreadNew > 0 ? `Jump to ${unreadNew} new message${unreadNew === 1 ? '' : 's'}` : 'Jump to latest'
+              }
+            >
+              <ArrowLeft className="h-3.5 w-3.5 -rotate-90" />
+              {unreadNew > 0 ? (
+                <>
+                  <span>{unreadNew} new</span>
+                  <span
+                    className={cn(
+                      'ml-0.5 inline-flex items-center justify-center rounded-full px-1.5 min-w-[1.1rem] text-[10px] font-bold',
+                      native ? 'bg-white text-[#005c4b]' : 'bg-primary-foreground text-primary',
+                    )}
+                  >
+                    {unreadNew > 99 ? '99+' : unreadNew}
+                  </span>
+                </>
+              ) : (
+                <span>Jump to latest</span>
+              )}
+            </button>
+          )}
+        </div>
       </div>
+
+
 
 
       <form
