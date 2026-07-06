@@ -354,7 +354,7 @@ export default function Messages() {
               <NewMessageDialog onClose={() => setNewOpen(false)} />
             </Dialog>
           </div>
-          <div className="p-3 border-b">
+          <div className="p-3 border-b space-y-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -364,50 +364,39 @@ export default function Messages() {
                 className="pl-9"
               />
             </div>
+            {archivedList.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowArchived((v) => !v)}
+                className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted/60 transition-colors"
+              >
+                <Archive className="h-3.5 w-3.5" />
+                <span className="font-medium">
+                  {showArchived ? 'Back to chats' : `Archived · ${archivedList.length}`}
+                </span>
+              </button>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto">
             {convosQ.isLoading ? (
               <div className="p-4 text-sm text-muted-foreground">Loading…</div>
             ) : filteredConvos.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">
-                No conversations yet.
+                {showArchived ? 'No archived chats.' : 'No conversations yet.'}
               </div>
             ) : (
-              filteredConvos.map((c) => {
-                const active = c.id === conversationId
-                return (
-                  <Link
-                    key={c.id}
-                    to={`/messages/${c.id}`}
-                    className={cn(
-                      'flex items-start gap-3 px-3 py-3 border-l-4 hover:bg-muted/50 transition-colors',
-                      active ? 'border-secondary bg-secondary/5' : 'border-transparent',
-                    )}
-                  >
-                    <Avatar profile={c.other_user} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold truncate">
-                          {c.other_user?.display_name || c.other_user?.username || 'User'}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground shrink-0">
-                          {c.last_message_at &&
-                            formatDistanceToNow(new Date(c.last_message_at), { addSuffix: false })}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs text-muted-foreground truncate">
-                          {c.last_message || 'No messages yet'}
-                        </p>
-                        {!!c.unread_count && (
-                          <span className="text-[10px] font-bold bg-secondary text-secondary-foreground rounded-full px-1.5 min-w-[18px] text-center">
-                            {c.unread_count}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                )
+              filteredConvos.map((c) => (
+                <ConversationRow
+                  key={c.id}
+                  c={c}
+                  active={c.id === conversationId}
+                  onOpenForward={() => {
+                    /* row-level forward is not supported; forward is per-message */
+                  }}
+                />
+              ))
+            )}
+          </div>
               })
             )}
           </div>
