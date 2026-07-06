@@ -1010,6 +1010,11 @@ function ConversationView({
   }, [messagesQ.data])
 
   const canSend = !!draft.trim() || !!pendingFile
+  const messageById = useMemo(() => {
+    const map = new Map<string, Message>()
+    ;(messagesQ.data ?? []).forEach((m) => map.set(m.id, m))
+    return map
+  }, [messagesQ.data])
 
   return (
     <>
