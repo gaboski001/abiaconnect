@@ -291,6 +291,7 @@ class CallManager {
       peer: target,
       error: null,
       startedAt: null,
+      remoteRinging: false,
     })
     await this.openSessionChannel(callId, true)
     await this.setupPeer(true)
