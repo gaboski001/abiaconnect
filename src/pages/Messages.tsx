@@ -1025,6 +1025,19 @@ function ConversationView({
     }
   })
 
+  // Emoji reactions for messages currently rendered in this conversation.
+  const messageIdList = useMemo(
+    () => (messagesQ.data ?? []).map((m) => m.id),
+    [messagesQ.data],
+  )
+  const { reactionsByMessage, toggleReaction } = useMessageReactions(
+    conversationId,
+    messageIdList,
+    user?.id,
+  )
+
+
+
   // Scroll to a specific message (used when tapping a quoted reply preview).
   // Flashes a ring around the target so the user's eye lands on it.
   const jumpToMessage = (id: string) => {
