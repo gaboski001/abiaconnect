@@ -416,7 +416,7 @@ function ProgressStrip({ controller, platform, version, onRetry, tone }: Progres
   // failed
   const red = dark ? 'border-red-400/30 bg-red-500/10' : 'border-red-500/40 bg-red-500/5'
   const canInstallCached =
-    platform === 'android' && (hasCachedInstall || !!state.installFilename)
+    platform === 'android' && (hasCached || !!state.installFilename)
   const permissionHint = state.permissionRequired
   return (
     <div className={`mt-3 rounded-2xl border px-3 py-3 ${red}`} role="alert">
