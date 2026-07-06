@@ -604,6 +604,11 @@ function ConversationView({
     setDraft('')
     setPendingFile(null)
     if (fileRef.current) fileRef.current.value = ''
+    // Sending is an explicit intent to see the newest message — re-pin the
+    // viewport even if the user had scrolled up while reading.
+    stickToBottomRef.current = true
+    requestAnimationFrame(() => scrollToBottom('smooth'))
+
 
     // Text-only (incl. emoji): send instantly with optimistic update — no queue, no loading UI.
     if (!file && text) {
