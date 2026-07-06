@@ -576,8 +576,9 @@ export default function Messages() {
   return (
     <>
       <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
-    <div className="container mx-auto px-0 md:px-4 py-0 md:py-6">
-      <div className="md:rounded-2xl md:border md:bg-card overflow-hidden h-[calc(100dvh-3.5rem)] md:h-[calc(100vh-8rem)] flex bg-gradient-to-b from-background to-muted/30">
+    <div className={cn('container mx-auto px-0 md:px-4 py-0 md:py-6', isNativeApp() && conversationId && 'h-full max-w-full p-0')}>
+      <div className={cn('md:rounded-2xl md:border md:bg-card overflow-hidden flex bg-gradient-to-b from-background to-muted/30', isNativeApp() && conversationId ? 'h-full md:h-[calc(100vh-8rem)]' : 'h-[calc(100dvh-3.5rem)] md:h-[calc(100vh-8rem)]')}>
+
 
         {/* LEFT */}
         <aside
