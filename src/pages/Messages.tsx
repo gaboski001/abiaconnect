@@ -1256,6 +1256,38 @@ function ConversationView({
         onSubmit={handleSend}
         className="sticky bottom-0 z-10 p-3 border-t bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 space-y-2 shadow-[0_-1px_0_0_hsl(var(--border))] pb-[max(0.75rem,env(safe-area-inset-bottom))]"
       >
+        {(replyTo || editing) && (
+          <div
+            className={cn(
+              'flex items-start gap-2 rounded-lg border-l-4 px-3 py-2 text-xs',
+              editing ? 'border-amber-500 bg-amber-500/10' : 'border-primary bg-muted/60',
+            )}
+          >
+            <div className="min-w-0 flex-1">
+              <p className={cn('font-semibold text-[11px] uppercase tracking-wide', editing ? 'text-amber-700 dark:text-amber-400' : 'text-primary')}>
+                {editing ? 'Editing message' : `Replying to ${replyTo?.sender_id === user?.id ? 'yourself' : other?.display_name || other?.username || 'user'}`}
+              </p>
+              <p className="truncate text-muted-foreground mt-0.5">
+                {messagePreview(editing || replyTo!)}
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label={editing ? 'Cancel edit' : 'Cancel reply'}
+              onClick={() => {
+                if (editing) {
+                  setEditing(null)
+                  setDraft('')
+                } else {
+                  setReplyTo(null)
+                }
+              }}
+              className="h-6 w-6 grid place-items-center rounded-full hover:bg-muted text-muted-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
         {pendingFile && (
           <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-2">
             {filePreview ? (
