@@ -534,6 +534,7 @@ export default function Messages() {
     const channel = supabase
       .channel(`messages-inbox:${user.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, invalidate)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, invalidate)
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, invalidate)
       .on(
         'postgres_changes',
