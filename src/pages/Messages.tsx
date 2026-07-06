@@ -1891,6 +1891,7 @@ function CallLogRow({
 function MessageBubble({
   m,
   mine,
+  native,
   hasAttachment,
   quoted,
   userId,
@@ -1904,6 +1905,7 @@ function MessageBubble({
 }: {
   m: Message
   mine: boolean
+  native?: boolean
   hasAttachment: boolean
   quoted: Message | null
   userId?: string
@@ -1947,13 +1949,18 @@ function MessageBubble({
       <div
         className={cn(
           'relative max-w-[78%] rounded-2xl px-3.5 py-2 text-sm space-y-1.5 shadow-sm ring-1',
-          mine
-            ? 'bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
-            : 'bg-card text-foreground rounded-bl-md ring-border/60',
+          native
+            ? mine
+              ? 'bg-[#005c4b] text-white rounded-br-md ring-transparent'
+              : 'bg-[#1f2c33] text-white rounded-bl-md ring-white/5'
+            : mine
+              ? 'bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
+              : 'bg-card text-foreground rounded-bl-md ring-border/60',
           m._optimistic && 'opacity-70',
           deleted && 'italic opacity-70',
         )}
       >
+
         {m.forwarded_from_id && !deleted && (
           <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide opacity-60">
             <Forward className="h-3 w-3" /> Forwarded
