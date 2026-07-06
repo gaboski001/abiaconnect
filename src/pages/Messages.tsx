@@ -722,6 +722,22 @@ function ConversationView({
     setFilePreview(null)
   }, [pendingFile])
 
+  // Dedupe stores that survive Realtime reconnects and TanStack refetches.
+  //   deliveredOwnRef  → our own message IDs the peer has ack'd as delivered.
+  //                      Reapplied to the cache on every refetch so ✓✓ persists
+  //                      after a token refresh / network drop repopulates the list.
+  //   deliveredAckedRef → inbound IDs we've already broadcast 'delivered' for,
+  //                       so reconnect + open-conversation re-runs never spam
+  //                       duplicate acks to the sender.
+  const deliveredOwnRef = useRef<Set<string>>(new Set())
+  const deliveredAckedRef = useRef<Set<string>>(new Set())
+
+  // Reset per-conversation dedupe state when switching chats.
+  useEffect(() => {
+    deliveredOwnRef.current = new Set()
+    deliveredAckedRef.current = new Set()
+  }, [conversationId])
+
   const messagesQ = useQuery({
     queryKey,
     enabled: !!conversationId,
@@ -732,7 +748,17 @@ function ConversationView({
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true })
       if (error) throw error
-      return (data ?? []) as Message[]
+      const rows = (data ?? []) as Message[]
+      // Re-hydrate client-only delivery state after a refetch. `is_read` is
+      // persisted server-side so it survives on its own; `_status: 'delivered'`
+      // is broadcast-only, so we replay the set we've been tracking.
+      const delivered = deliveredOwnRef.current
+      if (!delivered.size) return rows
+      return rows.map((m) =>
+        m.sender_id === user?.id && !m.is_read && delivered.has(m.id)
+          ? { ...m, _status: 'delivered' as const }
+          : m,
+      )
     },
   })
 
@@ -748,12 +774,22 @@ function ConversationView({
     if (!conversationId || !user?.id) return
     const uid = user.id
 
-    const broadcastDelivered = (messageId: string) => {
+    const ackDelivered = (messageId: string) => {
+      // Idempotent: only broadcast the first time per session/reconnect cycle.
+      if (deliveredAckedRef.current.has(messageId)) return
+      deliveredAckedRef.current.add(messageId)
       chatChannelRef.current?.send({
         type: 'broadcast',
         event: 'delivered',
         payload: { messageId, by: uid },
       })
+    }
+
+    const ackAllUnreadInbound = () => {
+      const list = qc.getQueryData<Message[]>(queryKey) ?? []
+      for (const m of list) {
+        if (m.sender_id !== uid && !m.is_read) ackDelivered(m.id)
+      }
     }
 
     const channel = supabase
@@ -779,7 +815,13 @@ function ConversationView({
                 (m.content ?? '') === (incoming.content ?? ''),
             )
             // Own echo stays 'sent' (single ✓) until the recipient broadcasts 'delivered'.
-            const next: Message = { ...incoming, _status: 'sent' }
+            // If a peer ack already arrived (out-of-order over a laggy socket),
+            // promote straight to 'delivered'.
+            const initialStatus: 'sent' | 'delivered' =
+              incoming.sender_id === uid && deliveredOwnRef.current.has(incoming.id)
+                ? 'delivered'
+                : 'sent'
+            const next: Message = { ...incoming, _status: initialStatus }
             if (tempIdx >= 0) {
               const copy = list.slice()
               copy[tempIdx] = next
@@ -788,9 +830,7 @@ function ConversationView({
             return [...list, next]
           })
           // If this incoming message is FROM the other user, ack delivery back to them.
-          if (incoming.sender_id !== uid) {
-            broadcastDelivered(incoming.id)
-          }
+          if (incoming.sender_id !== uid) ackDelivered(incoming.id)
         },
       )
       .on(
@@ -804,7 +844,16 @@ function ConversationView({
         (payload) => {
           const updated = payload.new as Message
           qc.setQueryData<Message[]>(queryKey, (prev) =>
-            (prev ?? []).map((m) => (m.id === updated.id ? { ...m, ...updated } : m)),
+            (prev ?? []).map((m) => {
+              if (m.id !== updated.id) return m
+              const merged: Message = { ...m, ...updated }
+              // Preserve client-only delivered flag; if the row is now read
+              // the ✓✓-blue path in the bubble takes over.
+              if (!merged.is_read && deliveredOwnRef.current.has(merged.id)) {
+                merged._status = 'delivered'
+              }
+              return merged
+            }),
           )
         },
       )
@@ -827,15 +876,23 @@ function ConversationView({
       .on('broadcast', { event: 'delivered' }, (msg) => {
         const { messageId, by } = (msg.payload as { messageId?: string; by?: string }) ?? {}
         if (!messageId || !by || by === uid) return
+        // Remember the ack across refetches, and skip redundant cache writes.
+        if (deliveredOwnRef.current.has(messageId)) return
+        deliveredOwnRef.current.add(messageId)
         qc.setQueryData<Message[]>(queryKey, (prev) =>
-          (prev ?? []).map((m) =>
-            m.id === messageId && m.sender_id === uid && !m.is_read
-              ? { ...m, _status: 'delivered' }
-              : m,
-          ),
+          (prev ?? []).map((m) => {
+            if (m.id !== messageId || m.sender_id !== uid) return m
+            if (m.is_read || m._status === 'delivered') return m
+            return { ...m, _status: 'delivered' }
+          }),
         )
       })
-      .subscribe()
+      .subscribe((status) => {
+        // On (re)connect — including automatic resubscribe after a token refresh
+        // or network blip — replay delivery acks for anything still unread. The
+        // deliveredAckedRef Set keeps this idempotent, so we never spam the peer.
+        if (status === 'SUBSCRIBED') ackAllUnreadInbound()
+      })
 
     chatChannelRef.current = channel
     return () => {
@@ -846,14 +903,15 @@ function ConversationView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, user?.id, qc])
 
-  // When we open a conversation, ack delivery for any unread messages from the
-  // other user that were sent while we were offline. This ensures they see ✓✓
-  // the moment we come online, matching WhatsApp behavior.
+  // First-load ack: covers the case where the channel is already SUBSCRIBED
+  // before the initial fetch resolves. The Set dedupes against the reconnect
+  // handler above.
   useEffect(() => {
     if (!user?.id || !messagesQ.data?.length || !chatChannelRef.current) return
     const uid = user.id
     for (const m of messagesQ.data) {
-      if (m.sender_id !== uid && !m.is_read) {
+      if (m.sender_id !== uid && !m.is_read && !deliveredAckedRef.current.has(m.id)) {
+        deliveredAckedRef.current.add(m.id)
         chatChannelRef.current.send({
           type: 'broadcast',
           event: 'delivered',
@@ -861,8 +919,8 @@ function ConversationView({
         })
       }
     }
-    // Only re-run when the list identity changes.
   }, [messagesQ.data, user?.id])
+
 
   // Throttled typing broadcaster wired to the composer's onChange.
   const sendTyping = (isTyping: boolean) => {
