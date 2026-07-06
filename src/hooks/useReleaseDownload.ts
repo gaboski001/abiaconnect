@@ -454,3 +454,11 @@ export function useReleaseDownload() {
 
   return { state, download, cancel, reset, installExisting, openInstallSettings, hasCachedInstall }
 }
+
+/**
+ * Public shape returned by {@link useReleaseDownload}. Components that render
+ * update UI should depend on this type instead of re-declaring the props they
+ * consume, so future additions to the hook flow through without breaking
+ * TypeScript at every render site.
+ */
+export type ReleaseDownloadController = ReturnType<typeof useReleaseDownload>
