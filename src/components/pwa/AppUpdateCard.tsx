@@ -234,10 +234,21 @@ interface ProgressStripProps {
   version: string
   onCancel: () => void
   onRetry: () => void
+  onInstallNow: () => void
+  onGrantPermission: () => void
   tone: 'dark' | 'light'
 }
 
-function ProgressStrip({ state, platform, version, onCancel, onRetry, tone }: ProgressStripProps) {
+function ProgressStrip({
+  state,
+  platform,
+  version,
+  onCancel,
+  onRetry,
+  onInstallNow,
+  onGrantPermission,
+  tone,
+}: ProgressStripProps) {
   const dark = tone === 'dark'
   const wrap = dark
     ? 'mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-3'
@@ -300,29 +311,94 @@ function ProgressStrip({ state, platform, version, onCancel, onRetry, tone }: Pr
   }
 
   if (state.status === 'installing' || state.status === 'done') {
-    const emerald = dark
-      ? 'border-emerald-400/25 bg-emerald-400/10'
-      : 'border-emerald-500/30 bg-emerald-500/5'
+    const canRelaunchInstall =
+      platform === 'android' && !!state.installFilename
+    const needsPermission = state.permissionRequired
+
+    const tint = needsPermission
+      ? dark
+        ? 'border-amber-400/30 bg-amber-400/10'
+        : 'border-amber-500/40 bg-amber-500/10'
+      : dark
+        ? 'border-emerald-400/25 bg-emerald-400/10'
+        : 'border-emerald-500/30 bg-emerald-500/5'
+
+    const iconTone = needsPermission
+      ? dark
+        ? 'text-amber-300'
+        : 'text-amber-600'
+      : dark
+        ? 'text-emerald-300'
+        : 'text-emerald-600'
+
+    const titleTone = needsPermission
+      ? dark
+        ? 'text-amber-100'
+        : 'text-amber-800'
+      : dark
+        ? 'text-emerald-100'
+        : 'text-emerald-800'
+
     return (
-      <div className={`mt-3 rounded-2xl border px-3 py-3 ${emerald}`} role="status" aria-live="polite">
+      <div className={`mt-3 rounded-2xl border px-3 py-3 ${tint}`} role="status" aria-live="polite">
         <div className="flex items-start gap-2">
-          <CheckCircle2 className={`size-4 mt-0.5 ${dark ? 'text-emerald-300' : 'text-emerald-600'}`} />
+          {needsPermission ? (
+            <ShieldCheck className={`size-4 mt-0.5 ${iconTone}`} />
+          ) : (
+            <CheckCircle2 className={`size-4 mt-0.5 ${iconTone}`} />
+          )}
           <div className="min-w-0 flex-1">
-            <p className={`text-xs font-semibold ${dark ? 'text-emerald-100' : 'text-emerald-800'}`}>
-              {platform === 'ios' ? `Installer opened for v${version}` : `Ready to install v${version}`}
+            <p className={`text-xs font-semibold ${titleTone}`}>
+              {needsPermission
+                ? `Allow app installs to finish v${version}`
+                : platform === 'ios'
+                  ? `Installer opened for v${version}`
+                  : `Ready to install v${version}`}
             </p>
             <p className={`mt-0.5 text-[11px] leading-snug ${dark ? 'text-white/60' : 'text-muted-foreground'}`}>
-              {platform === 'ios'
-                ? 'Follow the on-screen steps to install. This card disappears once the new version is running.'
-                : platform === 'android'
-                  ? 'Your device will prompt you to install. If you don\u2019t see it, check your notifications.'
-                  : 'Check your downloads folder to open the file.'}
+              {needsPermission
+                ? 'Turn on "Install unknown apps" for AbiaConnect, then tap Install now — no need to download again.'
+                : platform === 'ios'
+                  ? 'Follow the on-screen steps to install. This card disappears once the new version is running.'
+                  : platform === 'android'
+                    ? canRelaunchInstall
+                      ? 'Approve the system prompt to finish. Missed it? Tap Install now — the update is already on your device.'
+                      : 'Your device will prompt you to install. If you don\u2019t see it, check your notifications.'
+                    : 'Check your downloads folder to open the file.'}
             </p>
+
+            {(canRelaunchInstall || needsPermission) && platform === 'android' ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {needsPermission ? (
+                  <Button
+                    size="sm"
+                    variant={dark ? 'outline' : 'secondary'}
+                    onClick={onGrantPermission}
+                    className={`h-8 gap-1.5 px-3 text-[11px] ${
+                      dark ? 'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white' : ''
+                    }`}
+                  >
+                    <ShieldCheck className="size-3.5" /> Grant permission
+                  </Button>
+                ) : null}
+                {canRelaunchInstall ? (
+                  <Button
+                    size="sm"
+                    onClick={onInstallNow}
+                    className="h-8 gap-1.5 px-3 text-[11px] font-bold text-[#0B1220]"
+                    style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
+                  >
+                    <Download className="size-3.5" /> Install now
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
     )
   }
+
 
   // failed
   const red = dark ? 'border-red-400/30 bg-red-500/10' : 'border-red-500/40 bg-red-500/5'
