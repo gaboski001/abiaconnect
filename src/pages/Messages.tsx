@@ -85,6 +85,8 @@ interface Conversation {
   last_message?: string | null
   last_message_at?: string | null
   unread_count?: number
+  pinned_at?: string | null
+  archived_at?: string | null
 }
 
 interface Message {
@@ -101,8 +103,44 @@ interface Message {
   attachment_name?: string | null
   attachment_size?: number | null
   attachment_expires_at?: string | null
+  reply_to_id?: string | null
+  edited_at?: string | null
+  deleted_for_everyone?: boolean | null
+  deleted_at?: string | null
+  forwarded_from_id?: string | null
   _optimistic?: boolean
   _status?: 'sent' | 'delivered'
+}
+
+/** Chat action state driven by the per-bubble menu (reply / edit) and toolbar (forward). */
+interface ChatAction {
+  reply?: Message | null
+  edit?: Message | null
+  forward?: Message | null
+}
+
+const EDIT_WINDOW_MS = 15 * 60 * 1000
+const DELETE_WINDOW_MS = 60 * 60 * 1000
+
+function canEdit(m: Message, userId?: string) {
+  if (!userId || m.sender_id !== userId) return false
+  if (m.deleted_for_everyone) return false
+  if (m._optimistic) return false
+  return Date.now() - new Date(m.created_at).getTime() < EDIT_WINDOW_MS
+}
+function canDeleteForEveryone(m: Message, userId?: string) {
+  if (!userId || m.sender_id !== userId) return false
+  if (m.deleted_for_everyone) return false
+  if (m._optimistic) return false
+  return Date.now() - new Date(m.created_at).getTime() < DELETE_WINDOW_MS
+}
+function messagePreview(m: Pick<Message, 'content' | 'attachment_type' | 'attachment_name' | 'deleted_for_everyone'>) {
+  if (m.deleted_for_everyone) return '🚫 This message was deleted'
+  if (m.content?.trim()) return m.content
+  if (m.attachment_type?.startsWith('image/')) return '📷 Photo'
+  if (m.attachment_type?.startsWith('audio/')) return '🎤 Voice note'
+  if (m.attachment_name) return `📎 ${m.attachment_name}`
+  return '📎 Attachment'
 }
 
 
