@@ -161,6 +161,38 @@ class CallManager {
    */
   private cancelledCallIds = new Map<string, number>()
   private static CANCELLED_TTL_MS = 60_000
+  /**
+   * If the user tapped "Answer" on the FCM call notification BEFORE the
+   * realtime `invite` event reached this device (cold start / slow socket),
+   * we remember the callId here. As soon as the matching invite arrives,
+   * we auto-accept it so the ring stops immediately and the call connects
+   * — instead of surfacing a ringing UI the user has to accept a second time.
+   */
+  private pendingAcceptCallId: string | null = null
+  private pendingAcceptExpiresAt = 0
+  private static PENDING_ACCEPT_TTL_MS = 20_000
+
+  /**
+   * Called from the native Answer action when the realtime invite may not
+   * have arrived yet. Safe to call repeatedly; expires after 20s so a stale
+   * queued accept can't hijack the next incoming call.
+   */
+  queuePendingAccept(callId: string) {
+    if (!callId) return
+    this.pendingAcceptCallId = callId
+    this.pendingAcceptExpiresAt = Date.now() + CallManager.PENDING_ACCEPT_TTL_MS
+  }
+
+  private consumePendingAcceptFor(callId: string): boolean {
+    if (!this.pendingAcceptCallId) return false
+    if (Date.now() > this.pendingAcceptExpiresAt) {
+      this.pendingAcceptCallId = null
+      return false
+    }
+    if (this.pendingAcceptCallId !== callId) return false
+    this.pendingAcceptCallId = null
+    return true
+  }
 
 
 
