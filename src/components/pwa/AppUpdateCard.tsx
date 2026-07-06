@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAppUpdate } from '@/hooks/useAppUpdate'
-import { useReleaseDownload, type DownloadState } from '@/hooks/useReleaseDownload'
+import { useReleaseDownload, type ReleaseDownloadController } from '@/hooks/useReleaseDownload'
 import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { ChangelogModal } from './ChangelogModal'
 
@@ -95,19 +95,25 @@ export function AppUpdateCard({ variant = 'premium', className, showWhenUpToDate
   const busy = state.status === 'preparing' || state.status === 'downloading'
   const showStrip = state.status !== 'idle'
 
-  const strip = showStrip ? (
-    <ProgressStrip
-      state={state}
-      platform={platform}
-      version={release.version}
-      onCancel={cancel}
-      onRetry={start}
-      onInstallNow={installExisting}
-      onGrantPermission={openInstallSettings}
-      hasCachedInstall={hasCachedInstall()}
-      tone={variant === 'premium' ? 'dark' : 'light'}
-    />
-  ) : null
+  const controller: ReleaseDownloadController = {
+    state,
+    download,
+    cancel,
+    reset,
+    installExisting,
+    openInstallSettings,
+    hasCachedInstall,
+  }
+
+  const stripProps: ProgressStripProps = {
+    controller,
+    platform,
+    version: release.version,
+    onRetry: start,
+    tone: variant === 'premium' ? 'dark' : 'light',
+  }
+
+  const strip = showStrip ? <ProgressStrip {...stripProps} /> : null
 
   const modal = (
     <ChangelogModal
@@ -230,28 +236,32 @@ export function AppUpdateCard({ variant = 'premium', className, showWhenUpToDate
 }
 
 interface ProgressStripProps {
-  state: DownloadState
+  /**
+   * The full download controller returned by `useReleaseDownload`. Consuming
+   * the controller (instead of re-declaring individual callbacks/state fields)
+   * means future additions to the hook — new status branches, extra actions,
+   * more telemetry — flow into this component without changing its prop type.
+   */
+  controller: ReleaseDownloadController
   platform: 'android' | 'ios' | 'web'
   version: string
-  onCancel: () => void
+  /**
+   * Retry the download from scratch. Owned by the parent so it can rebuild
+   * the `DownloadInput` from the currently-selected release.
+   */
   onRetry: () => void
-  onInstallNow: () => void
-  onGrantPermission: () => void
-  hasCachedInstall: boolean
   tone: 'dark' | 'light'
 }
 
-function ProgressStrip({
-  state,
-  platform,
-  version,
-  onCancel,
-  onRetry,
-  onInstallNow,
-  onGrantPermission,
-  hasCachedInstall,
-  tone,
-}: ProgressStripProps) {
+function ProgressStrip({ controller, platform, version, onRetry, tone }: ProgressStripProps) {
+  const {
+    state,
+    cancel: onCancel,
+    installExisting: onInstallNow,
+    openInstallSettings: onGrantPermission,
+    hasCachedInstall,
+  } = controller
+  const hasCached = hasCachedInstall()
   const dark = tone === 'dark'
   const wrap = dark
     ? 'mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-3'
@@ -406,7 +416,7 @@ function ProgressStrip({
   // failed
   const red = dark ? 'border-red-400/30 bg-red-500/10' : 'border-red-500/40 bg-red-500/5'
   const canInstallCached =
-    platform === 'android' && (hasCachedInstall || !!state.installFilename)
+    platform === 'android' && (hasCached || !!state.installFilename)
   const permissionHint = state.permissionRequired
   return (
     <div className={`mt-3 rounded-2xl border px-3 py-3 ${red}`} role="alert">
