@@ -70,6 +70,7 @@ public class CallForegroundService extends Service {
 
         if (ACTION_STOP.equals(action)) {
             Log.d(TAG, "Stopping call foreground service");
+            releaseProximityWakeLock();
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
