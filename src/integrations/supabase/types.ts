@@ -182,6 +182,7 @@ export type Database = {
         Row: {
           archived_at: string | null
           conversation_id: string
+          muted_until: string | null
           pinned_at: string | null
           updated_at: string
           user_id: string
@@ -189,6 +190,7 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           conversation_id: string
+          muted_until?: string | null
           pinned_at?: string | null
           updated_at?: string
           user_id: string
@@ -196,6 +198,7 @@ export type Database = {
         Update: {
           archived_at?: string | null
           conversation_id?: string
+          muted_until?: string | null
           pinned_at?: string | null
           updated_at?: string
           user_id?: string

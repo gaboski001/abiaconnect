@@ -31,7 +31,19 @@ import {
   CheckCircle2,
   Ban,
   Video,
+  BellOff,
+  Bell,
 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { callManager } from '@/lib/webrtcCall'
@@ -722,8 +734,48 @@ function ConversationView({
   const [uploadPct, setUploadPct] = useState<number | null>(null)
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [editing, setEditing] = useState<Message | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [muteDialogOpen, setMuteDialogOpen] = useState(false)
+  const [clearDialogOpen, setClearDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Per-user mute state for this conversation
+  const muteQ = useQuery({
+    queryKey: ['conversation_state', conversationId, user?.id],
+    enabled: !!conversationId && !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('conversation_states')
+        .select('muted_until')
+        .eq('conversation_id', conversationId)
+        .eq('user_id', user!.id)
+        .maybeSingle()
+      return (data?.muted_until as string | null) ?? null
+    },
+  })
+  const mutedUntil = muteQ.data
+  const isMuted = !!mutedUntil && (mutedUntil === '9999-12-31T00:00:00+00:00' || new Date(mutedUntil) > new Date())
+
+  const setMute = async (until: Date | null) => {
+    if (!user?.id) return
+    const value = until ? until.toISOString() : null
+    const { error } = await supabase
+      .from('conversation_states')
+      .upsert(
+        { conversation_id: conversationId, user_id: user.id, muted_until: value, updated_at: new Date().toISOString() },
+        { onConflict: 'conversation_id,user_id' },
+      )
+    if (error) {
+      toast.error(error.message || 'Could not update mute')
+      return
+    }
+    qc.invalidateQueries({ queryKey: ['conversation_state', conversationId, user.id] })
+    toast.success(value ? 'Chat muted' : 'Chat unmuted')
+  }
+
 
   // Reset reply/edit when switching conversations
   useEffect(() => {
@@ -1308,10 +1360,12 @@ function ConversationView({
     })
   }
 
-  // Group messages by day
+  // Group messages by day, filtered by search query when active
   const grouped = useMemo(() => {
     const groups: { date: string; items: Message[] }[] = []
+    const q = searchQuery.trim().toLowerCase()
     ;(messagesQ.data ?? []).forEach((m) => {
+      if (q && !(m.content ?? '').toLowerCase().includes(q)) return
       const d = new Date(m.created_at)
       const key = isToday(d) ? 'Today' : isYesterday(d) ? 'Yesterday' : format(d, 'PPP')
       const last = groups[groups.length - 1]
@@ -1319,7 +1373,8 @@ function ConversationView({
       else groups.push({ date: key, items: [m] })
     })
     return groups
-  }, [messagesQ.data])
+  }, [messagesQ.data, searchQuery])
+
 
   const canSend = !!draft.trim() || !!pendingFile
   const messageById = useMemo(() => {
@@ -1333,12 +1388,13 @@ function ConversationView({
     <>
       <div
         className={cn(
-          'sticky top-0 z-10 px-3 md:px-4 py-2.5 border-b flex items-center gap-2 backdrop-blur-xl backdrop-saturate-150 shadow-[0_1px_0_0_hsl(var(--border))]',
+          'sticky top-0 z-10 border-b backdrop-blur-xl backdrop-saturate-150 shadow-[0_1px_0_0_hsl(var(--border))]',
           native
-            ? 'bg-[#1f2c33] text-white border-black/40 pt-[max(0.625rem,env(safe-area-inset-top))]'
+            ? 'bg-[#1f2c33] text-white border-black/40 pt-[max(0,env(safe-area-inset-top))]'
             : 'bg-background/85 supports-[backdrop-filter]:bg-background/70',
         )}
       >
+        <div className="px-3 md:px-4 py-2.5 flex items-center gap-2">
         <Button
           variant="ghost"
           size="icon"
@@ -1349,8 +1405,9 @@ function ConversationView({
         </Button>
         <Avatar profile={other} size="sm" />
         <div className="min-w-0 flex-1 leading-tight">
-          <p className={cn('font-semibold text-sm truncate', native && 'text-white')}>
-            {other?.display_name || other?.username || 'Conversation'}
+          <p className={cn('font-semibold text-sm truncate flex items-center gap-1.5', native && 'text-white')}>
+            <span className="truncate">{other?.display_name || other?.username || 'Conversation'}</span>
+            {isMuted && <BellOff className={cn('h-3.5 w-3.5 shrink-0', native ? 'text-white/60' : 'text-muted-foreground')} aria-label="Muted" />}
           </p>
           {otherTyping ? (
             <p className={cn('text-[11px] truncate flex items-center gap-1', native ? 'text-emerald-300' : 'text-emerald-600 dark:text-emerald-400')}>
@@ -1397,56 +1454,212 @@ function ConversationView({
             >
               <Phone className="h-5 w-5" />
             </Button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full text-white hover:bg-white/10 hover:text-white active:scale-95 transition-transform"
-                  aria-label="More options"
-                >
-                  <MoreVertical className="h-5 w-5" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" side="bottom" className="w-52 p-1">
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm hover:bg-muted"
-                  onClick={() => toast.info('In-chat search is coming soon')}
-                >
-                  <Search className="h-4 w-4" /> Search in chat
-                </button>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm hover:bg-muted"
-                  onClick={async () => {
-                    const { error } = await supabase.rpc('clear_conversation', { _conversation_id: conversationId })
-                    if (error) toast.error(error.message || 'Could not clear')
-                    else toast.success('Chat cleared')
-                  }}
-                >
-                  <Archive className="h-4 w-4" /> Clear chat
-                </button>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-destructive hover:bg-destructive/10"
-                  onClick={async () => {
-                    if (!confirm('Delete this chat for you? This cannot be undone.')) return
-                    const { error } = await supabase.rpc('delete_conversation', { _conversation_id: conversationId })
-                    if (error) toast.error(error.message || 'Could not delete')
-                    else {
-                      toast.success('Chat deleted')
-                      onBack()
-                    }
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" /> Delete chat
-                </button>
-              </PopoverContent>
-            </Popover>
           </>
         )}
+        {other?.id && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  'rounded-full active:scale-95 transition-transform',
+                  native && 'text-white hover:bg-white/10 hover:text-white',
+                )}
+                aria-label="More options"
+              >
+                <MoreVertical className="h-5 w-5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              side="bottom"
+              sideOffset={6}
+              className={cn(
+                'w-56 p-1 rounded-xl',
+                native && 'bg-[#233138] border-black/40 text-white shadow-2xl',
+              )}
+            >
+              <button
+                type="button"
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
+                  native ? 'hover:bg-white/[0.06]' : 'hover:bg-muted',
+                )}
+                onClick={() => {
+                  setSearchOpen(true)
+                  setSearchQuery('')
+                }}
+              >
+                <Search className="h-4 w-4 opacity-80" /> Search
+              </button>
+              {isMuted ? (
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
+                    native ? 'hover:bg-white/[0.06]' : 'hover:bg-muted',
+                  )}
+                  onClick={() => setMute(null)}
+                >
+                  <Bell className="h-4 w-4 opacity-80" /> Unmute
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
+                    native ? 'hover:bg-white/[0.06]' : 'hover:bg-muted',
+                  )}
+                  onClick={() => setMuteDialogOpen(true)}
+                >
+                  <BellOff className="h-4 w-4 opacity-80" /> Mute
+                </button>
+              )}
+              <button
+                type="button"
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
+                  native ? 'hover:bg-white/[0.06]' : 'hover:bg-muted',
+                )}
+                onClick={() => setClearDialogOpen(true)}
+              >
+                <Archive className="h-4 w-4 opacity-80" /> Clear history
+              </button>
+              <div className={cn('my-1 h-px', native ? 'bg-white/10' : 'bg-border')} />
+              <button
+                type="button"
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
+                  native ? 'text-red-400 hover:bg-red-500/10' : 'text-destructive hover:bg-destructive/10',
+                )}
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" /> Delete chat
+              </button>
+            </PopoverContent>
+          </Popover>
+        )}
+        </div>
+        {searchOpen && (
+          <div className={cn('px-3 md:px-4 pb-2 flex items-center gap-2', native ? 'bg-[#1f2c33]' : 'bg-background/85')}>
+            <Search className={cn('h-4 w-4', native ? 'text-white/60' : 'text-muted-foreground')} />
+            <Input
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search in this chat…"
+              className={cn(
+                'h-8 flex-1 border-0 shadow-none focus-visible:ring-0 px-1',
+                native && 'bg-transparent text-white placeholder:text-white/40',
+              )}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn('h-7 w-7 rounded-full', native && 'text-white hover:bg-white/10 hover:text-white')}
+              onClick={() => {
+                setSearchOpen(false)
+                setSearchQuery('')
+              }}
+              aria-label="Close search"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
+
+      <AlertDialog open={muteDialogOpen} onOpenChange={setMuteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mute notifications</AlertDialogTitle>
+            <AlertDialogDescription>
+              You won't be notified about new messages in this chat.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid grid-cols-1 gap-2">
+            {([
+              { label: 'For 1 hour', hours: 1 },
+              { label: 'For 8 hours', hours: 8 },
+              { label: 'For 1 week', hours: 24 * 7 },
+              { label: 'Always', hours: null },
+            ] as const).map((opt) => (
+              <button
+                key={opt.label}
+                type="button"
+                className="w-full rounded-md border px-3 py-2.5 text-sm text-left hover:bg-muted"
+                onClick={() => {
+                  const until = opt.hours == null
+                    ? new Date('9999-12-31T00:00:00Z')
+                    : new Date(Date.now() + opt.hours * 3600 * 1000)
+                  setMute(until)
+                  setMuteDialogOpen(false)
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear chat history?</AlertDialogTitle>
+            <AlertDialogDescription>
+              All messages in this chat will be removed for you. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                const { error } = await supabase.rpc('clear_conversation', { _conversation_id: conversationId })
+                if (error) toast.error(error.message || 'Could not clear')
+                else {
+                  toast.success('Chat cleared')
+                  qc.invalidateQueries({ queryKey })
+                }
+              }}
+            >
+              Clear
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The conversation with {other?.display_name || other?.username || 'this user'} will be removed from your inbox. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                const { error } = await supabase.rpc('delete_conversation', { _conversation_id: conversationId })
+                if (error) toast.error(error.message || 'Could not delete')
+                else {
+                  toast.success('Chat deleted')
+                  onBack()
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
 
       <div
