@@ -175,7 +175,7 @@ function useAttachmentUrl(m: Message): string | null {
   return useSignedUrl(source, 'chat-attachments', 60 * 60)
 }
 
-function MessageAttachment({ m, mine }: { m: Message; mine: boolean }) {
+function MessageAttachment({ m, mine, native }: { m: Message; mine: boolean; native?: boolean }) {
   const url = useAttachmentUrl(m)
   const hasImage = !!url && (m.attachment_type?.startsWith('image/') ?? false)
   const lowerName = (m.attachment_name || m.attachment_path || '').toLowerCase()
@@ -187,7 +187,15 @@ function MessageAttachment({ m, mine }: { m: Message; mine: boolean }) {
   if (!url) return null
   if (hasImage) {
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(
+          'block overflow-hidden rounded-lg',
+          native && 'ring-1 ring-white/10 bg-black/20',
+        )}
+      >
         <img
           src={url}
           alt={m.attachment_name || 'attachment'}
@@ -206,11 +214,17 @@ function MessageAttachment({ m, mine }: { m: Message; mine: boolean }) {
         rel="noopener noreferrer"
         download={m.attachment_name || undefined}
         className={cn(
-          'flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs',
-          mine ? 'bg-secondary-foreground/10' : 'bg-background/60',
+          'flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-colors',
+          native
+            ? mine
+              ? 'bg-black/25 text-white/95 hover:bg-black/35'
+              : 'bg-white/5 text-white/95 hover:bg-white/10'
+            : mine
+              ? 'bg-secondary-foreground/10'
+              : 'bg-background/60',
         )}
       >
-        <FileText className="h-4 w-4 shrink-0" />
+        <FileText className={cn('h-4 w-4 shrink-0', native && 'text-emerald-300')} />
         <span className="truncate flex-1">{m.attachment_name || 'Attachment'}</span>
         <Download className="h-3.5 w-3.5 shrink-0 opacity-70" />
       </a>
@@ -218,6 +232,7 @@ function MessageAttachment({ m, mine }: { m: Message; mine: boolean }) {
   }
   return null
 }
+
 
 /**
  * Sidebar row with WhatsApp-style row actions (pin/archive/clear/delete).
@@ -1988,15 +2003,19 @@ function MessageBubble({
           <div
             className={cn(
               'rounded-lg px-2 py-1.5 border-l-2 text-xs mb-1',
-              mine
-                ? 'bg-secondary-foreground/10 border-secondary-foreground/40'
-                : 'bg-muted border-primary/60',
+              native
+                ? mine
+                  ? 'bg-black/25 border-emerald-300/70 text-white/90'
+                  : 'bg-white/[0.06] border-emerald-400/70 text-white/90'
+                : mine
+                  ? 'bg-secondary-foreground/10 border-secondary-foreground/40'
+                  : 'bg-muted border-primary/60',
             )}
           >
-            <p className="font-semibold text-[11px] mb-0.5 opacity-80">
+            <p className={cn('font-semibold text-[11px] mb-0.5', native ? 'text-emerald-300' : 'opacity-80')}>
               {quoted.sender_id === userId ? 'You' : otherName}
             </p>
-            <p className="truncate opacity-80">{messagePreview(quoted)}</p>
+            <p className={cn('truncate', native ? 'text-white/70' : 'opacity-80')}>{messagePreview(quoted)}</p>
           </div>
         )}
         {deleted ? (
@@ -2006,7 +2025,8 @@ function MessageBubble({
           </p>
         ) : (
           <>
-            {hasAttachment && <MessageAttachment m={m} mine={mine} />}
+            {hasAttachment && <MessageAttachment m={m} mine={mine} native={native} />}
+
             {m.content && (
               <p className="whitespace-pre-wrap break-words">{m.content}</p>
             )}
