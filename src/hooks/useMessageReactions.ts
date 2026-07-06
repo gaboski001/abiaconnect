@@ -130,11 +130,12 @@ export function useMessageReactions(
         created_at: new Date().toISOString(),
       }
       qc.setQueryData<RawReaction[]>(queryKey, (prev) => [...(prev ?? []), optimistic])
-      const { data, error } = await supabase
-        .from('message_reactions' as never)
+      const { data, error } = await (supabase
+        .from('message_reactions' as never) as any)
         .insert({ message_id: messageId, user_id: userId, emoji })
         .select('id, message_id, user_id, emoji, created_at')
         .maybeSingle()
+
       if (error) {
         qc.setQueryData<RawReaction[]>(queryKey, (prev) =>
           (prev ?? []).filter((r) => r.id !== optimistic.id),
