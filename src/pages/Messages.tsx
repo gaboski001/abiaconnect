@@ -251,7 +251,8 @@ export default function Messages() {
     <>
       <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
     <div className="container mx-auto px-0 md:px-4 py-0 md:py-6">
-      <div className="md:rounded-2xl md:border md:bg-card overflow-hidden h-[calc(100vh-5rem)] md:h-[calc(100vh-8rem)] flex">
+      <div className="md:rounded-2xl md:border md:bg-card overflow-hidden h-[calc(100dvh-3.5rem)] md:h-[calc(100vh-8rem)] flex bg-gradient-to-b from-background to-muted/30">
+
         {/* LEFT */}
         <aside
           className={cn(
