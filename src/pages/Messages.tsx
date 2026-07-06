@@ -739,6 +739,7 @@ function ConversationView({
   const [muteDialogOpen, setMuteDialogOpen] = useState(false)
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
