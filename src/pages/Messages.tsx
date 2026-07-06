@@ -2094,7 +2094,7 @@ function ConversationView({
             }}
             placeholder="Write a message..."
             rows={1}
-            className="resize-none min-h-[40px] max-h-32 rounded-2xl bg-muted/60 border-muted focus-visible:bg-background transition-colors"
+            className="resize-none min-h-[40px] max-h-32 rounded-2xl bg-background text-foreground placeholder:text-muted-foreground border border-input focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring transition-colors"
           />
           <Button
             type="submit"
