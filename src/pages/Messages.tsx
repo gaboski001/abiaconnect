@@ -1098,45 +1098,42 @@ function ConversationView({
                   )
                 }
                 return (
-                  <div
+                  <MessageBubble
                     key={m.id}
-                    ref={!mine && !m.is_read ? registerMessageRef(m.id) : undefined}
-                    data-mid={m.id}
-                    className={cn('flex', mine ? 'justify-end' : 'justify-start')}
-                  >
-                    <div
-                      className={cn(
-                        'max-w-[78%] rounded-2xl px-3.5 py-2 text-sm space-y-2 shadow-sm ring-1',
-                        mine
-                          ? 'bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
-                          : 'bg-card text-foreground rounded-bl-md ring-border/60',
-                        m._optimistic && 'opacity-70',
-                      )}
-                    >
-
-                      {hasAttachment && <MessageAttachment m={m} mine={mine} />}
-                      {m.content && (
-                        <p className="whitespace-pre-wrap break-words">{m.content}</p>
-                      )}
-                      <p
-                        className={cn(
-                          'text-[10px] opacity-70',
-                          mine ? 'text-right' : 'text-left',
-                        )}
-                      >
-                        {format(new Date(m.created_at), 'p')}
-
-                        {mine && (m._status || m.is_read) && (
-                          <span className="ml-1" aria-label={m.is_read ? 'read' : m._status === 'delivered' ? 'delivered' : 'sent'}>
-                            {m.is_read || m._status === 'delivered' ? '✓✓' : '✓'}
-                          </span>
-                        )}
-                        {mine && m.is_read && m.read_at && (
-                          <span className="ml-1 opacity-80">· read {format(new Date(m.read_at), 'p')}</span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
+                    m={m}
+                    mine={mine}
+                    hasAttachment={hasAttachment}
+                    quoted={m.reply_to_id ? messageById.get(m.reply_to_id) ?? null : null}
+                    userId={user?.id}
+                    otherName={other?.display_name || other?.username || 'User'}
+                    innerRef={!mine && !m.is_read ? registerMessageRef(m.id) : undefined}
+                    onReply={() => {
+                      setEditing(null)
+                      setReplyTo(m)
+                      textareaRef.current?.focus()
+                    }}
+                    onEdit={() => {
+                      setReplyTo(null)
+                      setEditing(m)
+                      setDraft(m.content ?? '')
+                      requestAnimationFrame(() => textareaRef.current?.focus())
+                    }}
+                    onDelete={async () => {
+                      const { error } = await supabase.rpc('delete_message_for_everyone', {
+                        _message_id: m.id,
+                      })
+                      if (error) toast.error(error.message || 'Could not delete')
+                    }}
+                    onForward={() => onForward(m)}
+                    onCopy={() => {
+                      if (m.content) {
+                        navigator.clipboard.writeText(m.content).then(
+                          () => toast.success('Copied'),
+                          () => toast.error('Could not copy'),
+                        )
+                      }
+                    }}
+                  />
                 )
               })}
             </div>
