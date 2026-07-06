@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, Download, FileText, Loader2, Pause, RefreshCw, Sparkles, XCircle } from 'lucide-react'
+import {
+  CheckCircle2,
+  Download,
+  FileText,
+  Loader2,
+  Pause,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  XCircle,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAppUpdate } from '@/hooks/useAppUpdate'
 import { useReleaseDownload, type DownloadState } from '@/hooks/useReleaseDownload'
@@ -11,7 +21,14 @@ type Variant = 'premium' | 'plain'
 interface AppUpdateCardProps {
   variant?: Variant
   className?: string
+  /**
+   * When true, render a compact "You're on the latest version" card once the
+   * user is up to date, so the dashboard always shows an app status instead
+   * of the space collapsing. Any lingering download UI is auto-cleared.
+   */
+  showWhenUpToDate?: boolean
 }
+
 
 function formatBytes(n: number | null) {
   if (n == null) return null
