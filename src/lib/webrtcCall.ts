@@ -603,6 +603,17 @@ class CallManager {
       return
     }
     this.pendingOffer = { from: payload.from, sdp: payload.sdp, callId: payload.callId }
+    // If the user already tapped Answer on the system notification before
+    // this realtime invite arrived, connect right away — no second ring,
+    // no lingering "ringing" icon.
+    if (this.consumePendingAcceptFor(payload.callId)) {
+      void this.broadcastToUser(payload.from.id, 'ringing', {
+        callId: payload.callId,
+        from: this.selfPeer,
+      })
+      void this.accept()
+      return
+    }
     this.patch({
       status: 'ringing',
       callId: payload.callId,
