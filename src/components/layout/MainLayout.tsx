@@ -38,11 +38,18 @@ export function MainLayout() {
   // Hide the site footer on the chat page in the native app so the chat
   // composer sits flush against the bottom nav — a proper messenger feel.
   const isChatRoute = /^\/messages(\/|$)/.test(location.pathname)
-  const hideFooter = isAuthPage || (isChatRoute && isNativeApp())
+  // A specific chat detail (e.g. /messages/abc123). On native we want a
+  // full-bleed WhatsApp-style chat: no top bar, no bottom nav, no page padding.
+  const isChatDetail = /^\/messages\/[^/]+/.test(location.pathname)
+  const native = isNativeApp()
+  const immersiveChat = isChatDetail && native
+  const hideFooter = isAuthPage || (isChatRoute && native)
+  const hideTopBar = isAuthPage || immersiveChat
+  const hideBottomNav = isAuthPage || immersiveChat
 
   return (
     <div data-site-theme={siteTheme} className="min-h-screen flex flex-col">
-      {!isAuthPage && <MobileTopBar />}
+      {!hideTopBar && <MobileTopBar />}
       <div className="hidden md:block">
         <Navbar />
       </div>
@@ -61,7 +68,11 @@ export function MainLayout() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="mx-auto max-w-[1400px] px-3 sm:px-4 md:px-6 py-6 md:py-12"
+            className={
+              immersiveChat
+                ? 'h-[calc(100dvh-var(--kb-inset,0px))] transition-[height] duration-150'
+                : 'mx-auto max-w-[1400px] px-3 sm:px-4 md:px-6 py-6 md:py-12'
+            }
           >
             <Outlet />
           </motion.div>
@@ -71,7 +82,7 @@ export function MainLayout() {
       {!hideFooter && <Footer />}
 
       {/* Native-only premium navigation shell */}
-      {!isAuthPage && <MobileBottomNav />}
+      {!hideBottomNav && <MobileBottomNav />}
 
       {!isAuthPage && <InstallAppPrompt />}
       {!isAuthPage && <IOSInstallPrompt />}
@@ -80,5 +91,6 @@ export function MainLayout() {
     </div>
   )
 }
+
 
 export default MainLayout

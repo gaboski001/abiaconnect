@@ -182,6 +182,7 @@ export type Database = {
         Row: {
           archived_at: string | null
           conversation_id: string
+          muted_until: string | null
           pinned_at: string | null
           updated_at: string
           user_id: string
@@ -189,6 +190,7 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           conversation_id: string
+          muted_until?: string | null
           pinned_at?: string | null
           updated_at?: string
           user_id: string
@@ -196,6 +198,7 @@ export type Database = {
         Update: {
           archived_at?: string | null
           conversation_id?: string
+          muted_until?: string | null
           pinned_at?: string | null
           updated_at?: string
           user_id?: string
@@ -518,6 +521,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {

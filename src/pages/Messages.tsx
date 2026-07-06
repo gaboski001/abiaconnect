@@ -30,7 +30,21 @@ import {
   MoreHorizontal,
   CheckCircle2,
   Ban,
+  Video,
+  BellOff,
+  Bell,
 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { callManager } from '@/lib/webrtcCall'
 import { SEO } from '@/components/SEO'
@@ -65,6 +79,10 @@ import { uploadQueue } from '@/lib/uploadQueue'
 import { useUploadQueue } from '@/hooks/useUploadQueue'
 import { moderateContent } from '@/lib/moderateContent'
 import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
+import { useKeyboardInset } from '@/hooks/useKeyboardInset'
+import { useMessageReactions, type ReactionAgg } from '@/hooks/useMessageReactions'
+
+
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'))
 
@@ -171,7 +189,7 @@ function useAttachmentUrl(m: Message): string | null {
   return useSignedUrl(source, 'chat-attachments', 60 * 60)
 }
 
-function MessageAttachment({ m, mine }: { m: Message; mine: boolean }) {
+function MessageAttachment({ m, mine, native }: { m: Message; mine: boolean; native?: boolean }) {
   const url = useAttachmentUrl(m)
   const hasImage = !!url && (m.attachment_type?.startsWith('image/') ?? false)
   const lowerName = (m.attachment_name || m.attachment_path || '').toLowerCase()
@@ -183,7 +201,15 @@ function MessageAttachment({ m, mine }: { m: Message; mine: boolean }) {
   if (!url) return null
   if (hasImage) {
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(
+          'block overflow-hidden rounded-lg',
+          native && 'ring-1 ring-white/10 bg-black/20',
+        )}
+      >
         <img
           src={url}
           alt={m.attachment_name || 'attachment'}
@@ -202,11 +228,17 @@ function MessageAttachment({ m, mine }: { m: Message; mine: boolean }) {
         rel="noopener noreferrer"
         download={m.attachment_name || undefined}
         className={cn(
-          'flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs',
-          mine ? 'bg-secondary-foreground/10' : 'bg-background/60',
+          'flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-colors',
+          native
+            ? mine
+              ? 'bg-black/25 text-white/95 hover:bg-black/35'
+              : 'bg-white/5 text-white/95 hover:bg-white/10'
+            : mine
+              ? 'bg-secondary-foreground/10'
+              : 'bg-background/60',
         )}
       >
-        <FileText className="h-4 w-4 shrink-0" />
+        <FileText className={cn('h-4 w-4 shrink-0', native && 'text-emerald-300')} />
         <span className="truncate flex-1">{m.attachment_name || 'Attachment'}</span>
         <Download className="h-3.5 w-3.5 shrink-0 opacity-70" />
       </a>
@@ -214,6 +246,7 @@ function MessageAttachment({ m, mine }: { m: Message; mine: boolean }) {
   }
   return null
 }
+
 
 /**
  * Sidebar row with WhatsApp-style row actions (pin/archive/clear/delete).
@@ -576,8 +609,9 @@ export default function Messages() {
   return (
     <>
       <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
-    <div className="container mx-auto px-0 md:px-4 py-0 md:py-6">
-      <div className="md:rounded-2xl md:border md:bg-card overflow-hidden h-[calc(100dvh-3.5rem)] md:h-[calc(100vh-8rem)] flex bg-gradient-to-b from-background to-muted/30">
+    <div className={cn('container mx-auto px-0 md:px-4 py-0 md:py-6', isNativeApp() && conversationId && 'h-full max-w-full p-0')}>
+      <div className={cn('md:rounded-2xl md:border md:bg-card overflow-hidden flex bg-gradient-to-b from-background to-muted/30 transition-[height] duration-150', isNativeApp() && conversationId ? 'h-full md:h-[calc(100vh-8rem)]' : 'h-[calc(100dvh-var(--kb-inset,0px)-3.5rem)] md:h-[calc(100vh-8rem)]')}>
+
 
         {/* LEFT */}
         <aside
@@ -700,8 +734,57 @@ function ConversationView({
   const [uploadPct, setUploadPct] = useState<number | null>(null)
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [editing, setEditing] = useState<Message | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [muteDialogOpen, setMuteDialogOpen] = useState(false)
+  const [clearDialogOpen, setClearDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  // Hard gate — set the instant a delete starts so realtime handlers,
+  // read-acks, and queued cache writes can't resurrect a deleted chat.
+  const deletingRef = useRef(false)
+  // Reset the gate when switching conversations so a new chat starts clean.
+  useEffect(() => {
+    deletingRef.current = false
+    setDeleting(false)
+  }, [conversationId])
   const fileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Per-user mute state for this conversation
+  const muteQ = useQuery({
+    queryKey: ['conversation_state', conversationId, user?.id],
+    enabled: !!conversationId && !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('conversation_states')
+        .select('muted_until')
+        .eq('conversation_id', conversationId)
+        .eq('user_id', user!.id)
+        .maybeSingle()
+      return (data?.muted_until as string | null) ?? null
+    },
+  })
+  const mutedUntil = muteQ.data
+  const isMuted = !!mutedUntil && (mutedUntil === '9999-12-31T00:00:00+00:00' || new Date(mutedUntil) > new Date())
+
+  const setMute = async (until: Date | null) => {
+    if (!user?.id) return
+    const value = until ? until.toISOString() : null
+    const { error } = await supabase
+      .from('conversation_states')
+      .upsert(
+        { conversation_id: conversationId, user_id: user.id, muted_until: value, updated_at: new Date().toISOString() },
+        { onConflict: 'conversation_id,user_id' },
+      )
+    if (error) {
+      toast.error(error.message || 'Could not update mute')
+      return
+    }
+    qc.invalidateQueries({ queryKey: ['conversation_state', conversationId, user.id] })
+    toast.success(value ? 'Chat muted' : 'Chat unmuted')
+  }
+
 
   // Reset reply/edit when switching conversations
   useEffect(() => {
@@ -740,14 +823,23 @@ function ConversationView({
 
   const messagesQ = useQuery({
     queryKey,
-    enabled: !!conversationId,
+    enabled: !!conversationId && !deleting,
     queryFn: async () => {
+      // If deletion started while this fetch was queued, bail out and return
+      // whatever the cache already has (usually []). Never overwrite it.
+      if (deletingRef.current) {
+        return (qc.getQueryData<Message[]>(queryKey) ?? [])
+      }
       const { data, error } = await supabase
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true })
       if (error) throw error
+      // The RPC race: response landed after we started deleting. Drop it.
+      if (deletingRef.current) {
+        return (qc.getQueryData<Message[]>(queryKey) ?? [])
+      }
       const rows = (data ?? []) as Message[]
       // Re-hydrate client-only delivery state after a refetch. `is_read` is
       // persisted server-side so it survives on its own; `_status: 'delivered'`
@@ -803,6 +895,7 @@ function ConversationView({
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          if (deletingRef.current) return
           const incoming = payload.new as Message
           qc.setQueryData<Message[]>(queryKey, (prev) => {
             const list = prev ?? []
@@ -842,6 +935,7 @@ function ConversationView({
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          if (deletingRef.current) return
           const updated = payload.new as Message
           // Multi-device: if THIS user is the recipient and another of their
           // devices just flipped is_read → true, refresh inbox unread badges
@@ -977,6 +1071,11 @@ function ConversationView({
   // scroll — that's an explicit intent to see their new message.
   const stickToBottomRef = useRef(true)
   const lastMessageIdRef = useRef<string | null>(null)
+  // Drives the floating "Jump to latest" button. `atBottom` mirrors
+  // `stickToBottomRef` as reactive state; `unreadNew` counts incoming
+  // messages that landed while the user was scrolled up.
+  const [atBottom, setAtBottom] = useState(true)
+  const [unreadNew, setUnreadNew] = useState(0)
 
   const isNearBottom = (el: HTMLDivElement, threshold = 96) =>
     el.scrollHeight - el.scrollTop - el.clientHeight < threshold
@@ -986,14 +1085,59 @@ function ConversationView({
     if (!el) return
     el.scrollTo({ top: el.scrollHeight, behavior })
     stickToBottomRef.current = true
+    setAtBottom(true)
+    setUnreadNew(0)
   }
+
+  // Keep the transcript pinned to the newest message whenever the on-screen
+  // keyboard opens or grows, on iOS and Android alike.
+  useKeyboardInset(() => {
+    if (stickToBottomRef.current) {
+      requestAnimationFrame(() => scrollToBottom('auto'))
+    }
+  })
+
+  // Emoji reactions for messages currently rendered in this conversation.
+  const messageIdList = useMemo(
+    () => (messagesQ.data ?? []).map((m) => m.id),
+    [messagesQ.data],
+  )
+  const { reactionsByMessage, toggleReaction } = useMessageReactions(
+    conversationId,
+    messageIdList,
+    user?.id,
+  )
+
+
+
+  // Scroll to a specific message (used when tapping a quoted reply preview).
+  // Flashes a ring around the target so the user's eye lands on it.
+  const jumpToMessage = (id: string) => {
+    const root = scrollRef.current
+    if (!root) return
+    const el = root.querySelector(`[data-mid="${CSS.escape(id)}"]`) as HTMLElement | null
+    if (!el) {
+      toast.info('Original message is no longer loaded')
+      return
+    }
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const flashClasses = ['ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-transparent', 'rounded-2xl']
+    el.classList.add(...flashClasses)
+    window.setTimeout(() => el.classList.remove(...flashClasses), 1500)
+  }
+
+
+
 
   // Track whether the user is pinned to the bottom.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
     const onScroll = () => {
-      stickToBottomRef.current = isNearBottom(el)
+      const near = isNearBottom(el)
+      stickToBottomRef.current = near
+      setAtBottom((prev) => (prev === near ? prev : near))
+      if (near) setUnreadNew(0)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
@@ -1010,10 +1154,14 @@ function ConversationView({
     return () => {
       lastMessageIdRef.current = null
       stickToBottomRef.current = true
+      setAtBottom(true)
+      setUnreadNew(0)
     }
   }, [conversationId])
 
   // Auto-scroll on new messages, only if the user is still at the bottom.
+  // If the user has scrolled up, count the new incoming message so the
+  // floating "Jump to latest" pill can surface the backlog.
   useEffect(() => {
     const list = messagesQ.data
     if (!list?.length) return
@@ -1021,16 +1169,19 @@ function ConversationView({
     const changed = newestId !== lastMessageIdRef.current
     lastMessageIdRef.current = newestId
     if (!changed) return
-    // Always follow our own outgoing (optimistic) messages; only follow
-    // incoming ones when the user hasn't scrolled up.
     const newest = list[list.length - 1]
     const mine = newest?.sender_id === user?.id
     if (mine || stickToBottomRef.current) {
       // Wait one frame so the newly-rendered bubble is in the DOM before we
       // compute scrollHeight.
-      requestAnimationFrame(() => scrollToBottom(mine ? 'smooth' : 'smooth'))
+      requestAnimationFrame(() => scrollToBottom('smooth'))
+    } else {
+      // Incoming message arrived while the user was reading history — surface
+      // it on the jump-to-latest pill instead of yanking the viewport down.
+      setUnreadNew((n) => n + 1)
     }
   }, [messagesQ.data, user?.id])
+
 
 
   // Viewport-based read receipts: mark each incoming message read only when it scrolls into view.
@@ -1229,10 +1380,12 @@ function ConversationView({
     })
   }
 
-  // Group messages by day
+  // Group messages by day, filtered by search query when active
   const grouped = useMemo(() => {
     const groups: { date: string; items: Message[] }[] = []
+    const q = searchQuery.trim().toLowerCase()
     ;(messagesQ.data ?? []).forEach((m) => {
+      if (q && !(m.content ?? '').toLowerCase().includes(q)) return
       const d = new Date(m.created_at)
       const key = isToday(d) ? 'Today' : isYesterday(d) ? 'Yesterday' : format(d, 'PPP')
       const last = groups[groups.length - 1]
@@ -1240,7 +1393,8 @@ function ConversationView({
       else groups.push({ date: key, items: [m] })
     })
     return groups
-  }, [messagesQ.data])
+  }, [messagesQ.data, searchQuery])
+
 
   const canSend = !!draft.trim() || !!pendingFile
   const messageById = useMemo(() => {
@@ -1249,19 +1403,34 @@ function ConversationView({
     return map
   }, [messagesQ.data])
 
+  const native = isNativeApp()
   return (
     <>
-      <div className="sticky top-0 z-10 px-3 md:px-4 py-2.5 border-b bg-background/85 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/70 flex items-center gap-2 shadow-[0_1px_0_0_hsl(var(--border))]">
-        <Button variant="ghost" size="icon" className="md:hidden -ml-1 rounded-full" onClick={onBack}>
+      <div
+        className={cn(
+          'sticky top-0 z-10 border-b backdrop-blur-xl backdrop-saturate-150 shadow-[0_1px_0_0_hsl(var(--border))]',
+          native
+            ? 'bg-[#1f2c33] text-white border-black/40 pt-[max(0,env(safe-area-inset-top))]'
+            : 'bg-background/85 supports-[backdrop-filter]:bg-background/70',
+        )}
+      >
+        <div className="px-3 md:px-4 py-2.5 flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn('md:hidden -ml-1 rounded-full', native && 'text-white hover:bg-white/10 hover:text-white')}
+          onClick={onBack}
+        >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <Avatar profile={other} size="sm" />
         <div className="min-w-0 flex-1 leading-tight">
-          <p className="font-semibold text-sm truncate">
-            {other?.display_name || other?.username || 'Conversation'}
+          <p className={cn('font-semibold text-sm truncate flex items-center gap-1.5', native && 'text-white')}>
+            <span className="truncate">{other?.display_name || other?.username || 'Conversation'}</span>
+            {isMuted && <BellOff className={cn('h-3.5 w-3.5 shrink-0', native ? 'text-white/60' : 'text-muted-foreground')} aria-label="Muted" />}
           </p>
           {otherTyping ? (
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 truncate flex items-center gap-1">
+            <p className={cn('text-[11px] truncate flex items-center gap-1', native ? 'text-emerald-300' : 'text-emerald-600 dark:text-emerald-400')}>
               <span className="inline-flex gap-0.5" aria-hidden>
                 <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
                 <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
@@ -1270,36 +1439,307 @@ function ConversationView({
               typing…
             </p>
           ) : other?.username ? (
-            <p className="text-[11px] text-muted-foreground truncate">@{other.username}</p>
+            <p className={cn('text-[11px] truncate', native ? 'text-white/60' : 'text-muted-foreground')}>@{other.username}</p>
           ) : null}
         </div>
-        {/* Native-only WhatsApp-style call button. Hidden on the web project. */}
-        {isNativeApp() && other?.id && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 active:scale-95 transition-transform"
-            aria-label={`Call ${other.display_name || other.username || 'user'}`}
-            onClick={() => {
-              try {
-                callManager.startCall({
-                  id: other.id,
-                  name: other.display_name || other.username || 'User',
-                  avatarUrl: other.avatar_url ?? null,
-                  conversationId,
-                })
-              } catch (e) {
-                toast.error((e as Error).message || 'Could not start call')
-              }
-            }}
-          >
-            <Phone className="h-5 w-5" />
-          </Button>
+        {/* Native-only WhatsApp-style call cluster. Hidden on the web project. */}
+        {native && other?.id && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full text-white hover:bg-white/10 hover:text-white active:scale-95 transition-transform"
+              aria-label="Video call (coming soon)"
+              onClick={() => toast.info('Video calls are coming soon')}
+            >
+              <Video className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full text-white hover:bg-white/10 hover:text-white active:scale-95 transition-transform"
+              aria-label={`Call ${other.display_name || other.username || 'user'}`}
+              onClick={() => {
+                try {
+                  callManager.startCall({
+                    id: other.id!,
+                    name: other.display_name || other.username || 'User',
+                    avatarUrl: other.avatar_url ?? null,
+                    conversationId,
+                  })
+                } catch (e) {
+                  toast.error((e as Error).message || 'Could not start call')
+                }
+              }}
+            >
+              <Phone className="h-5 w-5" />
+            </Button>
+          </>
+        )}
+        {other?.id && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  'rounded-full active:scale-95 transition-transform',
+                  native && 'text-white hover:bg-white/10 hover:text-white',
+                )}
+                aria-label="More options"
+              >
+                <MoreVertical className="h-5 w-5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              side="bottom"
+              sideOffset={6}
+              className={cn(
+                'w-56 p-1 rounded-xl',
+                native && 'bg-[#233138] border-black/40 text-white shadow-2xl',
+              )}
+            >
+              <button
+                type="button"
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
+                  native ? 'hover:bg-white/[0.06]' : 'hover:bg-muted',
+                )}
+                onClick={() => {
+                  setSearchOpen(true)
+                  setSearchQuery('')
+                }}
+              >
+                <Search className="h-4 w-4 opacity-80" /> Search
+              </button>
+              {isMuted ? (
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
+                    native ? 'hover:bg-white/[0.06]' : 'hover:bg-muted',
+                  )}
+                  onClick={() => setMute(null)}
+                >
+                  <Bell className="h-4 w-4 opacity-80" /> Unmute
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
+                    native ? 'hover:bg-white/[0.06]' : 'hover:bg-muted',
+                  )}
+                  onClick={() => setMuteDialogOpen(true)}
+                >
+                  <BellOff className="h-4 w-4 opacity-80" /> Mute
+                </button>
+              )}
+              <button
+                type="button"
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
+                  native ? 'hover:bg-white/[0.06]' : 'hover:bg-muted',
+                )}
+                onClick={() => setClearDialogOpen(true)}
+              >
+                <Archive className="h-4 w-4 opacity-80" /> Clear history
+              </button>
+              <div className={cn('my-1 h-px', native ? 'bg-white/10' : 'bg-border')} />
+              <button
+                type="button"
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
+                  native ? 'text-red-400 hover:bg-red-500/10' : 'text-destructive hover:bg-destructive/10',
+                )}
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" /> Delete chat
+              </button>
+            </PopoverContent>
+          </Popover>
+        )}
+        </div>
+        {searchOpen && (
+          <div className={cn('px-3 md:px-4 pb-2 flex items-center gap-2', native ? 'bg-[#1f2c33]' : 'bg-background/85')}>
+            <Search className={cn('h-4 w-4', native ? 'text-white/60' : 'text-muted-foreground')} />
+            <Input
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search in this chat…"
+              className={cn(
+                'h-8 flex-1 border-0 shadow-none focus-visible:ring-0 px-1',
+                native && 'bg-transparent text-white placeholder:text-white/40',
+              )}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn('h-7 w-7 rounded-full', native && 'text-white hover:bg-white/10 hover:text-white')}
+              onClick={() => {
+                setSearchOpen(false)
+                setSearchQuery('')
+              }}
+              aria-label="Close search"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         )}
       </div>
 
+      <AlertDialog open={muteDialogOpen} onOpenChange={setMuteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mute notifications</AlertDialogTitle>
+            <AlertDialogDescription>
+              You won't be notified about new messages in this chat.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid grid-cols-1 gap-2">
+            {([
+              { label: 'For 1 hour', hours: 1 },
+              { label: 'For 8 hours', hours: 8 },
+              { label: 'For 1 week', hours: 24 * 7 },
+              { label: 'Always', hours: null },
+            ] as const).map((opt) => (
+              <button
+                key={opt.label}
+                type="button"
+                className="w-full rounded-md border px-3 py-2.5 text-sm text-left hover:bg-muted"
+                onClick={() => {
+                  const until = opt.hours == null
+                    ? new Date('9999-12-31T00:00:00Z')
+                    : new Date(Date.now() + opt.hours * 3600 * 1000)
+                  setMute(until)
+                  setMuteDialogOpen(false)
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 md:px-4 py-4 space-y-5">
+      <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear chat history?</AlertDialogTitle>
+            <AlertDialogDescription>
+              All messages in this chat will be removed for you. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                const { error } = await supabase.rpc('clear_conversation', { _conversation_id: conversationId })
+                if (error) toast.error(error.message || 'Could not clear')
+                else {
+                  toast.success('Chat cleared')
+                  qc.invalidateQueries({ queryKey })
+                }
+              }}
+            >
+              Clear
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The conversation with {other?.display_name || other?.username || 'this user'} will be removed from your inbox. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async (e) => {
+                e.preventDefault()
+                if (deleting) return
+                // Flip the hard gate BEFORE anything async so realtime handlers
+                // and any in-flight queryFn resolutions can't write to the cache
+                // between here and the RPC returning.
+                deletingRef.current = true
+                setDeleting(true)
+                // Abort any in-flight message fetches for this chat.
+                await qc.cancelQueries({ queryKey })
+                // Snapshot the current inbox so we can roll back on failure.
+                const inboxKey = ['conversations', user?.id]
+                const unreadKey = ['messages-unread', user?.id]
+                const prevInbox = qc.getQueryData<any[]>(inboxKey)
+                // Optimistic UI: remove from inbox + clear this chat's messages.
+                if (Array.isArray(prevInbox)) {
+                  qc.setQueryData(
+                    inboxKey,
+                    prevInbox.filter((c: any) => c?.id !== conversationId),
+                  )
+                }
+                qc.setQueryData(queryKey, [])
+
+                const { error } = await supabase.rpc('delete_conversation', {
+                  _conversation_id: conversationId,
+                })
+                if (error) {
+                  // Roll back optimistic changes and surface the failure.
+                  deletingRef.current = false
+                  if (prevInbox !== undefined) qc.setQueryData(inboxKey, prevInbox)
+                  qc.invalidateQueries({ queryKey })
+                  qc.invalidateQueries({ queryKey: inboxKey })
+                  setDeleting(false)
+                  toast.error(error.message || 'Could not delete chat')
+                  return
+                }
+                // Drop the messages cache entirely so a revisit refetches clean.
+                qc.removeQueries({ queryKey })
+                // Refresh inbox ordering + unread badges immediately so the
+                // list stays consistent after deletion.
+                await Promise.all([
+                  qc.refetchQueries({ queryKey: inboxKey, exact: true }),
+                  qc.invalidateQueries({ queryKey: unreadKey }),
+                ])
+                setDeleteDialogOpen(false)
+                toast.success('Chat deleted')
+                onBack()
+              }}
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+
+        </AlertDialogContent>
+      </AlertDialog>
+
+
+
+      <div
+        ref={scrollRef}
+        className={cn(
+          'flex-1 overflow-y-auto px-3 md:px-4 py-4 space-y-5',
+          native && 'bg-[#0b141a] text-white',
+        )}
+        style={
+          native
+            ? {
+                backgroundImage:
+                  'radial-gradient(circle at 20% 10%, rgba(255,255,255,0.03) 0, transparent 40%), radial-gradient(circle at 80% 60%, rgba(255,255,255,0.025) 0, transparent 45%)',
+              }
+            : undefined
+        }
+      >
+
         {messagesQ.isLoading ? (
           <div className="text-sm text-muted-foreground">Loading…</div>
         ) : grouped.length === 0 ? (
@@ -1336,7 +1776,9 @@ function ConversationView({
                     key={m.id}
                     m={m}
                     mine={mine}
+                    native={native}
                     hasAttachment={hasAttachment}
+
                     quoted={m.reply_to_id ? messageById.get(m.reply_to_id) ?? null : null}
                     userId={user?.id}
                     otherName={other?.display_name || other?.username || 'User'}
@@ -1367,7 +1809,12 @@ function ConversationView({
                         )
                       }
                     }}
+                    onJumpToQuoted={jumpToMessage}
+                    reactions={reactionsByMessage.get(m.id) ?? []}
+                    onToggleReaction={(emoji) => toggleReaction(m.id, emoji)}
                   />
+
+
                 )
               })}
             </div>
@@ -1445,13 +1892,65 @@ function ConversationView({
             ))}
           </div>
         )}
+
+        {/* Floating "Jump to latest" pill — sticky within the scroller so it
+            hovers above the newest visible bubble without pinning to the
+            composer. Only shows when the user has scrolled up from the tail. */}
+        <div
+          className={cn(
+            'sticky bottom-2 z-20 flex justify-center pointer-events-none transition-opacity duration-150',
+            atBottom ? 'opacity-0' : 'opacity-100',
+          )}
+          aria-hidden={atBottom}
+        >
+          {!atBottom && (
+            <button
+              type="button"
+              onClick={() => scrollToBottom('smooth')}
+              className={cn(
+                'pointer-events-auto flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold shadow-lg active:scale-95 transition-transform',
+                native
+                  ? 'bg-[#005c4b] text-white ring-1 ring-emerald-300/40'
+                  : 'bg-primary text-primary-foreground ring-1 ring-primary/40',
+              )}
+              aria-label={
+                unreadNew > 0 ? `Jump to ${unreadNew} new message${unreadNew === 1 ? '' : 's'}` : 'Jump to latest'
+              }
+            >
+              <ArrowLeft className="h-3.5 w-3.5 -rotate-90" />
+              {unreadNew > 0 ? (
+                <>
+                  <span>{unreadNew} new</span>
+                  <span
+                    className={cn(
+                      'ml-0.5 inline-flex items-center justify-center rounded-full px-1.5 min-w-[1.1rem] text-[10px] font-bold',
+                      native ? 'bg-white text-[#005c4b]' : 'bg-primary-foreground text-primary',
+                    )}
+                  >
+                    {unreadNew > 99 ? '99+' : unreadNew}
+                  </span>
+                </>
+              ) : (
+                <span>Jump to latest</span>
+              )}
+            </button>
+          )}
+        </div>
       </div>
+
+
 
 
       <form
         onSubmit={handleSend}
-        className="sticky bottom-0 z-10 p-3 border-t bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 space-y-2 shadow-[0_-1px_0_0_hsl(var(--border))] pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        className={cn(
+          'sticky bottom-0 z-10 p-3 border-t backdrop-blur-xl space-y-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+          native
+            ? 'bg-[#1f2c33] border-black/40 text-white shadow-[0_-1px_0_0_rgba(0,0,0,0.4)]'
+            : 'bg-background/85 supports-[backdrop-filter]:bg-background/70 shadow-[0_-1px_0_0_hsl(var(--border))]',
+        )}
       >
+
         {(replyTo || editing) && (
           <div
             className={cn(
@@ -1800,6 +2299,7 @@ function CallLogRow({
 function MessageBubble({
   m,
   mine,
+  native,
   hasAttachment,
   quoted,
   userId,
@@ -1810,9 +2310,13 @@ function MessageBubble({
   onDelete,
   onForward,
   onCopy,
+  onJumpToQuoted,
+  reactions = [],
+  onToggleReaction,
 }: {
   m: Message
   mine: boolean
+  native?: boolean
   hasAttachment: boolean
   quoted: Message | null
   userId?: string
@@ -1823,12 +2327,42 @@ function MessageBubble({
   onDelete: () => void
   onForward: () => void
   onCopy: () => void
+  onJumpToQuoted?: (id: string) => void
+  reactions?: ReactionAgg[]
+  onToggleReaction?: (emoji: string) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirm, setConfirm] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const longPressTimerRef = useRef<number | null>(null)
+  const longPressFiredRef = useRef(false)
   const deleted = !!m.deleted_for_everyone
   const editable = canEdit(m, userId)
   const deletable = canDeleteForEveryone(m, userId)
+
+  const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏']
+
+  const startLongPress = () => {
+    if (deleted) return
+    longPressFiredRef.current = false
+    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current)
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressFiredRef.current = true
+      setPickerOpen(true)
+      try {
+        if ('vibrate' in navigator) navigator.vibrate?.(15)
+      } catch {
+        /* noop */
+      }
+    }, 380)
+  }
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
 
   return (
     <div
@@ -1854,35 +2388,100 @@ function MessageBubble({
         />
       )}
       <div
+        onPointerDown={startLongPress}
+        onPointerUp={cancelLongPress}
+        onPointerCancel={cancelLongPress}
+        onPointerLeave={cancelLongPress}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          if (!deleted) setPickerOpen(true)
+        }}
         className={cn(
-          'relative max-w-[78%] rounded-2xl px-3.5 py-2 text-sm space-y-1.5 shadow-sm ring-1',
-          mine
-            ? 'bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
-            : 'bg-card text-foreground rounded-bl-md ring-border/60',
+          'relative max-w-[78%] rounded-2xl px-3.5 py-2 text-sm space-y-1.5 shadow-sm ring-1 select-none',
+          native
+            ? mine
+              ? 'bg-[#005c4b] text-white rounded-br-md ring-transparent'
+              : 'bg-[#1f2c33] text-white rounded-bl-md ring-white/5'
+            : mine
+              ? 'bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
+              : 'bg-card text-foreground rounded-bl-md ring-border/60',
           m._optimistic && 'opacity-70',
           deleted && 'italic opacity-70',
         )}
       >
+        {/* Quick reaction picker — appears on long-press / right-click.
+            A transparent full-screen backdrop closes it on outside tap. */}
+        {pickerOpen && (
+          <>
+            <button
+              type="button"
+              aria-label="Close reactions"
+              onClick={() => setPickerOpen(false)}
+              className="fixed inset-0 z-40 cursor-default bg-transparent"
+            />
+            <div
+              role="menu"
+              className={cn(
+                'absolute z-50 -top-12 flex items-center gap-1 rounded-full px-2 py-1.5 shadow-xl ring-1 animate-in fade-in zoom-in-95 duration-150',
+                mine ? 'right-0 origin-bottom-right' : 'left-0 origin-bottom-left',
+                native
+                  ? 'bg-[#233138] ring-white/10'
+                  : 'bg-popover text-popover-foreground ring-border',
+              )}
+            >
+              {QUICK_REACTIONS.map((emoji) => {
+                const active = reactions.some((r) => r.emoji === emoji && r.mine)
+                return (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => {
+                      onToggleReaction?.(emoji)
+                      setPickerOpen(false)
+                    }}
+                    className={cn(
+                      'grid place-items-center w-9 h-9 rounded-full text-xl leading-none transition-transform active:scale-90 hover:scale-110',
+                      active && (native ? 'bg-white/10' : 'bg-muted'),
+                    )}
+                    aria-label={active ? `Remove ${emoji} reaction` : `React with ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+
         {m.forwarded_from_id && !deleted && (
           <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide opacity-60">
             <Forward className="h-3 w-3" /> Forwarded
           </div>
         )}
         {quoted && !deleted && (
-          <div
+          <button
+            type="button"
+            onClick={() => onJumpToQuoted?.(quoted.id)}
             className={cn(
-              'rounded-lg px-2 py-1.5 border-l-2 text-xs mb-1',
-              mine
-                ? 'bg-secondary-foreground/10 border-secondary-foreground/40'
-                : 'bg-muted border-primary/60',
+              'w-full text-left rounded-lg px-2 py-1.5 border-l-2 text-xs mb-1 transition-colors cursor-pointer',
+              native
+                ? mine
+                  ? 'bg-black/25 border-emerald-300/70 text-white/90 hover:bg-black/35 active:bg-black/45'
+                  : 'bg-white/[0.06] border-emerald-400/70 text-white/90 hover:bg-white/[0.10] active:bg-white/[0.14]'
+                : mine
+                  ? 'bg-secondary-foreground/10 border-secondary-foreground/40 hover:bg-secondary-foreground/15'
+                  : 'bg-muted border-primary/60 hover:bg-muted/80',
             )}
+            aria-label="Jump to quoted message"
           >
-            <p className="font-semibold text-[11px] mb-0.5 opacity-80">
+            <p className={cn('font-semibold text-[11px] mb-0.5', native ? 'text-emerald-300' : 'opacity-80')}>
               {quoted.sender_id === userId ? 'You' : otherName}
             </p>
-            <p className="truncate opacity-80">{messagePreview(quoted)}</p>
-          </div>
+            <p className={cn('truncate', native ? 'text-white/70' : 'opacity-80')}>{messagePreview(quoted)}</p>
+          </button>
         )}
+
         {deleted ? (
           <p className="whitespace-pre-wrap break-words flex items-center gap-1.5">
             <Ban className="h-3.5 w-3.5" />
@@ -1890,7 +2489,8 @@ function MessageBubble({
           </p>
         ) : (
           <>
-            {hasAttachment && <MessageAttachment m={m} mine={mine} />}
+            {hasAttachment && <MessageAttachment m={m} mine={mine} native={native} />}
+
             {m.content && (
               <p className="whitespace-pre-wrap break-words">{m.content}</p>
             )}
@@ -1913,7 +2513,41 @@ function MessageBubble({
             </span>
           )}
         </p>
+
+        {/* Reaction chips — overlap the bottom edge of the bubble, WhatsApp-style. */}
+        {reactions.length > 0 && !deleted && (
+          <div
+            className={cn(
+              'absolute -bottom-3 flex items-center gap-1',
+              mine ? 'right-2' : 'left-2',
+            )}
+          >
+            {reactions.map((r) => (
+              <button
+                key={r.emoji}
+                type="button"
+                onClick={() => onToggleReaction?.(r.emoji)}
+                aria-label={r.mine ? `Remove your ${r.emoji} reaction` : `Add ${r.emoji} reaction`}
+                aria-pressed={r.mine}
+                className={cn(
+                  'flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] leading-none shadow-sm ring-1 transition-transform active:scale-90 hover:scale-105',
+                  native
+                    ? r.mine
+                      ? 'bg-[#005c4b] ring-emerald-300/50 text-white'
+                      : 'bg-[#2a3942] ring-white/10 text-white'
+                    : r.mine
+                      ? 'bg-primary text-primary-foreground ring-primary/40'
+                      : 'bg-background text-foreground ring-border',
+                )}
+              >
+                <span>{r.emoji}</span>
+                {r.count > 1 && <span className="font-semibold">{r.count}</span>}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
       {!mine && (
         <BubbleMenu
           open={menuOpen}
