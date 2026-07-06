@@ -397,9 +397,6 @@ export default function Messages() {
               ))
             )}
           </div>
-              })
-            )}
-          </div>
         </aside>
 
         {/* RIGHT */}
