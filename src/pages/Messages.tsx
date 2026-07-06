@@ -639,17 +639,17 @@ function ConversationView({
 
   return (
     <>
-      <div className="px-4 py-3 border-b flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={onBack}>
+      <div className="sticky top-0 z-10 px-3 md:px-4 py-2.5 border-b bg-background/85 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/70 flex items-center gap-2 shadow-[0_1px_0_0_hsl(var(--border))]">
+        <Button variant="ghost" size="icon" className="md:hidden -ml-1 rounded-full" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <Avatar profile={other} size="sm" />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 leading-tight">
           <p className="font-semibold text-sm truncate">
             {other?.display_name || other?.username || 'Conversation'}
           </p>
           {other?.username && (
-            <p className="text-xs text-muted-foreground truncate">@{other.username}</p>
+            <p className="text-[11px] text-muted-foreground truncate">@{other.username}</p>
           )}
         </div>
         {/* Native-only WhatsApp-style call button. Hidden on the web project. */}
@@ -657,7 +657,7 @@ function ConversationView({
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+            className="rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 active:scale-95 transition-transform"
             aria-label={`Call ${other.display_name || other.username || 'user'}`}
             onClick={() => {
               try {
@@ -676,6 +676,7 @@ function ConversationView({
           </Button>
         )}
       </div>
+
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messagesQ.isLoading ? (
