@@ -33,6 +33,7 @@ export function CallProvider() {
     reconnectAttempts: 0,
     maxReconnectAttempts: 3,
     timeline: [],
+    remoteRinging: false,
   })
 
 
