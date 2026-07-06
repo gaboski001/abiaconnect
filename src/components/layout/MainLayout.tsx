@@ -35,6 +35,10 @@ export function MainLayout() {
   }, [])
 
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register'
+  // Hide the site footer on the chat page in the native app so the chat
+  // composer sits flush against the bottom nav — a proper messenger feel.
+  const isChatRoute = /^\/messages(\/|$)/.test(location.pathname)
+  const hideFooter = isAuthPage || (isChatRoute && isNativeApp())
 
   return (
     <div data-site-theme={siteTheme} className="min-h-screen flex flex-col">
@@ -64,7 +68,7 @@ export function MainLayout() {
         </AnimatePresence>
       </main>
 
-      {!isAuthPage && <Footer />}
+      {!hideFooter && <Footer />}
 
       {/* Native-only premium navigation shell */}
       {!isAuthPage && <MobileBottomNav />}

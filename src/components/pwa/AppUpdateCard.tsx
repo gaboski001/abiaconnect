@@ -1,8 +1,18 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, Download, FileText, Loader2, Pause, RefreshCw, Sparkles, XCircle } from 'lucide-react'
+import {
+  CheckCircle2,
+  Download,
+  FileText,
+  Loader2,
+  Pause,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  XCircle,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAppUpdate } from '@/hooks/useAppUpdate'
-import { useReleaseDownload, type DownloadState } from '@/hooks/useReleaseDownload'
+import { useReleaseDownload, type ReleaseDownloadController } from '@/hooks/useReleaseDownload'
 import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { ChangelogModal } from './ChangelogModal'
 
@@ -11,7 +21,14 @@ type Variant = 'premium' | 'plain'
 interface AppUpdateCardProps {
   variant?: Variant
   className?: string
+  /**
+   * When true, render a compact "You're on the latest version" card once the
+   * user is up to date, so the dashboard always shows an app status instead
+   * of the space collapsing. Any lingering download UI is auto-cleared.
+   */
+  showWhenUpToDate?: boolean
 }
+
 
 function formatBytes(n: number | null) {
   if (n == null) return null
@@ -32,14 +49,23 @@ function formatSpeed(bps: number | null) {
  * version is older than the latest published release. When the user is on
  * the latest version, `hasUpdate` is false and the card is hidden.
  */
-export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardProps) {
-  const { release, currentVersion, hasUpdate, platform, isLoading } = useAppUpdate()
+export function AppUpdateCard({ variant = 'premium', className, showWhenUpToDate = false }: AppUpdateCardProps) {
+  const { release, currentVersion, hasUpdate, platform, isLoading, isNative } = useAppUpdate()
   const [modalOpen, setModalOpen] = useState(false)
-  const { state, download, cancel, reset } = useReleaseDownload()
+  const { state, download, cancel, reset, installExisting, openInstallSettings, hasCachedInstall } = useReleaseDownload()
 
-  // Auto-hide the transient "installing/done" states after the app regains
-  // focus — the useAppUpdate query will refetch and unmount this card if the
-  // new version is now installed.
+  // Once the installed version matches the latest release, aggressively clear
+  // any stale download/installing strip so the card collapses back to a clean
+  // "up to date" status — no lingering "Ready to install" notification.
+  useEffect(() => {
+    if (!hasUpdate && state.status !== 'idle') {
+      reset()
+    }
+  }, [hasUpdate, state.status, reset])
+
+  // Auto-clear the transient "installing/done" states when the app regains
+  // focus — the useAppUpdate query refetches and, if the new version is
+  // running, the effect above will collapse the strip.
   useEffect(() => {
     if (state.status !== 'installing') return
     const onVisible = () => {
@@ -49,7 +75,12 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [state.status, reset])
 
-  if (!hasUpdate || !release) return null
+  if (!hasUpdate || !release) {
+    if (showWhenUpToDate && isNative && !isLoading && currentVersion) {
+      return <UpToDateCard version={currentVersion} platform={platform} variant={variant} className={className} />
+    }
+    return null
+  }
 
   const sizeMb = release.file_size ? (release.file_size / 1024 / 1024).toFixed(1) : null
 
@@ -64,16 +95,25 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
   const busy = state.status === 'preparing' || state.status === 'downloading'
   const showStrip = state.status !== 'idle'
 
-  const strip = showStrip ? (
-    <ProgressStrip
-      state={state}
-      platform={platform}
-      version={release.version}
-      onCancel={cancel}
-      onRetry={start}
-      tone={variant === 'premium' ? 'dark' : 'light'}
-    />
-  ) : null
+  const controller: ReleaseDownloadController = {
+    state,
+    download,
+    cancel,
+    reset,
+    installExisting,
+    openInstallSettings,
+    hasCachedInstall,
+  }
+
+  const stripProps: ProgressStripProps = {
+    controller,
+    platform,
+    version: release.version,
+    onRetry: start,
+    tone: variant === 'premium' ? 'dark' : 'light',
+  }
+
+  const strip = showStrip ? <ProgressStrip {...stripProps} /> : null
 
   const modal = (
     <ChangelogModal
@@ -89,6 +129,7 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
       downloading={busy}
     />
   )
+
 
   if (variant === 'plain') {
     return (
@@ -195,15 +236,32 @@ export function AppUpdateCard({ variant = 'premium', className }: AppUpdateCardP
 }
 
 interface ProgressStripProps {
-  state: DownloadState
+  /**
+   * The full download controller returned by `useReleaseDownload`. Consuming
+   * the controller (instead of re-declaring individual callbacks/state fields)
+   * means future additions to the hook — new status branches, extra actions,
+   * more telemetry — flow into this component without changing its prop type.
+   */
+  controller: ReleaseDownloadController
   platform: 'android' | 'ios' | 'web'
   version: string
-  onCancel: () => void
+  /**
+   * Retry the download from scratch. Owned by the parent so it can rebuild
+   * the `DownloadInput` from the currently-selected release.
+   */
   onRetry: () => void
   tone: 'dark' | 'light'
 }
 
-function ProgressStrip({ state, platform, version, onCancel, onRetry, tone }: ProgressStripProps) {
+function ProgressStrip({ controller, platform, version, onRetry, tone }: ProgressStripProps) {
+  const {
+    state,
+    cancel: onCancel,
+    installExisting: onInstallNow,
+    openInstallSettings: onGrantPermission,
+    hasCachedInstall,
+  } = controller
+  const hasCached = hasCachedInstall()
   const dark = tone === 'dark'
   const wrap = dark
     ? 'mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-3'
@@ -266,23 +324,176 @@ function ProgressStrip({ state, platform, version, onCancel, onRetry, tone }: Pr
   }
 
   if (state.status === 'installing' || state.status === 'done') {
-    const emerald = dark
-      ? 'border-emerald-400/25 bg-emerald-400/10'
-      : 'border-emerald-500/30 bg-emerald-500/5'
+    const canRelaunchInstall =
+      platform === 'android' && !!state.installFilename
+    const needsPermission = state.permissionRequired
+
+    const tint = needsPermission
+      ? dark
+        ? 'border-amber-400/30 bg-amber-400/10'
+        : 'border-amber-500/40 bg-amber-500/10'
+      : dark
+        ? 'border-emerald-400/25 bg-emerald-400/10'
+        : 'border-emerald-500/30 bg-emerald-500/5'
+
+    const iconTone = needsPermission
+      ? dark
+        ? 'text-amber-300'
+        : 'text-amber-600'
+      : dark
+        ? 'text-emerald-300'
+        : 'text-emerald-600'
+
+    const titleTone = needsPermission
+      ? dark
+        ? 'text-amber-100'
+        : 'text-amber-800'
+      : dark
+        ? 'text-emerald-100'
+        : 'text-emerald-800'
+
     return (
-      <div className={`mt-3 rounded-2xl border px-3 py-3 ${emerald}`} role="status" aria-live="polite">
+      <div className={`mt-3 rounded-2xl border px-3 py-3 ${tint}`} role="status" aria-live="polite">
         <div className="flex items-start gap-2">
-          <CheckCircle2 className={`size-4 mt-0.5 ${dark ? 'text-emerald-300' : 'text-emerald-600'}`} />
+          {needsPermission ? (
+            <ShieldCheck className={`size-4 mt-0.5 ${iconTone}`} />
+          ) : (
+            <CheckCircle2 className={`size-4 mt-0.5 ${iconTone}`} />
+          )}
           <div className="min-w-0 flex-1">
-            <p className={`text-xs font-semibold ${dark ? 'text-emerald-100' : 'text-emerald-800'}`}>
-              {platform === 'ios' ? `Installer opened for v${version}` : `Ready to install v${version}`}
+            <p className={`text-xs font-semibold ${titleTone}`}>
+              {needsPermission
+                ? `Allow app installs to finish v${version}`
+                : platform === 'ios'
+                  ? `Installer opened for v${version}`
+                  : `Ready to install v${version}`}
             </p>
             <p className={`mt-0.5 text-[11px] leading-snug ${dark ? 'text-white/60' : 'text-muted-foreground'}`}>
-              {platform === 'ios'
-                ? 'Follow the on-screen steps to install. This card disappears once the new version is running.'
-                : platform === 'android'
-                  ? 'Your device will prompt you to install. If you don\u2019t see it, check your notifications.'
-                  : 'Check your downloads folder to open the file.'}
+              {needsPermission
+                ? 'Turn on "Install unknown apps" for AbiaConnect, then tap Install now — no need to download again.'
+                : platform === 'ios'
+                  ? 'Follow the on-screen steps to install. This card disappears once the new version is running.'
+                  : platform === 'android'
+                    ? canRelaunchInstall
+                      ? 'Approve the system prompt to finish. Missed it? Tap Install now — the update is already on your device.'
+                      : 'Your device will prompt you to install. If you don\u2019t see it, check your notifications.'
+                    : 'Check your downloads folder to open the file.'}
+            </p>
+
+            {(canRelaunchInstall || needsPermission) && platform === 'android' ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {needsPermission ? (
+                  <Button
+                    size="sm"
+                    variant={dark ? 'outline' : 'secondary'}
+                    onClick={onGrantPermission}
+                    className={`h-8 gap-1.5 px-3 text-[11px] ${
+                      dark ? 'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white' : ''
+                    }`}
+                  >
+                    <ShieldCheck className="size-3.5" /> Grant permission
+                  </Button>
+                ) : null}
+                {canRelaunchInstall ? (
+                  <Button
+                    size="sm"
+                    onClick={onInstallNow}
+                    className="h-8 gap-1.5 px-3 text-[11px] font-bold text-[#0B1220]"
+                    style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
+                  >
+                    <Download className="size-3.5" /> Install now
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+
+  // failed
+  const red = dark ? 'border-red-400/30 bg-red-500/10' : 'border-red-500/40 bg-red-500/5'
+  const canInstallCached =
+    platform === 'android' && (hasCached || !!state.installFilename)
+  const permissionHint = state.permissionRequired
+  return (
+    <div className={`mt-3 rounded-2xl border px-3 py-3 ${red}`} role="alert">
+      <div className="flex items-start gap-2">
+        <XCircle className={`size-4 mt-0.5 ${dark ? 'text-red-300' : 'text-red-600'}`} />
+        <div className="min-w-0 flex-1">
+          <p className={`text-xs font-semibold ${dark ? 'text-red-100' : 'text-red-800'}`}>
+            {permissionHint ? 'Installation blocked' : 'Update failed'}
+          </p>
+          <p className={`mt-0.5 text-[11px] leading-snug ${dark ? 'text-white/60' : 'text-muted-foreground'}`}>
+            {canInstallCached
+              ? permissionHint
+                ? 'Allow "Install unknown apps" for AbiaConnect, then tap Install now — the update is already on your device.'
+                : `${state.error ?? 'Something went wrong.'} The update is still cached — tap Install now to try again without re-downloading.`
+              : state.error ?? 'Something went wrong preparing the download.'}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {canInstallCached && permissionHint ? (
+              <Button
+                size="sm"
+                variant={dark ? 'outline' : 'secondary'}
+                onClick={onGrantPermission}
+                className={`h-8 gap-1.5 px-3 text-[11px] ${
+                  dark ? 'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white' : ''
+                }`}
+              >
+                <ShieldCheck className="size-3.5" /> Grant permission
+              </Button>
+            ) : null}
+            {canInstallCached ? (
+              <Button
+                size="sm"
+                onClick={onInstallNow}
+                className="h-8 gap-1.5 px-3 text-[11px] font-bold text-[#0B1220]"
+                style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
+              >
+                <Download className="size-3.5" /> Install now
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              variant={dark ? 'outline' : 'secondary'}
+              onClick={onRetry}
+              className={`h-8 gap-1.5 px-3 text-[11px] ${
+                dark ? 'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white' : ''
+              }`}
+            >
+              <RefreshCw className="size-3.5" /> {canInstallCached ? 'Re-download' : 'Retry'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface UpToDateCardProps {
+  version: string
+  platform: 'android' | 'ios' | 'web'
+  variant: Variant
+  className?: string
+}
+
+function UpToDateCard({ version, platform, variant, className }: UpToDateCardProps) {
+  const platformLabel = platform === 'ios' ? 'iOS' : platform === 'android' ? 'Android' : 'Web'
+
+  if (variant === 'plain') {
+    return (
+      <div className={`rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 ${className ?? ''}`}>
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15">
+            <CheckCircle2 className="size-5 text-emerald-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">App is up to date</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Running v{version} · {platformLabel}
             </p>
           </div>
         </div>
@@ -290,31 +501,28 @@ function ProgressStrip({ state, platform, version, onCancel, onRetry, tone }: Pr
     )
   }
 
-  // failed
-  const red = dark ? 'border-red-400/30 bg-red-500/10' : 'border-red-500/40 bg-red-500/5'
   return (
-    <div className={`mt-3 rounded-2xl border px-3 py-3 ${red} flex items-start gap-2`} role="alert">
-      <XCircle className={`size-4 mt-0.5 ${dark ? 'text-red-300' : 'text-red-600'}`} />
-      <div className="min-w-0 flex-1">
-        <p className={`text-xs font-semibold ${dark ? 'text-red-100' : 'text-red-800'}`}>
-          Update failed
-        </p>
-        <p className={`mt-0.5 text-[11px] leading-snug ${dark ? 'text-white/60' : 'text-muted-foreground'}`}>
-          {state.error ?? 'Something went wrong preparing the download.'}
-        </p>
+    <section
+      className={`relative overflow-hidden rounded-[2rem] border border-emerald-400/25 bg-[#0B1220] p-5 text-white shadow-xl ${className ?? ''}`}
+    >
+      <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-400/20 blur-[70px]" />
+      <div className="relative flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-400/15">
+          <CheckCircle2 className="size-5 text-emerald-300" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">
+            App status
+          </p>
+          <h3 className="mt-0.5 text-base font-black leading-tight">You're on the latest version</h3>
+          <p className="mt-1 text-xs text-white/60">
+            Running v{version} · {platformLabel}
+          </p>
+        </div>
       </div>
-      <Button
-        size="sm"
-        variant={dark ? 'outline' : 'secondary'}
-        onClick={onRetry}
-        className={`h-7 gap-1 px-2 text-[11px] ${
-          dark ? 'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white' : ''
-        }`}
-      >
-        <RefreshCw className="size-3" /> Retry
-      </Button>
-    </div>
+    </section>
   )
 }
 
 export default AppUpdateCard
+

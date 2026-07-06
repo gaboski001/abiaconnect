@@ -178,6 +178,38 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_states: {
+        Row: {
+          archived_at: string | null
+          conversation_id: string
+          pinned_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          conversation_id: string
+          pinned_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          conversation_id?: string
+          pinned_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_states_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
@@ -498,9 +530,14 @@ export type Database = {
           content: string | null
           conversation_id: string
           created_at: string
+          deleted_at: string | null
+          deleted_for_everyone: boolean
+          edited_at: string | null
+          forwarded_from_id: string | null
           id: string
           is_read: boolean
           read_at: string | null
+          reply_to_id: string | null
           sender_id: string
         }
         Insert: {
@@ -513,9 +550,14 @@ export type Database = {
           content?: string | null
           conversation_id: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_for_everyone?: boolean
+          edited_at?: string | null
+          forwarded_from_id?: string | null
           id?: string
           is_read?: boolean
           read_at?: string | null
+          reply_to_id?: string | null
           sender_id: string
         }
         Update: {
@@ -528,9 +570,14 @@ export type Database = {
           content?: string | null
           conversation_id?: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_for_everyone?: boolean
+          edited_at?: string | null
+          forwarded_from_id?: string | null
           id?: string
           is_read?: boolean
           read_at?: string | null
+          reply_to_id?: string | null
           sender_id?: string
         }
         Relationships: [
@@ -539,6 +586,20 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_forwarded_from_id_fkey"
+            columns: ["forwarded_from_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
         ]
@@ -1645,13 +1706,29 @@ export type Database = {
           id: string
         }[]
       }
+      clear_conversation: {
+        Args: { _conversation_id: string }
+        Returns: number
+      }
       decide_join_request: {
         Args: { _approve: boolean; _request_id: string }
+        Returns: undefined
+      }
+      delete_conversation: {
+        Args: { _conversation_id: string }
         Returns: undefined
       }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
+      }
+      delete_message_for_everyone: {
+        Args: { _message_id: string }
+        Returns: undefined
+      }
+      edit_message: {
+        Args: { _message_id: string; _new_content: string }
+        Returns: undefined
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
       enforce_rate_limit: {
@@ -1661,6 +1738,10 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      forward_message: {
+        Args: { _message_id: string; _to_conversation_id: string }
+        Returns: string
       }
       get_my_profile: {
         Args: never
@@ -1812,6 +1893,14 @@ export type Database = {
           id: string
           username: string
         }[]
+      }
+      set_conversation_archived: {
+        Args: { _archived: boolean; _conversation_id: string }
+        Returns: undefined
+      }
+      set_conversation_pinned: {
+        Args: { _conversation_id: string; _pinned: boolean }
+        Returns: undefined
       }
       submit_moderation_appeal: {
         Args: {

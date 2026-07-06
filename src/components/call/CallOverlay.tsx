@@ -49,23 +49,31 @@ export function CallOverlay({ state }: { state: CallState }) {
   }, [state.status])
 
   // Professional ringtone/ringback while ringing or calling.
+  // Caller only hears ringback once the callee's device has actually started
+  // ringing (remoteRinging), matching real phone behaviour.
   useEffect(() => {
     if (state.status === 'ringing' && state.direction === 'incoming') {
       startRingtone('incoming')
-    } else if (state.status === 'calling' && state.direction === 'outgoing') {
+    } else if (
+      state.status === 'calling' &&
+      state.direction === 'outgoing' &&
+      state.remoteRinging
+    ) {
       startRingtone('outgoing')
     } else {
       stopRingtone()
     }
     return () => stopRingtone()
-  }, [state.status, state.direction])
+  }, [state.status, state.direction, state.remoteRinging])
 
   const peer = state.peer!
   const elapsed = state.startedAt ? now - state.startedAt : 0
 
   const statusLabel =
     state.status === 'calling'
-      ? 'Calling…'
+      ? state.remoteRinging
+        ? 'Ringing…'
+        : 'Calling…'
       : state.status === 'ringing'
         ? 'Incoming voice call'
         : state.status === 'connecting'
@@ -114,7 +122,7 @@ export function CallOverlay({ state }: { state: CallState }) {
           <div className="grid grid-cols-2 gap-3 text-left">
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.05] p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Status</p>
-              <p className="mt-2 text-sm font-bold text-white">{state.status === 'ringing' ? 'Awaiting response' : state.status === 'connected' ? 'Live' : state.status}</p>
+              <p className="mt-2 text-sm font-bold text-white">{state.status === 'calling' ? (state.remoteRinging ? 'Ringing their phone' : 'Reaching out…') : state.status === 'ringing' ? 'Awaiting response' : state.status === 'connected' ? 'Live' : state.status}</p>
             </div>
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.05] p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Security</p>

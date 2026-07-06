@@ -17,6 +17,19 @@ import {
   PhoneIncoming,
   PhoneOutgoing,
   PhoneMissed,
+  Reply,
+  Pencil,
+  Trash2,
+  Copy,
+  Forward,
+  Pin,
+  PinOff,
+  Archive,
+  ArchiveRestore,
+  MoreVertical,
+  MoreHorizontal,
+  CheckCircle2,
+  Ban,
 } from 'lucide-react'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { callManager } from '@/lib/webrtcCall'
@@ -72,6 +85,8 @@ interface Conversation {
   last_message?: string | null
   last_message_at?: string | null
   unread_count?: number
+  pinned_at?: string | null
+  archived_at?: string | null
 }
 
 interface Message {
@@ -88,8 +103,50 @@ interface Message {
   attachment_name?: string | null
   attachment_size?: number | null
   attachment_expires_at?: string | null
+  reply_to_id?: string | null
+  edited_at?: string | null
+  deleted_for_everyone?: boolean | null
+  deleted_at?: string | null
+  forwarded_from_id?: string | null
   _optimistic?: boolean
+  /**
+   * Client-side delivery lifecycle:
+   *  - 'sent'      → single ✓, server has our row (or optimistic)
+   *  - 'delivered' → ✓✓ grey, recipient's client acknowledged over Realtime broadcast
+   *  is_read (from DB)  → ✓✓ blue, recipient actually saw the bubble
+   */
   _status?: 'sent' | 'delivered'
+}
+
+/** Chat action state driven by the per-bubble menu (reply / edit) and toolbar (forward). */
+interface ChatAction {
+  reply?: Message | null
+  edit?: Message | null
+  forward?: Message | null
+}
+
+const EDIT_WINDOW_MS = 15 * 60 * 1000
+const DELETE_WINDOW_MS = 60 * 60 * 1000
+
+function canEdit(m: Message, userId?: string) {
+  if (!userId || m.sender_id !== userId) return false
+  if (m.deleted_for_everyone) return false
+  if (m._optimistic) return false
+  return Date.now() - new Date(m.created_at).getTime() < EDIT_WINDOW_MS
+}
+function canDeleteForEveryone(m: Message, userId?: string) {
+  if (!userId || m.sender_id !== userId) return false
+  if (m.deleted_for_everyone) return false
+  if (m._optimistic) return false
+  return Date.now() - new Date(m.created_at).getTime() < DELETE_WINDOW_MS
+}
+function messagePreview(m: Pick<Message, 'content' | 'attachment_type' | 'attachment_name' | 'deleted_for_everyone'>) {
+  if (m.deleted_for_everyone) return '🚫 This message was deleted'
+  if (m.content?.trim()) return m.content
+  if (m.attachment_type?.startsWith('image/')) return '📷 Photo'
+  if (m.attachment_type?.startsWith('audio/')) return '🎤 Voice note'
+  if (m.attachment_name) return `📎 ${m.attachment_name}`
+  return '📎 Attachment'
 }
 
 
@@ -158,6 +215,242 @@ function MessageAttachment({ m, mine }: { m: Message; mine: boolean }) {
   return null
 }
 
+/**
+ * Sidebar row with WhatsApp-style row actions (pin/archive/clear/delete).
+ * The row itself navigates; the ⋯ menu is a sibling so we don't nest a
+ * button inside the <Link> (invalid HTML + unreliable clicks).
+ */
+function ConversationRow({
+  c,
+  active,
+}: {
+  c: Conversation
+  active: boolean
+  onOpenForward: () => void
+}) {
+  const qc = useQueryClient()
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [confirm, setConfirm] = useState<null | 'clear' | 'delete'>(null)
+
+  const invalidate = () =>
+    qc.invalidateQueries({ queryKey: ['conversations', user?.id] })
+
+  const call = async (rpc: 'set_conversation_pinned' | 'set_conversation_archived' | 'clear_conversation' | 'delete_conversation', args: Record<string, unknown> = {}) => {
+    const { error } = await supabase.rpc(rpc as never, { _conversation_id: c.id, ...args } as never)
+    if (error) {
+      toast.error(error.message || 'Action failed')
+      return false
+    }
+    return true
+  }
+
+  const pinned = !!c.pinned_at
+  const archived = !!c.archived_at
+
+  return (
+    <div
+      className={cn(
+        'group relative flex items-start gap-3 px-3 py-3 border-l-4 hover:bg-muted/50 transition-colors',
+        active ? 'border-secondary bg-secondary/5' : 'border-transparent',
+      )}
+    >
+      <Link
+        to={`/messages/${c.id}`}
+        className="absolute inset-0 z-0"
+        aria-label={`Open conversation with ${c.other_user?.display_name || c.other_user?.username || 'user'}`}
+      />
+      <div className="relative z-[1] pointer-events-none">
+        <Avatar profile={c.other_user} />
+      </div>
+      <div className="relative z-[1] min-w-0 flex-1 pointer-events-none">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold truncate flex items-center gap-1">
+            {pinned && <Pin className="h-3 w-3 text-muted-foreground shrink-0" />}
+            {c.other_user?.display_name || c.other_user?.username || 'User'}
+          </span>
+          <span className="text-[10px] text-muted-foreground shrink-0">
+            {c.last_message_at &&
+              formatDistanceToNow(new Date(c.last_message_at), { addSuffix: false })}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground truncate">
+            {c.last_message || 'No messages yet'}
+          </p>
+          {!!c.unread_count && (
+            <span className="text-[10px] font-bold bg-secondary text-secondary-foreground rounded-full px-1.5 min-w-[18px] text-center">
+              {c.unread_count}
+            </span>
+          )}
+        </div>
+      </div>
+      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label="Conversation actions"
+            className="relative z-[2] h-8 w-8 shrink-0 grid place-items-center rounded-full text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-muted transition-opacity data-[state=open]:opacity-100"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+            }}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-52 p-1">
+          <MenuItem
+            icon={pinned ? PinOff : Pin}
+            label={pinned ? 'Unpin chat' : 'Pin chat'}
+            onSelect={async () => {
+              setMenuOpen(false)
+              if (await call('set_conversation_pinned', { _pinned: !pinned })) {
+                toast.success(pinned ? 'Chat unpinned' : 'Chat pinned to top')
+                invalidate()
+              }
+            }}
+          />
+          <MenuItem
+            icon={archived ? ArchiveRestore : Archive}
+            label={archived ? 'Unarchive' : 'Archive'}
+            onSelect={async () => {
+              setMenuOpen(false)
+              if (await call('set_conversation_archived', { _archived: !archived })) {
+                toast.success(archived ? 'Chat restored' : 'Chat archived')
+                invalidate()
+              }
+            }}
+          />
+          <MenuItem
+            icon={Ban}
+            label="Clear messages"
+            onSelect={() => {
+              setMenuOpen(false)
+              setConfirm('clear')
+            }}
+          />
+          <MenuItem
+            icon={Trash2}
+            label="Delete chat"
+            destructive
+            onSelect={() => {
+              setMenuOpen(false)
+              setConfirm('delete')
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+
+      <ConfirmDialog
+        open={confirm === 'clear'}
+        onOpenChange={(v) => !v && setConfirm(null)}
+        title="Clear all messages?"
+        description="This removes every message in this chat for both of you. This cannot be undone."
+        confirmLabel="Clear"
+        destructive
+        onConfirm={async () => {
+          if (await call('clear_conversation')) {
+            toast.success('Messages cleared')
+            qc.setQueryData<Message[]>(['messages', c.id], [])
+            invalidate()
+          }
+          setConfirm(null)
+        }}
+      />
+      <ConfirmDialog
+        open={confirm === 'delete'}
+        onOpenChange={(v) => !v && setConfirm(null)}
+        title="Delete this chat?"
+        description="The entire conversation, its messages, and its history will be removed for both of you."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={async () => {
+          if (await call('delete_conversation')) {
+            toast.success('Chat deleted')
+            invalidate()
+            if (active) navigate('/messages')
+          }
+          setConfirm(null)
+        }}
+      />
+    </div>
+  )
+}
+
+function MenuItem({
+  icon: Icon,
+  label,
+  onSelect,
+  destructive,
+  disabled,
+}: {
+  icon: typeof Pin
+  label: string
+  onSelect: () => void
+  destructive?: boolean
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={disabled}
+      className={cn(
+        'w-full flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-left transition-colors',
+        'hover:bg-muted focus-visible:bg-muted disabled:opacity-40 disabled:pointer-events-none',
+        destructive && 'text-destructive hover:bg-destructive/10',
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="truncate">{label}</span>
+    </button>
+  )
+}
+
+function ConfirmDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  confirmLabel,
+  destructive,
+  onConfirm,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  title: string
+  description: string
+  confirmLabel: string
+  destructive?: boolean
+  onConfirm: () => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-end gap-2 mt-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant={destructive ? 'destructive' : 'default'}
+            onClick={onConfirm}
+          >
+            {confirmLabel}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+
+
 export default function Messages() {
   const { user } = useAuth()
   const { conversationId } = useParams<{ conversationId?: string }>()
@@ -165,6 +458,8 @@ export default function Messages() {
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [newOpen, setNewOpen] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
+  const [forwardMessage, setForwardMessage] = useState<Message | null>(null)
 
   const convosQ = useQuery({
     queryKey: ['conversations', user?.id],
@@ -181,13 +476,18 @@ export default function Messages() {
 
       const otherIds = list.map((c) => (c.user1_id === user!.id ? c.user2_id : c.user1_id))
       const ids = list.map((c) => c.id)
-      const [{ data: profiles }, { data: msgs }] = await Promise.all([
+      const [{ data: profiles }, { data: msgs }, { data: states }] = await Promise.all([
         supabase.rpc('get_public_profiles', { _ids: otherIds }),
         supabase
           .from('messages')
-          .select('conversation_id, sender_id, content, is_read, created_at')
+          .select('conversation_id, sender_id, content, is_read, created_at, deleted_for_everyone, attachment_type, attachment_name')
           .in('conversation_id', ids)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('conversation_states')
+          .select('conversation_id, pinned_at, archived_at')
+          .eq('user_id', user!.id)
+          .in('conversation_id', ids),
       ])
       const profileMap: Record<string, Profile> = {}
       ;(profiles ?? []).forEach((p: any) => (profileMap[p.id] = p))
@@ -196,7 +496,7 @@ export default function Messages() {
       ;(msgs ?? []).forEach((m: any) => {
         if (!lastMap[m.conversation_id]) {
           lastMap[m.conversation_id] = {
-            content: m.content || '📎 Attachment',
+            content: messagePreview(m),
             created_at: m.created_at,
           }
         }
@@ -204,28 +504,48 @@ export default function Messages() {
           unreadMap[m.conversation_id] = (unreadMap[m.conversation_id] || 0) + 1
         }
       })
-      return list.map((c) => {
+      const stateMap: Record<string, { pinned_at?: string | null; archived_at?: string | null }> = {}
+      ;(states ?? []).forEach((s: any) => (stateMap[s.conversation_id] = s))
+      const enriched = list.map((c) => {
         const otherId = c.user1_id === user!.id ? c.user2_id : c.user1_id
+        const s = stateMap[c.id] || {}
         return {
           ...c,
           other_user: profileMap[otherId] || { id: otherId },
           last_message: lastMap[c.id]?.content ?? null,
           last_message_at: lastMap[c.id]?.created_at ?? c.updated_at,
           unread_count: unreadMap[c.id] || 0,
-        }
+          pinned_at: s.pinned_at ?? null,
+          archived_at: s.archived_at ?? null,
+        } as Conversation
       })
+      // Pinned first, then by last activity
+      enriched.sort((a, b) => {
+        const ap = a.pinned_at ? 1 : 0
+        const bp = b.pinned_at ? 1 : 0
+        if (ap !== bp) return bp - ap
+        const at = new Date(a.last_message_at || a.updated_at).getTime()
+        const bt = new Date(b.last_message_at || b.updated_at).getTime()
+        return bt - at
+      })
+      return enriched
     },
   })
 
-  // Realtime: refresh conversation list on any new message
+  // Realtime: refresh conversation list on new messages OR pin/archive changes
   useEffect(() => {
     if (!user) return
+    const invalidate = () =>
+      qc.invalidateQueries({ queryKey: ['conversations', user.id] })
     const channel = supabase
       .channel(`messages-inbox:${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, invalidate)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, invalidate)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, invalidate)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        () => qc.invalidateQueries({ queryKey: ['conversations', user.id] }),
+        { event: '*', schema: 'public', table: 'conversation_states', filter: `user_id=eq.${user.id}` },
+        invalidate,
       )
       .subscribe()
     return () => {
@@ -233,25 +553,32 @@ export default function Messages() {
     }
   }, [user, qc])
 
-  const filteredConvos = useMemo(() => {
+  const { activeList, archivedList, filteredConvos } = useMemo(() => {
     const list = convosQ.data ?? []
     const q = search.trim().toLowerCase()
-    if (!q) return list
-    return list.filter((c) =>
-      (c.other_user?.display_name || c.other_user?.username || '').toLowerCase().includes(q),
-    )
-  }, [convosQ.data, search])
+    const matches = q
+      ? list.filter((c) =>
+          (c.other_user?.display_name || c.other_user?.username || '').toLowerCase().includes(q),
+        )
+      : list
+    const activeList = matches.filter((c) => !c.archived_at)
+    const archivedList = matches.filter((c) => !!c.archived_at)
+    const filteredConvos = showArchived ? archivedList : activeList
+    return { activeList, archivedList, filteredConvos }
+  }, [convosQ.data, search, showArchived])
 
   const activeConvo = useMemo(
-    () => filteredConvos.find((c) => c.id === conversationId) || (convosQ.data ?? []).find((c) => c.id === conversationId),
-    [filteredConvos, convosQ.data, conversationId],
+    () =>
+      (convosQ.data ?? []).find((c) => c.id === conversationId) || null,
+    [convosQ.data, conversationId],
   )
 
   return (
     <>
       <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
     <div className="container mx-auto px-0 md:px-4 py-0 md:py-6">
-      <div className="md:rounded-2xl md:border md:bg-card overflow-hidden h-[calc(100vh-5rem)] md:h-[calc(100vh-8rem)] flex">
+      <div className="md:rounded-2xl md:border md:bg-card overflow-hidden h-[calc(100dvh-3.5rem)] md:h-[calc(100vh-8rem)] flex bg-gradient-to-b from-background to-muted/30">
+
         {/* LEFT */}
         <aside
           className={cn(
@@ -270,7 +597,7 @@ export default function Messages() {
               <NewMessageDialog onClose={() => setNewOpen(false)} />
             </Dialog>
           </div>
-          <div className="p-3 border-b">
+          <div className="p-3 border-b space-y-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -280,51 +607,37 @@ export default function Messages() {
                 className="pl-9"
               />
             </div>
+            {archivedList.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowArchived((v) => !v)}
+                className="w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted/60 transition-colors"
+              >
+                <Archive className="h-3.5 w-3.5" />
+                <span className="font-medium">
+                  {showArchived ? 'Back to chats' : `Archived · ${archivedList.length}`}
+                </span>
+              </button>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto">
             {convosQ.isLoading ? (
               <div className="p-4 text-sm text-muted-foreground">Loading…</div>
             ) : filteredConvos.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">
-                No conversations yet.
+                {showArchived ? 'No archived chats.' : 'No conversations yet.'}
               </div>
             ) : (
-              filteredConvos.map((c) => {
-                const active = c.id === conversationId
-                return (
-                  <Link
-                    key={c.id}
-                    to={`/messages/${c.id}`}
-                    className={cn(
-                      'flex items-start gap-3 px-3 py-3 border-l-4 hover:bg-muted/50 transition-colors',
-                      active ? 'border-secondary bg-secondary/5' : 'border-transparent',
-                    )}
-                  >
-                    <Avatar profile={c.other_user} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold truncate">
-                          {c.other_user?.display_name || c.other_user?.username || 'User'}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground shrink-0">
-                          {c.last_message_at &&
-                            formatDistanceToNow(new Date(c.last_message_at), { addSuffix: false })}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs text-muted-foreground truncate">
-                          {c.last_message || 'No messages yet'}
-                        </p>
-                        {!!c.unread_count && (
-                          <span className="text-[10px] font-bold bg-secondary text-secondary-foreground rounded-full px-1.5 min-w-[18px] text-center">
-                            {c.unread_count}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                )
-              })
+              filteredConvos.map((c) => (
+                <ConversationRow
+                  key={c.id}
+                  c={c}
+                  active={c.id === conversationId}
+                  onOpenForward={() => {
+                    /* row-level forward is not supported; forward is per-message */
+                  }}
+                />
+              ))
             )}
           </div>
         </aside>
@@ -350,11 +663,17 @@ export default function Messages() {
               conversationId={conversationId}
               other={activeConvo?.other_user}
               onBack={() => navigate('/messages')}
+              onForward={(m) => setForwardMessage(m)}
             />
           )}
         </section>
       </div>
     </div>
+    <ForwardDialog
+      message={forwardMessage}
+      onClose={() => setForwardMessage(null)}
+      conversations={convosQ.data ?? []}
+    />
     </>
   )
 }
@@ -363,10 +682,12 @@ function ConversationView({
   conversationId,
   other,
   onBack,
+  onForward,
 }: {
   conversationId: string
   other?: Profile | null
   onBack: () => void
+  onForward: (m: Message) => void
 }) {
   const { user } = useAuth()
   const qc = useQueryClient()
@@ -377,8 +698,16 @@ function ConversationView({
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [emojiOpen, setEmojiOpen] = useState(false)
   const [uploadPct, setUploadPct] = useState<number | null>(null)
+  const [replyTo, setReplyTo] = useState<Message | null>(null)
+  const [editing, setEditing] = useState<Message | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Reset reply/edit when switching conversations
+  useEffect(() => {
+    setReplyTo(null)
+    setEditing(null)
+  }, [conversationId])
 
   useEffect(() => {
     if (!pendingFile) {
@@ -393,6 +722,22 @@ function ConversationView({
     setFilePreview(null)
   }, [pendingFile])
 
+  // Dedupe stores that survive Realtime reconnects and TanStack refetches.
+  //   deliveredOwnRef  → our own message IDs the peer has ack'd as delivered.
+  //                      Reapplied to the cache on every refetch so ✓✓ persists
+  //                      after a token refresh / network drop repopulates the list.
+  //   deliveredAckedRef → inbound IDs we've already broadcast 'delivered' for,
+  //                       so reconnect + open-conversation re-runs never spam
+  //                       duplicate acks to the sender.
+  const deliveredOwnRef = useRef<Set<string>>(new Set())
+  const deliveredAckedRef = useRef<Set<string>>(new Set())
+
+  // Reset per-conversation dedupe state when switching chats.
+  useEffect(() => {
+    deliveredOwnRef.current = new Set()
+    deliveredAckedRef.current = new Set()
+  }, [conversationId])
+
   const messagesQ = useQuery({
     queryKey,
     enabled: !!conversationId,
@@ -403,15 +748,52 @@ function ConversationView({
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true })
       if (error) throw error
-      return (data ?? []) as Message[]
+      const rows = (data ?? []) as Message[]
+      // Re-hydrate client-only delivery state after a refetch. `is_read` is
+      // persisted server-side so it survives on its own; `_status: 'delivered'`
+      // is broadcast-only, so we replay the set we've been tracking.
+      const delivered = deliveredOwnRef.current
+      if (!delivered.size) return rows
+      return rows.map((m) =>
+        m.sender_id === user?.id && !m.is_read && delivered.has(m.id)
+          ? { ...m, _status: 'delivered' as const }
+          : m,
+      )
     },
   })
 
+  // Presence/broadcast channel for typing + delivery receipts.
+  // Kept in a ref so send handlers can broadcast without re-subscribing.
+  const chatChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const [otherTyping, setOtherTyping] = useState(false)
+  const otherTypingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastTypingSentRef = useRef(0)
+
   // Realtime: merge INSERT/UPDATE directly into cache (no refetch, no duplicates)
   useEffect(() => {
-    if (!conversationId) return
+    if (!conversationId || !user?.id) return
+    const uid = user.id
+
+    const ackDelivered = (messageId: string) => {
+      // Idempotent: only broadcast the first time per session/reconnect cycle.
+      if (deliveredAckedRef.current.has(messageId)) return
+      deliveredAckedRef.current.add(messageId)
+      chatChannelRef.current?.send({
+        type: 'broadcast',
+        event: 'delivered',
+        payload: { messageId, by: uid },
+      })
+    }
+
+    const ackAllUnreadInbound = () => {
+      const list = qc.getQueryData<Message[]>(queryKey) ?? []
+      for (const m of list) {
+        if (m.sender_id !== uid && !m.is_read) ackDelivered(m.id)
+      }
+    }
+
     const channel = supabase
-      .channel(`messages-${conversationId}`)
+      .channel(`chat:${conversationId}`, { config: { broadcast: { self: false } } })
       .on(
         'postgres_changes',
         {
@@ -432,7 +814,14 @@ function ConversationView({
                 m.sender_id === incoming.sender_id &&
                 (m.content ?? '') === (incoming.content ?? ''),
             )
-            const next = { ...incoming, _status: 'delivered' as const }
+            // Own echo stays 'sent' (single ✓) until the recipient broadcasts 'delivered'.
+            // If a peer ack already arrived (out-of-order over a laggy socket),
+            // promote straight to 'delivered'.
+            const initialStatus: 'sent' | 'delivered' =
+              incoming.sender_id === uid && deliveredOwnRef.current.has(incoming.id)
+                ? 'delivered'
+                : 'sent'
+            const next: Message = { ...incoming, _status: initialStatus }
             if (tempIdx >= 0) {
               const copy = list.slice()
               copy[tempIdx] = next
@@ -440,6 +829,8 @@ function ConversationView({
             }
             return [...list, next]
           })
+          // If this incoming message is FROM the other user, ack delivery back to them.
+          if (incoming.sender_id !== uid) ackDelivered(incoming.id)
         },
       )
       .on(
@@ -452,24 +843,195 @@ function ConversationView({
         },
         (payload) => {
           const updated = payload.new as Message
+          // Multi-device: if THIS user is the recipient and another of their
+          // devices just flipped is_read → true, refresh inbox unread badges
+          // here too. Guarded by an actual state change so repeated no-op
+          // UPDATEs (idempotent mark_message_read from a second device) don't
+          // spam the inbox query.
+          let readFlippedForMe = false
           qc.setQueryData<Message[]>(queryKey, (prev) =>
-            (prev ?? []).map((m) => (m.id === updated.id ? { ...m, ...updated } : m)),
+            (prev ?? []).map((m) => {
+              if (m.id !== updated.id) return m
+              if (
+                updated.is_read === true &&
+                m.is_read !== true &&
+                updated.sender_id !== uid
+              ) {
+                readFlippedForMe = true
+              }
+              const merged: Message = { ...m, ...updated }
+              // Preserve client-only delivered flag; if the row is now read
+              // the ✓✓-blue path in the bubble takes over.
+              if (!merged.is_read && deliveredOwnRef.current.has(merged.id)) {
+                merged._status = 'delivered'
+              }
+              return merged
+            }),
           )
+          if (readFlippedForMe) {
+            qc.invalidateQueries({ queryKey: ['conversations', uid] })
+            qc.invalidateQueries({ queryKey: ['messages-unread', uid] })
+          }
         },
       )
-      .subscribe()
+      // Typing indicator from the other participant.
+      .on('broadcast', { event: 'typing' }, (msg) => {
+        const from = (msg.payload as { from?: string; isTyping?: boolean })?.from
+        const isTyping = (msg.payload as { isTyping?: boolean })?.isTyping
+        if (!from || from === uid) return
+        if (isTyping) {
+          setOtherTyping(true)
+          if (otherTypingTimerRef.current) clearTimeout(otherTypingTimerRef.current)
+          // Auto-clear if we stop hearing typing pings for 3.5s.
+          otherTypingTimerRef.current = setTimeout(() => setOtherTyping(false), 3500)
+        } else {
+          if (otherTypingTimerRef.current) clearTimeout(otherTypingTimerRef.current)
+          setOtherTyping(false)
+        }
+      })
+      // Delivery ack from the other participant → mark our own bubble as delivered.
+      .on('broadcast', { event: 'delivered' }, (msg) => {
+        const { messageId, by } = (msg.payload as { messageId?: string; by?: string }) ?? {}
+        if (!messageId || !by || by === uid) return
+        // Remember the ack across refetches, and skip redundant cache writes.
+        if (deliveredOwnRef.current.has(messageId)) return
+        deliveredOwnRef.current.add(messageId)
+        qc.setQueryData<Message[]>(queryKey, (prev) =>
+          (prev ?? []).map((m) => {
+            if (m.id !== messageId || m.sender_id !== uid) return m
+            if (m.is_read || m._status === 'delivered') return m
+            return { ...m, _status: 'delivered' }
+          }),
+        )
+      })
+      .subscribe((status) => {
+        // On (re)connect — including automatic resubscribe after a token refresh
+        // or network blip — replay delivery acks for anything still unread. The
+        // deliveredAckedRef Set keeps this idempotent, so we never spam the peer.
+        if (status === 'SUBSCRIBED') ackAllUnreadInbound()
+      })
+
+    chatChannelRef.current = channel
     return () => {
+      if (otherTypingTimerRef.current) clearTimeout(otherTypingTimerRef.current)
+      chatChannelRef.current = null
       supabase.removeChannel(channel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, qc])
+  }, [conversationId, user?.id, qc])
 
-  // Auto-scroll on new messages
+  // First-load ack: covers the case where the channel is already SUBSCRIBED
+  // before the initial fetch resolves. The Set dedupes against the reconnect
+  // handler above.
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    if (!user?.id || !messagesQ.data?.length || !chatChannelRef.current) return
+    const uid = user.id
+    for (const m of messagesQ.data) {
+      if (m.sender_id !== uid && !m.is_read && !deliveredAckedRef.current.has(m.id)) {
+        deliveredAckedRef.current.add(m.id)
+        chatChannelRef.current.send({
+          type: 'broadcast',
+          event: 'delivered',
+          payload: { messageId: m.id, by: uid },
+        })
+      }
     }
-  }, [messagesQ.data?.length])
+  }, [messagesQ.data, user?.id])
+
+
+  // Throttled typing broadcaster wired to the composer's onChange.
+  const sendTyping = (isTyping: boolean) => {
+    const ch = chatChannelRef.current
+    if (!ch || !user?.id) return
+    const now = Date.now()
+    // Cap outbound typing pings to ~1 every 1.5s while composing, but always
+    // send an immediate 'stopped' event so the peer's indicator clears fast.
+    if (isTyping && now - lastTypingSentRef.current < 1500) return
+    lastTypingSentRef.current = isTyping ? now : 0
+    ch.send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { from: user.id, isTyping },
+    })
+  }
+
+  // Stop-typing timer: 2s of idle keystrokes → broadcast stop.
+  const stopTypingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleDraftChange = (value: string) => {
+    setDraft(value)
+    if (value.trim().length > 0) {
+      sendTyping(true)
+      if (stopTypingTimerRef.current) clearTimeout(stopTypingTimerRef.current)
+      stopTypingTimerRef.current = setTimeout(() => sendTyping(false), 2000)
+    } else {
+      if (stopTypingTimerRef.current) clearTimeout(stopTypingTimerRef.current)
+      sendTyping(false)
+    }
+  }
+
+
+  // --- Auto-scroll that respects the user's manual scroll --------------------
+  // We only pin to the bottom when the user is already there. If they've
+  // scrolled up to read older messages, incoming messages must not yank the
+  // viewport back down. When they send a message themselves we *do* force a
+  // scroll — that's an explicit intent to see their new message.
+  const stickToBottomRef = useRef(true)
+  const lastMessageIdRef = useRef<string | null>(null)
+
+  const isNearBottom = (el: HTMLDivElement, threshold = 96) =>
+    el.scrollHeight - el.scrollTop - el.clientHeight < threshold
+
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior })
+    stickToBottomRef.current = true
+  }
+
+  // Track whether the user is pinned to the bottom.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onScroll = () => {
+      stickToBottomRef.current = isNearBottom(el)
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Snap to bottom when the conversation first loads.
+  useEffect(() => {
+    if (!messagesQ.data?.length) return
+    if (lastMessageIdRef.current == null) {
+      scrollToBottom('auto')
+    }
+    lastMessageIdRef.current = messagesQ.data[messagesQ.data.length - 1]?.id ?? null
+    // Reset stickiness when the user switches conversations.
+    return () => {
+      lastMessageIdRef.current = null
+      stickToBottomRef.current = true
+    }
+  }, [conversationId])
+
+  // Auto-scroll on new messages, only if the user is still at the bottom.
+  useEffect(() => {
+    const list = messagesQ.data
+    if (!list?.length) return
+    const newestId = list[list.length - 1]?.id ?? null
+    const changed = newestId !== lastMessageIdRef.current
+    lastMessageIdRef.current = newestId
+    if (!changed) return
+    // Always follow our own outgoing (optimistic) messages; only follow
+    // incoming ones when the user hasn't scrolled up.
+    const newest = list[list.length - 1]
+    const mine = newest?.sender_id === user?.id
+    if (mine || stickToBottomRef.current) {
+      // Wait one frame so the newly-rendered bubble is in the DOM before we
+      // compute scrollHeight.
+      requestAnimationFrame(() => scrollToBottom(mine ? 'smooth' : 'smooth'))
+    }
+  }, [messagesQ.data, user?.id])
+
 
   // Viewport-based read receipts: mark each incoming message read only when it scrolls into view.
   const markedRef = useRef<Set<string>>(new Set())
@@ -542,11 +1104,55 @@ function ConversationView({
   const handleSend = (e?: FormEvent) => {
     e?.preventDefault()
     const text = draft.trim()
+    // Sending clears typing state immediately so the peer's "typing…" hides.
+    if (stopTypingTimerRef.current) clearTimeout(stopTypingTimerRef.current)
+    sendTyping(false)
+
+    // -------- EDIT PATH --------
+    if (editing && user) {
+      if (!text) {
+        toast.error('Message cannot be empty.')
+        return
+      }
+      const target = editing
+      // Optimistic patch
+      qc.setQueryData<Message[]>(queryKey, (prev) =>
+        (prev ?? []).map((m) =>
+          m.id === target.id ? { ...m, content: text, edited_at: new Date().toISOString() } : m,
+        ),
+      )
+      setDraft('')
+      setEditing(null)
+      ;(async () => {
+        const mod = await moderateContent('message', text)
+        if (!mod.allowed) {
+          qc.invalidateQueries({ queryKey })
+          showModerationBlocked({ surface: 'message', content: text, ...mod })
+          return
+        }
+        const { error } = await supabase.rpc('edit_message', {
+          _message_id: target.id,
+          _new_content: text,
+        })
+        if (error) {
+          toast.error(error.message || 'Could not edit')
+          qc.invalidateQueries({ queryKey })
+        }
+      })()
+      return
+    }
+
     if ((!text && !pendingFile) || !user) return
     const file = pendingFile
+    const reply = replyTo
     setDraft('')
     setPendingFile(null)
+    setReplyTo(null)
     if (fileRef.current) fileRef.current.value = ''
+    // Sending is an explicit intent to see the newest message — re-pin the
+    // viewport even if the user had scrolled up while reading.
+    stickToBottomRef.current = true
+    requestAnimationFrame(() => scrollToBottom('smooth'))
 
     // Text-only (incl. emoji): send instantly with optimistic update — no queue, no loading UI.
     if (!file && text) {
@@ -557,6 +1163,7 @@ function ConversationView({
         content: text,
         created_at: new Date().toISOString(),
         is_read: false,
+        reply_to_id: reply?.id ?? null,
         _optimistic: true,
         _status: 'sent',
       }
@@ -577,6 +1184,7 @@ function ConversationView({
           conversation_id: conversationId,
           sender_id: user.id,
           content: text,
+          reply_to_id: reply?.id ?? null,
         })
         if (error) {
           qc.setQueryData<Message[]>(queryKey, (prev) =>
@@ -635,28 +1243,42 @@ function ConversationView({
   }, [messagesQ.data])
 
   const canSend = !!draft.trim() || !!pendingFile
+  const messageById = useMemo(() => {
+    const map = new Map<string, Message>()
+    ;(messagesQ.data ?? []).forEach((m) => map.set(m.id, m))
+    return map
+  }, [messagesQ.data])
 
   return (
     <>
-      <div className="px-4 py-3 border-b flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={onBack}>
+      <div className="sticky top-0 z-10 px-3 md:px-4 py-2.5 border-b bg-background/85 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/70 flex items-center gap-2 shadow-[0_1px_0_0_hsl(var(--border))]">
+        <Button variant="ghost" size="icon" className="md:hidden -ml-1 rounded-full" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <Avatar profile={other} size="sm" />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 leading-tight">
           <p className="font-semibold text-sm truncate">
             {other?.display_name || other?.username || 'Conversation'}
           </p>
-          {other?.username && (
-            <p className="text-xs text-muted-foreground truncate">@{other.username}</p>
-          )}
+          {otherTyping ? (
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 truncate flex items-center gap-1">
+              <span className="inline-flex gap-0.5" aria-hidden>
+                <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
+                <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
+                <span className="w-1 h-1 rounded-full bg-current animate-bounce" />
+              </span>
+              typing…
+            </p>
+          ) : other?.username ? (
+            <p className="text-[11px] text-muted-foreground truncate">@{other.username}</p>
+          ) : null}
         </div>
         {/* Native-only WhatsApp-style call button. Hidden on the web project. */}
         {isNativeApp() && other?.id && (
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+            className="rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 active:scale-95 transition-transform"
             aria-label={`Call ${other.display_name || other.username || 'user'}`}
             onClick={() => {
               try {
@@ -676,7 +1298,8 @@ function ConversationView({
         )}
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 md:px-4 py-4 space-y-5">
         {messagesQ.isLoading ? (
           <div className="text-sm text-muted-foreground">Loading…</div>
         ) : grouped.length === 0 ? (
@@ -686,9 +1309,12 @@ function ConversationView({
         ) : (
           grouped.map((g) => (
             <div key={g.date} className="space-y-2">
-              <div className="text-center text-[11px] uppercase tracking-wide text-muted-foreground">
-                {g.date}
+              <div className="flex justify-center">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/60 px-2.5 py-0.5 rounded-full">
+                  {g.date}
+                </span>
               </div>
+
               {g.items.map((m) => {
                 const mine = m.sender_id === user?.id
                 const hasAttachment = !!(m.attachment_path || m.attachment_url)
@@ -706,44 +1332,42 @@ function ConversationView({
                   )
                 }
                 return (
-                  <div
+                  <MessageBubble
                     key={m.id}
-                    ref={!mine && !m.is_read ? registerMessageRef(m.id) : undefined}
-                    data-mid={m.id}
-                    className={cn('flex', mine ? 'justify-end' : 'justify-start')}
-                  >
-                    <div
-                      className={cn(
-                        'max-w-[75%] rounded-2xl px-3 py-2 text-sm space-y-2',
-                        mine
-                          ? 'bg-secondary text-secondary-foreground rounded-br-sm'
-                          : 'bg-muted text-foreground rounded-bl-sm',
-                        m._optimistic && 'opacity-70',
-                      )}
-                    >
-                      {hasAttachment && <MessageAttachment m={m} mine={mine} />}
-                      {m.content && (
-                        <p className="whitespace-pre-wrap break-words">{m.content}</p>
-                      )}
-                      <p
-                        className={cn(
-                          'text-[10px] opacity-70',
-                          mine ? 'text-right' : 'text-left',
-                        )}
-                      >
-                        {format(new Date(m.created_at), 'p')}
-
-                        {mine && (m._status || m.is_read) && (
-                          <span className="ml-1" aria-label={m.is_read ? 'read' : m._status === 'delivered' ? 'delivered' : 'sent'}>
-                            {m.is_read || m._status === 'delivered' ? '✓✓' : '✓'}
-                          </span>
-                        )}
-                        {mine && m.is_read && m.read_at && (
-                          <span className="ml-1 opacity-80">· read {format(new Date(m.read_at), 'p')}</span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
+                    m={m}
+                    mine={mine}
+                    hasAttachment={hasAttachment}
+                    quoted={m.reply_to_id ? messageById.get(m.reply_to_id) ?? null : null}
+                    userId={user?.id}
+                    otherName={other?.display_name || other?.username || 'User'}
+                    innerRef={!mine && !m.is_read ? registerMessageRef(m.id) : undefined}
+                    onReply={() => {
+                      setEditing(null)
+                      setReplyTo(m)
+                      textareaRef.current?.focus()
+                    }}
+                    onEdit={() => {
+                      setReplyTo(null)
+                      setEditing(m)
+                      setDraft(m.content ?? '')
+                      requestAnimationFrame(() => textareaRef.current?.focus())
+                    }}
+                    onDelete={async () => {
+                      const { error } = await supabase.rpc('delete_message_for_everyone', {
+                        _message_id: m.id,
+                      })
+                      if (error) toast.error(error.message || 'Could not delete')
+                    }}
+                    onForward={() => onForward(m)}
+                    onCopy={() => {
+                      if (m.content) {
+                        navigator.clipboard.writeText(m.content).then(
+                          () => toast.success('Copied'),
+                          () => toast.error('Could not copy'),
+                        )
+                      }
+                    }}
+                  />
                 )
               })}
             </div>
@@ -824,7 +1448,42 @@ function ConversationView({
       </div>
 
 
-      <form onSubmit={handleSend} className="p-3 border-t space-y-2">
+      <form
+        onSubmit={handleSend}
+        className="sticky bottom-0 z-10 p-3 border-t bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 space-y-2 shadow-[0_-1px_0_0_hsl(var(--border))] pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+      >
+        {(replyTo || editing) && (
+          <div
+            className={cn(
+              'flex items-start gap-2 rounded-lg border-l-4 px-3 py-2 text-xs',
+              editing ? 'border-amber-500 bg-amber-500/10' : 'border-primary bg-muted/60',
+            )}
+          >
+            <div className="min-w-0 flex-1">
+              <p className={cn('font-semibold text-[11px] uppercase tracking-wide', editing ? 'text-amber-700 dark:text-amber-400' : 'text-primary')}>
+                {editing ? 'Editing message' : `Replying to ${replyTo?.sender_id === user?.id ? 'yourself' : other?.display_name || other?.username || 'user'}`}
+              </p>
+              <p className="truncate text-muted-foreground mt-0.5">
+                {messagePreview(editing || replyTo!)}
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label={editing ? 'Cancel edit' : 'Cancel reply'}
+              onClick={() => {
+                if (editing) {
+                  setEditing(null)
+                  setDraft('')
+                } else {
+                  setReplyTo(null)
+                }
+              }}
+              className="h-6 w-6 grid place-items-center rounded-full hover:bg-muted text-muted-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
         {pendingFile && (
           <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-2">
             {filePreview ? (
@@ -927,7 +1586,7 @@ function ConversationView({
           <Textarea
             ref={textareaRef}
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => handleDraftChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
@@ -936,9 +1595,14 @@ function ConversationView({
             }}
             placeholder="Write a message..."
             rows={1}
-            className="resize-none min-h-[40px] max-h-32"
+            className="resize-none min-h-[40px] max-h-32 rounded-2xl bg-muted/60 border-muted focus-visible:bg-background transition-colors"
           />
-          <Button type="submit" size="icon" disabled={!canSend}>
+          <Button
+            type="submit"
+            size="icon"
+            disabled={!canSend}
+            className="rounded-full shadow-md active:scale-95 transition-transform disabled:opacity-40"
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
@@ -1126,5 +1790,307 @@ function CallLogRow({
         </div>
       </div>
     </div>
+  )
+}
+
+// ============================================================================
+// MessageBubble — WhatsApp-like bubble with reply-quote, edited/deleted
+// markers, forwarded label, and per-message action menu.
+// ============================================================================
+function MessageBubble({
+  m,
+  mine,
+  hasAttachment,
+  quoted,
+  userId,
+  otherName,
+  innerRef,
+  onReply,
+  onEdit,
+  onDelete,
+  onForward,
+  onCopy,
+}: {
+  m: Message
+  mine: boolean
+  hasAttachment: boolean
+  quoted: Message | null
+  userId?: string
+  otherName: string
+  innerRef?: (el: HTMLDivElement | null) => void
+  onReply: () => void
+  onEdit: () => void
+  onDelete: () => void
+  onForward: () => void
+  onCopy: () => void
+}) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [confirm, setConfirm] = useState(false)
+  const deleted = !!m.deleted_for_everyone
+  const editable = canEdit(m, userId)
+  const deletable = canDeleteForEveryone(m, userId)
+
+  return (
+    <div
+      ref={innerRef}
+      data-mid={m.id}
+      className={cn('group flex items-end gap-1', mine ? 'justify-end' : 'justify-start')}
+    >
+      {mine && (
+        <BubbleMenu
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+          mine
+          canReply={!deleted}
+          canCopy={!deleted && !!m.content}
+          canForward={!deleted}
+          canEdit={editable}
+          canDelete={deletable}
+          onReply={onReply}
+          onCopy={onCopy}
+          onForward={onForward}
+          onEdit={onEdit}
+          onDelete={() => setConfirm(true)}
+        />
+      )}
+      <div
+        className={cn(
+          'relative max-w-[78%] rounded-2xl px-3.5 py-2 text-sm space-y-1.5 shadow-sm ring-1',
+          mine
+            ? 'bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
+            : 'bg-card text-foreground rounded-bl-md ring-border/60',
+          m._optimistic && 'opacity-70',
+          deleted && 'italic opacity-70',
+        )}
+      >
+        {m.forwarded_from_id && !deleted && (
+          <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide opacity-60">
+            <Forward className="h-3 w-3" /> Forwarded
+          </div>
+        )}
+        {quoted && !deleted && (
+          <div
+            className={cn(
+              'rounded-lg px-2 py-1.5 border-l-2 text-xs mb-1',
+              mine
+                ? 'bg-secondary-foreground/10 border-secondary-foreground/40'
+                : 'bg-muted border-primary/60',
+            )}
+          >
+            <p className="font-semibold text-[11px] mb-0.5 opacity-80">
+              {quoted.sender_id === userId ? 'You' : otherName}
+            </p>
+            <p className="truncate opacity-80">{messagePreview(quoted)}</p>
+          </div>
+        )}
+        {deleted ? (
+          <p className="whitespace-pre-wrap break-words flex items-center gap-1.5">
+            <Ban className="h-3.5 w-3.5" />
+            This message was deleted
+          </p>
+        ) : (
+          <>
+            {hasAttachment && <MessageAttachment m={m} mine={mine} />}
+            {m.content && (
+              <p className="whitespace-pre-wrap break-words">{m.content}</p>
+            )}
+          </>
+        )}
+        <p
+          className={cn(
+            'text-[10px] opacity-70 flex items-center gap-1',
+            mine ? 'justify-end' : 'justify-start',
+          )}
+        >
+          {m.edited_at && !deleted && <span className="italic">edited</span>}
+          <span>{format(new Date(m.created_at), 'p')}</span>
+          {mine && !deleted && (m._status || m.is_read) && (
+            <span
+              aria-label={m.is_read ? 'read' : m._status === 'delivered' ? 'delivered' : 'sent'}
+              className={cn(m.is_read && 'text-sky-500')}
+            >
+              {m.is_read || m._status === 'delivered' ? '✓✓' : '✓'}
+            </span>
+          )}
+        </p>
+      </div>
+      {!mine && (
+        <BubbleMenu
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+          canReply={!deleted}
+          canCopy={!deleted && !!m.content}
+          canForward={!deleted}
+          onReply={onReply}
+          onCopy={onCopy}
+          onForward={onForward}
+        />
+      )}
+
+      <ConfirmDialog
+        open={confirm}
+        onOpenChange={setConfirm}
+        title="Delete message for everyone?"
+        description="This message will be removed for both of you. This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          setConfirm(false)
+          onDelete()
+        }}
+      />
+    </div>
+  )
+}
+
+function BubbleMenu({
+  open,
+  onOpenChange,
+  mine,
+  canReply,
+  canCopy,
+  canForward,
+  canEdit,
+  canDelete,
+  onReply,
+  onCopy,
+  onForward,
+  onEdit,
+  onDelete,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  mine?: boolean
+  canReply?: boolean
+  canCopy?: boolean
+  canForward?: boolean
+  canEdit?: boolean
+  canDelete?: boolean
+  onReply?: () => void
+  onCopy?: () => void
+  onForward?: () => void
+  onEdit?: () => void
+  onDelete?: () => void
+}) {
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Message actions"
+          className={cn(
+            'h-7 w-7 grid place-items-center rounded-full text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-muted transition-opacity data-[state=open]:opacity-100 shrink-0',
+            'md:opacity-0 opacity-100', // always visible on mobile
+          )}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align={mine ? 'end' : 'start'} side="top" className="w-44 p-1">
+        {canReply && <MenuItem icon={Reply} label="Reply" onSelect={() => { onOpenChange(false); onReply?.() }} />}
+        {canCopy && <MenuItem icon={Copy} label="Copy" onSelect={() => { onOpenChange(false); onCopy?.() }} />}
+        {canForward && <MenuItem icon={Forward} label="Forward" onSelect={() => { onOpenChange(false); onForward?.() }} />}
+        {canEdit && <MenuItem icon={Pencil} label="Edit" onSelect={() => { onOpenChange(false); onEdit?.() }} />}
+        {canDelete && <MenuItem icon={Trash2} destructive label="Delete for everyone" onSelect={() => { onOpenChange(false); onDelete?.() }} />}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// ============================================================================
+// ForwardDialog — pick an existing 1:1 conversation to forward to.
+// ============================================================================
+function ForwardDialog({
+  message,
+  onClose,
+  conversations,
+}: {
+  message: Message | null
+  onClose: () => void
+  conversations: Conversation[]
+}) {
+  const { user } = useAuth()
+  const [busy, setBusy] = useState<string | null>(null)
+  const open = !!message
+
+  const targets = useMemo(
+    () =>
+      conversations
+        .filter((c) => c.id !== message?.conversation_id)
+        .filter((c) => !c.archived_at)
+        .slice(0, 100),
+    [conversations, message?.conversation_id],
+  )
+
+  const forward = async (targetId: string) => {
+    if (!message) return
+    setBusy(targetId)
+    const { error } = await supabase.rpc('forward_message', {
+      _message_id: message.id,
+      _to_conversation_id: targetId,
+    })
+    setBusy(null)
+    if (error) {
+      toast.error(error.message || 'Could not forward')
+      return
+    }
+    toast.success('Message forwarded')
+    onClose()
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Forward message</DialogTitle>
+          <DialogDescription>
+            Choose one of your existing chats to send this message to.
+          </DialogDescription>
+        </DialogHeader>
+        {message && (
+          <div className="rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground line-clamp-3">
+            {messagePreview(message)}
+          </div>
+        )}
+        <div className="max-h-72 overflow-y-auto rounded-lg border divide-y">
+          {targets.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground text-center">
+              No other chats available.
+            </p>
+          ) : (
+            targets.map((c) => {
+              const other = c.other_user
+              const name = other?.display_name || other?.username || 'User'
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => forward(c.id)}
+                  disabled={busy === c.id}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/50 transition-colors disabled:opacity-60"
+                >
+                  <UserAvatar
+                    avatarUrl={other?.avatar_url}
+                    displayName={name}
+                    size="sm"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{name}</p>
+                    {other?.username && (
+                      <p className="text-[11px] text-muted-foreground truncate">@{other.username}</p>
+                    )}
+                  </div>
+                  {busy === c.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Forward className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+              )
+            })
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

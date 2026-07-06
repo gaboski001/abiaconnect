@@ -34,12 +34,23 @@ function isIOS(): boolean {
   return iOSClassic || iPadOS
 }
 
+function isAndroid(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /Android/i.test(navigator.userAgent || '')
+}
+
+
+
 export function InstallAppPrompt() {
   const [open, setOpen] = useState(false)
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
+  const androidWeb = isAndroid() && !Capacitor.isNativePlatform()
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    // Android ships as a native APK — no PWA install UI, no
+    // beforeinstallprompt handling, no manifest. Do nothing here.
+    if (androidWeb) return
     if (Capacitor.isNativePlatform()) return
     if (isIOS()) return // iOS uses the dedicated IOSInstallPrompt
     if (isStandalone()) return
@@ -59,7 +70,13 @@ export function InstallAppPrompt() {
       window.clearTimeout(t)
       window.removeEventListener('beforeinstallprompt', onBeforeInstall)
     }
-  }, [])
+  }, [androidWeb])
+
+  // Android: never render the install modal.
+  if (androidWeb) return null
+
+
+
 
   const dismiss = () => {
     localStorage.setItem(DISMISS_KEY, String(Date.now()))

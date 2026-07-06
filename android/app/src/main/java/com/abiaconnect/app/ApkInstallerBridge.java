@@ -25,13 +25,17 @@ import java.net.URL;
  * flow inside the app instead of handing off to the browser + notifications.
  *
  * Exposed to the web layer as `window.AbiaApkInstaller`.
- *  - installFromUrl(url, filename)       – kick off download + install
- *  - openInstallSettings()               – jump the user to "Install unknown apps"
+ *  - installFromUrl(url, filename)  – download (or reuse cached) and install
+ *  - installExisting(filename)      – re-launch installer for an already-downloaded APK
+ *  - hasDownloaded(filename)        – true when a cached APK is ready to install
+ *  - canInstall()                   – whether "install unknown apps" is granted
+ *  - openInstallSettings()          – jump the user to "Install unknown apps"
  *
  * Progress + status events are dispatched back to the WebView as CustomEvents:
- *   window.addEventListener('abiaconnect-apk-progress', e => e.detail)
- *   window.addEventListener('abiaconnect-apk-error', e => e.detail)
- *   window.addEventListener('abiaconnect-apk-installing', e => e.detail)
+ *   'abiaconnect-apk-progress'              { loaded, total, speed }
+ *   'abiaconnect-apk-installing'            { path, launched }
+ *   'abiaconnect-apk-permission-required'   { path, filename }
+ *   'abiaconnect-apk-error'                 { message }
  */
 public class ApkInstallerBridge {
     private final Activity activity;
@@ -64,10 +68,45 @@ public class ApkInstallerBridge {
         } catch (Exception ignored) {}
     }
 
+    /** True when a previously-downloaded APK for `filename` is still on disk. */
+    @JavascriptInterface
+    public boolean hasDownloaded(String filename) {
+        File f = apkFileFor(filename);
+        return f != null && f.exists() && f.length() > 0;
+    }
+
+    /**
+     * Re-launch the installer for an APK we already downloaded — used when
+     * the user dismissed the install prompt, denied "install unknown apps",
+     * or just wants to retry without paying the download cost again.
+     * Silently no-ops (with an error event) when the cached file is gone.
+     */
+    @JavascriptInterface
+    public void installExisting(String filename) {
+        File f = apkFileFor(filename);
+        if (f == null || !f.exists() || f.length() <= 0) {
+            dispatchError("Downloaded update is no longer available. Please download again.");
+            return;
+        }
+        launchInstaller(f);
+    }
+
     @JavascriptInterface
     public void installFromUrl(final String url, final String filename) {
         if (url == null || url.isEmpty()) return;
         if (worker != null && worker.isAlive()) return;
+
+        // Fast-path: if we already have this exact APK on disk, skip the network
+        // and jump straight to install. This is what lets the user "retry install"
+        // (or dismiss the system prompt and open it again) without re-downloading.
+        File cached = apkFileFor(filename);
+        if (cached != null && cached.exists() && cached.length() > 0) {
+            long size = cached.length();
+            // Emit a synthetic progress-complete so the UI can update its bar.
+            dispatchProgress(size, size, 0);
+            launchInstaller(cached);
+            return;
+        }
 
         worker = new Thread(() -> {
             HttpURLConnection conn = null;
@@ -75,17 +114,26 @@ public class ApkInstallerBridge {
             FileOutputStream out = null;
             File outFile = null;
             try {
-                File dir = new File(activity.getExternalFilesDir(null), "updates");
-                if (!dir.exists()) //noinspection ResultOfMethodCallIgnored
-                    dir.mkdirs();
-
-                // Clean older APKs so we don't fill the cache after several updates.
-                File[] old = dir.listFiles();
-                if (old != null) for (File f : old) //noinspection ResultOfMethodCallIgnored
-                    f.delete();
+                File dir = updatesDir();
+                if (dir == null) {
+                    dispatchError("Could not access update storage.");
+                    return;
+                }
 
                 String safeName = filename == null || filename.isEmpty() ? "update.apk" : filename;
                 outFile = new File(dir, safeName);
+
+                // Prune stale APKs (previous versions) but keep the one we're
+                // about to write so a partial retry can reuse it.
+                File[] existing = dir.listFiles();
+                if (existing != null) {
+                    for (File f : existing) {
+                        if (!f.getName().equals(safeName)) {
+                            //noinspection ResultOfMethodCallIgnored
+                            f.delete();
+                        }
+                    }
+                }
 
                 conn = (HttpURLConnection) new URL(url).openConnection();
                 conn.setConnectTimeout(20000);
@@ -141,13 +189,28 @@ public class ApkInstallerBridge {
         worker.start();
     }
 
+    private File updatesDir() {
+        File dir = new File(activity.getExternalFilesDir(null), "updates");
+        if (!dir.exists() && !dir.mkdirs()) return null;
+        return dir;
+    }
+
+    private File apkFileFor(String filename) {
+        if (filename == null || filename.isEmpty()) return null;
+        File dir = updatesDir();
+        if (dir == null) return null;
+        return new File(dir, filename);
+    }
+
     private void launchInstaller(File apk) {
         activity.runOnUiThread(() -> {
             try {
                 // Android 8+: requires user to grant "install unknown apps" first.
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                     && !activity.getPackageManager().canRequestPackageInstalls()) {
-                    dispatchInstalling(apk.getAbsolutePath(), false);
+                    // Distinct event so the UI can prompt for permission AND
+                    // keep an "Install now" retry action pointed at the cached APK.
+                    dispatchPermissionRequired(apk);
                     openInstallSettings();
                     return;
                 }
@@ -177,6 +240,12 @@ public class ApkInstallerBridge {
     private void dispatchInstalling(String path, boolean launched) {
         emit("abiaconnect-apk-installing",
             "{\"path\":" + JSONObject.quote(path) + ",\"launched\":" + launched + "}");
+    }
+
+    private void dispatchPermissionRequired(File apk) {
+        emit("abiaconnect-apk-permission-required",
+            "{\"path\":" + JSONObject.quote(apk.getAbsolutePath())
+                + ",\"filename\":" + JSONObject.quote(apk.getName()) + "}");
     }
 
     private void dispatchError(String message) {

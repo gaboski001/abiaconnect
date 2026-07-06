@@ -62,7 +62,7 @@ export default function Version() {
 
   return (
     <div className="container max-w-2xl py-8 space-y-4">
-      <AppUpdateCard variant="plain" />
+      <AppUpdateCard variant="plain" showWhenUpToDate />
       <Card>
         <CardHeader>
           <CardTitle>Version info</CardTitle>
