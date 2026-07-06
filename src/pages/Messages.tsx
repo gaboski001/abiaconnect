@@ -2003,15 +2003,19 @@ function MessageBubble({
           <div
             className={cn(
               'rounded-lg px-2 py-1.5 border-l-2 text-xs mb-1',
-              mine
-                ? 'bg-secondary-foreground/10 border-secondary-foreground/40'
-                : 'bg-muted border-primary/60',
+              native
+                ? mine
+                  ? 'bg-black/25 border-emerald-300/70 text-white/90'
+                  : 'bg-white/[0.06] border-emerald-400/70 text-white/90'
+                : mine
+                  ? 'bg-secondary-foreground/10 border-secondary-foreground/40'
+                  : 'bg-muted border-primary/60',
             )}
           >
-            <p className="font-semibold text-[11px] mb-0.5 opacity-80">
+            <p className={cn('font-semibold text-[11px] mb-0.5', native ? 'text-emerald-300' : 'opacity-80')}>
               {quoted.sender_id === userId ? 'You' : otherName}
             </p>
-            <p className="truncate opacity-80">{messagePreview(quoted)}</p>
+            <p className={cn('truncate', native ? 'text-white/70' : 'opacity-80')}>{messagePreview(quoted)}</p>
           </div>
         )}
         {deleted ? (
@@ -2021,7 +2025,8 @@ function MessageBubble({
           </p>
         ) : (
           <>
-            {hasAttachment && <MessageAttachment m={m} mine={mine} />}
+            {hasAttachment && <MessageAttachment m={m} mine={mine} native={native} />}
+
             {m.content && (
               <p className="whitespace-pre-wrap break-words">{m.content}</p>
             )}
