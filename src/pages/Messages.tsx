@@ -1425,7 +1425,9 @@ function ConversationView({
                     key={m.id}
                     m={m}
                     mine={mine}
+                    native={native}
                     hasAttachment={hasAttachment}
+
                     quoted={m.reply_to_id ? messageById.get(m.reply_to_id) ?? null : null}
                     userId={user?.id}
                     otherName={other?.display_name || other?.username || 'User'}
