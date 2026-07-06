@@ -216,6 +216,8 @@ export default function Messages() {
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [newOpen, setNewOpen] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
+  const [forwardMessage, setForwardMessage] = useState<Message | null>(null)
 
   const convosQ = useQuery({
     queryKey: ['conversations', user?.id],
