@@ -36,6 +36,14 @@ public class CallForegroundService extends Service {
     public static final String EXTRA_CALLER_NAME = "caller_name";
     public static final String EXTRA_CALL_ID = "call_id";
 
+    /**
+     * Proximity wake lock — when the user holds the phone to their ear during
+     * a call, PROXIMITY_SCREEN_OFF_WAKE_LOCK turns the display off so the
+     * user's cheek/skin can't accidentally trigger buttons on the screen.
+     * Released when the call ends.
+     */
+    @Nullable private PowerManager.WakeLock proximityWakeLock;
+
     public static void start(Context context, String callerName, String callId) {
         Intent intent = new Intent(context, CallForegroundService.class);
         intent.setAction(ACTION_START);
