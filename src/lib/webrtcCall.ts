@@ -153,6 +153,14 @@ class CallManager {
   private autoReconnecting = false
   private inviteRetryTimer: number | null = null
   private wasConnected = false
+  /**
+   * Recently cancelled call ids (by us or by the peer). Used so a late
+   * `invite` for a call the user already hung up on is auto-declined and
+   * never surfaces a ringing UI. Bounded + time-pruned to avoid unbounded
+   * growth on long-lived sessions.
+   */
+  private cancelledCallIds = new Map<string, number>()
+  private static CANCELLED_TTL_MS = 60_000
 
 
 
@@ -323,11 +331,43 @@ class CallManager {
   reject() {
     if (!this.pendingOffer) return
     const { from, callId } = this.pendingOffer
-    void this.broadcastToUser(from.id, 'cancel', { callId, reason: 'rejected' })
+    this.rememberCancelled(callId)
+    this.sendCancelWithRetries(from.id, callId, 'rejected')
     this.clearInviteRetryLoop()
     this.pendingOffer = null
     this.patch({ status: 'idle', callId: null, direction: null, peer: null })
   }
+
+  /**
+   * Broadcast a `cancel` several times over the first few seconds so a peer
+   * whose realtime channel is still catching up (cold start after FCM, brief
+   * WebView pause, transient network drop) still receives the hangup and
+   * stops ringing. `onCancel` is idempotent so extra deliveries are no-ops.
+   */
+  private sendCancelWithRetries(peerId: string, callId: string, reason?: string) {
+    this.rememberCancelled(callId)
+    const payload: Record<string, unknown> = { callId }
+    if (reason) payload.reason = reason
+    const attempts = [0, 400, 1200, 3000, 6000]
+    for (const delay of attempts) {
+      window.setTimeout(() => {
+        void this.broadcastToUser(peerId, 'cancel', payload).catch(() => undefined)
+      }, delay)
+    }
+  }
+
+  private rememberCancelled(callId: string) {
+    this.pruneCancelled()
+    this.cancelledCallIds.set(callId, Date.now())
+  }
+
+  private pruneCancelled() {
+    const cutoff = Date.now() - CallManager.CANCELLED_TTL_MS
+    for (const [id, at] of this.cancelledCallIds) {
+      if (at < cutoff) this.cancelledCallIds.delete(id)
+    }
+  }
+
 
   private async broadcastToUser(userId: string, event: string, payload: any) {
     const ch = supabase.channel(`call-user:${userId}`, {
@@ -417,8 +457,13 @@ class CallManager {
     const direction = this.state.direction
     const wasConnected = this.wasConnected
     if (notifyPeer && peerId && callId) {
-      await this.sessionSend('bye', { callId }).catch(() => undefined)
-      await this.broadcastToUser(peerId, 'cancel', { callId }).catch(() => undefined)
+      // Fire-and-forget: don't await, so hangup UI is instant.
+      // Retry the cancel broadcast so a peer whose realtime channel is still
+      // subscribing (cold start after FCM, backgrounded WebView, brief
+      // network blip) still receives the hangup and stops ringing. onCancel
+      // is idempotent, so extra deliveries are harmless.
+      void this.sessionSend('bye', { callId }).catch(() => undefined)
+      this.sendCancelWithRetries(peerId, callId)
     }
     // Log a call entry in the conversation (missed or completed).
     // Only the caller writes it (single source of truth — both peers see the same row).
@@ -499,13 +544,19 @@ class CallManager {
 
   private onInvite(payload: any) {
     if (!payload?.callId || !payload?.from) return
+    this.pruneCancelled()
+    // Late invite for a call already hung up on either side — bounce a cancel
+    // back so the caller (whose own hangup broadcast may have raced our late
+    // subscribe) stops ringing/spinning immediately.
+    if (this.cancelledCallIds.has(payload.callId)) {
+      this.sendCancelWithRetries(payload.from.id, payload.callId, 'cancelled')
+      return
+    }
     // User has disabled calls in settings — silently decline so the caller
     // sees a normal "unavailable" cancel instead of an endless ring.
     if (!areCallsEnabled()) {
-      void this.broadcastToUser(payload.from.id, 'cancel', {
-        callId: payload.callId,
-        reason: 'unavailable',
-      })
+      this.rememberCancelled(payload.callId)
+      this.sendCancelWithRetries(payload.from.id, payload.callId, 'unavailable')
       return
     }
     // retry that matches the call we're already handling — otherwise once
@@ -515,10 +566,8 @@ class CallManager {
     if (this.pendingOffer?.callId === payload.callId) return
     // Busy: auto-reject a genuinely-different incoming call.
     if (this.state.status !== 'idle' && this.state.status !== 'ended') {
-      void this.broadcastToUser(payload.from.id, 'cancel', {
-        callId: payload.callId,
-        reason: 'busy',
-      })
+      this.rememberCancelled(payload.callId)
+      this.sendCancelWithRetries(payload.from.id, payload.callId, 'busy')
       return
     }
     this.pendingOffer = { from: payload.from, sdp: payload.sdp, callId: payload.callId }
@@ -547,12 +596,23 @@ class CallManager {
 
   private onCancel(payload: any) {
     if (!payload?.callId) return
+    // Always remember cancellations so any late-arriving invite retry for the
+    // same callId is auto-rejected before we ever start ringing.
+    this.rememberCancelled(payload.callId)
+    // Pending (not yet accepted) invite matches — clear it so we can never
+    // surface a ringing UI for an already-cancelled call.
+    if (this.pendingOffer?.callId === payload.callId) {
+      this.pendingOffer = null
+    }
     if (this.state.callId !== payload.callId) return
     // Ignore a stale "busy" cancel that arrives after we've already progressed
     // past the calling phase (caused by our own retry pinging the peer after
     // they accepted). Only honour it while we're still waiting for pickup.
     if (payload?.reason === 'busy' && this.state.status !== 'calling') return
+    // Already tearing down — idempotent no-op.
+    if (this.state.status === 'ended' || this.state.status === 'idle') return
     void this.endCall(false, payload?.reason === 'busy' ? 'User is busy' : null)
+
   }
 
   private async openSessionChannel(callId: string, isCaller: boolean) {
