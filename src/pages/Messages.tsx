@@ -30,7 +30,9 @@ import {
   MoreHorizontal,
   CheckCircle2,
   Ban,
+  Video,
 } from 'lucide-react'
+
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { callManager } from '@/lib/webrtcCall'
 import { SEO } from '@/components/SEO'
@@ -576,8 +578,9 @@ export default function Messages() {
   return (
     <>
       <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
-    <div className="container mx-auto px-0 md:px-4 py-0 md:py-6">
-      <div className="md:rounded-2xl md:border md:bg-card overflow-hidden h-[calc(100dvh-3.5rem)] md:h-[calc(100vh-8rem)] flex bg-gradient-to-b from-background to-muted/30">
+    <div className={cn('container mx-auto px-0 md:px-4 py-0 md:py-6', isNativeApp() && conversationId && 'h-full max-w-full p-0')}>
+      <div className={cn('md:rounded-2xl md:border md:bg-card overflow-hidden flex bg-gradient-to-b from-background to-muted/30', isNativeApp() && conversationId ? 'h-full md:h-[calc(100vh-8rem)]' : 'h-[calc(100dvh-3.5rem)] md:h-[calc(100vh-8rem)]')}>
+
 
         {/* LEFT */}
         <aside
@@ -1249,19 +1252,32 @@ function ConversationView({
     return map
   }, [messagesQ.data])
 
+  const native = isNativeApp()
   return (
     <>
-      <div className="sticky top-0 z-10 px-3 md:px-4 py-2.5 border-b bg-background/85 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/70 flex items-center gap-2 shadow-[0_1px_0_0_hsl(var(--border))]">
-        <Button variant="ghost" size="icon" className="md:hidden -ml-1 rounded-full" onClick={onBack}>
+      <div
+        className={cn(
+          'sticky top-0 z-10 px-3 md:px-4 py-2.5 border-b flex items-center gap-2 backdrop-blur-xl backdrop-saturate-150 shadow-[0_1px_0_0_hsl(var(--border))]',
+          native
+            ? 'bg-[#1f2c33] text-white border-black/40 pt-[max(0.625rem,env(safe-area-inset-top))]'
+            : 'bg-background/85 supports-[backdrop-filter]:bg-background/70',
+        )}
+      >
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn('md:hidden -ml-1 rounded-full', native && 'text-white hover:bg-white/10 hover:text-white')}
+          onClick={onBack}
+        >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <Avatar profile={other} size="sm" />
         <div className="min-w-0 flex-1 leading-tight">
-          <p className="font-semibold text-sm truncate">
+          <p className={cn('font-semibold text-sm truncate', native && 'text-white')}>
             {other?.display_name || other?.username || 'Conversation'}
           </p>
           {otherTyping ? (
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 truncate flex items-center gap-1">
+            <p className={cn('text-[11px] truncate flex items-center gap-1', native ? 'text-emerald-300' : 'text-emerald-600 dark:text-emerald-400')}>
               <span className="inline-flex gap-0.5" aria-hidden>
                 <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
                 <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
@@ -1270,36 +1286,109 @@ function ConversationView({
               typing…
             </p>
           ) : other?.username ? (
-            <p className="text-[11px] text-muted-foreground truncate">@{other.username}</p>
+            <p className={cn('text-[11px] truncate', native ? 'text-white/60' : 'text-muted-foreground')}>@{other.username}</p>
           ) : null}
         </div>
-        {/* Native-only WhatsApp-style call button. Hidden on the web project. */}
-        {isNativeApp() && other?.id && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 active:scale-95 transition-transform"
-            aria-label={`Call ${other.display_name || other.username || 'user'}`}
-            onClick={() => {
-              try {
-                callManager.startCall({
-                  id: other.id,
-                  name: other.display_name || other.username || 'User',
-                  avatarUrl: other.avatar_url ?? null,
-                  conversationId,
-                })
-              } catch (e) {
-                toast.error((e as Error).message || 'Could not start call')
-              }
-            }}
-          >
-            <Phone className="h-5 w-5" />
-          </Button>
+        {/* Native-only WhatsApp-style call cluster. Hidden on the web project. */}
+        {native && other?.id && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full text-white hover:bg-white/10 hover:text-white active:scale-95 transition-transform"
+              aria-label="Video call (coming soon)"
+              onClick={() => toast.info('Video calls are coming soon')}
+            >
+              <Video className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full text-white hover:bg-white/10 hover:text-white active:scale-95 transition-transform"
+              aria-label={`Call ${other.display_name || other.username || 'user'}`}
+              onClick={() => {
+                try {
+                  callManager.startCall({
+                    id: other.id!,
+                    name: other.display_name || other.username || 'User',
+                    avatarUrl: other.avatar_url ?? null,
+                    conversationId,
+                  })
+                } catch (e) {
+                  toast.error((e as Error).message || 'Could not start call')
+                }
+              }}
+            >
+              <Phone className="h-5 w-5" />
+            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full text-white hover:bg-white/10 hover:text-white active:scale-95 transition-transform"
+                  aria-label="More options"
+                >
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" side="bottom" className="w-52 p-1">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm hover:bg-muted"
+                  onClick={() => toast.info('In-chat search is coming soon')}
+                >
+                  <Search className="h-4 w-4" /> Search in chat
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm hover:bg-muted"
+                  onClick={async () => {
+                    const { error } = await supabase.rpc('clear_conversation', { _conversation_id: conversationId })
+                    if (error) toast.error(error.message || 'Could not clear')
+                    else toast.success('Chat cleared')
+                  }}
+                >
+                  <Archive className="h-4 w-4" /> Clear chat
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-destructive hover:bg-destructive/10"
+                  onClick={async () => {
+                    if (!confirm('Delete this chat for you? This cannot be undone.')) return
+                    const { error } = await supabase.rpc('delete_conversation', { _conversation_id: conversationId })
+                    if (error) toast.error(error.message || 'Could not delete')
+                    else {
+                      toast.success('Chat deleted')
+                      onBack()
+                    }
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" /> Delete chat
+                </button>
+              </PopoverContent>
+            </Popover>
+          </>
         )}
       </div>
 
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 md:px-4 py-4 space-y-5">
+      <div
+        ref={scrollRef}
+        className={cn(
+          'flex-1 overflow-y-auto px-3 md:px-4 py-4 space-y-5',
+          native && 'bg-[#0b141a] text-white',
+        )}
+        style={
+          native
+            ? {
+                backgroundImage:
+                  'radial-gradient(circle at 20% 10%, rgba(255,255,255,0.03) 0, transparent 40%), radial-gradient(circle at 80% 60%, rgba(255,255,255,0.025) 0, transparent 45%)',
+              }
+            : undefined
+        }
+      >
+
         {messagesQ.isLoading ? (
           <div className="text-sm text-muted-foreground">Loading…</div>
         ) : grouped.length === 0 ? (
@@ -1336,7 +1425,9 @@ function ConversationView({
                     key={m.id}
                     m={m}
                     mine={mine}
+                    native={native}
                     hasAttachment={hasAttachment}
+
                     quoted={m.reply_to_id ? messageById.get(m.reply_to_id) ?? null : null}
                     userId={user?.id}
                     otherName={other?.display_name || other?.username || 'User'}
@@ -1450,8 +1541,14 @@ function ConversationView({
 
       <form
         onSubmit={handleSend}
-        className="sticky bottom-0 z-10 p-3 border-t bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 space-y-2 shadow-[0_-1px_0_0_hsl(var(--border))] pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        className={cn(
+          'sticky bottom-0 z-10 p-3 border-t backdrop-blur-xl space-y-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+          native
+            ? 'bg-[#1f2c33] border-black/40 text-white shadow-[0_-1px_0_0_rgba(0,0,0,0.4)]'
+            : 'bg-background/85 supports-[backdrop-filter]:bg-background/70 shadow-[0_-1px_0_0_hsl(var(--border))]',
+        )}
       >
+
         {(replyTo || editing) && (
           <div
             className={cn(
@@ -1800,6 +1897,7 @@ function CallLogRow({
 function MessageBubble({
   m,
   mine,
+  native,
   hasAttachment,
   quoted,
   userId,
@@ -1813,6 +1911,7 @@ function MessageBubble({
 }: {
   m: Message
   mine: boolean
+  native?: boolean
   hasAttachment: boolean
   quoted: Message | null
   userId?: string
@@ -1856,13 +1955,18 @@ function MessageBubble({
       <div
         className={cn(
           'relative max-w-[78%] rounded-2xl px-3.5 py-2 text-sm space-y-1.5 shadow-sm ring-1',
-          mine
-            ? 'bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
-            : 'bg-card text-foreground rounded-bl-md ring-border/60',
+          native
+            ? mine
+              ? 'bg-[#005c4b] text-white rounded-br-md ring-transparent'
+              : 'bg-[#1f2c33] text-white rounded-bl-md ring-white/5'
+            : mine
+              ? 'bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
+              : 'bg-card text-foreground rounded-bl-md ring-border/60',
           m._optimistic && 'opacity-70',
           deleted && 'italic opacity-70',
         )}
       >
+
         {m.forwarded_from_id && !deleted && (
           <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide opacity-60">
             <Forward className="h-3 w-3" /> Forwarded
