@@ -68,6 +68,8 @@ import { useUploadQueue } from '@/hooks/useUploadQueue'
 import { moderateContent } from '@/lib/moderateContent'
 import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 import { useKeyboardInset } from '@/hooks/useKeyboardInset'
+import { useMessageReactions, type ReactionAgg } from '@/hooks/useMessageReactions'
+
 
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'))
@@ -1023,6 +1025,19 @@ function ConversationView({
     }
   })
 
+  // Emoji reactions for messages currently rendered in this conversation.
+  const messageIdList = useMemo(
+    () => (messagesQ.data ?? []).map((m) => m.id),
+    [messagesQ.data],
+  )
+  const { reactionsByMessage, toggleReaction } = useMessageReactions(
+    conversationId,
+    messageIdList,
+    user?.id,
+  )
+
+
+
   // Scroll to a specific message (used when tapping a quoted reply preview).
   // Flashes a ring around the target so the user's eye lands on it.
   const jumpToMessage = (id: string) => {
@@ -1520,7 +1535,10 @@ function ConversationView({
                       }
                     }}
                     onJumpToQuoted={jumpToMessage}
+                    reactions={reactionsByMessage.get(m.id) ?? []}
+                    onToggleReaction={(emoji) => toggleReaction(m.id, emoji)}
                   />
+
 
                 )
               })}
@@ -2018,6 +2036,8 @@ function MessageBubble({
   onForward,
   onCopy,
   onJumpToQuoted,
+  reactions = [],
+  onToggleReaction,
 }: {
   m: Message
   mine: boolean
@@ -2033,13 +2053,41 @@ function MessageBubble({
   onForward: () => void
   onCopy: () => void
   onJumpToQuoted?: (id: string) => void
-
+  reactions?: ReactionAgg[]
+  onToggleReaction?: (emoji: string) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirm, setConfirm] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const longPressTimerRef = useRef<number | null>(null)
+  const longPressFiredRef = useRef(false)
   const deleted = !!m.deleted_for_everyone
   const editable = canEdit(m, userId)
   const deletable = canDeleteForEveryone(m, userId)
+
+  const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏']
+
+  const startLongPress = () => {
+    if (deleted) return
+    longPressFiredRef.current = false
+    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current)
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressFiredRef.current = true
+      setPickerOpen(true)
+      try {
+        if ('vibrate' in navigator) navigator.vibrate?.(15)
+      } catch {
+        /* noop */
+      }
+    }, 380)
+  }
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
 
   return (
     <div
@@ -2065,8 +2113,16 @@ function MessageBubble({
         />
       )}
       <div
+        onPointerDown={startLongPress}
+        onPointerUp={cancelLongPress}
+        onPointerCancel={cancelLongPress}
+        onPointerLeave={cancelLongPress}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          if (!deleted) setPickerOpen(true)
+        }}
         className={cn(
-          'relative max-w-[78%] rounded-2xl px-3.5 py-2 text-sm space-y-1.5 shadow-sm ring-1',
+          'relative max-w-[78%] rounded-2xl px-3.5 py-2 text-sm space-y-1.5 shadow-sm ring-1 select-none',
           native
             ? mine
               ? 'bg-[#005c4b] text-white rounded-br-md ring-transparent'
@@ -2078,6 +2134,50 @@ function MessageBubble({
           deleted && 'italic opacity-70',
         )}
       >
+        {/* Quick reaction picker — appears on long-press / right-click.
+            A transparent full-screen backdrop closes it on outside tap. */}
+        {pickerOpen && (
+          <>
+            <button
+              type="button"
+              aria-label="Close reactions"
+              onClick={() => setPickerOpen(false)}
+              className="fixed inset-0 z-40 cursor-default bg-transparent"
+            />
+            <div
+              role="menu"
+              className={cn(
+                'absolute z-50 -top-12 flex items-center gap-1 rounded-full px-2 py-1.5 shadow-xl ring-1 animate-in fade-in zoom-in-95 duration-150',
+                mine ? 'right-0 origin-bottom-right' : 'left-0 origin-bottom-left',
+                native
+                  ? 'bg-[#233138] ring-white/10'
+                  : 'bg-popover text-popover-foreground ring-border',
+              )}
+            >
+              {QUICK_REACTIONS.map((emoji) => {
+                const active = reactions.some((r) => r.emoji === emoji && r.mine)
+                return (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => {
+                      onToggleReaction?.(emoji)
+                      setPickerOpen(false)
+                    }}
+                    className={cn(
+                      'grid place-items-center w-9 h-9 rounded-full text-xl leading-none transition-transform active:scale-90 hover:scale-110',
+                      active && (native ? 'bg-white/10' : 'bg-muted'),
+                    )}
+                    aria-label={active ? `Remove ${emoji} reaction` : `React with ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
+
 
         {m.forwarded_from_id && !deleted && (
           <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide opacity-60">
@@ -2138,7 +2238,41 @@ function MessageBubble({
             </span>
           )}
         </p>
+
+        {/* Reaction chips — overlap the bottom edge of the bubble, WhatsApp-style. */}
+        {reactions.length > 0 && !deleted && (
+          <div
+            className={cn(
+              'absolute -bottom-3 flex items-center gap-1',
+              mine ? 'right-2' : 'left-2',
+            )}
+          >
+            {reactions.map((r) => (
+              <button
+                key={r.emoji}
+                type="button"
+                onClick={() => onToggleReaction?.(r.emoji)}
+                aria-label={r.mine ? `Remove your ${r.emoji} reaction` : `Add ${r.emoji} reaction`}
+                aria-pressed={r.mine}
+                className={cn(
+                  'flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] leading-none shadow-sm ring-1 transition-transform active:scale-90 hover:scale-105',
+                  native
+                    ? r.mine
+                      ? 'bg-[#005c4b] ring-emerald-300/50 text-white'
+                      : 'bg-[#2a3942] ring-white/10 text-white'
+                    : r.mine
+                      ? 'bg-primary text-primary-foreground ring-primary/40'
+                      : 'bg-background text-foreground ring-border',
+                )}
+              >
+                <span>{r.emoji}</span>
+                {r.count > 1 && <span className="font-semibold">{r.count}</span>}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
       {!mine && (
         <BubbleMenu
           open={menuOpen}
