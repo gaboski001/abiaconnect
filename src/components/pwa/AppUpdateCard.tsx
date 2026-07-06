@@ -104,6 +104,7 @@ export function AppUpdateCard({ variant = 'premium', className, showWhenUpToDate
       onRetry={start}
       onInstallNow={installExisting}
       onGrantPermission={openInstallSettings}
+      hasCachedInstall={hasCachedInstall()}
       tone={variant === 'premium' ? 'dark' : 'light'}
     />
   ) : null
