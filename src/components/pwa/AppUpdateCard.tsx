@@ -52,7 +52,7 @@ function formatSpeed(bps: number | null) {
 export function AppUpdateCard({ variant = 'premium', className, showWhenUpToDate = false }: AppUpdateCardProps) {
   const { release, currentVersion, hasUpdate, platform, isLoading, isNative } = useAppUpdate()
   const [modalOpen, setModalOpen] = useState(false)
-  const { state, download, cancel, reset, installExisting, openInstallSettings } = useReleaseDownload()
+  const { state, download, cancel, reset, installExisting, openInstallSettings, hasCachedInstall } = useReleaseDownload()
 
   // Once the installed version matches the latest release, aggressively clear
   // any stale download/installing strip so the card collapses back to a clean
