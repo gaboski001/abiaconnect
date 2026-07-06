@@ -68,6 +68,8 @@ import { useUploadQueue } from '@/hooks/useUploadQueue'
 import { moderateContent } from '@/lib/moderateContent'
 import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 import { useKeyboardInset } from '@/hooks/useKeyboardInset'
+import { useMessageReactions, type ReactionAgg } from '@/hooks/useMessageReactions'
+
 
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'))
