@@ -1535,7 +1535,10 @@ function ConversationView({
                       }
                     }}
                     onJumpToQuoted={jumpToMessage}
+                    reactions={reactionsByMessage.get(m.id) ?? []}
+                    onToggleReaction={(emoji) => toggleReaction(m.id, emoji)}
                   />
+
 
                 )
               })}
