@@ -118,11 +118,20 @@ public class CallForegroundService extends Service {
     }
 
     private void acquireProximityWakeLock() {
+        // Best-effort. Any failure here MUST NOT affect the call itself —
+        // the WebRTC session, audio routing, and CallOverlay all continue
+        // to work without proximity screen-off.
+        if (proximityUnavailable) return;
         try {
             PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            if (pm == null) return;
+            if (pm == null) {
+                proximityUnavailable = true;
+                Log.d(TAG, "PowerManager unavailable — proximity screen-off disabled for this call");
+                return;
+            }
             if (!pm.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)) {
-                Log.d(TAG, "Proximity wake lock not supported on this device");
+                proximityUnavailable = true;
+                Log.d(TAG, "Proximity wake lock not supported — call continues without screen-off");
                 return;
             }
             if (proximityWakeLock != null && proximityWakeLock.isHeld()) return;
@@ -132,10 +141,19 @@ public class CallForegroundService extends Service {
             );
             proximityWakeLock.setReferenceCounted(false);
             proximityWakeLock.acquire(60 * 60 * 1000L /* 1h safety cap */);
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to acquire proximity wake lock: " + e.getMessage());
+        } catch (SecurityException se) {
+            // WAKE_LOCK permission revoked / OEM-restricted. Fall back silently.
+            proximityUnavailable = true;
+            proximityWakeLock = null;
+            Log.w(TAG, "Proximity wake lock denied by OS — call continues without screen-off: " + se.getMessage());
+        } catch (Throwable t) {
+            // Never let a wake-lock error crash the call foreground service.
+            proximityUnavailable = true;
+            proximityWakeLock = null;
+            Log.w(TAG, "Proximity wake lock unavailable — call continues without screen-off: " + t.getMessage());
         }
     }
+
 
     private void releaseProximityWakeLock() {
         try {
