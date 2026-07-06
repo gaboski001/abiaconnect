@@ -7,7 +7,7 @@ import { createElement } from 'react'
 // ---- Mocks --------------------------------------------------------------
 
 let installedVersion = '1.0.0'
-const resumeListeners: Array<(state?: { isActive: boolean }) => void> = []
+const resumeListeners: Array<(state: { isActive: boolean }) => void> = []
 const appStateListeners: Array<(state: { isActive: boolean }) => void> = []
 
 vi.mock('@capacitor/core', () => ({
