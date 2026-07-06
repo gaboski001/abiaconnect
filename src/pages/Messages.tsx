@@ -1185,9 +1185,18 @@ function ConversationView({
           <p className="font-semibold text-sm truncate">
             {other?.display_name || other?.username || 'Conversation'}
           </p>
-          {other?.username && (
+          {otherTyping ? (
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 truncate flex items-center gap-1">
+              <span className="inline-flex gap-0.5" aria-hidden>
+                <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
+                <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
+                <span className="w-1 h-1 rounded-full bg-current animate-bounce" />
+              </span>
+              typing…
+            </p>
+          ) : other?.username ? (
             <p className="text-[11px] text-muted-foreground truncate">@{other.username}</p>
-          )}
+          ) : null}
         </div>
         {/* Native-only WhatsApp-style call button. Hidden on the web project. */}
         {isNativeApp() && other?.id && (
