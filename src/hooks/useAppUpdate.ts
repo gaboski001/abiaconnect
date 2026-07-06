@@ -24,12 +24,24 @@ function compareVersions(a: string, b: string): number {
   return 0
 }
 
-async function getCurrentNativeVersion(): Promise<string | null> {
+// Dynamically load @capacitor/app without a static import so the web build
+// doesn't require the native-only plugin to be installed.
+async function loadCapacitorApp(): Promise<any | null> {
   if (!Capacitor.isNativePlatform()) return null
   try {
     const mod = '@capacitor/' + 'app'
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const m: any = await (new Function('x', 'return import(x)'))(mod)
+    return m
+  } catch {
+    return null
+  }
+}
+
+async function getCurrentNativeVersion(): Promise<string | null> {
+  const m = await loadCapacitorApp()
+  if (!m) return null
+  try {
     const info = await m.App.getInfo()
     return info.version as string
   } catch {
@@ -74,9 +86,36 @@ export function useAppUpdate() {
       if (document.visibilityState === 'visible') refreshNativeVersion()
     }
     document.addEventListener('visibilitychange', onVisible)
+
+    // Also listen to Capacitor App lifecycle events. On Android, returning
+    // from the system package-installer often does NOT fire a
+    // `visibilitychange` (the WebView was never fully hidden), but
+    // `appStateChange` + `resume` always do. Re-read the installed version
+    // on both so the "Update available" banner clears the instant the
+    // freshly-installed APK is running.
+    const appHandles: Array<{ remove: () => void } | Promise<{ remove: () => void }>> = []
+    loadCapacitorApp().then((m) => {
+      if (cancelled || !m?.App) return
+      try {
+        appHandles.push(
+          m.App.addListener('appStateChange', (state: { isActive: boolean }) => {
+            if (state?.isActive) refreshNativeVersion()
+          }),
+        )
+        appHandles.push(m.App.addListener('resume', () => refreshNativeVersion()))
+      } catch {
+        /* listener setup failed — visibilitychange is still active */
+      }
+    })
+
     return () => {
       cancelled = true
       document.removeEventListener('visibilitychange', onVisible)
+      appHandles.forEach((h) => {
+        Promise.resolve(h)
+          .then((handle) => handle?.remove?.())
+          .catch(() => {})
+      })
     }
   }, [])
 
