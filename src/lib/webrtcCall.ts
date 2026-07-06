@@ -475,6 +475,7 @@ class CallManager {
       degraded: false,
       reconnecting: false,
       reconnectAttempts: 0,
+      remoteRinging: false,
       timeline: this.appendTimeline(this.state.timeline, 'unknown', error ?? 'Call ended'),
     })
 
