@@ -993,6 +993,16 @@ function ConversationView({
     stickToBottomRef.current = true
   }
 
+  // Keep the transcript pinned to the newest message whenever the on-screen
+  // keyboard opens or grows, on iOS and Android alike.
+  useKeyboardInset(() => {
+    if (stickToBottomRef.current) {
+      requestAnimationFrame(() => scrollToBottom('auto'))
+    }
+  })
+
+
+
   // Track whether the user is pinned to the bottom.
   useEffect(() => {
     const el = scrollRef.current
