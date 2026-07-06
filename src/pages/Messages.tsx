@@ -1502,7 +1502,9 @@ function ConversationView({
                         )
                       }
                     }}
+                    onJumpToQuoted={jumpToMessage}
                   />
+
                 )
               })}
             </div>
