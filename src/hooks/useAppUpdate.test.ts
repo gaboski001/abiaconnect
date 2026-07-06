@@ -102,7 +102,7 @@ describe('useAppUpdate', () => {
     // the newly-installed APK.
     installedVersion = '4.0.1'
     await act(async () => {
-      resumeListeners.forEach((cb) => cb())
+      resumeListeners.forEach((cb) => cb({ isActive: true }))
     })
 
     await waitFor(() => expect(result.current.currentVersion).toBe('4.0.1'))
