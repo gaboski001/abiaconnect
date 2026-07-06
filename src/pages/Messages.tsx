@@ -736,11 +736,28 @@ function ConversationView({
     },
   })
 
+  // Presence/broadcast channel for typing + delivery receipts.
+  // Kept in a ref so send handlers can broadcast without re-subscribing.
+  const chatChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const [otherTyping, setOtherTyping] = useState(false)
+  const otherTypingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastTypingSentRef = useRef(0)
+
   // Realtime: merge INSERT/UPDATE directly into cache (no refetch, no duplicates)
   useEffect(() => {
-    if (!conversationId) return
+    if (!conversationId || !user?.id) return
+    const uid = user.id
+
+    const broadcastDelivered = (messageId: string) => {
+      chatChannelRef.current?.send({
+        type: 'broadcast',
+        event: 'delivered',
+        payload: { messageId, by: uid },
+      })
+    }
+
     const channel = supabase
-      .channel(`messages-${conversationId}`)
+      .channel(`chat:${conversationId}`, { config: { broadcast: { self: false } } })
       .on(
         'postgres_changes',
         {
@@ -761,7 +778,8 @@ function ConversationView({
                 m.sender_id === incoming.sender_id &&
                 (m.content ?? '') === (incoming.content ?? ''),
             )
-            const next = { ...incoming, _status: 'delivered' as const }
+            // Own echo stays 'sent' (single ✓) until the recipient broadcasts 'delivered'.
+            const next: Message = { ...incoming, _status: 'sent' }
             if (tempIdx >= 0) {
               const copy = list.slice()
               copy[tempIdx] = next
@@ -769,6 +787,10 @@ function ConversationView({
             }
             return [...list, next]
           })
+          // If this incoming message is FROM the other user, ack delivery back to them.
+          if (incoming.sender_id !== uid) {
+            broadcastDelivered(incoming.id)
+          }
         },
       )
       .on(
@@ -786,12 +808,92 @@ function ConversationView({
           )
         },
       )
+      // Typing indicator from the other participant.
+      .on('broadcast', { event: 'typing' }, (msg) => {
+        const from = (msg.payload as { from?: string; isTyping?: boolean })?.from
+        const isTyping = (msg.payload as { isTyping?: boolean })?.isTyping
+        if (!from || from === uid) return
+        if (isTyping) {
+          setOtherTyping(true)
+          if (otherTypingTimerRef.current) clearTimeout(otherTypingTimerRef.current)
+          // Auto-clear if we stop hearing typing pings for 3.5s.
+          otherTypingTimerRef.current = setTimeout(() => setOtherTyping(false), 3500)
+        } else {
+          if (otherTypingTimerRef.current) clearTimeout(otherTypingTimerRef.current)
+          setOtherTyping(false)
+        }
+      })
+      // Delivery ack from the other participant → mark our own bubble as delivered.
+      .on('broadcast', { event: 'delivered' }, (msg) => {
+        const { messageId, by } = (msg.payload as { messageId?: string; by?: string }) ?? {}
+        if (!messageId || !by || by === uid) return
+        qc.setQueryData<Message[]>(queryKey, (prev) =>
+          (prev ?? []).map((m) =>
+            m.id === messageId && m.sender_id === uid && !m.is_read
+              ? { ...m, _status: 'delivered' }
+              : m,
+          ),
+        )
+      })
       .subscribe()
+
+    chatChannelRef.current = channel
     return () => {
+      if (otherTypingTimerRef.current) clearTimeout(otherTypingTimerRef.current)
+      chatChannelRef.current = null
       supabase.removeChannel(channel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, qc])
+  }, [conversationId, user?.id, qc])
+
+  // When we open a conversation, ack delivery for any unread messages from the
+  // other user that were sent while we were offline. This ensures they see ✓✓
+  // the moment we come online, matching WhatsApp behavior.
+  useEffect(() => {
+    if (!user?.id || !messagesQ.data?.length || !chatChannelRef.current) return
+    const uid = user.id
+    for (const m of messagesQ.data) {
+      if (m.sender_id !== uid && !m.is_read) {
+        chatChannelRef.current.send({
+          type: 'broadcast',
+          event: 'delivered',
+          payload: { messageId: m.id, by: uid },
+        })
+      }
+    }
+    // Only re-run when the list identity changes.
+  }, [messagesQ.data, user?.id])
+
+  // Throttled typing broadcaster wired to the composer's onChange.
+  const sendTyping = (isTyping: boolean) => {
+    const ch = chatChannelRef.current
+    if (!ch || !user?.id) return
+    const now = Date.now()
+    // Cap outbound typing pings to ~1 every 1.5s while composing, but always
+    // send an immediate 'stopped' event so the peer's indicator clears fast.
+    if (isTyping && now - lastTypingSentRef.current < 1500) return
+    lastTypingSentRef.current = isTyping ? now : 0
+    ch.send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { from: user.id, isTyping },
+    })
+  }
+
+  // Stop-typing timer: 2s of idle keystrokes → broadcast stop.
+  const stopTypingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleDraftChange = (value: string) => {
+    setDraft(value)
+    if (value.trim().length > 0) {
+      sendTyping(true)
+      if (stopTypingTimerRef.current) clearTimeout(stopTypingTimerRef.current)
+      stopTypingTimerRef.current = setTimeout(() => sendTyping(false), 2000)
+    } else {
+      if (stopTypingTimerRef.current) clearTimeout(stopTypingTimerRef.current)
+      sendTyping(false)
+    }
+  }
+
 
   // --- Auto-scroll that respects the user's manual scroll --------------------
   // We only pin to the bottom when the user is already there. If they've
