@@ -86,9 +86,36 @@ export function useAppUpdate() {
       if (document.visibilityState === 'visible') refreshNativeVersion()
     }
     document.addEventListener('visibilitychange', onVisible)
+
+    // Also listen to Capacitor App lifecycle events. On Android, returning
+    // from the system package-installer often does NOT fire a
+    // `visibilitychange` (the WebView was never fully hidden), but
+    // `appStateChange` + `resume` always do. Re-read the installed version
+    // on both so the "Update available" banner clears the instant the
+    // freshly-installed APK is running.
+    const appHandles: Array<{ remove: () => void } | Promise<{ remove: () => void }>> = []
+    loadCapacitorApp().then((m) => {
+      if (cancelled || !m?.App) return
+      try {
+        appHandles.push(
+          m.App.addListener('appStateChange', (state: { isActive: boolean }) => {
+            if (state?.isActive) refreshNativeVersion()
+          }),
+        )
+        appHandles.push(m.App.addListener('resume', () => refreshNativeVersion()))
+      } catch {
+        /* listener setup failed — visibilitychange is still active */
+      }
+    })
+
     return () => {
       cancelled = true
       document.removeEventListener('visibilitychange', onVisible)
+      appHandles.forEach((h) => {
+        Promise.resolve(h)
+          .then((handle) => handle?.remove?.())
+          .catch(() => {})
+      })
     }
   }, [])
 
