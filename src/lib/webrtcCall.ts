@@ -417,8 +417,13 @@ class CallManager {
     const direction = this.state.direction
     const wasConnected = this.wasConnected
     if (notifyPeer && peerId && callId) {
-      await this.sessionSend('bye', { callId }).catch(() => undefined)
-      await this.broadcastToUser(peerId, 'cancel', { callId }).catch(() => undefined)
+      // Fire-and-forget: don't await, so hangup UI is instant.
+      // Retry the cancel broadcast so a peer whose realtime channel is still
+      // subscribing (cold start after FCM, backgrounded WebView, brief
+      // network blip) still receives the hangup and stops ringing. onCancel
+      // is idempotent, so extra deliveries are harmless.
+      void this.sessionSend('bye', { callId }).catch(() => undefined)
+      this.sendCancelWithRetries(peerId, callId)
     }
     // Log a call entry in the conversation (missed or completed).
     // Only the caller writes it (single source of truth — both peers see the same row).
