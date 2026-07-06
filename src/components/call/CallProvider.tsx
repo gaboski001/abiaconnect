@@ -115,13 +115,17 @@ export function CallProvider() {
   }, [state.status])
 
   useEffect(() => {
-    const onAnswer = () => {
-      // Only accept if we actually have a ringing invite. If FCM arrived
-      // before the realtime `invite` event, this is a no-op and the invite
-      // handler will still surface the incoming-call UI on arrival.
+    const onAnswer = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { callId?: string } | undefined
+      const callId = detail?.callId ?? ''
+      // Ringing already: accept immediately.
       if (statusRef.current === 'ringing') {
         void callManager.accept()
+        return
       }
+      // FCM Answer arrived before the realtime invite — queue the accept so
+      // it fires the instant the invite lands, avoiding a second ring.
+      if (callId) callManager.queuePendingAccept(callId)
     }
     const onDecline = () => {
       if (statusRef.current === 'ringing') {
