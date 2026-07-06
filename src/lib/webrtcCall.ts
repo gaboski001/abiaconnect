@@ -183,6 +183,7 @@ class CallManager {
     })
     ch.on('broadcast', { event: 'invite' }, ({ payload }) => this.onInvite(payload))
     ch.on('broadcast', { event: 'cancel' }, ({ payload }) => this.onCancel(payload))
+    ch.on('broadcast', { event: 'ringing' }, ({ payload }) => this.onRingingAck(payload))
     ch.subscribe()
     this.userChannel = ch
   }
