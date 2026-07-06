@@ -290,15 +290,19 @@ export default function Messages() {
     },
   })
 
-  // Realtime: refresh conversation list on any new message
+  // Realtime: refresh conversation list on new messages OR pin/archive changes
   useEffect(() => {
     if (!user) return
+    const invalidate = () =>
+      qc.invalidateQueries({ queryKey: ['conversations', user.id] })
     const channel = supabase
       .channel(`messages-inbox:${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, invalidate)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, invalidate)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        () => qc.invalidateQueries({ queryKey: ['conversations', user.id] }),
+        { event: '*', schema: 'public', table: 'conversation_states', filter: `user_id=eq.${user.id}` },
+        invalidate,
       )
       .subscribe()
     return () => {
@@ -306,18 +310,24 @@ export default function Messages() {
     }
   }, [user, qc])
 
-  const filteredConvos = useMemo(() => {
+  const { activeList, archivedList, filteredConvos } = useMemo(() => {
     const list = convosQ.data ?? []
     const q = search.trim().toLowerCase()
-    if (!q) return list
-    return list.filter((c) =>
-      (c.other_user?.display_name || c.other_user?.username || '').toLowerCase().includes(q),
-    )
-  }, [convosQ.data, search])
+    const matches = q
+      ? list.filter((c) =>
+          (c.other_user?.display_name || c.other_user?.username || '').toLowerCase().includes(q),
+        )
+      : list
+    const activeList = matches.filter((c) => !c.archived_at)
+    const archivedList = matches.filter((c) => !!c.archived_at)
+    const filteredConvos = showArchived ? archivedList : activeList
+    return { activeList, archivedList, filteredConvos }
+  }, [convosQ.data, search, showArchived])
 
   const activeConvo = useMemo(
-    () => filteredConvos.find((c) => c.id === conversationId) || (convosQ.data ?? []).find((c) => c.id === conversationId),
-    [filteredConvos, convosQ.data, conversationId],
+    () =>
+      (convosQ.data ?? []).find((c) => c.id === conversationId) || null,
+    [convosQ.data, conversationId],
   )
 
   return (
