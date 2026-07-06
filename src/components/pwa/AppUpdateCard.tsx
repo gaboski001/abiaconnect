@@ -237,6 +237,7 @@ interface ProgressStripProps {
   onRetry: () => void
   onInstallNow: () => void
   onGrantPermission: () => void
+  hasCachedInstall: boolean
   tone: 'dark' | 'light'
 }
 
@@ -248,6 +249,7 @@ function ProgressStrip({
   onRetry,
   onInstallNow,
   onGrantPermission,
+  hasCachedInstall,
   tone,
 }: ProgressStripProps) {
   const dark = tone === 'dark'
