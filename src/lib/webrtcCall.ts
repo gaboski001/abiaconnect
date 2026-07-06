@@ -82,6 +82,13 @@ export interface CallState {
   reconnectAttempts: number
   maxReconnectAttempts: number
   timeline: QualityEvent[]
+  /**
+   * Outgoing calls only. True once the callee's device has received our
+   * invite and is displaying the incoming-call UI (i.e. their phone is
+   * actually ringing). Lets the caller UI distinguish "Calling…" (invite
+   * in flight) from "Ringing…" (peer notified).
+   */
+  remoteRinging: boolean
 }
 
 
