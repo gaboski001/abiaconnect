@@ -405,27 +405,60 @@ function ProgressStrip({
 
   // failed
   const red = dark ? 'border-red-400/30 bg-red-500/10' : 'border-red-500/40 bg-red-500/5'
+  const canInstallCached =
+    platform === 'android' && (hasCachedInstall || !!state.installFilename)
+  const permissionHint = state.permissionRequired
   return (
-    <div className={`mt-3 rounded-2xl border px-3 py-3 ${red} flex items-start gap-2`} role="alert">
-      <XCircle className={`size-4 mt-0.5 ${dark ? 'text-red-300' : 'text-red-600'}`} />
-      <div className="min-w-0 flex-1">
-        <p className={`text-xs font-semibold ${dark ? 'text-red-100' : 'text-red-800'}`}>
-          Update failed
-        </p>
-        <p className={`mt-0.5 text-[11px] leading-snug ${dark ? 'text-white/60' : 'text-muted-foreground'}`}>
-          {state.error ?? 'Something went wrong preparing the download.'}
-        </p>
+    <div className={`mt-3 rounded-2xl border px-3 py-3 ${red}`} role="alert">
+      <div className="flex items-start gap-2">
+        <XCircle className={`size-4 mt-0.5 ${dark ? 'text-red-300' : 'text-red-600'}`} />
+        <div className="min-w-0 flex-1">
+          <p className={`text-xs font-semibold ${dark ? 'text-red-100' : 'text-red-800'}`}>
+            {permissionHint ? 'Installation blocked' : 'Update failed'}
+          </p>
+          <p className={`mt-0.5 text-[11px] leading-snug ${dark ? 'text-white/60' : 'text-muted-foreground'}`}>
+            {canInstallCached
+              ? permissionHint
+                ? 'Allow "Install unknown apps" for AbiaConnect, then tap Install now — the update is already on your device.'
+                : `${state.error ?? 'Something went wrong.'} The update is still cached — tap Install now to try again without re-downloading.`
+              : state.error ?? 'Something went wrong preparing the download.'}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {canInstallCached && permissionHint ? (
+              <Button
+                size="sm"
+                variant={dark ? 'outline' : 'secondary'}
+                onClick={onGrantPermission}
+                className={`h-8 gap-1.5 px-3 text-[11px] ${
+                  dark ? 'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white' : ''
+                }`}
+              >
+                <ShieldCheck className="size-3.5" /> Grant permission
+              </Button>
+            ) : null}
+            {canInstallCached ? (
+              <Button
+                size="sm"
+                onClick={onInstallNow}
+                className="h-8 gap-1.5 px-3 text-[11px] font-bold text-[#0B1220]"
+                style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
+              >
+                <Download className="size-3.5" /> Install now
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              variant={dark ? 'outline' : 'secondary'}
+              onClick={onRetry}
+              className={`h-8 gap-1.5 px-3 text-[11px] ${
+                dark ? 'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white' : ''
+              }`}
+            >
+              <RefreshCw className="size-3.5" /> {canInstallCached ? 'Re-download' : 'Retry'}
+            </Button>
+          </div>
+        </div>
       </div>
-      <Button
-        size="sm"
-        variant={dark ? 'outline' : 'secondary'}
-        onClick={onRetry}
-        className={`h-7 gap-1 px-2 text-[11px] ${
-          dark ? 'border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white' : ''
-        }`}
-      >
-        <RefreshCw className="size-3" /> Retry
-      </Button>
     </div>
   )
 }
