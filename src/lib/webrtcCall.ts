@@ -331,11 +331,43 @@ class CallManager {
   reject() {
     if (!this.pendingOffer) return
     const { from, callId } = this.pendingOffer
-    void this.broadcastToUser(from.id, 'cancel', { callId, reason: 'rejected' })
+    this.rememberCancelled(callId)
+    this.sendCancelWithRetries(from.id, callId, 'rejected')
     this.clearInviteRetryLoop()
     this.pendingOffer = null
     this.patch({ status: 'idle', callId: null, direction: null, peer: null })
   }
+
+  /**
+   * Broadcast a `cancel` several times over the first few seconds so a peer
+   * whose realtime channel is still catching up (cold start after FCM, brief
+   * WebView pause, transient network drop) still receives the hangup and
+   * stops ringing. `onCancel` is idempotent so extra deliveries are no-ops.
+   */
+  private sendCancelWithRetries(peerId: string, callId: string, reason?: string) {
+    this.rememberCancelled(callId)
+    const payload: Record<string, unknown> = { callId }
+    if (reason) payload.reason = reason
+    const attempts = [0, 400, 1200, 3000, 6000]
+    for (const delay of attempts) {
+      window.setTimeout(() => {
+        void this.broadcastToUser(peerId, 'cancel', payload).catch(() => undefined)
+      }, delay)
+    }
+  }
+
+  private rememberCancelled(callId: string) {
+    this.pruneCancelled()
+    this.cancelledCallIds.set(callId, Date.now())
+  }
+
+  private pruneCancelled() {
+    const cutoff = Date.now() - CallManager.CANCELLED_TTL_MS
+    for (const [id, at] of this.cancelledCallIds) {
+      if (at < cutoff) this.cancelledCallIds.delete(id)
+    }
+  }
+
 
   private async broadcastToUser(userId: string, event: string, payload: any) {
     const ch = supabase.channel(`call-user:${userId}`, {
