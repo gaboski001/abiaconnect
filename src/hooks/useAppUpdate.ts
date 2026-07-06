@@ -24,12 +24,24 @@ function compareVersions(a: string, b: string): number {
   return 0
 }
 
-async function getCurrentNativeVersion(): Promise<string | null> {
+// Dynamically load @capacitor/app without a static import so the web build
+// doesn't require the native-only plugin to be installed.
+async function loadCapacitorApp(): Promise<any | null> {
   if (!Capacitor.isNativePlatform()) return null
   try {
     const mod = '@capacitor/' + 'app'
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const m: any = await (new Function('x', 'return import(x)'))(mod)
+    return m
+  } catch {
+    return null
+  }
+}
+
+async function getCurrentNativeVersion(): Promise<string | null> {
+  const m = await loadCapacitorApp()
+  if (!m) return null
+  try {
     const info = await m.App.getInfo()
     return info.version as string
   } catch {
