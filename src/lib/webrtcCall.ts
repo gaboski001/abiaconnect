@@ -544,13 +544,19 @@ class CallManager {
 
   private onInvite(payload: any) {
     if (!payload?.callId || !payload?.from) return
+    this.pruneCancelled()
+    // Late invite for a call already hung up on either side — bounce a cancel
+    // back so the caller (whose own hangup broadcast may have raced our late
+    // subscribe) stops ringing/spinning immediately.
+    if (this.cancelledCallIds.has(payload.callId)) {
+      this.sendCancelWithRetries(payload.from.id, payload.callId, 'cancelled')
+      return
+    }
     // User has disabled calls in settings — silently decline so the caller
     // sees a normal "unavailable" cancel instead of an endless ring.
     if (!areCallsEnabled()) {
-      void this.broadcastToUser(payload.from.id, 'cancel', {
-        callId: payload.callId,
-        reason: 'unavailable',
-      })
+      this.rememberCancelled(payload.callId)
+      this.sendCancelWithRetries(payload.from.id, payload.callId, 'unavailable')
       return
     }
     // retry that matches the call we're already handling — otherwise once
@@ -560,10 +566,8 @@ class CallManager {
     if (this.pendingOffer?.callId === payload.callId) return
     // Busy: auto-reject a genuinely-different incoming call.
     if (this.state.status !== 'idle' && this.state.status !== 'ended') {
-      void this.broadcastToUser(payload.from.id, 'cancel', {
-        callId: payload.callId,
-        reason: 'busy',
-      })
+      this.rememberCancelled(payload.callId)
+      this.sendCancelWithRetries(payload.from.id, payload.callId, 'busy')
       return
     }
     this.pendingOffer = { from: payload.from, sdp: payload.sdp, callId: payload.callId }
@@ -592,12 +596,23 @@ class CallManager {
 
   private onCancel(payload: any) {
     if (!payload?.callId) return
+    // Always remember cancellations so any late-arriving invite retry for the
+    // same callId is auto-rejected before we ever start ringing.
+    this.rememberCancelled(payload.callId)
+    // Pending (not yet accepted) invite matches — clear it so we can never
+    // surface a ringing UI for an already-cancelled call.
+    if (this.pendingOffer?.callId === payload.callId) {
+      this.pendingOffer = null
+    }
     if (this.state.callId !== payload.callId) return
     // Ignore a stale "busy" cancel that arrives after we've already progressed
     // past the calling phase (caused by our own retry pinging the peer after
     // they accepted). Only honour it while we're still waiting for pickup.
     if (payload?.reason === 'busy' && this.state.status !== 'calling') return
+    // Already tearing down — idempotent no-op.
+    if (this.state.status === 'ended' || this.state.status === 'idle') return
     void this.endCall(false, payload?.reason === 'busy' ? 'User is busy' : null)
+
   }
 
   private async openSessionChannel(callId: string, isCaller: boolean) {
