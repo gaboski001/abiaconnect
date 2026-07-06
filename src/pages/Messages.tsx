@@ -678,7 +678,7 @@ function ConversationView({
       </div>
 
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 md:px-4 py-4 space-y-5">
         {messagesQ.isLoading ? (
           <div className="text-sm text-muted-foreground">Loading…</div>
         ) : grouped.length === 0 ? (
@@ -688,9 +688,12 @@ function ConversationView({
         ) : (
           grouped.map((g) => (
             <div key={g.date} className="space-y-2">
-              <div className="text-center text-[11px] uppercase tracking-wide text-muted-foreground">
-                {g.date}
+              <div className="flex justify-center">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/60 px-2.5 py-0.5 rounded-full">
+                  {g.date}
+                </span>
               </div>
+
               {g.items.map((m) => {
                 const mine = m.sender_id === user?.id
                 const hasAttachment = !!(m.attachment_path || m.attachment_url)
