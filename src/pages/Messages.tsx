@@ -740,6 +740,14 @@ function ConversationView({
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  // Hard gate — set the instant a delete starts so realtime handlers,
+  // read-acks, and queued cache writes can't resurrect a deleted chat.
+  const deletingRef = useRef(false)
+  // Reset the gate when switching conversations so a new chat starts clean.
+  useEffect(() => {
+    deletingRef.current = false
+    setDeleting(false)
+  }, [conversationId])
   const fileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
