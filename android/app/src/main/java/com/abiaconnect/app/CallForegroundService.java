@@ -103,9 +103,47 @@ public class CallForegroundService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
+        acquireProximityWakeLock();
 
         // START_STICKY keeps the service alive if the system briefly reclaims it.
         return START_STICKY;
+    }
+
+    private void acquireProximityWakeLock() {
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm == null) return;
+            if (!pm.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)) {
+                Log.d(TAG, "Proximity wake lock not supported on this device");
+                return;
+            }
+            if (proximityWakeLock != null && proximityWakeLock.isHeld()) return;
+            proximityWakeLock = pm.newWakeLock(
+                PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK,
+                "AbiaConnect:CallProximity"
+            );
+            proximityWakeLock.setReferenceCounted(false);
+            proximityWakeLock.acquire(60 * 60 * 1000L /* 1h safety cap */);
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to acquire proximity wake lock: " + e.getMessage());
+        }
+    }
+
+    private void releaseProximityWakeLock() {
+        try {
+            if (proximityWakeLock != null && proximityWakeLock.isHeld()) {
+                // release with WAIT_FOR_NO_PROXIMITY so we don't blink the
+                // screen back on until the phone is away from the ear.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    proximityWakeLock.release(PowerManager.RELEASE_FLAG_WAIT_FOR_NO_PROXIMITY);
+                } else {
+                    proximityWakeLock.release();
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            proximityWakeLock = null;
+        }
     }
 
     private Notification buildOngoingCallNotification(String callerName, String callId) {
