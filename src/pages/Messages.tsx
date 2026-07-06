@@ -739,6 +739,7 @@ function ConversationView({
   const [muteDialogOpen, setMuteDialogOpen] = useState(false)
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -1642,21 +1643,54 @@ function ConversationView({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={async () => {
-                const { error } = await supabase.rpc('delete_conversation', { _conversation_id: conversationId })
-                if (error) toast.error(error.message || 'Could not delete')
-                else {
-                  toast.success('Chat deleted')
-                  onBack()
+              onClick={async (e) => {
+                e.preventDefault()
+                if (deleting) return
+                setDeleting(true)
+                // Stop any in-flight message fetches so they don't repopulate
+                // the cache after we've cleared it.
+                await qc.cancelQueries({ queryKey })
+                // Snapshot the current inbox so we can roll back on failure.
+                const inboxKey = ['conversations', user?.id]
+                const prevInbox = qc.getQueryData<any[]>(inboxKey)
+                // Optimistic UI: remove from inbox + clear this chat's messages.
+                if (Array.isArray(prevInbox)) {
+                  qc.setQueryData(
+                    inboxKey,
+                    prevInbox.filter((c: any) => c?.id !== conversationId),
+                  )
                 }
+                qc.setQueryData(queryKey, [])
+
+                const { error } = await supabase.rpc('delete_conversation', {
+                  _conversation_id: conversationId,
+                })
+                if (error) {
+                  // Roll back optimistic changes and surface the failure.
+                  if (prevInbox !== undefined) qc.setQueryData(inboxKey, prevInbox)
+                  qc.invalidateQueries({ queryKey })
+                  qc.invalidateQueries({ queryKey: inboxKey })
+                  setDeleting(false)
+                  toast.error(error.message || 'Could not delete chat')
+                  return
+                }
+                // Drop the messages cache entirely so a revisit refetches clean.
+                qc.removeQueries({ queryKey })
+                qc.invalidateQueries({ queryKey: inboxKey })
+                setDeleteDialogOpen(false)
+                setDeleting(false)
+                toast.success('Chat deleted')
+                onBack()
               }}
             >
-              Delete
+              {deleting ? 'Deleting…' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
+
         </AlertDialogContent>
       </AlertDialog>
 
