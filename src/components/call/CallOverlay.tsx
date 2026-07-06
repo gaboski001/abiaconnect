@@ -122,7 +122,7 @@ export function CallOverlay({ state }: { state: CallState }) {
           <div className="grid grid-cols-2 gap-3 text-left">
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.05] p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Status</p>
-              <p className="mt-2 text-sm font-bold text-white">{state.status === 'ringing' ? 'Awaiting response' : state.status === 'connected' ? 'Live' : state.status}</p>
+              <p className="mt-2 text-sm font-bold text-white">{state.status === 'calling' ? (state.remoteRinging ? 'Ringing their phone' : 'Reaching out…') : state.status === 'ringing' ? 'Awaiting response' : state.status === 'connected' ? 'Live' : state.status}</p>
             </div>
             <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.05] p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Security</p>
