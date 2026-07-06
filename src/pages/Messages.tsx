@@ -656,11 +656,17 @@ export default function Messages() {
               conversationId={conversationId}
               other={activeConvo?.other_user}
               onBack={() => navigate('/messages')}
+              onForward={(m) => setForwardMessage(m)}
             />
           )}
         </section>
       </div>
     </div>
+    <ForwardDialog
+      message={forwardMessage}
+      onClose={() => setForwardMessage(null)}
+      conversations={convosQ.data ?? []}
+    />
     </>
   )
 }
