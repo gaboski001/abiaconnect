@@ -17,6 +17,19 @@ import {
   PhoneIncoming,
   PhoneOutgoing,
   PhoneMissed,
+  Reply,
+  Pencil,
+  Trash2,
+  Copy,
+  Forward,
+  Pin,
+  PinOff,
+  Archive,
+  ArchiveRestore,
+  MoreVertical,
+  MoreHorizontal,
+  CheckCircle2,
+  Ban,
 } from 'lucide-react'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { callManager } from '@/lib/webrtcCall'
