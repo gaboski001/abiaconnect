@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAppUpdate } from '@/hooks/useAppUpdate'
-import { useReleaseDownload, type DownloadState } from '@/hooks/useReleaseDownload'
+import { useReleaseDownload, type ReleaseDownloadController } from '@/hooks/useReleaseDownload'
 import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { ChangelogModal } from './ChangelogModal'
 
