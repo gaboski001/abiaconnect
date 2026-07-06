@@ -734,8 +734,48 @@ function ConversationView({
   const [uploadPct, setUploadPct] = useState<number | null>(null)
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [editing, setEditing] = useState<Message | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [muteDialogOpen, setMuteDialogOpen] = useState(false)
+  const [clearDialogOpen, setClearDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Per-user mute state for this conversation
+  const muteQ = useQuery({
+    queryKey: ['conversation_state', conversationId, user?.id],
+    enabled: !!conversationId && !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('conversation_states')
+        .select('muted_until')
+        .eq('conversation_id', conversationId)
+        .eq('user_id', user!.id)
+        .maybeSingle()
+      return (data?.muted_until as string | null) ?? null
+    },
+  })
+  const mutedUntil = muteQ.data
+  const isMuted = !!mutedUntil && (mutedUntil === '9999-12-31T00:00:00+00:00' || new Date(mutedUntil) > new Date())
+
+  const setMute = async (until: Date | null) => {
+    if (!user?.id) return
+    const value = until ? until.toISOString() : null
+    const { error } = await supabase
+      .from('conversation_states')
+      .upsert(
+        { conversation_id: conversationId, user_id: user.id, muted_until: value, updated_at: new Date().toISOString() },
+        { onConflict: 'conversation_id,user_id' },
+      )
+    if (error) {
+      toast.error(error.message || 'Could not update mute')
+      return
+    }
+    qc.invalidateQueries({ queryKey: ['conversation_state', conversationId, user.id] })
+    toast.success(value ? 'Chat muted' : 'Chat unmuted')
+  }
+
 
   // Reset reply/edit when switching conversations
   useEffect(() => {
