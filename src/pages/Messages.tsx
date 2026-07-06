@@ -1526,3 +1526,305 @@ function CallLogRow({
     </div>
   )
 }
+
+// ============================================================================
+// MessageBubble — WhatsApp-like bubble with reply-quote, edited/deleted
+// markers, forwarded label, and per-message action menu.
+// ============================================================================
+function MessageBubble({
+  m,
+  mine,
+  hasAttachment,
+  quoted,
+  userId,
+  otherName,
+  innerRef,
+  onReply,
+  onEdit,
+  onDelete,
+  onForward,
+  onCopy,
+}: {
+  m: Message
+  mine: boolean
+  hasAttachment: boolean
+  quoted: Message | null
+  userId?: string
+  otherName: string
+  innerRef?: (el: HTMLDivElement | null) => void
+  onReply: () => void
+  onEdit: () => void
+  onDelete: () => void
+  onForward: () => void
+  onCopy: () => void
+}) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [confirm, setConfirm] = useState(false)
+  const deleted = !!m.deleted_for_everyone
+  const editable = canEdit(m, userId)
+  const deletable = canDeleteForEveryone(m, userId)
+
+  return (
+    <div
+      ref={innerRef}
+      data-mid={m.id}
+      className={cn('group flex items-end gap-1', mine ? 'justify-end' : 'justify-start')}
+    >
+      {mine && (
+        <BubbleMenu
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+          mine
+          canReply={!deleted}
+          canCopy={!deleted && !!m.content}
+          canForward={!deleted}
+          canEdit={editable}
+          canDelete={deletable}
+          onReply={onReply}
+          onCopy={onCopy}
+          onForward={onForward}
+          onEdit={onEdit}
+          onDelete={() => setConfirm(true)}
+        />
+      )}
+      <div
+        className={cn(
+          'relative max-w-[78%] rounded-2xl px-3.5 py-2 text-sm space-y-1.5 shadow-sm ring-1',
+          mine
+            ? 'bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
+            : 'bg-card text-foreground rounded-bl-md ring-border/60',
+          m._optimistic && 'opacity-70',
+          deleted && 'italic opacity-70',
+        )}
+      >
+        {m.forwarded_from_id && !deleted && (
+          <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide opacity-60">
+            <Forward className="h-3 w-3" /> Forwarded
+          </div>
+        )}
+        {quoted && !deleted && (
+          <div
+            className={cn(
+              'rounded-lg px-2 py-1.5 border-l-2 text-xs mb-1',
+              mine
+                ? 'bg-secondary-foreground/10 border-secondary-foreground/40'
+                : 'bg-muted border-primary/60',
+            )}
+          >
+            <p className="font-semibold text-[11px] mb-0.5 opacity-80">
+              {quoted.sender_id === userId ? 'You' : otherName}
+            </p>
+            <p className="truncate opacity-80">{messagePreview(quoted)}</p>
+          </div>
+        )}
+        {deleted ? (
+          <p className="whitespace-pre-wrap break-words flex items-center gap-1.5">
+            <Ban className="h-3.5 w-3.5" />
+            This message was deleted
+          </p>
+        ) : (
+          <>
+            {hasAttachment && <MessageAttachment m={m} mine={mine} />}
+            {m.content && (
+              <p className="whitespace-pre-wrap break-words">{m.content}</p>
+            )}
+          </>
+        )}
+        <p
+          className={cn(
+            'text-[10px] opacity-70 flex items-center gap-1',
+            mine ? 'justify-end' : 'justify-start',
+          )}
+        >
+          {m.edited_at && !deleted && <span className="italic">edited</span>}
+          <span>{format(new Date(m.created_at), 'p')}</span>
+          {mine && !deleted && (m._status || m.is_read) && (
+            <span
+              aria-label={m.is_read ? 'read' : m._status === 'delivered' ? 'delivered' : 'sent'}
+              className={cn(m.is_read && 'text-sky-500')}
+            >
+              {m.is_read || m._status === 'delivered' ? '✓✓' : '✓'}
+            </span>
+          )}
+        </p>
+      </div>
+      {!mine && (
+        <BubbleMenu
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+          canReply={!deleted}
+          canCopy={!deleted && !!m.content}
+          canForward={!deleted}
+          onReply={onReply}
+          onCopy={onCopy}
+          onForward={onForward}
+        />
+      )}
+
+      <ConfirmDialog
+        open={confirm}
+        onOpenChange={setConfirm}
+        title="Delete message for everyone?"
+        description="This message will be removed for both of you. This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          setConfirm(false)
+          onDelete()
+        }}
+      />
+    </div>
+  )
+}
+
+function BubbleMenu({
+  open,
+  onOpenChange,
+  mine,
+  canReply,
+  canCopy,
+  canForward,
+  canEdit,
+  canDelete,
+  onReply,
+  onCopy,
+  onForward,
+  onEdit,
+  onDelete,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  mine?: boolean
+  canReply?: boolean
+  canCopy?: boolean
+  canForward?: boolean
+  canEdit?: boolean
+  canDelete?: boolean
+  onReply?: () => void
+  onCopy?: () => void
+  onForward?: () => void
+  onEdit?: () => void
+  onDelete?: () => void
+}) {
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Message actions"
+          className={cn(
+            'h-7 w-7 grid place-items-center rounded-full text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-muted transition-opacity data-[state=open]:opacity-100 shrink-0',
+            'md:opacity-0 opacity-100', // always visible on mobile
+          )}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align={mine ? 'end' : 'start'} side="top" className="w-44 p-1">
+        {canReply && <MenuItem icon={Reply} label="Reply" onSelect={() => { onOpenChange(false); onReply?.() }} />}
+        {canCopy && <MenuItem icon={Copy} label="Copy" onSelect={() => { onOpenChange(false); onCopy?.() }} />}
+        {canForward && <MenuItem icon={Forward} label="Forward" onSelect={() => { onOpenChange(false); onForward?.() }} />}
+        {canEdit && <MenuItem icon={Pencil} label="Edit" onSelect={() => { onOpenChange(false); onEdit?.() }} />}
+        {canDelete && <MenuItem icon={Trash2} destructive label="Delete for everyone" onSelect={() => { onOpenChange(false); onDelete?.() }} />}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// ============================================================================
+// ForwardDialog — pick an existing 1:1 conversation to forward to.
+// ============================================================================
+function ForwardDialog({
+  message,
+  onClose,
+  conversations,
+}: {
+  message: Message | null
+  onClose: () => void
+  conversations: Conversation[]
+}) {
+  const { user } = useAuth()
+  const [busy, setBusy] = useState<string | null>(null)
+  const open = !!message
+
+  const targets = useMemo(
+    () =>
+      conversations
+        .filter((c) => c.id !== message?.conversation_id)
+        .filter((c) => !c.archived_at)
+        .slice(0, 100),
+    [conversations, message?.conversation_id],
+  )
+
+  const forward = async (targetId: string) => {
+    if (!message) return
+    setBusy(targetId)
+    const { error } = await supabase.rpc('forward_message', {
+      _message_id: message.id,
+      _to_conversation_id: targetId,
+    })
+    setBusy(null)
+    if (error) {
+      toast.error(error.message || 'Could not forward')
+      return
+    }
+    toast.success('Message forwarded')
+    onClose()
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Forward message</DialogTitle>
+          <DialogDescription>
+            Choose one of your existing chats to send this message to.
+          </DialogDescription>
+        </DialogHeader>
+        {message && (
+          <div className="rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground line-clamp-3">
+            {messagePreview(message)}
+          </div>
+        )}
+        <div className="max-h-72 overflow-y-auto rounded-lg border divide-y">
+          {targets.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground text-center">
+              No other chats available.
+            </p>
+          ) : (
+            targets.map((c) => {
+              const other = c.other_user
+              const name = other?.display_name || other?.username || 'User'
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => forward(c.id)}
+                  disabled={busy === c.id}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/50 transition-colors disabled:opacity-60"
+                >
+                  <UserAvatar
+                    avatarUrl={other?.avatar_url}
+                    displayName={name}
+                    size="sm"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{name}</p>
+                    {other?.username && (
+                      <p className="text-[11px] text-muted-foreground truncate">@{other.username}</p>
+                    )}
+                  </div>
+                  {busy === c.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Forward className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+              )
+            })
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
