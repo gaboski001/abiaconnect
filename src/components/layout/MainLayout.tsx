@@ -70,7 +70,7 @@ export function MainLayout() {
             transition={{ duration: 0.25, ease: 'easeOut' }}
             className={
               immersiveChat
-                ? 'h-[100dvh]'
+                ? 'h-[calc(100dvh-var(--kb-inset,0px))] transition-[height] duration-150'
                 : 'mx-auto max-w-[1400px] px-3 sm:px-4 md:px-6 py-6 md:py-12'
             }
           >
