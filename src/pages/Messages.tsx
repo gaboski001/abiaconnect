@@ -843,9 +843,22 @@ function ConversationView({
         },
         (payload) => {
           const updated = payload.new as Message
+          // Multi-device: if THIS user is the recipient and another of their
+          // devices just flipped is_read → true, refresh inbox unread badges
+          // here too. Guarded by an actual state change so repeated no-op
+          // UPDATEs (idempotent mark_message_read from a second device) don't
+          // spam the inbox query.
+          let readFlippedForMe = false
           qc.setQueryData<Message[]>(queryKey, (prev) =>
             (prev ?? []).map((m) => {
               if (m.id !== updated.id) return m
+              if (
+                updated.is_read === true &&
+                m.is_read !== true &&
+                updated.sender_id !== uid
+              ) {
+                readFlippedForMe = true
+              }
               const merged: Message = { ...m, ...updated }
               // Preserve client-only delivered flag; if the row is now read
               // the ✓✓-blue path in the bubble takes over.
@@ -855,6 +868,10 @@ function ConversationView({
               return merged
             }),
           )
+          if (readFlippedForMe) {
+            qc.invalidateQueries({ queryKey: ['conversations', uid] })
+            qc.invalidateQueries({ queryKey: ['messages-unread', uid] })
+          }
         },
       )
       // Typing indicator from the other participant.
