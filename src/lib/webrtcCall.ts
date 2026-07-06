@@ -153,6 +153,14 @@ class CallManager {
   private autoReconnecting = false
   private inviteRetryTimer: number | null = null
   private wasConnected = false
+  /**
+   * Recently cancelled call ids (by us or by the peer). Used so a late
+   * `invite` for a call the user already hung up on is auto-declined and
+   * never surfaces a ringing UI. Bounded + time-pruned to avoid unbounded
+   * growth on long-lived sessions.
+   */
+  private cancelledCallIds = new Map<string, number>()
+  private static CANCELLED_TTL_MS = 60_000
 
 
 
