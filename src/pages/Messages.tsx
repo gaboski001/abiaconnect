@@ -232,13 +232,18 @@ export default function Messages() {
 
       const otherIds = list.map((c) => (c.user1_id === user!.id ? c.user2_id : c.user1_id))
       const ids = list.map((c) => c.id)
-      const [{ data: profiles }, { data: msgs }] = await Promise.all([
+      const [{ data: profiles }, { data: msgs }, { data: states }] = await Promise.all([
         supabase.rpc('get_public_profiles', { _ids: otherIds }),
         supabase
           .from('messages')
-          .select('conversation_id, sender_id, content, is_read, created_at')
+          .select('conversation_id, sender_id, content, is_read, created_at, deleted_for_everyone, attachment_type, attachment_name')
           .in('conversation_id', ids)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('conversation_states')
+          .select('conversation_id, pinned_at, archived_at')
+          .eq('user_id', user!.id)
+          .in('conversation_id', ids),
       ])
       const profileMap: Record<string, Profile> = {}
       ;(profiles ?? []).forEach((p: any) => (profileMap[p.id] = p))
@@ -247,7 +252,7 @@ export default function Messages() {
       ;(msgs ?? []).forEach((m: any) => {
         if (!lastMap[m.conversation_id]) {
           lastMap[m.conversation_id] = {
-            content: m.content || '📎 Attachment',
+            content: messagePreview(m),
             created_at: m.created_at,
           }
         }
@@ -255,16 +260,31 @@ export default function Messages() {
           unreadMap[m.conversation_id] = (unreadMap[m.conversation_id] || 0) + 1
         }
       })
-      return list.map((c) => {
+      const stateMap: Record<string, { pinned_at?: string | null; archived_at?: string | null }> = {}
+      ;(states ?? []).forEach((s: any) => (stateMap[s.conversation_id] = s))
+      const enriched = list.map((c) => {
         const otherId = c.user1_id === user!.id ? c.user2_id : c.user1_id
+        const s = stateMap[c.id] || {}
         return {
           ...c,
           other_user: profileMap[otherId] || { id: otherId },
           last_message: lastMap[c.id]?.content ?? null,
           last_message_at: lastMap[c.id]?.created_at ?? c.updated_at,
           unread_count: unreadMap[c.id] || 0,
-        }
+          pinned_at: s.pinned_at ?? null,
+          archived_at: s.archived_at ?? null,
+        } as Conversation
       })
+      // Pinned first, then by last activity
+      enriched.sort((a, b) => {
+        const ap = a.pinned_at ? 1 : 0
+        const bp = b.pinned_at ? 1 : 0
+        if (ap !== bp) return bp - ap
+        const at = new Date(a.last_message_at || a.updated_at).getTime()
+        const bt = new Date(b.last_message_at || b.updated_at).getTime()
+        return bt - at
+      })
+      return enriched
     },
   })
 
