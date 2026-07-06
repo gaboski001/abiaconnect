@@ -719,13 +719,14 @@ function ConversationView({
                   >
                     <div
                       className={cn(
-                        'max-w-[75%] rounded-2xl px-3 py-2 text-sm space-y-2',
+                        'max-w-[78%] rounded-2xl px-3.5 py-2 text-sm space-y-2 shadow-sm ring-1',
                         mine
-                          ? 'bg-secondary text-secondary-foreground rounded-br-sm'
-                          : 'bg-muted text-foreground rounded-bl-sm',
+                          ? 'bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
+                          : 'bg-card text-foreground rounded-bl-md ring-border/60',
                         m._optimistic && 'opacity-70',
                       )}
                     >
+
                       {hasAttachment && <MessageAttachment m={m} mine={mine} />}
                       {m.content && (
                         <p className="whitespace-pre-wrap break-words">{m.content}</p>
