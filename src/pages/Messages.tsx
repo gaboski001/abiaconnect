@@ -1541,8 +1541,14 @@ function ConversationView({
 
       <form
         onSubmit={handleSend}
-        className="sticky bottom-0 z-10 p-3 border-t bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 space-y-2 shadow-[0_-1px_0_0_hsl(var(--border))] pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        className={cn(
+          'sticky bottom-0 z-10 p-3 border-t backdrop-blur-xl space-y-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+          native
+            ? 'bg-[#1f2c33] border-black/40 text-white shadow-[0_-1px_0_0_rgba(0,0,0,0.4)]'
+            : 'bg-background/85 supports-[backdrop-filter]:bg-background/70 shadow-[0_-1px_0_0_hsl(var(--border))]',
+        )}
       >
+
         {(replyTo || editing) && (
           <div
             className={cn(
