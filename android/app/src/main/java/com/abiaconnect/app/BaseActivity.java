@@ -20,6 +20,30 @@ public class BaseActivity extends BridgeActivity {
     public static final String CHANNEL_ID = "abia_default";
     public static final String CALL_CHANNEL_ID = "abia_calls";
 
+    /**
+     * Tracks whether the app's Activity is currently visible & interactive.
+     * When true, FCM should NOT post the loud system incoming-call notification
+     * — the in-app CallOverlay + realtime signaling handles the UI, so the
+     * device doesn't ring twice at the same time.
+     */
+    private static volatile boolean sAppInForeground = false;
+
+    public static boolean isAppInForeground() {
+        return sAppInForeground;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        sAppInForeground = true;
+    }
+
+    @Override
+    protected void onPause() {
+        sAppInForeground = false;
+        super.onPause();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         SplashScreen.installSplashScreen(this);

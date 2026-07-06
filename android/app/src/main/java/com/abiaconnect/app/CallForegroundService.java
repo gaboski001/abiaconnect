@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -35,6 +36,22 @@ public class CallForegroundService extends Service {
     public static final String EXTRA_CALLER_NAME = "caller_name";
     public static final String EXTRA_CALL_ID = "call_id";
 
+    /**
+     * Proximity wake lock — when the user holds the phone to their ear during
+     * a call, PROXIMITY_SCREEN_OFF_WAKE_LOCK turns the display off so the
+     * user's cheek/skin can't accidentally trigger buttons on the screen.
+     * Released when the call ends.
+     *
+     * This is a best-effort enhancement: if the device has no proximity
+     * sensor, the OEM restricts the wake-lock level, or a SecurityException
+     * is thrown (e.g. WAKE_LOCK permission revoked at runtime on some
+     * hardened builds), we log and continue without it. The call itself
+     * must never fail because proximity screen-off is unavailable.
+     */
+    @Nullable private PowerManager.WakeLock proximityWakeLock;
+    private boolean proximityUnavailable = false;
+
+
     public static void start(Context context, String callerName, String callId) {
         Intent intent = new Intent(context, CallForegroundService.class);
         intent.setAction(ACTION_START);
@@ -61,6 +78,7 @@ public class CallForegroundService extends Service {
 
         if (ACTION_STOP.equals(action)) {
             Log.d(TAG, "Stopping call foreground service");
+            releaseProximityWakeLock();
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
@@ -93,9 +111,65 @@ public class CallForegroundService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
+        acquireProximityWakeLock();
 
         // START_STICKY keeps the service alive if the system briefly reclaims it.
         return START_STICKY;
+    }
+
+    private void acquireProximityWakeLock() {
+        // Best-effort. Any failure here MUST NOT affect the call itself —
+        // the WebRTC session, audio routing, and CallOverlay all continue
+        // to work without proximity screen-off.
+        if (proximityUnavailable) return;
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm == null) {
+                proximityUnavailable = true;
+                Log.d(TAG, "PowerManager unavailable — proximity screen-off disabled for this call");
+                return;
+            }
+            if (!pm.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)) {
+                proximityUnavailable = true;
+                Log.d(TAG, "Proximity wake lock not supported — call continues without screen-off");
+                return;
+            }
+            if (proximityWakeLock != null && proximityWakeLock.isHeld()) return;
+            proximityWakeLock = pm.newWakeLock(
+                PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK,
+                "AbiaConnect:CallProximity"
+            );
+            proximityWakeLock.setReferenceCounted(false);
+            proximityWakeLock.acquire(60 * 60 * 1000L /* 1h safety cap */);
+        } catch (SecurityException se) {
+            // WAKE_LOCK permission revoked / OEM-restricted. Fall back silently.
+            proximityUnavailable = true;
+            proximityWakeLock = null;
+            Log.w(TAG, "Proximity wake lock denied by OS — call continues without screen-off: " + se.getMessage());
+        } catch (Throwable t) {
+            // Never let a wake-lock error crash the call foreground service.
+            proximityUnavailable = true;
+            proximityWakeLock = null;
+            Log.w(TAG, "Proximity wake lock unavailable — call continues without screen-off: " + t.getMessage());
+        }
+    }
+
+
+    private void releaseProximityWakeLock() {
+        try {
+            if (proximityWakeLock != null && proximityWakeLock.isHeld()) {
+                // release with WAIT_FOR_NO_PROXIMITY so we don't blink the
+                // screen back on until the phone is away from the ear.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    proximityWakeLock.release(PowerManager.RELEASE_FLAG_WAIT_FOR_NO_PROXIMITY);
+                } else {
+                    proximityWakeLock.release();
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            proximityWakeLock = null;
+        }
     }
 
     private Notification buildOngoingCallNotification(String callerName, String callId) {
@@ -147,6 +221,7 @@ public class CallForegroundService extends Service {
     @Override
     public void onDestroy() {
         Log.d(TAG, "CallForegroundService destroyed");
+        releaseProximityWakeLock();
         super.onDestroy();
     }
 }

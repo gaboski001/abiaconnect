@@ -125,6 +125,16 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     }
 
     private void showIncomingCallNotification(String title, String body, String callId, String url) {
+        // If the app is currently in the foreground, do NOT post the loud
+        // system CallStyle notification — the in-app CallOverlay + WebRTC
+        // realtime signaling will show and ring the incoming call. This
+        // prevents the double-ring shown in the bug report (heads-up call
+        // banner ringing at the same time as the in-app UI).
+        if (BaseActivity.isAppInForeground()) {
+            android.util.Log.d(TAG, "Skipping system call notification — app is in foreground");
+            return;
+        }
+
         int notificationId = TextUtils.isEmpty(callId) ? (int) System.currentTimeMillis() : callId.hashCode();
         String callerName = TextUtils.isEmpty(title) ? "Incoming call" : title;
         PendingIntent answerIntent = buildContentIntent(notificationId + 1, "call", url, callId, callerName, notificationId, "answer");

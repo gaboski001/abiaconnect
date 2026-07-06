@@ -121,4 +121,25 @@ describe('useAppUpdate', () => {
     })
     await waitFor(() => expect(result.current.hasUpdate).toBe(false))
   })
+
+  it('does NOT show update when installed version cannot be read (plugin unavailable)', async () => {
+    // Break the dynamic import so getCurrentNativeVersion() returns null,
+    // matching the "You're on v?" state from the reported bug.
+    ;(globalThis as any).Function = function (...args: string[]) {
+      const src = args[args.length - 1] ?? ''
+      if (src.includes('import(x)')) {
+        return (_x: string) => Promise.reject(new Error('plugin missing'))
+      }
+      return OriginalFunction(...args)
+    } as unknown as FunctionConstructor
+
+    const { result } = renderHook(() => useAppUpdate(), { wrapper })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // Wait a tick for the query to settle.
+    await new Promise((r) => setTimeout(r, 20))
+    expect(result.current.currentVersion).toBeNull()
+    expect(result.current.hasUpdate).toBe(false)
+    expect(result.current.release).toBeNull()
+  })
 })
+
