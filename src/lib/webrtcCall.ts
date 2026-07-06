@@ -131,6 +131,7 @@ class CallManager {
     reconnectAttempts: 0,
     maxReconnectAttempts: 3,
     timeline: [],
+    remoteRinging: false,
   }
 
   private userId: string | null = null
