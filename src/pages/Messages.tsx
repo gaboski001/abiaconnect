@@ -935,6 +935,7 @@ function ConversationView({
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          if (deletingRef.current) return
           const updated = payload.new as Message
           // Multi-device: if THIS user is the recipient and another of their
           // devices just flipped is_read → true, refresh inbox unread badges
