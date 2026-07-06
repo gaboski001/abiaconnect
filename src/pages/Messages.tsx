@@ -209,6 +209,242 @@ function MessageAttachment({ m, mine }: { m: Message; mine: boolean }) {
   return null
 }
 
+/**
+ * Sidebar row with WhatsApp-style row actions (pin/archive/clear/delete).
+ * The row itself navigates; the ⋯ menu is a sibling so we don't nest a
+ * button inside the <Link> (invalid HTML + unreliable clicks).
+ */
+function ConversationRow({
+  c,
+  active,
+}: {
+  c: Conversation
+  active: boolean
+  onOpenForward: () => void
+}) {
+  const qc = useQueryClient()
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [confirm, setConfirm] = useState<null | 'clear' | 'delete'>(null)
+
+  const invalidate = () =>
+    qc.invalidateQueries({ queryKey: ['conversations', user?.id] })
+
+  const call = async (rpc: 'set_conversation_pinned' | 'set_conversation_archived' | 'clear_conversation' | 'delete_conversation', args: Record<string, unknown> = {}) => {
+    const { error } = await supabase.rpc(rpc as never, { _conversation_id: c.id, ...args } as never)
+    if (error) {
+      toast.error(error.message || 'Action failed')
+      return false
+    }
+    return true
+  }
+
+  const pinned = !!c.pinned_at
+  const archived = !!c.archived_at
+
+  return (
+    <div
+      className={cn(
+        'group relative flex items-start gap-3 px-3 py-3 border-l-4 hover:bg-muted/50 transition-colors',
+        active ? 'border-secondary bg-secondary/5' : 'border-transparent',
+      )}
+    >
+      <Link
+        to={`/messages/${c.id}`}
+        className="absolute inset-0 z-0"
+        aria-label={`Open conversation with ${c.other_user?.display_name || c.other_user?.username || 'user'}`}
+      />
+      <div className="relative z-[1] pointer-events-none">
+        <Avatar profile={c.other_user} />
+      </div>
+      <div className="relative z-[1] min-w-0 flex-1 pointer-events-none">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold truncate flex items-center gap-1">
+            {pinned && <Pin className="h-3 w-3 text-muted-foreground shrink-0" />}
+            {c.other_user?.display_name || c.other_user?.username || 'User'}
+          </span>
+          <span className="text-[10px] text-muted-foreground shrink-0">
+            {c.last_message_at &&
+              formatDistanceToNow(new Date(c.last_message_at), { addSuffix: false })}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground truncate">
+            {c.last_message || 'No messages yet'}
+          </p>
+          {!!c.unread_count && (
+            <span className="text-[10px] font-bold bg-secondary text-secondary-foreground rounded-full px-1.5 min-w-[18px] text-center">
+              {c.unread_count}
+            </span>
+          )}
+        </div>
+      </div>
+      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label="Conversation actions"
+            className="relative z-[2] h-8 w-8 shrink-0 grid place-items-center rounded-full text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-muted transition-opacity data-[state=open]:opacity-100"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+            }}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-52 p-1">
+          <MenuItem
+            icon={pinned ? PinOff : Pin}
+            label={pinned ? 'Unpin chat' : 'Pin chat'}
+            onSelect={async () => {
+              setMenuOpen(false)
+              if (await call('set_conversation_pinned', { _pinned: !pinned })) {
+                toast.success(pinned ? 'Chat unpinned' : 'Chat pinned to top')
+                invalidate()
+              }
+            }}
+          />
+          <MenuItem
+            icon={archived ? ArchiveRestore : Archive}
+            label={archived ? 'Unarchive' : 'Archive'}
+            onSelect={async () => {
+              setMenuOpen(false)
+              if (await call('set_conversation_archived', { _archived: !archived })) {
+                toast.success(archived ? 'Chat restored' : 'Chat archived')
+                invalidate()
+              }
+            }}
+          />
+          <MenuItem
+            icon={Ban}
+            label="Clear messages"
+            onSelect={() => {
+              setMenuOpen(false)
+              setConfirm('clear')
+            }}
+          />
+          <MenuItem
+            icon={Trash2}
+            label="Delete chat"
+            destructive
+            onSelect={() => {
+              setMenuOpen(false)
+              setConfirm('delete')
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+
+      <ConfirmDialog
+        open={confirm === 'clear'}
+        onOpenChange={(v) => !v && setConfirm(null)}
+        title="Clear all messages?"
+        description="This removes every message in this chat for both of you. This cannot be undone."
+        confirmLabel="Clear"
+        destructive
+        onConfirm={async () => {
+          if (await call('clear_conversation')) {
+            toast.success('Messages cleared')
+            qc.setQueryData<Message[]>(['messages', c.id], [])
+            invalidate()
+          }
+          setConfirm(null)
+        }}
+      />
+      <ConfirmDialog
+        open={confirm === 'delete'}
+        onOpenChange={(v) => !v && setConfirm(null)}
+        title="Delete this chat?"
+        description="The entire conversation, its messages, and its history will be removed for both of you."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={async () => {
+          if (await call('delete_conversation')) {
+            toast.success('Chat deleted')
+            invalidate()
+            if (active) navigate('/messages')
+          }
+          setConfirm(null)
+        }}
+      />
+    </div>
+  )
+}
+
+function MenuItem({
+  icon: Icon,
+  label,
+  onSelect,
+  destructive,
+  disabled,
+}: {
+  icon: typeof Pin
+  label: string
+  onSelect: () => void
+  destructive?: boolean
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={disabled}
+      className={cn(
+        'w-full flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-left transition-colors',
+        'hover:bg-muted focus-visible:bg-muted disabled:opacity-40 disabled:pointer-events-none',
+        destructive && 'text-destructive hover:bg-destructive/10',
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="truncate">{label}</span>
+    </button>
+  )
+}
+
+function ConfirmDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  confirmLabel,
+  destructive,
+  onConfirm,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  title: string
+  description: string
+  confirmLabel: string
+  destructive?: boolean
+  onConfirm: () => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-end gap-2 mt-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant={destructive ? 'destructive' : 'default'}
+            onClick={onConfirm}
+          >
+            {confirmLabel}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+
+
 export default function Messages() {
   const { user } = useAuth()
   const { conversationId } = useParams<{ conversationId?: string }>()
