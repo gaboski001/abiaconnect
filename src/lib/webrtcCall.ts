@@ -528,6 +528,21 @@ class CallManager {
       direction: 'incoming',
       peer: payload.from,
     })
+    // Tell the caller their invite reached us and our device is now ringing,
+    // so their UI can flip from "Calling…" to "Ringing…".
+    void this.broadcastToUser(payload.from.id, 'ringing', {
+      callId: payload.callId,
+      from: this.selfPeer,
+    })
+  }
+
+  private onRingingAck(payload: any) {
+    if (!payload?.callId) return
+    if (this.state.callId !== payload.callId) return
+    if (this.state.direction !== 'outgoing') return
+    if (this.state.status !== 'calling') return
+    if (this.state.remoteRinging) return
+    this.patch({ remoteRinging: true })
   }
 
   private onCancel(payload: any) {
