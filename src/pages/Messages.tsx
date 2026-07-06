@@ -830,7 +830,10 @@ function ConversationView({
       </div>
 
 
-      <form onSubmit={handleSend} className="p-3 border-t space-y-2">
+      <form
+        onSubmit={handleSend}
+        className="sticky bottom-0 z-10 p-3 border-t bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 space-y-2 shadow-[0_-1px_0_0_hsl(var(--border))] pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+      >
         {pendingFile && (
           <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-2">
             {filePreview ? (
