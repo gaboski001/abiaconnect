@@ -95,19 +95,19 @@ export function AppUpdateCard({ variant = 'premium', className, showWhenUpToDate
   const busy = state.status === 'preparing' || state.status === 'downloading'
   const showStrip = state.status !== 'idle'
 
-  const strip = showStrip ? (
-    <ProgressStrip
-      state={state}
-      platform={platform}
-      version={release.version}
-      onCancel={cancel}
-      onRetry={start}
-      onInstallNow={installExisting}
-      onGrantPermission={openInstallSettings}
-      hasCachedInstall={hasCachedInstall()}
-      tone={variant === 'premium' ? 'dark' : 'light'}
-    />
-  ) : null
+  const stripProps: ProgressStripProps = {
+    state,
+    platform,
+    version: release.version,
+    onCancel: cancel,
+    onRetry: start,
+    onInstallNow: installExisting,
+    onGrantPermission: openInstallSettings,
+    hasCachedInstall: hasCachedInstall(),
+    tone: variant === 'premium' ? 'dark' : 'light',
+  }
+
+  const strip = showStrip ? <ProgressStrip {...stripProps} /> : null
 
   const modal = (
     <ChangelogModal
