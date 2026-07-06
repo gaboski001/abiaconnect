@@ -1360,10 +1360,12 @@ function ConversationView({
     })
   }
 
-  // Group messages by day
+  // Group messages by day, filtered by search query when active
   const grouped = useMemo(() => {
     const groups: { date: string; items: Message[] }[] = []
+    const q = searchQuery.trim().toLowerCase()
     ;(messagesQ.data ?? []).forEach((m) => {
+      if (q && !(m.content ?? '').toLowerCase().includes(q)) return
       const d = new Date(m.created_at)
       const key = isToday(d) ? 'Today' : isYesterday(d) ? 'Yesterday' : format(d, 'PPP')
       const last = groups[groups.length - 1]
@@ -1371,7 +1373,8 @@ function ConversationView({
       else groups.push({ date: key, items: [m] })
     })
     return groups
-  }, [messagesQ.data])
+  }, [messagesQ.data, searchQuery])
+
 
   const canSend = !!draft.trim() || !!pendingFile
   const messageById = useMemo(() => {
