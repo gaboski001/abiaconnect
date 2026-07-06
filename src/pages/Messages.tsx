@@ -2036,6 +2036,8 @@ function MessageBubble({
   onForward,
   onCopy,
   onJumpToQuoted,
+  reactions = [],
+  onToggleReaction,
 }: {
   m: Message
   mine: boolean
@@ -2051,13 +2053,41 @@ function MessageBubble({
   onForward: () => void
   onCopy: () => void
   onJumpToQuoted?: (id: string) => void
-
+  reactions?: ReactionAgg[]
+  onToggleReaction?: (emoji: string) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirm, setConfirm] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const longPressTimerRef = useRef<number | null>(null)
+  const longPressFiredRef = useRef(false)
   const deleted = !!m.deleted_for_everyone
   const editable = canEdit(m, userId)
   const deletable = canDeleteForEveryone(m, userId)
+
+  const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏']
+
+  const startLongPress = () => {
+    if (deleted) return
+    longPressFiredRef.current = false
+    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current)
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressFiredRef.current = true
+      setPickerOpen(true)
+      try {
+        if ('vibrate' in navigator) navigator.vibrate?.(15)
+      } catch {
+        /* noop */
+      }
+    }, 380)
+  }
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
 
   return (
     <div
