@@ -30,6 +30,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
 import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
+import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
 const schema = z.object({
   category_id: z.string().optional(),
@@ -84,6 +85,19 @@ export default function CreateThread() {
   const [uploading, setUploading] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Paths uploaded this session — cleaned up if user cancels/navigates away,
+  // and diffed on every edit so removed images are purged from the bucket.
+  const uploadedPathsRef = useRef<Set<string>>(new Set())
+  const submittedRef = useRef(false)
+
+  // On unmount: if user never submitted, delete anything they uploaded.
+  useEffect(() => {
+    return () => {
+      if (submittedRef.current) return
+      const paths = [...uploadedPathsRef.current]
+      if (paths.length) void deleteAttachmentPaths(paths)
+    }
+  }, [])
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', 'list'],
@@ -205,10 +219,11 @@ export default function CreateThread() {
         .from('thread-attachments')
         .createSignedUrl(path, 60 * 60 * 24 * 365 * 10)
       if (signErr || !signed?.signedUrl) throw signErr ?? new Error('Could not sign URL')
+      uploadedPathsRef.current.add(path)
       document.execCommand('insertImage', false, signed.signedUrl)
       syncContent()
       toast.dismiss(t)
-      toast.success('Image inserted')
+      toast.success('Image inserted — remove it in the editor to also delete it from storage.')
     } catch (err) {
       toast.dismiss(t)
       const msg = err instanceof Error ? err.message : 'Upload failed'
@@ -221,7 +236,21 @@ export default function CreateThread() {
 
   const syncContent = () => {
     const html = editorRef.current?.innerHTML ?? ''
-    form.setValue('content', DOMPurify.sanitize(html), { shouldValidate: true })
+    const clean = DOMPurify.sanitize(html)
+    form.setValue('content', clean, { shouldValidate: true })
+
+    // Purge session uploads that were removed from the editor.
+    if (uploadedPathsRef.current.size) {
+      const stillPresent = new Set(extractAttachmentPaths(clean))
+      const orphaned: string[] = []
+      uploadedPathsRef.current.forEach((p) => {
+        if (!stillPresent.has(p)) orphaned.push(p)
+      })
+      if (orphaned.length) {
+        orphaned.forEach((p) => uploadedPathsRef.current.delete(p))
+        void deleteAttachmentPaths(orphaned)
+      }
+    }
   }
 
   const addTag = (raw: string) => {
@@ -296,6 +325,7 @@ export default function CreateThread() {
       toast.error(error.message)
       return
     }
+    submittedRef.current = true
     toast.success('Thread posted!')
     navigate(`/thread/${(data as { id: string }).id}`)
   })

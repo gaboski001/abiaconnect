@@ -35,6 +35,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
 // Lazy-load Textarea — only needed when user opens a reply form.
 const Textarea = lazy(() =>
@@ -726,15 +727,19 @@ function Thread() {
       if (!threadId) throw new Error('Missing thread')
       const { data: rows, error: fetchErr } = await supabase
         .from('replies')
-        .select('id')
+        .select('id, content')
         .eq('thread_id', threadId)
       if (fetchErr) throw fetchErr
       const ids = (rows ?? []).map((r) => r.id as string)
+      const paths = (rows ?? []).flatMap((r) =>
+        extractAttachmentPaths((r as { content?: string }).content),
+      )
       if (ids.length > 0) {
         await supabase.from('reply_votes').delete().in('reply_id', ids)
       }
       const { error } = await supabase.from('replies').delete().eq('thread_id', threadId)
       if (error) throw error
+      if (paths.length) await deleteAttachmentPaths(paths)
       return ids.length
     },
     onSuccess: (count) => {
