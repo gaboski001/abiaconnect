@@ -76,7 +76,7 @@ export function ThreadEditor({
         allowBase64: false,
         HTMLAttributes: { class: 'te-img' },
       }),
-      TextAlign.configure({ types: ['heading', 'paragraph', 'image'] }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
     ],
     content: value || '',
     autofocus: autoFocus ? 'end' : false,
