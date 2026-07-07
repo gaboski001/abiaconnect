@@ -163,7 +163,7 @@ export default function CreateThread() {
   }
 
   const insertImage = () => {
-    const url = window.prompt('Image URL')
+    const url = window.prompt('Paste image URL')
     if (!url) return
     try {
       const u = new URL(url)
@@ -174,6 +174,50 @@ export default function CreateThread() {
       toast.error('Please enter a valid http(s) URL')
     }
   }
+
+  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+  const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // reset so same file can be re-picked
+    if (!file) return
+    if (!user) { toast.error('Please sign in'); return }
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast.error('Only PNG, JPG, WEBP or GIF images are allowed')
+      return
+    }
+    if (file.size > MAX_BYTES) {
+      toast.error('Image must be under 5 MB')
+      return
+    }
+    setUploading(true)
+    const t = toast.loading('Uploading image…')
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin'
+      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('thread-attachments')
+        .upload(path, file, { contentType: file.type, upsert: false })
+      if (upErr) throw upErr
+      // 10-year signed URL — bucket is private, so embedded <img> needs a token URL.
+      const { data: signed, error: signErr } = await supabase.storage
+        .from('thread-attachments')
+        .createSignedUrl(path, 60 * 60 * 24 * 365 * 10)
+      if (signErr || !signed?.signedUrl) throw signErr ?? new Error('Could not sign URL')
+      document.execCommand('insertImage', false, signed.signedUrl)
+      syncContent()
+      toast.dismiss(t)
+      toast.success('Image inserted')
+    } catch (err) {
+      toast.dismiss(t)
+      const msg = err instanceof Error ? err.message : 'Upload failed'
+      toast.error(msg)
+    } finally {
+      setUploading(false)
+    }
+  }
+
 
   const syncContent = () => {
     const html = editorRef.current?.innerHTML ?? ''
