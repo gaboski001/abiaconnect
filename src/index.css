@@ -284,6 +284,21 @@ body {
 .thread-prose [style*="text-align: center"] img { margin-left: auto; margin-right: auto; display: block; }
 .thread-prose [style*="text-align: right"]  img { margin-left: auto; margin-right: 0;    display: block; }
 .thread-prose [style*="text-align: left"]   img { margin-left: 0;    margin-right: auto; display: block; }
+.thread-prose figure.te-figure { margin: 1.75em 0; }
+.thread-prose figure.te-figure[data-align="center"] { text-align: center; }
+.thread-prose figure.te-figure[data-align="left"]   { text-align: left; }
+.thread-prose figure.te-figure[data-align="right"]  { text-align: right; }
+.thread-prose figure.te-figure img { margin: 0 auto; display: inline-block; }
+.thread-prose figure.te-figure[data-align="left"]  img { margin-left: 0; }
+.thread-prose figure.te-figure[data-align="right"] img { margin-right: 0; margin-left: auto; }
+.thread-prose figcaption.te-caption {
+  margin-top: 0.6em;
+  font-family: 'Lora', Georgia, serif;
+  font-style: italic;
+  font-size: 0.9em;
+  color: color-mix(in oklab, var(--foreground) 55%, transparent);
+  text-align: center;
+}
 .thread-prose code {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   background: color-mix(in oklab, var(--muted) 70%, transparent);
