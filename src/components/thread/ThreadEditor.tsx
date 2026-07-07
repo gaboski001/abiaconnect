@@ -57,6 +57,10 @@ export function ThreadEditor({
         codeBlock: { HTMLAttributes: { class: 'te-code' } },
         blockquote: { HTMLAttributes: { class: 'te-quote' } },
         horizontalRule: { HTMLAttributes: { class: 'te-hr' } },
+        // Disable extensions we register standalone with custom config to
+        // avoid duplicate schema registration (causes DOMSerializer null spec).
+        underline: false,
+        link: false,
       }),
       Underline,
       Typography,
