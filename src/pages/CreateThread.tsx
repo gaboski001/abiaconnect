@@ -325,6 +325,7 @@ export default function CreateThread() {
       toast.error(error.message)
       return
     }
+    submittedRef.current = true
     toast.success('Thread posted!')
     navigate(`/thread/${(data as { id: string }).id}`)
   })
