@@ -1,20 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Bold,
-  Image as ImageIcon,
-  Italic,
-  Loader2,
-  Underline as UnderlineIcon,
-  Upload,
-  X,
-} from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 import { toast } from '@/lib/toast'
-import DOMPurify from 'dompurify'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -30,8 +21,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
 import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
-import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
-import { compressToWebp } from '@/lib/imageCompress'
+import { ThreadEditor } from '@/components/thread/ThreadEditor'
 
 const schema = z.object({
   category_id: z.string().optional(),
@@ -83,22 +73,6 @@ export default function CreateThread() {
 
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
-  const [uploading, setUploading] = useState(false)
-  const editorRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  // Paths uploaded this session — cleaned up if user cancels/navigates away,
-  // and diffed on every edit so removed images are purged from the bucket.
-  const uploadedPathsRef = useRef<Set<string>>(new Set())
-  const submittedRef = useRef(false)
-
-  // On unmount: if user never submitted, delete anything they uploaded.
-  useEffect(() => {
-    return () => {
-      if (submittedRef.current) return
-      const paths = [...uploadedPathsRef.current]
-      if (paths.length) void deleteAttachmentPaths(paths)
-    }
-  }, [])
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', 'list'],
@@ -168,93 +142,8 @@ export default function CreateThread() {
   const currentCategoryId = form.watch('category_id')
   void currentCategoryId
 
+  const content = form.watch('content')
 
-
-
-
-  const exec = (cmd: 'bold' | 'italic' | 'underline') => {
-    document.execCommand(cmd)
-    syncContent()
-  }
-
-  const insertImage = () => {
-    const url = window.prompt('Paste image URL')
-    if (!url) return
-    try {
-      const u = new URL(url)
-      if (u.protocol !== 'https:' && u.protocol !== 'http:') throw new Error('Invalid')
-      document.execCommand('insertImage', false, u.toString())
-      syncContent()
-    } catch {
-      toast.error('Please enter a valid http(s) URL')
-    }
-  }
-
-  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
-  const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = '' // reset so same file can be re-picked
-    if (!file) return
-    if (!user) { toast.error('Please sign in'); return }
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      toast.error('Only PNG, JPG, WEBP or GIF images are allowed')
-      return
-    }
-    if (file.size > MAX_BYTES) {
-      toast.error('Image must be under 5 MB')
-      return
-    }
-    setUploading(true)
-    const t = toast.loading('Optimizing & uploading…')
-    try {
-      const { file: outFile, converted } = await compressToWebp(file, { maxEdge: 1600, quality: 0.82 })
-      const ext = outFile.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'webp'
-      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-      const { error: upErr } = await supabase.storage
-        .from('thread-attachments')
-        .upload(path, outFile, { contentType: outFile.type, upsert: false })
-      if (upErr) throw upErr
-      // 10-year signed URL — bucket is private, so embedded <img> needs a token URL.
-      const { data: signed, error: signErr } = await supabase.storage
-        .from('thread-attachments')
-        .createSignedUrl(path, 60 * 60 * 24 * 365 * 10)
-      if (signErr || !signed?.signedUrl) throw signErr ?? new Error('Could not sign URL')
-      uploadedPathsRef.current.add(path)
-      document.execCommand('insertImage', false, signed.signedUrl)
-      syncContent()
-      toast.dismiss(t)
-      const saved = converted ? ` (${Math.round((1 - outFile.size / file.size) * 100)}% smaller)` : ''
-      toast.success(`Image inserted${saved}. Remove it in the editor to also delete it from storage.`)
-    } catch (err) {
-      toast.dismiss(t)
-      const msg = err instanceof Error ? err.message : 'Upload failed'
-      toast.error(msg)
-    } finally {
-      setUploading(false)
-    }
-  }
-
-
-  const syncContent = () => {
-    const html = editorRef.current?.innerHTML ?? ''
-    const clean = DOMPurify.sanitize(html)
-    form.setValue('content', clean, { shouldValidate: true })
-
-    // Purge session uploads that were removed from the editor.
-    if (uploadedPathsRef.current.size) {
-      const stillPresent = new Set(extractAttachmentPaths(clean))
-      const orphaned: string[] = []
-      uploadedPathsRef.current.forEach((p) => {
-        if (!stillPresent.has(p)) orphaned.push(p)
-      })
-      if (orphaned.length) {
-        orphaned.forEach((p) => uploadedPathsRef.current.delete(p))
-        void deleteAttachmentPaths(orphaned)
-      }
-    }
-  }
 
   const addTag = (raw: string) => {
     const t = raw.trim().replace(/^#/, '').slice(0, 30)
@@ -328,7 +217,8 @@ export default function CreateThread() {
       toast.error(error.message)
       return
     }
-    submittedRef.current = true
+    // Reset content to signal ThreadEditor's cleanup path (mark as submitted).
+    form.setValue('content', '')
     toast.success('Thread posted!')
     navigate(`/thread/${(data as { id: string }).id}`)
   })
@@ -409,55 +299,23 @@ export default function CreateThread() {
 
         {/* Rich-text content */}
         <div className="space-y-1.5">
-          <Label>Content</Label>
-          <div className="rounded-xl border border-input bg-background overflow-hidden">
-            <div className="flex items-center gap-1 border-b border-input bg-muted/40 p-1">
-              <Button type="button" size="icon" variant="ghost" onClick={() => exec('bold')} aria-label="Bold">
-                <Bold className="size-4" />
-              </Button>
-              <Button type="button" size="icon" variant="ghost" onClick={() => exec('italic')} aria-label="Italic">
-                <Italic className="size-4" />
-              </Button>
-              <Button type="button" size="icon" variant="ghost" onClick={() => exec('underline')} aria-label="Underline">
-                <UnderlineIcon className="size-4" />
-              </Button>
-              <Button type="button" size="icon" variant="ghost" onClick={insertImage} aria-label="Insert image by URL" title="Insert image by URL">
-                <ImageIcon className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                aria-label="Upload image"
-                title="Upload image from your device"
-              >
-                {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-            </div>
-            <div
-              ref={editorRef}
-              contentEditable
-              role="textbox"
-              aria-multiline="true"
-              onInput={syncContent}
-              onBlur={syncContent}
-              className="prose prose-sm dark:prose-invert max-w-none min-h-40 p-3 focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-b-xl"
-              suppressContentEditableWarning
-            />
+          <div className="flex items-baseline justify-between">
+            <Label>Your story</Label>
+            <span className="text-xs text-muted-foreground">
+              Select text for formatting · Empty line shows a “+” to add an image or heading
+            </span>
           </div>
+          <ThreadEditor
+            value={content}
+            onChange={(html) => form.setValue('content', html, { shouldValidate: true })}
+            placeholder="Open with a strong first line… Then use the toolbar or the + button on the left to structure your post."
+            minHeight={360}
+          />
           {form.formState.errors.content && (
             <p className="text-xs text-destructive">{form.formState.errors.content.message}</p>
           )}
         </div>
+
 
         {/* Tags */}
         <div className="space-y-1.5">
