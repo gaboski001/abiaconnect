@@ -216,7 +216,7 @@ export default function Register() {
             <form onSubmit={onStep1} className="space-y-4">
               <Field label="Full Name" error={form.formState.errors.name?.message}><Input {...form.register('name')} /></Field>
               <Field label="Username" error={form.formState.errors.username?.message}><Input {...form.register('username')} /></Field>
-              <Field label="Email" error={form.formState.errors.email?.message}><Input type="email" {...form.register('email')} /></Field>
+              <Field label="Email" error={form.formState.errors.email?.message}><Input type="email" {...form.register('email', { onBlur: (e) => checkEmailExists(e.target.value) })} /></Field>
               <Field label="Password" error={form.formState.errors.password?.message}><Input type="password" {...form.register('password')} /></Field>
               <Field label="Date of Birth" error={form.formState.errors.dob?.message}><Input type="date" {...form.register('dob')} /></Field>
               <Field label="LGA of Origin" error={form.formState.errors.lga?.message}>
