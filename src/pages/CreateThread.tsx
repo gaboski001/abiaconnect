@@ -219,10 +219,11 @@ export default function CreateThread() {
         .from('thread-attachments')
         .createSignedUrl(path, 60 * 60 * 24 * 365 * 10)
       if (signErr || !signed?.signedUrl) throw signErr ?? new Error('Could not sign URL')
+      uploadedPathsRef.current.add(path)
       document.execCommand('insertImage', false, signed.signedUrl)
       syncContent()
       toast.dismiss(t)
-      toast.success('Image inserted')
+      toast.success('Image inserted — remove it in the editor to also delete it from storage.')
     } catch (err) {
       toast.dismiss(t)
       const msg = err instanceof Error ? err.message : 'Upload failed'
