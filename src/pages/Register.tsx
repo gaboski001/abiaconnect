@@ -247,6 +247,46 @@ export default function Register() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <Dialog open={!!existingEmail} onOpenChange={(o) => !o && setExistingEmail(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <MailCheck className="size-6" />
+            </div>
+            <DialogTitle className="text-center">This email is already registered</DialogTitle>
+            <DialogDescription className="text-center">
+              An account with <span className="font-medium text-foreground">{existingEmail}</span>{' '}
+              already exists. Sign in to continue, or resend the verification email if you haven't
+              confirmed it yet.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              className="w-full"
+              onClick={() => {
+                const email = existingEmail
+                setExistingEmail(null)
+                navigate(`/login${email ? `?email=${encodeURIComponent(email)}` : ''}`)
+              }}
+            >
+              Sign in instead
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={resending}
+              onClick={() => existingEmail && resendVerification(existingEmail)}
+            >
+              {resending ? (
+                <><Loader2 className="mr-2 size-4 animate-spin" />Resending…</>
+              ) : (
+                'Resend verification email'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 
