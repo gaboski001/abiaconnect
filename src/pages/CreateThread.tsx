@@ -236,7 +236,21 @@ export default function CreateThread() {
 
   const syncContent = () => {
     const html = editorRef.current?.innerHTML ?? ''
-    form.setValue('content', DOMPurify.sanitize(html), { shouldValidate: true })
+    const clean = DOMPurify.sanitize(html)
+    form.setValue('content', clean, { shouldValidate: true })
+
+    // Purge session uploads that were removed from the editor.
+    if (uploadedPathsRef.current.size) {
+      const stillPresent = new Set(extractAttachmentPaths(clean))
+      const orphaned: string[] = []
+      uploadedPathsRef.current.forEach((p) => {
+        if (!stillPresent.has(p)) orphaned.push(p)
+      })
+      if (orphaned.length) {
+        orphaned.forEach((p) => uploadedPathsRef.current.delete(p))
+        void deleteAttachmentPaths(orphaned)
+      }
+    }
   }
 
   const addTag = (raw: string) => {
