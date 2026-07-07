@@ -37,10 +37,17 @@ import { SEO } from '@/components/SEO'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
-// Lazy-load Textarea — only needed when user opens a reply form.
-const Textarea = lazy(() =>
-  import('@/components/ui/textarea').then((m) => ({ default: m.Textarea })),
+// Lazy-load the reply composer — only needed when user opens a reply form.
+const ReplyComposer = lazy(() =>
+  import('@/components/thread/ReplyComposer').then((m) => ({ default: m.ReplyComposer })),
 )
+
+/** True if HTML has visible text or an embedded image. */
+function hasReplyContent(html: string): boolean {
+  if (!html) return false
+  if (/<img\b/i.test(html)) return true
+  return html.replace(/<[^>]+>/g, '').trim().length > 0
+}
 
 interface ThreadRow {
   id: string
@@ -168,17 +175,17 @@ const ReplyItem = memo(function ReplyItem({
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            if (!nestedDraft.trim()) return
+            if (!hasReplyContent(nestedDraft)) return
             onSubmitNested(r.id)
           }}
           className="mt-3 space-y-2"
         >
           <Suspense fallback={<div className="h-20 rounded-md bg-muted animate-pulse" />}>
-            <Textarea
+            <ReplyComposer
               value={nestedDraft}
-              onChange={(e) => onNestedDraftChange(e.target.value)}
+              onChange={onNestedDraftChange}
               placeholder={`Reply to ${name}…`}
-              rows={3}
+              minRows={3}
               maxLength={5000}
               autoFocus
             />
@@ -187,7 +194,7 @@ const ReplyItem = memo(function ReplyItem({
             <Button type="button" size="sm" variant="ghost" onClick={onCancelNested}>
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={submitting || !nestedDraft.trim()}>
+            <Button type="submit" size="sm" disabled={submitting || !hasReplyContent(nestedDraft)}>
               {submitting ? 'Posting…' : 'Post'}
             </Button>
           </div>
@@ -993,16 +1000,16 @@ function Thread() {
               className="space-y-2"
             >
               <Suspense fallback={<div className="h-24 rounded-md bg-muted animate-pulse" />}>
-                <Textarea
+                <ReplyComposer
                   value={reply}
-                  onChange={(e) => setReply(e.target.value)}
+                  onChange={setReply}
                   placeholder="Write a reply…"
-                  rows={4}
+                  minRows={4}
                   maxLength={5000}
                 />
               </Suspense>
               <div className="flex justify-end">
-                <Button type="submit" disabled={submitReply.isPending || !reply.trim()}>
+                <Button type="submit" disabled={submitReply.isPending || !hasReplyContent(reply)}>
                   {submitReply.isPending ? 'Posting…' : 'Post Reply'}
                 </Button>
               </div>
