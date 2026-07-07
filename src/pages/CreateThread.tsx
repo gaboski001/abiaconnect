@@ -264,6 +264,8 @@ export default function CreateThread() {
       return
     }
     // Reset content to signal ThreadEditor's cleanup path (mark as submitted).
+    submittedRef.current = true
+    clearDraft(draftScope)
     form.setValue('content', '')
     toast.success('Thread posted!')
     navigate(`/thread/${(data as { id: string }).id}`)
