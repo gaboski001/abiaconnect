@@ -217,7 +217,8 @@ export default function CreateThread() {
       toast.error(error.message)
       return
     }
-    submittedRef.current = true
+    // Reset content to signal ThreadEditor's cleanup path (mark as submitted).
+    form.setValue('content', '')
     toast.success('Thread posted!')
     navigate(`/thread/${(data as { id: string }).id}`)
   })
