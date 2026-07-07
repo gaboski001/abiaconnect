@@ -42,6 +42,13 @@ const ReplyComposer = lazy(() =>
   import('@/components/thread/ReplyComposer').then((m) => ({ default: m.ReplyComposer })),
 )
 
+/** True if HTML has visible text or an embedded image. */
+function hasReplyContent(html: string): boolean {
+  if (!html) return false
+  if (/<img\b/i.test(html)) return true
+  return html.replace(/<[^>]+>/g, '').trim().length > 0
+}
+
 interface ThreadRow {
   id: string
   title: string
