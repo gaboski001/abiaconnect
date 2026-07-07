@@ -105,10 +105,7 @@ export function ReplyComposer({
     }
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
+  const uploadFile = async (file: File) => {
     if (!user) { toast.error('Please sign in'); return }
     if (!ALLOWED.includes(file.type)) { toast.error('PNG, JPG, WEBP or GIF only'); return }
     if (file.size > MAX_BYTES) { toast.error('Image must be under 5 MB'); return }
@@ -141,6 +138,35 @@ export function ReplyComposer({
       setUploading(false)
     }
   }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) await uploadFile(file)
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    if (disabled || uploading) return
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'))
+    for (const f of files) {
+      // eslint-disable-next-line no-await-in-loop
+      await uploadFile(f)
+    }
+  }
+
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    if (disabled || uploading) return
+    const items = Array.from(e.clipboardData.items)
+    const imageItem = items.find((it) => it.kind === 'file' && it.type.startsWith('image/'))
+    if (!imageItem) return
+    const file = imageItem.getAsFile()
+    if (!file) return
+    e.preventDefault()
+    await uploadFile(file)
+  }
+
 
   return (
     <div className="rounded-md border border-input bg-background overflow-hidden">
