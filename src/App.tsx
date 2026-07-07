@@ -107,6 +107,7 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
+        <Route path="go/:token" element={<Suspense fallback={<RouteFallback />}><Go /></Suspense>} />
 
         <Route
           path="*"
