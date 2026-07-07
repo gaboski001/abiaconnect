@@ -31,6 +31,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
 import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
+import { compressToWebp } from '@/lib/imageCompress'
 
 const schema = z.object({
   category_id: z.string().optional(),
@@ -206,13 +207,14 @@ export default function CreateThread() {
       return
     }
     setUploading(true)
-    const t = toast.loading('Uploading image…')
+    const t = toast.loading('Optimizing & uploading…')
     try {
-      const ext = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin'
+      const { file: outFile, converted } = await compressToWebp(file, { maxEdge: 1600, quality: 0.82 })
+      const ext = outFile.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'webp'
       const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
       const { error: upErr } = await supabase.storage
         .from('thread-attachments')
-        .upload(path, file, { contentType: file.type, upsert: false })
+        .upload(path, outFile, { contentType: outFile.type, upsert: false })
       if (upErr) throw upErr
       // 10-year signed URL — bucket is private, so embedded <img> needs a token URL.
       const { data: signed, error: signErr } = await supabase.storage
@@ -223,7 +225,8 @@ export default function CreateThread() {
       document.execCommand('insertImage', false, signed.signedUrl)
       syncContent()
       toast.dismiss(t)
-      toast.success('Image inserted — remove it in the editor to also delete it from storage.')
+      const saved = converted ? ` (${Math.round((1 - outFile.size / file.size) * 100)}% smaller)` : ''
+      toast.success(`Image inserted${saved}. Remove it in the editor to also delete it from storage.`)
     } catch (err) {
       toast.dismiss(t)
       const msg = err instanceof Error ? err.message : 'Upload failed'
