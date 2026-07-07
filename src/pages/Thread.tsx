@@ -126,7 +126,7 @@ const ReplyItem = memo(function ReplyItem({
 }: ReplyItemProps) {
   const name = r.profiles?.display_name ?? 'Member'
   const isOptimistic = (r as Reply & { _optimistic?: boolean })._optimistic
-  const safeHtml = useMemo(() => DOMPurify.sanitize(r.content), [r.content])
+  const safeHtml = useMemo(() => sanitizeThreadHtml(r.content), [r.content])
   const isOpen = replyingTo === r.id
   return (
     <li
