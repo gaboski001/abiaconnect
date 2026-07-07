@@ -41,6 +41,7 @@ export function ReplyComposer({
   const uploadedPathsRef = useRef<Set<string>>(new Set())
   const submittedRef = useRef(false)
   const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
 
   // Sync external value → editor when caller resets (e.g. after post).
   useEffect(() => {
@@ -104,10 +105,7 @@ export function ReplyComposer({
     }
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
+  const uploadFile = async (file: File) => {
     if (!user) { toast.error('Please sign in'); return }
     if (!ALLOWED.includes(file.type)) { toast.error('PNG, JPG, WEBP or GIF only'); return }
     if (file.size > MAX_BYTES) { toast.error('Image must be under 5 MB'); return }
@@ -141,8 +139,49 @@ export function ReplyComposer({
     }
   }
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) await uploadFile(file)
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    if (disabled || uploading) return
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'))
+    for (const f of files) {
+      // eslint-disable-next-line no-await-in-loop
+      await uploadFile(f)
+    }
+  }
+
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    if (disabled || uploading) return
+    const items = Array.from(e.clipboardData.items)
+    const imageItem = items.find((it) => it.kind === 'file' && it.type.startsWith('image/'))
+    if (!imageItem) return
+    const file = imageItem.getAsFile()
+    if (!file) return
+    e.preventDefault()
+    await uploadFile(file)
+  }
+
+
   return (
-    <div className="rounded-md border border-input bg-background overflow-hidden">
+    <div
+      className={`rounded-md border bg-background overflow-hidden transition-colors ${
+        dragOver ? 'border-primary ring-2 ring-primary/30' : 'border-input'
+      }`}
+      onDragOver={(e) => { if (disabled) return; e.preventDefault(); setDragOver(true) }}
+      onDragEnter={(e) => { if (disabled) return; e.preventDefault(); setDragOver(true) }}
+      onDragLeave={(e) => {
+        // only clear when leaving the composer itself, not children
+        if (e.currentTarget.contains(e.relatedTarget as Node)) return
+        setDragOver(false)
+      }}
+      onDrop={handleDrop}
+    >
       <div className="flex items-center gap-1 border-b border-input bg-muted/40 p-1">
         <Button
           type="button"
@@ -182,6 +221,7 @@ export function ReplyComposer({
         data-placeholder={placeholder}
         onInput={sync}
         onBlur={sync}
+        onPaste={handlePaste}
         className="prose prose-sm dark:prose-invert max-w-none px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-b-md empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground"
         style={{ minHeight: `${minRows * 1.5}rem` }}
         suppressContentEditableWarning
