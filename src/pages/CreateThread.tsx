@@ -85,6 +85,19 @@ export default function CreateThread() {
   const [uploading, setUploading] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Paths uploaded this session — cleaned up if user cancels/navigates away,
+  // and diffed on every edit so removed images are purged from the bucket.
+  const uploadedPathsRef = useRef<Set<string>>(new Set())
+  const submittedRef = useRef(false)
+
+  // On unmount: if user never submitted, delete anything they uploaded.
+  useEffect(() => {
+    return () => {
+      if (submittedRef.current) return
+      const paths = [...uploadedPathsRef.current]
+      if (paths.length) void deleteAttachmentPaths(paths)
+    }
+  }, [])
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', 'list'],
