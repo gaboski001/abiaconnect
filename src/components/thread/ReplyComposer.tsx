@@ -41,6 +41,7 @@ export function ReplyComposer({
   const uploadedPathsRef = useRef<Set<string>>(new Set())
   const submittedRef = useRef(false)
   const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
 
   // Sync external value → editor when caller resets (e.g. after post).
   useEffect(() => {
