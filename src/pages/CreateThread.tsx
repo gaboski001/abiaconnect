@@ -299,55 +299,23 @@ export default function CreateThread() {
 
         {/* Rich-text content */}
         <div className="space-y-1.5">
-          <Label>Content</Label>
-          <div className="rounded-xl border border-input bg-background overflow-hidden">
-            <div className="flex items-center gap-1 border-b border-input bg-muted/40 p-1">
-              <Button type="button" size="icon" variant="ghost" onClick={() => exec('bold')} aria-label="Bold">
-                <Bold className="size-4" />
-              </Button>
-              <Button type="button" size="icon" variant="ghost" onClick={() => exec('italic')} aria-label="Italic">
-                <Italic className="size-4" />
-              </Button>
-              <Button type="button" size="icon" variant="ghost" onClick={() => exec('underline')} aria-label="Underline">
-                <UnderlineIcon className="size-4" />
-              </Button>
-              <Button type="button" size="icon" variant="ghost" onClick={insertImage} aria-label="Insert image by URL" title="Insert image by URL">
-                <ImageIcon className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                aria-label="Upload image"
-                title="Upload image from your device"
-              >
-                {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-            </div>
-            <div
-              ref={editorRef}
-              contentEditable
-              role="textbox"
-              aria-multiline="true"
-              onInput={syncContent}
-              onBlur={syncContent}
-              className="prose prose-sm dark:prose-invert max-w-none min-h-40 p-3 focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-b-xl"
-              suppressContentEditableWarning
-            />
+          <div className="flex items-baseline justify-between">
+            <Label>Your story</Label>
+            <span className="text-xs text-muted-foreground">
+              Select text for formatting · Empty line shows a “+” to add an image or heading
+            </span>
           </div>
+          <ThreadEditor
+            value={content}
+            onChange={(html) => form.setValue('content', html, { shouldValidate: true })}
+            placeholder="Open with a strong first line… Then use the toolbar or the + button on the left to structure your post."
+            minHeight={360}
+          />
           {form.formState.errors.content && (
             <p className="text-xs text-destructive">{form.formState.errors.content.message}</p>
           )}
         </div>
+
 
         {/* Tags */}
         <div className="space-y-1.5">
