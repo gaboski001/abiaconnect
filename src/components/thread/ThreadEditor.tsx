@@ -222,6 +222,32 @@ export function ThreadEditor({
 
   return (
     <div className="thread-editor rounded-2xl border border-input bg-card shadow-sm overflow-hidden">
+      {/* Sticky formatting toolbar */}
+      <div className="te-toolbar sticky top-0 z-20 flex flex-wrap items-center gap-0.5 border-b border-border/60 bg-card/95 backdrop-blur px-2 py-1.5">
+        <ToolbarBtn onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} label="Undo"><Undo2 className="size-4" /></ToolbarBtn>
+        <ToolbarBtn onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} label="Redo"><Redo2 className="size-4" /></ToolbarBtn>
+        <Sep />
+        <ToolbarBtn active={editor.isActive('paragraph') && !editor.isActive('heading')} onClick={() => editor.chain().focus().setParagraph().run()} label="Paragraph"><Pilcrow className="size-4" /></ToolbarBtn>
+        <ToolbarBtn active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} label="Heading"><Heading2 className="size-4" /></ToolbarBtn>
+        <ToolbarBtn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} label="Subheading"><Heading3 className="size-4" /></ToolbarBtn>
+        <Sep />
+        <ToolbarBtn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} label="Bold"><Bold className="size-4" /></ToolbarBtn>
+        <ToolbarBtn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} label="Italic"><Italic className="size-4" /></ToolbarBtn>
+        <ToolbarBtn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} label="Underline"><UnderlineIcon className="size-4" /></ToolbarBtn>
+        <ToolbarBtn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} label="Strikethrough"><Strikethrough className="size-4" /></ToolbarBtn>
+        <ToolbarBtn active={editor.isActive('link')} onClick={setLink} label="Link"><LinkIcon className="size-4" /></ToolbarBtn>
+        <Sep />
+        <ToolbarBtn active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} label="Bullet list"><List className="size-4" /></ToolbarBtn>
+        <ToolbarBtn active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()} label="Numbered list"><ListOrdered className="size-4" /></ToolbarBtn>
+        <ToolbarBtn active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()} label="Quote"><Quote className="size-4" /></ToolbarBtn>
+        <ToolbarBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} label="Divider"><Minus className="size-4" /></ToolbarBtn>
+        <Sep />
+        <ToolbarBtn onClick={() => fileInputRef.current?.click()} disabled={uploading} label="Upload image">
+          {uploading ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" />}
+          <span className="hidden md:inline text-xs font-medium">Image</span>
+        </ToolbarBtn>
+      </div>
+
       {/* Bubble menu — appears when text is selected */}
       <BubbleMenu
         editor={editor}
@@ -239,17 +265,6 @@ export function ThreadEditor({
         <TB active={editor.isActive('link')} onClick={setLink} label="Link"><LinkIcon className="size-3.5" /></TB>
       </BubbleMenu>
 
-      {/* Image bubble — alignment controls when an image is selected */}
-      <BubbleMenu
-        editor={editor}
-        options={{ placement: 'top', offset: 8 }}
-        shouldShow={({ editor: e }) => e.isActive('image')}
-        className="te-bubble"
-      >
-        <TB active={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()} label="Align left"><AlignLeft className="size-3.5" /></TB>
-        <TB active={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()} label="Align center"><AlignCenter className="size-3.5" /></TB>
-        <TB active={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()} label="Align right"><AlignRight className="size-3.5" /></TB>
-      </BubbleMenu>
 
       {/* Floating "+" menu on empty lines */}
       <FloatingMenu
