@@ -98,6 +98,7 @@ export default function Register() {
   const [quiz, setQuiz] = useState(makeQuiz)
   const [done, setDone] = useState(false)
   const [existingEmail, setExistingEmail] = useState<string | null>(null)
+  const [existingVerified, setExistingVerified] = useState<boolean | null>(null)
   const [resending, setResending] = useState(false)
 
   async function resendVerification(email: string) {
@@ -121,14 +122,18 @@ export default function Register() {
     const value = email.trim().toLowerCase()
     if (!value || !/^\S+@\S+\.\S+$/.test(value)) return
     try {
-      const { data, error } = await supabase.rpc('email_is_registered', { _email: value })
-      if (!error && data === true) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)('email_registration_status', { _email: value })
+      const row = Array.isArray(data) ? data[0] : data
+      if (!error && row?.is_registered === true) {
+        setExistingVerified(row.is_verified === true)
         setExistingEmail(value)
       }
     } catch {
       // silent — non-blocking pre-check
     }
   }
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
