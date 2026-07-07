@@ -145,7 +145,7 @@ const ReplyItem = memo(function ReplyItem({
         </span>
       </div>
       <div
-        className="prose prose-sm dark:prose-invert max-w-none"
+        className="thread-prose max-w-none"
         dangerouslySetInnerHTML={{ __html: safeHtml }}
       />
       <div className="flex items-center gap-1 mt-2">
