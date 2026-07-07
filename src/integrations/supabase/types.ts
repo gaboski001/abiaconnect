@@ -1765,6 +1765,7 @@ export type Database = {
         Args: { _message_id: string; _new_content: string }
         Returns: undefined
       }
+      email_is_registered: { Args: { _email: string }; Returns: boolean }
       email_queue_dispatch: { Args: never; Returns: undefined }
       enforce_rate_limit: {
         Args: { _max: number; _scope: string; _window_seconds?: number }
