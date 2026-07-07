@@ -229,10 +229,17 @@ async function handleWebhook(req: Request): Promise<Response> {
   let confirmationUrl: string = payload.data.url
   if (confirmationUrl) {
     try {
+      const ttlByType: Record<string, number> = {
+        reauthentication: 900,   // 15 min — matches OTP window
+        recovery: 3600,          // 1 hour — matches Supabase password-reset window
+        magiclink: 3600,
+        email_change: 86400,
+        invite: 604800,
+      }
       const { data: token, error: linkErr } = await supabase.rpc('create_email_short_link', {
         _target_url: confirmationUrl,
         _purpose: emailType,
-        _ttl_seconds: emailType === 'reauthentication' ? 900 : 86400,
+        _ttl_seconds: ttlByType[emailType] ?? 86400,
       })
       if (linkErr) {
         console.error('short-link mint failed, falling back to raw url', { linkErr, run_id })
