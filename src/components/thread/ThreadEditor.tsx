@@ -127,8 +127,13 @@ export function ThreadEditor({
 
   // Keep external value → editor content in sync when parent resets (e.g. after post).
   useEffect(() => {
-    if (!editor) return
-    const current = editor.getHTML()
+    if (!editor || editor.isDestroyed || !editor.view) return
+    let current = ''
+    try {
+      current = editor.getHTML()
+    } catch {
+      return
+    }
     // Empty parent reset ⇒ clear and mark submitted so unmount cleanup is skipped.
     if (value === '' && current !== '<p></p>' && current !== '') {
       editor.commands.clearContent()
