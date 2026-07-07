@@ -145,6 +145,51 @@ export default function CreateThread() {
 
   const content = form.watch('content')
 
+  // ---------- Autosave draft ----------
+  const draftScope = useMemo(() => {
+    if (presetSubgroup) return `subgroup:${presetSubgroup}`
+    if (presetCategory) return `category:${presetCategory}`
+    return 'new'
+  }, [presetSubgroup, presetCategory])
+  const restoredRef = useRef(false)
+  const submittedRef = useRef(false)
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null)
+
+  // Restore once on mount (per scope).
+  useEffect(() => {
+    if (restoredRef.current) return
+    const d = loadDraft(draftScope)
+    if (d) {
+      form.setValue('title', d.title, { shouldValidate: false })
+      form.setValue('content', d.content, { shouldValidate: false })
+      setTags(d.tags ?? [])
+      setDraftSavedAt(d.updatedAt)
+      toast.success('Draft restored')
+    }
+    restoredRef.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftScope])
+
+  // Debounced save on any change.
+  useEffect(() => {
+    if (!restoredRef.current || submittedRef.current) return
+    const t = window.setTimeout(() => {
+      saveDraft(draftScope, { title, content, tags })
+      setDraftSavedAt(Date.now())
+    }, 600)
+    return () => window.clearTimeout(t)
+  }, [draftScope, title, content, tags])
+
+  const discardDraft = () => {
+    clearDraft(draftScope)
+    form.setValue('title', '')
+    form.setValue('content', '')
+    setTags([])
+    setDraftSavedAt(null)
+    toast.success('Draft discarded')
+  }
+
+
 
   const addTag = (raw: string) => {
     const t = raw.trim().replace(/^#/, '').slice(0, 30)
