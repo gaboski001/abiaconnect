@@ -81,7 +81,9 @@ export default function CreateThread() {
 
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
   const editorRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', 'list'],
