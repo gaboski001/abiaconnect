@@ -71,7 +71,7 @@ export function ThreadEditor({
         protocols: ['http', 'https', 'mailto'],
         HTMLAttributes: { rel: 'noopener nofollow ugc', target: '_blank', class: 'te-link' },
       }),
-      Image.configure({
+      ResizableImage.configure({
         inline: false,
         allowBase64: false,
         HTMLAttributes: { class: 'te-img' },
