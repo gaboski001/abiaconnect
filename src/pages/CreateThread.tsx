@@ -359,6 +359,22 @@ export default function CreateThread() {
             placeholder="Open with a strong first line… Then use the toolbar or the + button on the left to structure your post."
             minHeight={360}
           />
+          <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+            <span>
+              {draftSavedAt
+                ? `Draft saved · ${new Date(draftSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : 'Autosave on — your draft is kept safely on this device.'}
+            </span>
+            {draftSavedAt && (
+              <button
+                type="button"
+                onClick={discardDraft}
+                className="text-destructive hover:underline"
+              >
+                Discard draft
+              </button>
+            )}
+          </div>
           {form.formState.errors.content && (
             <p className="text-xs text-destructive">{form.formState.errors.content.message}</p>
           )}
