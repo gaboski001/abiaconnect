@@ -216,7 +216,7 @@ export function ThreadEditor({
       {/* Bubble menu — appears when text is selected */}
       <BubbleMenu
         editor={editor}
-        tippyOptions={{ duration: 120, placement: 'top' }}
+        options={{ placement: 'top', offset: 8 }}
         shouldShow={({ editor: e, from, to }) => !e.state.selection.empty && from !== to && !e.isActive('image')}
         className="te-bubble"
       >
