@@ -1767,6 +1767,13 @@ export type Database = {
       }
       email_is_registered: { Args: { _email: string }; Returns: boolean }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      email_registration_status: {
+        Args: { _email: string }
+        Returns: {
+          is_registered: boolean
+          is_verified: boolean
+        }[]
+      }
       enforce_rate_limit: {
         Args: { _max: number; _scope: string; _window_seconds?: number }
         Returns: undefined
