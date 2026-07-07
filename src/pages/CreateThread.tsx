@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
 import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 import { ThreadEditor } from '@/components/thread/ThreadEditor'
+import { clearDraft, loadDraft, saveDraft } from '@/lib/threadDraft'
 
 const schema = z.object({
   category_id: z.string().optional(),
