@@ -157,6 +157,19 @@ export default function Register() {
 
   async function createAccount() {
     const v = form.getValues()
+    // Final server-side duplicate-email check — guards against skipped/racing onBlur.
+    try {
+      const { data: exists, error: rpcErr } = await supabase.rpc('email_is_registered', {
+        _email: v.email.trim().toLowerCase(),
+      })
+      if (!rpcErr && exists === true) {
+        setExistingEmail(v.email)
+        goTo(1)
+        return
+      }
+    } catch {
+      // non-blocking — fall through to signUp which still catches duplicates
+    }
     const { data, error } = await supabase.auth.signUp({
       email: v.email,
       password: v.password,
