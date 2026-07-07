@@ -707,7 +707,7 @@ function Thread() {
   )
 
   const threadContent = threadQ.data?.content ?? ''
-  const safeBody = useMemo(() => DOMPurify.sanitize(threadContent), [threadContent])
+  const safeBody = useMemo(() => sanitizeThreadHtml(threadContent), [threadContent])
   const plainBody = useMemo(
     () => threadContent.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
     [threadContent],
