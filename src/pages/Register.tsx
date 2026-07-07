@@ -165,9 +165,7 @@ export default function Register() {
         msg.includes('exists') ||
         msg.includes('user with this email')
       ) {
-        toast.error(
-          "This email is already registered. Please sign in, or check your inbox to verify your email if you haven't yet.",
-        )
+        setExistingEmail(v.email)
       } else {
         toast.error(error.message)
       }
@@ -178,18 +176,7 @@ export default function Register() {
     // empty identities array (and no session). Detect that and guide the user.
     const identities = data?.user?.identities ?? []
     if (data?.user && identities.length === 0) {
-      try {
-        await supabase.auth.resend({
-          type: 'signup',
-          email: v.email,
-          options: { emailRedirectTo: 'https://abiaconnect.com/' },
-        })
-      } catch {
-        // best-effort resend; never block UX
-      }
-      toast.error(
-        "This email is already registered. If you haven't verified it yet, we just re-sent the verification link — please check your inbox. Otherwise, sign in instead.",
-      )
+      setExistingEmail(v.email)
       goTo(1)
       return
     }
