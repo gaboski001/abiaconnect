@@ -168,17 +168,17 @@ const ReplyItem = memo(function ReplyItem({
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            if (!nestedDraft.trim()) return
+            if (!hasReplyContent(nestedDraft)) return
             onSubmitNested(r.id)
           }}
           className="mt-3 space-y-2"
         >
           <Suspense fallback={<div className="h-20 rounded-md bg-muted animate-pulse" />}>
-            <Textarea
+            <ReplyComposer
               value={nestedDraft}
-              onChange={(e) => onNestedDraftChange(e.target.value)}
+              onChange={onNestedDraftChange}
               placeholder={`Reply to ${name}…`}
-              rows={3}
+              minRows={3}
               maxLength={5000}
               autoFocus
             />
@@ -187,7 +187,7 @@ const ReplyItem = memo(function ReplyItem({
             <Button type="button" size="sm" variant="ghost" onClick={onCancelNested}>
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={submitting || !nestedDraft.trim()}>
+            <Button type="submit" size="sm" disabled={submitting || !hasReplyContent(nestedDraft)}>
               {submitting ? 'Posting…' : 'Post'}
             </Button>
           </div>
