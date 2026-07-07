@@ -5,14 +5,13 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
-import Image from '@tiptap/extension-image'
 import TextAlign from '@tiptap/extension-text-align'
 import Typography from '@tiptap/extension-typography'
 import DOMPurify from 'dompurify'
 import {
-  Bold, Italic, Underline as UnderlineIcon, Link as LinkIcon,
-  Heading2, Heading3, Quote, List, ListOrdered, Minus,
-  Image as ImageIcon, Upload, Plus, Loader2,
+  Bold, Italic, Underline as UnderlineIcon, Link as LinkIcon, Strikethrough,
+  Heading1, Heading2, Heading3, Quote, List, ListOrdered, Minus,
+  Image as ImageIcon, Upload, Plus, Loader2, Undo2, Redo2, Pilcrow,
   AlignLeft, AlignCenter, AlignRight,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -20,6 +19,7 @@ import { toast } from '@/lib/toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { compressToWebp } from '@/lib/imageCompress'
 import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
+import { ResizableImage } from './extensions/ResizableImage'
 
 interface Props {
   value: string
