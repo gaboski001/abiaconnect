@@ -388,9 +388,27 @@ export default function CreateThread() {
               <Button type="button" size="icon" variant="ghost" onClick={() => exec('underline')} aria-label="Underline">
                 <UnderlineIcon className="size-4" />
               </Button>
-              <Button type="button" size="icon" variant="ghost" onClick={insertImage} aria-label="Insert image">
+              <Button type="button" size="icon" variant="ghost" onClick={insertImage} aria-label="Insert image by URL" title="Insert image by URL">
                 <ImageIcon className="size-4" />
               </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                aria-label="Upload image"
+                title="Upload image from your device"
+              >
+                {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
             </div>
             <div
               ref={editorRef}
