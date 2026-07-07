@@ -218,3 +218,119 @@ body {
 }
 
 
+
+/* ------------------------------------------------------------------
+   Editorial thread typography (Paper & Ink + Lora/Nunito Sans)
+   Applied both inside the Tiptap composer and to rendered thread
+   content so what users write is exactly what readers see.
+   ------------------------------------------------------------------ */
+.thread-prose {
+  font-family: 'Nunito Sans', system-ui, sans-serif;
+  font-size: 1.0625rem;         /* 17px — long-form readable */
+  line-height: 1.75;
+  color: var(--foreground);
+  max-width: 68ch;
+}
+.thread-prose > * + * { margin-top: 1.1em; }
+.thread-prose h1, .thread-prose h2, .thread-prose h3, .thread-prose h4 {
+  font-family: 'Lora', Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--foreground);
+}
+.thread-prose h2 { font-size: 1.6rem; margin-top: 1.6em; }
+.thread-prose h3 { font-size: 1.3rem; margin-top: 1.4em; }
+.thread-prose p  { margin: 0; }
+.thread-prose a  {
+  color: hsl(from var(--primary) h s calc(l - 4));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+.thread-prose strong { color: var(--foreground); font-weight: 700; }
+.thread-prose em     { font-family: 'Lora', Georgia, serif; font-style: italic; }
+.thread-prose blockquote,
+.thread-prose .te-quote {
+  margin: 1.5em 0;
+  padding: 0.25em 0 0.25em 1.15em;
+  border-left: 3px solid var(--primary);
+  font-family: 'Lora', Georgia, serif;
+  font-style: italic;
+  font-size: 1.15em;
+  color: color-mix(in oklab, var(--foreground) 82%, transparent);
+}
+.thread-prose ul, .thread-prose ol { padding-left: 1.4em; }
+.thread-prose ul { list-style: disc; }
+.thread-prose ol { list-style: decimal; }
+.thread-prose li { margin: 0.25em 0; }
+.thread-prose li::marker { color: var(--primary); }
+.thread-prose hr,
+.thread-prose .te-hr {
+  border: 0;
+  margin: 2em auto;
+  width: 32%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+}
+.thread-prose img,
+.thread-prose .te-img {
+  border-radius: 12px;
+  margin: 1.5em auto;
+  max-width: 100%;
+  height: auto;
+  box-shadow: 0 8px 24px -12px oklch(0 0 0 / 0.25);
+}
+.thread-prose [style*="text-align: center"] img { margin-left: auto; margin-right: auto; display: block; }
+.thread-prose [style*="text-align: right"]  img { margin-left: auto; margin-right: 0;    display: block; }
+.thread-prose [style*="text-align: left"]   img { margin-left: 0;    margin-right: auto; display: block; }
+.thread-prose code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
+  padding: 0.1em 0.4em;
+  border-radius: 6px;
+  font-size: 0.9em;
+}
+.thread-prose pre, .thread-prose .te-code {
+  background: color-mix(in oklab, var(--foreground) 92%, transparent);
+  color: var(--background);
+  padding: 1em 1.15em;
+  border-radius: 12px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.thread-prose pre code { background: transparent; color: inherit; padding: 0; }
+
+/* Placeholder for the Tiptap composer */
+.thread-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: color-mix(in oklab, var(--foreground) 40%, transparent);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Tiptap editor chrome */
+.thread-editor { transition: box-shadow .2s ease, border-color .2s ease; }
+.thread-editor:focus-within {
+  border-color: color-mix(in oklab, var(--primary) 55%, var(--border));
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 12%, transparent);
+}
+.te-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--foreground);
+  color: var(--background);
+  box-shadow: 0 8px 24px -8px oklch(0 0 0 / 0.4);
+  z-index: 50;
+}
+.te-bubble button { color: color-mix(in oklab, var(--background) 88%, transparent); }
+.te-bubble button:hover { background: color-mix(in oklab, var(--background) 18%, transparent); color: var(--background); }
+.te-bubble button.bg-primary { background: var(--primary); color: var(--primary-foreground); }
+.te-sep { display:inline-block; width:1px; height:16px; margin:0 4px; background: color-mix(in oklab, var(--background) 28%, transparent); }
+.te-floating { z-index: 40; }
