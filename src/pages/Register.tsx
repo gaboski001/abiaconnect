@@ -353,7 +353,7 @@ export default function Register() {
                   <Input {...form.register('username')} />
                 </Field>
                 <Field label="Email" error={form.formState.errors.email?.message}>
-                  <Input type="email" {...form.register('email')} />
+                  <Input type="email" {...form.register('email', { onBlur: (e) => checkEmailExists(e.target.value) })} />
                 </Field>
                 <Field label="Password" error={form.formState.errors.password?.message}>
                   <Input type="password" {...form.register('password')} />
