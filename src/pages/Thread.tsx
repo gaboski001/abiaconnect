@@ -35,6 +35,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
 // Lazy-load Textarea — only needed when user opens a reply form.
 const Textarea = lazy(() =>
