@@ -169,7 +169,19 @@ export function ReplyComposer({
 
 
   return (
-    <div className="rounded-md border border-input bg-background overflow-hidden">
+    <div
+      className={`rounded-md border bg-background overflow-hidden transition-colors ${
+        dragOver ? 'border-primary ring-2 ring-primary/30' : 'border-input'
+      }`}
+      onDragOver={(e) => { if (disabled) return; e.preventDefault(); setDragOver(true) }}
+      onDragEnter={(e) => { if (disabled) return; e.preventDefault(); setDragOver(true) }}
+      onDragLeave={(e) => {
+        // only clear when leaving the composer itself, not children
+        if (e.currentTarget.contains(e.relatedTarget as Node)) return
+        setDragOver(false)
+      }}
+      onDrop={handleDrop}
+    >
       <div className="flex items-center gap-1 border-b border-input bg-muted/40 p-1">
         <Button
           type="button"
