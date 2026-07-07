@@ -37,9 +37,9 @@ import { SEO } from '@/components/SEO'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
-// Lazy-load Textarea — only needed when user opens a reply form.
-const Textarea = lazy(() =>
-  import('@/components/ui/textarea').then((m) => ({ default: m.Textarea })),
+// Lazy-load the reply composer — only needed when user opens a reply form.
+const ReplyComposer = lazy(() =>
+  import('@/components/thread/ReplyComposer').then((m) => ({ default: m.ReplyComposer })),
 )
 
 interface ThreadRow {
