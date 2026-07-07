@@ -1,20 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Bold,
-  Image as ImageIcon,
-  Italic,
-  Loader2,
-  Underline as UnderlineIcon,
-  Upload,
-  X,
-} from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 import { toast } from '@/lib/toast'
-import DOMPurify from 'dompurify'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -30,8 +21,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
 import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
-import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
-import { compressToWebp } from '@/lib/imageCompress'
+import { ThreadEditor } from '@/components/thread/ThreadEditor'
 
 const schema = z.object({
   category_id: z.string().optional(),
