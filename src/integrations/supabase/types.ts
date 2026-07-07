@@ -387,6 +387,39 @@ export type Database = {
         }
         Relationships: []
       }
+      email_short_link_events: {
+        Row: {
+          created_at: string
+          id: string
+          ip_hint: string | null
+          outcome: string
+          purpose: string | null
+          token: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_hint?: string | null
+          outcome: string
+          purpose?: string | null
+          token: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_hint?: string | null
+          outcome?: string
+          purpose?: string | null
+          token?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       email_short_links: {
         Row: {
           created_at: string
@@ -1772,7 +1805,9 @@ export type Database = {
         Args: { _conversation_id: string }
         Returns: number
       }
-      consume_email_short_link: { Args: { _token: string }; Returns: string }
+      consume_email_short_link:
+        | { Args: { _token: string }; Returns: string }
+        | { Args: { _token: string; _user_agent?: string }; Returns: string }
       create_email_short_link: {
         Args: { _purpose?: string; _target_url: string; _ttl_seconds?: number }
         Returns: string

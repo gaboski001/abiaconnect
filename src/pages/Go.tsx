@@ -19,7 +19,7 @@ export default function Go() {
       if (!token) { setError('Missing link token.'); return }
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error: rpcErr } = await (supabase.rpc as any)('consume_email_short_link', { _token: token })
+        const { data, error: rpcErr } = await (supabase.rpc as any)('consume_email_short_link', { _token: token, _user_agent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 500) : null })
         if (cancelled) return
         if (rpcErr) { setError('This link could not be verified. Please request a new one.'); return }
         if (!data) { setError('This link has expired or already been used. Please request a new one.'); return }
