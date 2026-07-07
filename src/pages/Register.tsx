@@ -164,10 +164,13 @@ export default function Register() {
     const v = form.getValues()
     // Final server-side duplicate-email check — guards against skipped/racing onBlur.
     try {
-      const { data: exists, error: rpcErr } = await supabase.rpc('email_is_registered', {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error: rpcErr } = await (supabase.rpc as any)('email_registration_status', {
         _email: v.email.trim().toLowerCase(),
       })
-      if (!rpcErr && exists === true) {
+      const row = Array.isArray(data) ? data[0] : data
+      if (!rpcErr && row?.is_registered === true) {
+        setExistingVerified(row.is_verified === true)
         setExistingEmail(v.email)
         goTo(1)
         return
@@ -196,6 +199,7 @@ export default function Register() {
         msg.includes('exists') ||
         msg.includes('user with this email')
       ) {
+        setExistingVerified(null)
         setExistingEmail(v.email)
       } else {
         toast.error(error.message)
@@ -207,12 +211,14 @@ export default function Register() {
     // empty identities array (and no session). Detect that and guide the user.
     const identities = data?.user?.identities ?? []
     if (data?.user && identities.length === 0) {
+      setExistingVerified(null)
       setExistingEmail(v.email)
       goTo(1)
       return
     }
     setDone(true)
   }
+
 
   const variants = useMemo(
     () => ({
