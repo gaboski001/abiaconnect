@@ -10,6 +10,7 @@ import {
   Italic,
   Loader2,
   Underline as UnderlineIcon,
+  Upload,
   X,
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
