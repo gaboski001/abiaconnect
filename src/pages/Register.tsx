@@ -97,6 +97,25 @@ export default function Register() {
   const [direction, setDirection] = useState(1)
   const [quiz, setQuiz] = useState(makeQuiz)
   const [done, setDone] = useState(false)
+  const [existingEmail, setExistingEmail] = useState<string | null>(null)
+  const [resending, setResending] = useState(false)
+
+  async function resendVerification(email: string) {
+    setResending(true)
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: 'https://abiaconnect.com/' },
+      })
+      if (error) toast.error(error.message)
+      else toast.success('Verification email sent. Please check your inbox.')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not resend email')
+    } finally {
+      setResending(false)
+    }
+  }
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
