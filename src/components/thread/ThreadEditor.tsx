@@ -233,7 +233,7 @@ export function ThreadEditor({
       {/* Image bubble — alignment controls when an image is selected */}
       <BubbleMenu
         editor={editor}
-        tippyOptions={{ duration: 120, placement: 'top' }}
+        options={{ placement: 'top', offset: 8 }}
         shouldShow={({ editor: e }) => e.isActive('image')}
         className="te-bubble"
       >
