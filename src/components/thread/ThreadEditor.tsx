@@ -346,6 +346,12 @@ function ToolbarBtn({ children, active, onClick, disabled, label }: { children: 
   )
 }
 
+function Sep() {
+  return <span className="mx-1 h-5 w-px bg-border" aria-hidden />
+}
+
+
+
 function PlusMenu({
   onImage, onImageUrl, onHeading, onQuote, onBullet, onNumber, onRule,
 }: {
