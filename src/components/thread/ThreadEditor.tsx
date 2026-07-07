@@ -10,9 +10,8 @@ import Typography from '@tiptap/extension-typography'
 import DOMPurify from 'dompurify'
 import {
   Bold, Italic, Underline as UnderlineIcon, Link as LinkIcon, Strikethrough,
-  Heading1, Heading2, Heading3, Quote, List, ListOrdered, Minus,
+  Heading2, Heading3, Quote, List, ListOrdered, Minus,
   Image as ImageIcon, Upload, Plus, Loader2, Undo2, Redo2, Pilcrow,
-  AlignLeft, AlignCenter, AlignRight,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from '@/lib/toast'
