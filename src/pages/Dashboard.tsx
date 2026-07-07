@@ -338,8 +338,16 @@ function MyPosts({ onDeleted }: { onDeleted: () => void }) {
 
   const del = useMutation({
     mutationFn: async (id: string) => {
+      // Fetch content first so we can clean up any uploaded images from storage.
+      const { data: row } = await supabase
+        .from('threads')
+        .select('content')
+        .eq('id', id)
+        .maybeSingle()
+      const paths = extractAttachmentPaths((row as { content?: string } | null)?.content)
       const { error } = await supabase.from('threads').delete().eq('id', id)
       if (error) throw error
+      if (paths.length) await deleteAttachmentPaths(paths)
     },
     onSuccess: () => {
       toast.success('Thread deleted')
