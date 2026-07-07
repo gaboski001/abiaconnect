@@ -117,7 +117,7 @@ export default function Register() {
 
   async function createAccount() {
     const v = form.getValues()
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: v.email,
       password: v.password,
       options: {
@@ -131,7 +131,38 @@ export default function Register() {
       },
     })
     if (error) {
-      toast.error(error.message)
+      const msg = error.message?.toLowerCase() ?? ''
+      if (
+        msg.includes('already') ||
+        msg.includes('registered') ||
+        msg.includes('exists') ||
+        msg.includes('user with this email')
+      ) {
+        toast.error(
+          "This email is already registered. Please sign in, or check your inbox to verify your email if you haven't yet.",
+        )
+      } else {
+        toast.error(error.message)
+      }
+      goTo(1)
+      return
+    }
+    // Supabase obfuscates "already registered" by returning a user with an
+    // empty identities array (and no session). Detect that and guide the user.
+    const identities = data?.user?.identities ?? []
+    if (data?.user && identities.length === 0) {
+      try {
+        await supabase.auth.resend({
+          type: 'signup',
+          email: v.email,
+          options: { emailRedirectTo: 'https://abiaconnect.com/' },
+        })
+      } catch {
+        // best-effort resend; never block UX
+      }
+      toast.error(
+        "This email is already registered. If you haven't verified it yet, we just re-sent the verification link — please check your inbox. Otherwise, sign in instead.",
+      )
       goTo(1)
       return
     }
