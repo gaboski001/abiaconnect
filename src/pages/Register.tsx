@@ -117,6 +117,19 @@ export default function Register() {
     }
   }
 
+  async function checkEmailExists(email: string) {
+    const value = email.trim().toLowerCase()
+    if (!value || !/^\S+@\S+\.\S+$/.test(value)) return
+    try {
+      const { data, error } = await supabase.rpc('email_is_registered', { _email: value })
+      if (!error && data === true) {
+        setExistingEmail(value)
+      }
+    } catch {
+      // silent — non-blocking pre-check
+    }
+  }
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
