@@ -221,6 +221,7 @@ export function ReplyComposer({
         data-placeholder={placeholder}
         onInput={sync}
         onBlur={sync}
+        onPaste={handlePaste}
         className="prose prose-sm dark:prose-invert max-w-none px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-b-md empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground"
         style={{ minHeight: `${minRows * 1.5}rem` }}
         suppressContentEditableWarning
