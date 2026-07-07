@@ -245,7 +245,7 @@ export function ThreadEditor({
       {/* Floating "+" menu on empty lines */}
       <FloatingMenu
         editor={editor}
-        tippyOptions={{ duration: 120, placement: 'left-start', offset: [0, 12] }}
+        options={{ placement: 'left-start', offset: 12 }}
         shouldShow={({ editor: e, state }) => {
           const { $from } = state.selection
           const isEmptyParagraph = $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0
