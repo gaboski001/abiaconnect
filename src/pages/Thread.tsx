@@ -851,7 +851,7 @@ function Thread() {
         </div>
 
         <div
-          className="prose prose-sm dark:prose-invert max-w-none"
+          className="thread-prose max-w-none"
           dangerouslySetInnerHTML={{ __html: safeBody }}
         />
 
