@@ -629,12 +629,18 @@ function ModerationSection() {
 
   const removeContent = useMutation({
     mutationFn: async (r: any) => {
+      let paths: string[] = []
       if (r.thread_id) {
+        const { data } = await supabase.from('threads').select('content').eq('id', r.thread_id).maybeSingle()
+        paths = extractAttachmentPaths((data as { content?: string } | null)?.content)
         await supabase.from('threads').delete().eq('id', r.thread_id)
       } else if (r.reply_id) {
+        const { data } = await supabase.from('replies').select('content').eq('id', r.reply_id).maybeSingle()
+        paths = extractAttachmentPaths((data as { content?: string } | null)?.content)
         await supabase.from('replies').delete().eq('id', r.reply_id)
       }
       await supabase.from('reports').update({ status: 'resolved' }).eq('id', r.id)
+      if (paths.length) await deleteAttachmentPaths(paths)
     },
     onSuccess: () => {
       toast.success('Content removed')
