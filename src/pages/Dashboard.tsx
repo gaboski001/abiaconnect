@@ -46,6 +46,7 @@ import { NotificationSoundToggle } from '@/components/notifications/Notification
 import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { NativeDashboard } from '@/components/mobile/NativeDashboard'
+import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'calls' | 'notifications' | 'settings'
 
