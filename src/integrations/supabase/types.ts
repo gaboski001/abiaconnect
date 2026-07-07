@@ -387,6 +387,33 @@ export type Database = {
         }
         Relationships: []
       }
+      email_short_links: {
+        Row: {
+          created_at: string
+          expires_at: string
+          purpose: string | null
+          target_url: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          purpose?: string | null
+          target_url: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          purpose?: string | null
+          target_url?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       email_unsubscribe_tokens: {
         Row: {
           created_at: string
@@ -1745,6 +1772,11 @@ export type Database = {
         Args: { _conversation_id: string }
         Returns: number
       }
+      consume_email_short_link: { Args: { _token: string }; Returns: string }
+      create_email_short_link: {
+        Args: { _purpose?: string; _target_url: string; _ttl_seconds?: number }
+        Returns: string
+      }
       decide_join_request: {
         Args: { _approve: boolean; _request_id: string }
         Returns: undefined
@@ -1913,6 +1945,7 @@ export type Database = {
         Args: { _pinned: boolean; _thread_id: string }
         Returns: undefined
       }
+      prune_email_short_links: { Args: never; Returns: undefined }
       prune_issue_report_contact_emails: { Args: never; Returns: undefined }
       prune_search_rate_limits: { Args: never; Returns: undefined }
       read_email_batch: {
