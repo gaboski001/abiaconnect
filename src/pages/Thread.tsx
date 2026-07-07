@@ -1000,16 +1000,16 @@ function Thread() {
               className="space-y-2"
             >
               <Suspense fallback={<div className="h-24 rounded-md bg-muted animate-pulse" />}>
-                <Textarea
+                <ReplyComposer
                   value={reply}
-                  onChange={(e) => setReply(e.target.value)}
+                  onChange={setReply}
                   placeholder="Write a reply…"
-                  rows={4}
+                  minRows={4}
                   maxLength={5000}
                 />
               </Suspense>
               <div className="flex justify-end">
-                <Button type="submit" disabled={submitReply.isPending || !reply.trim()}>
+                <Button type="submit" disabled={submitReply.isPending || !hasReplyContent(reply)}>
                   {submitReply.isPending ? 'Posting…' : 'Post Reply'}
                 </Button>
               </div>
