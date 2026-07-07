@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 
 import { formatDistanceToNow } from 'date-fns'
-import DOMPurify from 'dompurify'
+import { sanitizeThreadHtml } from '@/lib/sanitizeThreadHtml'
 import {
   Bookmark,
   ChevronLeft,
