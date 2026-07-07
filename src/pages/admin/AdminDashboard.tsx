@@ -64,6 +64,7 @@ import { Image as ImageIcon } from 'lucide-react'
 import AppReleasesSection from '@/components/admin/AppReleasesSection'
 import TestPushSection from '@/components/admin/TestPushSection'
 import { Download as DownloadIcon, BellRing } from 'lucide-react'
+import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
 type SectionId =
   | 'overview'
