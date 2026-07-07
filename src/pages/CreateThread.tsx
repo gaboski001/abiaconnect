@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
 import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 import { ThreadEditor } from '@/components/thread/ThreadEditor'
+import { clearDraft, loadDraft, saveDraft } from '@/lib/threadDraft'
 
 const schema = z.object({
   category_id: z.string().optional(),
@@ -144,6 +145,51 @@ export default function CreateThread() {
 
   const content = form.watch('content')
 
+  // ---------- Autosave draft ----------
+  const draftScope = useMemo(() => {
+    if (presetSubgroup) return `subgroup:${presetSubgroup}`
+    if (presetCategory) return `category:${presetCategory}`
+    return 'new'
+  }, [presetSubgroup, presetCategory])
+  const restoredRef = useRef(false)
+  const submittedRef = useRef(false)
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null)
+
+  // Restore once on mount (per scope).
+  useEffect(() => {
+    if (restoredRef.current) return
+    const d = loadDraft(draftScope)
+    if (d) {
+      form.setValue('title', d.title, { shouldValidate: false })
+      form.setValue('content', d.content, { shouldValidate: false })
+      setTags(d.tags ?? [])
+      setDraftSavedAt(d.updatedAt)
+      toast.success('Draft restored')
+    }
+    restoredRef.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftScope])
+
+  // Debounced save on any change.
+  useEffect(() => {
+    if (!restoredRef.current || submittedRef.current) return
+    const t = window.setTimeout(() => {
+      saveDraft(draftScope, { title, content, tags })
+      setDraftSavedAt(Date.now())
+    }, 600)
+    return () => window.clearTimeout(t)
+  }, [draftScope, title, content, tags])
+
+  const discardDraft = () => {
+    clearDraft(draftScope)
+    form.setValue('title', '')
+    form.setValue('content', '')
+    setTags([])
+    setDraftSavedAt(null)
+    toast.success('Draft discarded')
+  }
+
+
 
   const addTag = (raw: string) => {
     const t = raw.trim().replace(/^#/, '').slice(0, 30)
@@ -218,6 +264,8 @@ export default function CreateThread() {
       return
     }
     // Reset content to signal ThreadEditor's cleanup path (mark as submitted).
+    submittedRef.current = true
+    clearDraft(draftScope)
     form.setValue('content', '')
     toast.success('Thread posted!')
     navigate(`/thread/${(data as { id: string }).id}`)
@@ -311,6 +359,22 @@ export default function CreateThread() {
             placeholder="Open with a strong first line… Then use the toolbar or the + button on the left to structure your post."
             minHeight={360}
           />
+          <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+            <span>
+              {draftSavedAt
+                ? `Draft saved · ${new Date(draftSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : 'Autosave on — your draft is kept safely on this device.'}
+            </span>
+            {draftSavedAt && (
+              <button
+                type="button"
+                onClick={discardDraft}
+                className="text-destructive hover:underline"
+              >
+                Discard draft
+              </button>
+            )}
+          </div>
           {form.formState.errors.content && (
             <p className="text-xs text-destructive">{form.formState.errors.content.message}</p>
           )}

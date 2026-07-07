@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 
 import { formatDistanceToNow } from 'date-fns'
-import DOMPurify from 'dompurify'
+import { sanitizeThreadHtml } from '@/lib/sanitizeThreadHtml'
 import {
   Bookmark,
   ChevronLeft,
@@ -126,7 +126,7 @@ const ReplyItem = memo(function ReplyItem({
 }: ReplyItemProps) {
   const name = r.profiles?.display_name ?? 'Member'
   const isOptimistic = (r as Reply & { _optimistic?: boolean })._optimistic
-  const safeHtml = useMemo(() => DOMPurify.sanitize(r.content), [r.content])
+  const safeHtml = useMemo(() => sanitizeThreadHtml(r.content), [r.content])
   const isOpen = replyingTo === r.id
   return (
     <li
@@ -707,7 +707,7 @@ function Thread() {
   )
 
   const threadContent = threadQ.data?.content ?? ''
-  const safeBody = useMemo(() => DOMPurify.sanitize(threadContent), [threadContent])
+  const safeBody = useMemo(() => sanitizeThreadHtml(threadContent), [threadContent])
   const plainBody = useMemo(
     () => threadContent.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
     [threadContent],
