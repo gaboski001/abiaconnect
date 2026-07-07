@@ -285,45 +285,87 @@ export default function Register() {
         )}
       </AnimatePresence>
 
-      <Dialog open={!!existingEmail} onOpenChange={(o) => !o && setExistingEmail(null)}>
+      <Dialog open={!!existingEmail} onOpenChange={(o) => { if (!o) { setExistingEmail(null); setExistingVerified(null) } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
               <MailCheck className="size-6" />
             </div>
-            <DialogTitle className="text-center">This email is already registered</DialogTitle>
+            <DialogTitle className="text-center">
+              {existingVerified === false
+                ? 'Email registered but not verified'
+                : 'This email is already registered'}
+            </DialogTitle>
             <DialogDescription className="text-center">
-              An account with <span className="font-medium text-foreground">{existingEmail}</span>{' '}
-              already exists. Sign in to continue, or resend the verification email if you haven't
-              confirmed it yet.
+              {existingVerified === true && (
+                <>An account with <span className="font-medium text-foreground">{existingEmail}</span> is already verified. Sign in to continue.</>
+              )}
+              {existingVerified === false && (
+                <>We found an account for <span className="font-medium text-foreground">{existingEmail}</span>, but the email hasn't been verified yet. Resend the verification email to activate it.</>
+              )}
+              {existingVerified === null && (
+                <>An account with <span className="font-medium text-foreground">{existingEmail}</span> already exists. Sign in to continue, or resend the verification email if you haven't confirmed it yet.</>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-col">
-            <Button
-              className="w-full"
-              onClick={() => {
-                const email = existingEmail
-                setExistingEmail(null)
-                navigate(`/login${email ? `?email=${encodeURIComponent(email)}` : ''}`)
-              }}
-            >
-              Sign in instead
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              disabled={resending}
-              onClick={() => existingEmail && resendVerification(existingEmail)}
-            >
-              {resending ? (
-                <><Loader2 className="mr-2 size-4 animate-spin" />Resending…</>
-              ) : (
-                'Resend verification email'
-              )}
-            </Button>
+            {existingVerified === false ? (
+              <>
+                <Button
+                  className="w-full"
+                  disabled={resending}
+                  onClick={() => existingEmail && resendVerification(existingEmail)}
+                >
+                  {resending ? (
+                    <><Loader2 className="mr-2 size-4 animate-spin" />Resending…</>
+                  ) : (
+                    'Resend verification email'
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    const email = existingEmail
+                    setExistingEmail(null); setExistingVerified(null)
+                    navigate(`/login${email ? `?email=${encodeURIComponent(email)}` : ''}`)
+                  }}
+                >
+                  Sign in instead
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    const email = existingEmail
+                    setExistingEmail(null); setExistingVerified(null)
+                    navigate(`/login${email ? `?email=${encodeURIComponent(email)}` : ''}`)
+                  }}
+                >
+                  Sign in instead
+                </Button>
+                {existingVerified === null && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    disabled={resending}
+                    onClick={() => existingEmail && resendVerification(existingEmail)}
+                  >
+                    {resending ? (
+                      <><Loader2 className="mr-2 size-4 animate-spin" />Resending…</>
+                    ) : (
+                      'Resend verification email'
+                    )}
+                  </Button>
+                )}
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </>
   )
 
