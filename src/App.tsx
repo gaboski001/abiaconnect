@@ -93,6 +93,7 @@ export default function App() {
 
   return (
     <>
+      <IntroSplash />
       <ScrollToTop />
       {/* Native-only enhancements */}
       <NativeOnboardingGate />
