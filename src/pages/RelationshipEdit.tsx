@@ -305,8 +305,34 @@ export default function RelationshipEdit() {
         </div>
 
         <div>
-          <Label>Profile picture (URL)</Label>
-          <div className="flex gap-2">
+          <Label>Profile picture</Label>
+          <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-muted">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void uploadPhoto(f)
+                  e.target.value = ''
+                }}
+              />
+              {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+              {uploading ? 'Uploading…' : 'Upload photo'}
+            </label>
+            <span className="text-xs text-muted-foreground">or paste an image URL below</span>
+          </div>
+          <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={useAsAvatar}
+              onChange={(e) => setUseAsAvatar(e.target.checked)}
+              className="size-3.5 rounded border-input"
+            />
+            Also use uploaded photo as my account avatar
+          </label>
+          <div className="mt-2 flex gap-2">
             <Input
               value={photoInput || form.photos[0] || ''}
               onChange={(e) => setPhotoInput(e.target.value)}
@@ -335,8 +361,9 @@ export default function RelationshipEdit() {
               </button>
             </div>
           )}
-          <p className="text-xs text-muted-foreground mt-1">One profile picture only. Use "Fill from my profile" to pull your account avatar.</p>
+          <p className="text-xs text-muted-foreground mt-1">One profile picture only. Uploads are stored securely and scanned before use.</p>
         </div>
+
 
 
         <label className="flex items-center gap-3 text-sm">
