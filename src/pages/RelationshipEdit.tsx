@@ -122,6 +122,41 @@ export default function RelationshipEdit() {
     setPhotoInput('')
   }
 
+  const uploadPhoto = async (file: File) => {
+    if (!user) return
+    if (!file.type.startsWith('image/')) return toast.error('Please choose an image')
+    if (file.size > 8 * 1024 * 1024) return toast.error('Image is too large (max 8MB)')
+    setUploading(true)
+    try {
+      const webp = await toWebP(file)
+      const ext = webp.name.split('.').pop() || 'webp'
+      const path = `${user.id}/rel-${Date.now()}.${ext}`
+      const { uploadAndScan } = await import('@/lib/scanAttachment')
+      const res = await uploadAndScan('avatars', path, webp, {
+        contentType: webp.type,
+        upsert: true,
+      })
+      if (!res.uploaded) {
+        return toast.error(res.error || 'Upload blocked by security scan')
+      }
+      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path)
+      const publicUrl = pub?.publicUrl
+      if (!publicUrl) return toast.error('Could not resolve uploaded image URL')
+      setForm((f) => ({ ...f, photos: [publicUrl] }))
+      if (useAsAvatar) {
+        const { error } = await supabase.from('profiles').update({ avatar_url: path }).eq('id', user.id)
+        if (error) toast.error(`Photo uploaded but avatar update failed: ${error.message}`)
+        else toast.success('Photo uploaded and set as your avatar')
+      } else {
+        toast.success('Photo uploaded')
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
+
+
+
 
   const save = async () => {
     if (!user) return
