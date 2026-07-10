@@ -170,6 +170,37 @@ export default function Profile() {
     profileQ.refetch()
   }
 
+  const uploadAvatar = async (file: File) => {
+    if (!user) return
+    setUploadingAvatar(true)
+    try {
+      const webp = await toWebP(file)
+      const ext = webp.name.split('.').pop() || 'webp'
+      const path = `${user.id}/${Date.now()}.${ext}`
+      const { uploadAndScan } = await import('@/lib/scanAttachment')
+      const res = await uploadAndScan('avatars', path, webp, { contentType: webp.type, upsert: true })
+      if (!res.uploaded) {
+        toast.error(res.error || 'Avatar blocked by security scan')
+        return
+      }
+      const { error } = await supabase.from('profiles').update({ avatar_url: path }).eq('id', user.id)
+      if (error) return toast.error(error.message)
+      toast.success('Avatar updated')
+      profileQ.refetch()
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  const removeAvatar = async () => {
+    if (!user) return
+    const { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', user.id)
+    if (error) return toast.error(error.message)
+    toast.success('Avatar removed')
+    profileQ.refetch()
+  }
+
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <SEO
