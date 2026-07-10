@@ -296,6 +296,38 @@ export default function Profile() {
               </>
             ) : (
               <div className="mt-4 space-y-3">
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                  <Label className="text-xs">Profile photo</Label>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadAvatar(f); e.currentTarget.value = '' }}
+                      />
+                      <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-accent">
+                        {uploadingAvatar ? <Loader2 className="size-4 animate-spin" /> : <Pencil className="size-4" />}
+                        {uploadingAvatar ? 'Uploading…' : 'Choose photo'}
+                      </span>
+                    </label>
+                    <label className="sm:hidden">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="user"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadAvatar(f); e.currentTarget.value = '' }}
+                      />
+                      <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-accent">
+                        Take photo
+                      </span>
+                    </label>
+                    {profile.avatar_url && (
+                      <Button type="button" size="sm" variant="ghost" onClick={removeAvatar}>Remove</Button>
+                    )}
+                  </div>
+                </div>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label>Display Name</Label>
