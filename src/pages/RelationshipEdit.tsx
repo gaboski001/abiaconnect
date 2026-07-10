@@ -54,6 +54,8 @@ export default function RelationshipEdit() {
   const [tagInput, setTagInput] = useState('')
   const [photoInput, setPhotoInput] = useState('')
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [useAsAvatar, setUseAsAvatar] = useState(true)
   const [prefill, setPrefill] = useState(false)
 
   useEffect(() => {
