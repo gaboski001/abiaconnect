@@ -65,6 +65,7 @@ export default function Profile() {
 
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Partial<Profile>>({})
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   const profileQ = useQuery({
     queryKey: ['profile', viewedId, isSelf],
