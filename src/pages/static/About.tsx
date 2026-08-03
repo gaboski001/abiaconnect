@@ -231,18 +231,41 @@ export default function About() {
       <section className="not-prose mb-12">
         <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">05 — Platform</p>
         <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6">What AbiaConnect Offers</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {FEATURES.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="bg-card border border-border rounded-2xl p-6 hover:border-secondary/40 transition-colors">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shrink-0">
-                  <Icon className="size-5" />
-                </span>
-                <h3 className="font-semibold text-foreground">{title}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {FEATURES.map(({ icon: Icon, title, body }) => {
+            const isRelationship = title === 'Relationship Forum';
+            return (
+              <div 
+                key={title} 
+                className={`group relative bg-card border border-border rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
+                  isRelationship ? 'md:col-span-2 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-sm ring-1 ring-secondary/10' : 'hover:border-secondary/40'
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <span className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br transition-transform group-hover:scale-110 shrink-0 ${
+                    isRelationship ? 'from-secondary to-pink-500 text-white shadow-lg shadow-secondary/20' : 'from-primary to-secondary text-primary-foreground'
+                  }`}>
+                    <Icon className={isRelationship ? "size-6" : "size-5"} />
+                  </span>
+                  <div>
+                    <h3 className={`font-bold text-lg mb-2 transition-colors ${
+                      isRelationship ? 'text-secondary group-hover:text-pink-600' : 'text-foreground'
+                    }`}>
+                      {title}
+                      {isRelationship && (
+                        <span className="ml-2 inline-flex items-center rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary ring-1 ring-inset ring-secondary/20">
+                          Featured
+                        </span>
+                      )}
+                    </h3>
+                    <p className={`text-muted-foreground leading-relaxed ${isRelationship ? 'text-base' : 'text-sm'}`}>
+                      {body}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
