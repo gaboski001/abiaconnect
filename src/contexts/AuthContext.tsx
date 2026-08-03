@@ -164,10 +164,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {}
 
     await supabase.auth.signOut()
+    
+    // Clear all storage and caches after logout
     localStorage.removeItem(CACHE_KEY)
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      const names = await caches.keys()
+      await Promise.all(names.map(name => caches.delete(name)))
+    }
+    
     setRole('guest')
     setUser(null)
     setSession(null)
+    
+    // Force a clean reload to ensure all states are reset
+    window.location.href = '/'
   }
 
   const isAdmin = role === 'Super Admin' || role === 'Admin'

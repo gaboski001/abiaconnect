@@ -37,13 +37,26 @@ if (typeof window !== 'undefined') {
   (window as any).Capacitor = Capacitor;
 }
 
-// Best-effort: unregister any previously installed PWA service workers so
-// returning browsers don't keep serving a stale app shell after we removed PWA.
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-  navigator.serviceWorker
-    .getRegistrations()
-    .then((rs) => rs.forEach((r) => r.unregister()))
-    .catch(() => {})
+// Implement a robust cache-clearing routine that runs on every load to prevent
+// any previously cached offline/PWA assets from persisting.
+if (typeof window !== 'undefined') {
+  // 1. Unregister Service Workers
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister();
+      }
+    });
+  }
+
+  // 2. Clear Cache Storage
+  if ('caches' in window) {
+    caches.keys().then((names) => {
+      for (const name of names) {
+        caches.delete(name);
+      }
+    });
+  }
 }
 
 const queryClient = new QueryClient()
