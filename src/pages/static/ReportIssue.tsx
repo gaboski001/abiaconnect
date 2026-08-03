@@ -50,11 +50,12 @@ export default function ReportIssue() {
   return (
     <StaticPage
       badge="Safety"
-      title="Report an Issue"
+      title="Load the security issues from the scan results and fix the selected issues."
       subtitle="Help us keep AbiaConnect safe for everyone."
     >
       <p>
-        Load the security issues from the scan results and fix the selected issues.
+        If you have encountered content or behaviour that violates our Community Guidelines, please
+        use this form. All reports are reviewed within 24 hours. Your report is confidential.
       </p>
 
       <form onSubmit={submit} className="not-prose bg-card border border-border rounded-2xl p-6 space-y-5 my-6">
