@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,7 @@ import {
 import { useReleaseDownload } from '@/hooks/useReleaseDownload'
 import { useAuth } from '@/hooks/useAuth'
 import { useProfile } from '@/hooks/useProfile'
+import { Capacitor } from '@capacitor/core'
 
 type Release = {
   id: string
@@ -151,6 +152,7 @@ function DownloadRow({ r }: { r: Release }) {
 export function NativeAppDownload() {
   const { user } = useAuth()
   const { data: profile, isLoading: profileLoading } = useProfile()
+  const isNative = Capacitor.isNativePlatform()
 
   const q = useQuery({
     queryKey: ['app-releases-public'],
@@ -169,9 +171,11 @@ export function NativeAppDownload() {
     },
   })
 
+  // Hide the download prompt if running inside the native app itself
+  if (isNative) return null
+
   // Signed-in users who have already opened the native app get their profile
-  // stamped with `native_app_installed_at`. Hide the download prompt for them
-  // so the card only surfaces to fresh visitors who still need the APK/IPA.
+  // stamped with `native_app_installed_at`. Hide the download prompt for them.
   if (user && profileLoading) return null
   if (user && (profile as { native_app_installed_at?: string | null } | null)?.native_app_installed_at) {
     return null

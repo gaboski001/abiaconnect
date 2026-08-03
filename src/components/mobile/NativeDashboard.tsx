@@ -64,10 +64,7 @@ export function NativeDashboard({ profile, stats, chartData, recentThreads }: Na
 
   return (
     <div className="flex flex-col gap-6 pb-32 animate-in fade-in duration-500">
-      {/* App update banner — only renders on native when a newer release
-          exists. Once the user installs the latest version it disappears
-          entirely from the dashboard (no "up to date" placeholder). */}
-      <AppUpdateCard />
+      {/* App update banner removed by user request */}
 
 
       {/* Header Section */}
