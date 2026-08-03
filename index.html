@@ -36,6 +36,11 @@
         } catch (e) {}
       })();
     </script>
+    <script>
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
