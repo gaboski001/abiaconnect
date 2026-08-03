@@ -23,7 +23,7 @@ import {
 
 const FEATURES = [
   { icon: MessagesSquare, title: 'Community Forums', body: 'Structured discussions across 14 topic categories, from business and politics to culture and faith.' },
-  { icon: Heart, title: 'Relationship Forum', body: 'A professionally architected sanctuary for genuine, value-based matchmaking. Built for Abians seeking intentional relationships, it combines modern discovery with traditional cultural respect and absolute privacy.' },
+  { icon: Heart, title: 'Relationship Forum', body: 'Built for Abians seeking intentional relationships, it combines modern discovery with traditional cultural respect and absolute privacy.' },
   { icon: BarChart3, title: 'Live Polls', body: 'Real-time community polls that capture the pulse of Abia opinion on issues that matter.' },
   { icon: Users, title: 'Subgroups', body: 'Focused communities within the community — for LGAs, professions, diaspora cities, and shared interests.' },
   { icon: Mail, title: 'Private Messaging', body: 'Secure, direct messaging between members for trusted one-on-one conversations.' },
@@ -232,40 +232,26 @@ export default function About() {
         <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">05 — Platform</p>
         <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6">What AbiaConnect Offers</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {FEATURES.map(({ icon: Icon, title, body }) => {
-            const isRelationship = title === 'Relationship Forum';
-            return (
-              <div 
-                key={title} 
-                className={`group relative bg-card border border-border rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
-                  isRelationship ? 'md:col-span-2 bg-gradient-to-br from-card via-card to-secondary/5 border-secondary/20 shadow-sm ring-1 ring-secondary/10' : 'hover:border-secondary/40'
-                }`}
-              >
-                <div className="flex items-start gap-4">
-                  <span className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br transition-transform group-hover:scale-110 shrink-0 ${
-                    isRelationship ? 'from-secondary to-pink-500 text-white shadow-lg shadow-secondary/20' : 'from-primary to-secondary text-primary-foreground'
-                  }`}>
-                    <Icon className={isRelationship ? "size-6" : "size-5"} />
-                  </span>
-                  <div>
-                    <h3 className={`font-bold text-lg mb-2 transition-colors ${
-                      isRelationship ? 'text-secondary group-hover:text-pink-600' : 'text-foreground'
-                    }`}>
-                      {title}
-                      {isRelationship && (
-                        <span className="ml-2 inline-flex items-center rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary ring-1 ring-inset ring-secondary/20">
-                          Featured
-                        </span>
-                      )}
-                    </h3>
-                    <p className={`text-muted-foreground leading-relaxed ${isRelationship ? 'text-base' : 'text-sm'}`}>
-                      {body}
-                    </p>
-                  </div>
+          {FEATURES.map(({ icon: Icon, title, body }) => (
+            <div 
+              key={title} 
+              className="group relative bg-card border border-border rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-secondary/40"
+            >
+              <div className="flex items-start gap-4">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground transition-transform group-hover:scale-110 shrink-0">
+                  <Icon className="size-5" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-lg mb-2 text-foreground">
+                    {title}
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed text-sm">
+                    {body}
+                  </p>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </section>
 
