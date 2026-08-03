@@ -275,12 +275,7 @@ export default function SettingsPanel({
       </section>
 
 
-      <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
-        <h2 className="text-lg font-black text-white">App tools</h2>
-        <div className="mt-4 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
-          <NativeAppDownload />
-        </div>
-      </section>
+      {/* NativeAppDownload section removed by user request */}
 
       <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
         <h2 className="text-lg font-black text-white">Change password</h2>
