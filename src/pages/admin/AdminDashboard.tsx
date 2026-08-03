@@ -480,14 +480,14 @@ function UsersSection() {
                   <td className="p-3 text-muted-foreground">{u.email || '—'}</td>
                   <td className="p-3">
                     <Select
-                      defaultValue="Member"
+                      value={u.role || 'Member'}
                       onValueChange={(role) => roleMut.mutate({ id: u.id, role })}
                     >
                       <SelectTrigger className="h-8 w-32">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {['Member', 'Moderator', 'Admin', 'Ban'].map((r) => (
+                        {['Member', 'Moderator', 'Admin', 'Super Admin'].map((r) => (
                           <SelectItem key={r} value={r}>
                             {r}
                           </SelectItem>
