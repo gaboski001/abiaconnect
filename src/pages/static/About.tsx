@@ -18,15 +18,16 @@ import {
   Code2,
   Wrench,
   Rocket,
+  Heart,
 } from 'lucide-react'
 
 const FEATURES = [
   { icon: MessagesSquare, title: 'Community Forums', body: 'Structured discussions across 14 topic categories, from business and politics to culture and faith.' },
+  { icon: Heart, title: 'Relationship Forum', body: 'A professionally architected space for meaningful connections, built with privacy and cultural values at its core to foster genuine lifelong bonds.' },
   { icon: BarChart3, title: 'Live Polls', body: 'Real-time community polls that capture the pulse of Abia opinion on issues that matter.' },
   { icon: Users, title: 'Subgroups', body: 'Focused communities within the community — for LGAs, professions, diaspora cities, and shared interests.' },
   { icon: Mail, title: 'Private Messaging', body: 'Secure, direct messaging between members for trusted one-on-one conversations.' },
   { icon: Bell, title: 'Smart Notifications', body: 'Stay informed about replies, mentions, and community activity without noise.' },
-  { icon: Trophy, title: 'Success Stories', body: 'A dedicated space to celebrate Abian achievements and inspire the next generation.' },
 ]
 
 const STATS = [
