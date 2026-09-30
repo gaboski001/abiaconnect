@@ -1,223 +1,123 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { LogOut, Menu, Search } from 'lucide-react'
+import { useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ArrowUpRight, ChevronDown, HandHeart, LogOut, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Separator } from '@/components/ui/separator'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProfile } from '@/hooks/useProfile'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { SafeImage } from '@/components/ui/SafeImage'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { RealtimeStatus } from '@/components/RealtimeStatus'
 import { MessagesBell } from '@/components/messages/MessagesBell'
+import { cn } from '@/lib/utils'
+import { SiteLogo } from './SiteLogo'
+import { SiteNavDrawer } from './SiteNavDrawer'
+import { isNavItemActive, useNavSections, type NavItem } from './navItems'
 
 export function Navbar() {
   const navigate = useNavigate()
-  const { user, role, isAdmin, signOut } = useAuth()
+  const { pathname } = useLocation()
+  const { user } = useAuth()
   const { settings } = useSiteSettings()
-  const { data: profile } = useProfile()
-  const [open, setOpen] = useState(false)
+  const { primary, community } = useNavSections()
   const [query, setQuery] = useState('')
-  const [logoFailed, setLogoFailed] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   const siteName = settings.site_name || 'AbiaConnect'
-  const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
-  const showLogoImage = !!logoUrl && !logoFailed
-  const subgroupsEnabled = settings.global_subgroups_enabled !== 'false'
-  const storeLink = settings.store_link
-
-  useEffect(() => {
-    setLogoFailed(false)
-  }, [settings.site_logo, settings.logo_url, logoUrl])
-
-
-  const navLinks = (
-    <>
-      <Link to="/" className="text-sm font-medium hover:text-primary transition-colors">
-        Forums
-      </Link>
-      <Link to="/polls" className="text-sm font-medium hover:text-primary transition-colors">
-        Polls
-      </Link>
-      <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">
-        About Us
-      </Link>
-      <Link to="/donate" className="text-sm font-medium text-rose-600 hover:text-rose-700 transition-colors">
-        Donate ❤️
-      </Link>
-      {subgroupsEnabled && (
-        <Link to="/subgroups" className="text-sm font-medium hover:text-primary transition-colors">
-          Subgroups
-        </Link>
-      )}
-      {storeLink && (
-        <a
-          href={storeLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-medium hover:text-primary transition-colors"
-        >
-          Store
-        </a>
-      )}
-      {user && role !== 'guest' && (
-        <Link to="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
-          My Dashboard
-        </Link>
-      )}
-      {isAdmin && (
-        <>
-          <Link
-            to="/admin/dashboard"
-            className="text-sm font-medium hover:text-primary transition-colors"
-          >
-            Admin Portal
-          </Link>
-          <Link
-            to="/admin/donations"
-            className="text-sm font-medium hover:text-primary transition-colors"
-          >
-            Donations
-          </Link>
-        </>
-      )}
-    </>
-  )
+  // Donate gets its own button on the right; the rest sit in the main nav.
+  const navItems = [...primary, ...community.filter((i) => !i.highlight)]
 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    if (query.trim()) navigate(`/?q=${encodeURIComponent(query.trim())}`)
+    if (!query.trim()) return
+    navigate(`/?q=${encodeURIComponent(query.trim())}`)
+    setSearchOpen(false)
   }
 
-  const handleSignOut = async () => {
-    await signOut()
-    setOpen(false)
-    navigate('/')
-  }
+  const searchField = (autoFocus = false) => (
+    <form onSubmit={onSearch} className="relative" role="search">
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search discussions…"
+        aria-label="Search"
+        autoFocus={autoFocus}
+        className="h-9 w-full rounded-full border-border bg-muted/50 pl-9 focus-visible:bg-background"
+      />
+    </form>
+  )
 
   return (
-    <header className="sticky top-0 z-50 h-20 bg-background/80 backdrop-blur-2xl border-b border-border">
-      <div className="mx-auto h-full max-w-[1400px] px-6 flex items-center justify-between gap-4">
-        {/* Left: Logo */}
-        <div className="flex items-center gap-3">
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open menu">
-                <Menu />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-80">
-              <SheetHeader>
-                <SheetTitle asChild>
-                  <Link to="/" onClick={() => setOpen(false)} className="flex items-center" aria-label={siteName}>
-                    {showLogoImage && (
-                      <img
-                        src={logoUrl as string}
-                        alt={siteName}
-                        onError={() => setLogoFailed(true)}
-                        className="h-10 w-auto max-w-[180px] object-contain"
-                      />
-                    )}
-                  </Link>
-                </SheetTitle>
-              </SheetHeader>
-              <form onSubmit={onSearch} className="relative mt-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search…"
-                  className="pl-9 rounded-xl"
-                />
-              </form>
-              <nav className="mt-6 flex flex-col gap-4" onClick={() => setOpen(false)}>
-                {navLinks}
-              </nav>
-              <div className="mt-6 border-t border-border pt-4">
-                {user ? (
-                  <div className="flex flex-col gap-3">
-                    <div className="text-sm text-muted-foreground truncate">{user.email}</div>
-                    <Button variant="outline" onClick={handleSignOut}>
-                      <LogOut /> Sign Out
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    <Button variant="secondary" asChild onClick={() => setOpen(false)}>
-                      <Link to="/login">Sign In</Link>
-                    </Button>
-                    <Button asChild onClick={() => setOpen(false)}>
-                      <Link to="/register">Join Free</Link>
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </SheetContent>
-          </Sheet>
-
-          <Link to="/" className="flex items-center" aria-label={siteName}>
-            {showLogoImage && (
-              <img
-                src={logoUrl as string}
-                alt={siteName}
-                onError={() => setLogoFailed(true)}
-                className="h-10 w-auto max-w-[180px] object-contain"
-              />
-            )}
+    <header className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
+      <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-6">
+        {/* Left: menu (tablet) + brand */}
+        <div className="flex shrink-0 items-center gap-2">
+          <SiteNavDrawer triggerClassName="lg:hidden" />
+          <Link to="/" className="flex items-center rounded-lg" aria-label={`${siteName} home`}>
+            <SiteLogo />
           </Link>
         </div>
 
-        {/* Center: Nav */}
-        <nav className="hidden lg:flex items-center gap-6">{navLinks}</nav>
+        {/* Center: primary navigation */}
+        <nav aria-label="Main" className="hidden flex-1 items-center justify-center lg:flex">
+          <ul className="flex items-center gap-1">
+            {navItems.map((item) => (
+              <li key={item.label}>
+                <HeaderLink item={item} active={isNavItemActive(item, pathname)} />
+              </li>
+            ))}
+          </ul>
+        </nav>
 
-        {/* Right */}
-        <div className="flex items-center gap-2">
-          <form onSubmit={onSearch} className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search…"
-              className="pl-9 w-64 rounded-xl border border-border"
-            />
-          </form>
+        {/* Right: search, actions, account */}
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 lg:ml-0">
+          {/* Full search on tablets (no nav row) and wide screens */}
+          <div className="hidden w-56 md:block lg:hidden xl:block xl:w-64">{searchField()}</div>
+          {/* Compact search where the nav row takes the space */}
+          <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Search" className="hidden rounded-full lg:inline-flex xl:hidden">
+                <Search className="size-[18px]" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 rounded-2xl p-2">
+              {searchField(true)}
+            </PopoverContent>
+          </Popover>
 
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="hidden h-9 rounded-full border-rose-500/30 px-3.5 text-rose-600 hover:bg-rose-500/10 hover:text-rose-700 lg:inline-flex dark:text-rose-400"
+          >
+            <Link to="/donate">
+              <HandHeart className="size-4" /> Donate
+            </Link>
+          </Button>
+
+          <Separator orientation="vertical" className="mx-1 hidden h-6 lg:block" />
+
+          <RealtimeStatus className="hidden xl:inline-flex" />
           <ThemeToggle />
-
-          <RealtimeStatus className="hidden md:inline-flex" />
 
           {user ? (
             <>
               <MessagesBell />
               <NotificationBell />
-              <Link to="/profile" aria-label="Profile" className="flex">
-                <UserAvatar
-                  avatarUrl={profile?.avatar_url}
-                  displayName={profile?.display_name || user.email}
-                  size="sm"
-                  className="border-0"
-                />
-              </Link>
-              <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sign out">
-                <LogOut />
-              </Button>
+              <UserMenu />
             </>
           ) : (
-            <div className="hidden sm:flex items-center gap-2">
-              <Button variant="secondary" asChild>
+            <div className="ml-1 hidden items-center gap-2 sm:flex">
+              <Button variant="ghost" asChild className="h-9 rounded-full px-4">
                 <Link to="/login">Sign In</Link>
               </Button>
-              <Button asChild>
+              <Button asChild className="h-9 rounded-full px-4">
                 <Link to="/register">Join Free</Link>
               </Button>
             </div>
@@ -225,6 +125,109 @@ export function Navbar() {
         </div>
       </div>
     </header>
+  )
+}
+
+function HeaderLink({ item, active }: { item: NavItem; active: boolean }) {
+  const className = cn(
+    'inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-medium transition-colors',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+    active
+      ? 'bg-primary/10 text-primary dark:bg-primary/15'
+      : 'text-foreground/70 hover:bg-muted hover:text-foreground',
+  )
+  if (item.external) {
+    return (
+      <a href={item.to} target="_blank" rel="noopener noreferrer" className={className}>
+        {item.label}
+        <ArrowUpRight className="size-3.5 opacity-60" aria-hidden />
+      </a>
+    )
+  }
+  return (
+    <Link to={item.to} className={className} aria-current={active ? 'page' : undefined}>
+      {item.label}
+    </Link>
+  )
+}
+
+/** Avatar button with account, admin and sign-out actions. */
+function UserMenu() {
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const { user, signOut } = useAuth()
+  const { data: profile } = useProfile()
+  const { account, admin } = useNavSections()
+  const [open, setOpen] = useState(false)
+
+  if (!user) return null
+  const displayName = profile?.display_name || user.email
+
+  const handleSignOut = async () => {
+    setOpen(false)
+    await signOut()
+    navigate('/')
+  }
+
+  const menuLink = (item: NavItem) => {
+    const Icon = item.icon
+    const active = isNavItemActive(item, pathname)
+    return (
+      <Link
+        key={item.label}
+        to={item.to}
+        onClick={() => setOpen(false)}
+        className={cn(
+          'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors',
+          active ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
+        )}
+      >
+        <Icon className="size-4 text-muted-foreground" aria-hidden />
+        {item.label}
+      </Link>
+    )
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Account menu"
+          className="ml-1 flex items-center gap-1 rounded-full p-0.5 pr-1.5 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <UserAvatar avatarUrl={profile?.avatar_url} displayName={displayName} size="sm" className="border-0" />
+          <ChevronDown className={cn('size-3.5 text-muted-foreground transition-transform', open && 'rotate-180')} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64 rounded-2xl p-2">
+        <div className="flex items-center gap-3 px-2.5 py-2">
+          <UserAvatar avatarUrl={profile?.avatar_url} displayName={displayName} size="sm" className="border-0" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{profile?.display_name || 'My account'}</p>
+            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+          </div>
+        </div>
+        <Separator className="my-1.5" />
+        {account.map(menuLink)}
+        {admin.length > 0 && (
+          <>
+            <Separator className="my-1.5" />
+            <p className="px-2.5 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Admin</p>
+            {admin.map(menuLink)}
+          </>
+        )}
+        <Separator className="my-1.5" />
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-rose-600 transition-colors hover:bg-rose-500/10 dark:text-rose-400"
+        >
+          <LogOut className="size-4" aria-hidden />
+          Sign Out
+        </button>
+      </PopoverContent>
+    </Popover>
   )
 }
 
