@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 
 import { formatDistanceToNow } from 'date-fns'
-import DOMPurify from 'dompurify'
+import { sanitizeThreadHtml } from '@/lib/sanitizeThreadHtml'
 import {
   Bookmark,
   ChevronLeft,
@@ -35,11 +35,19 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
-// Lazy-load Textarea — only needed when user opens a reply form.
-const Textarea = lazy(() =>
-  import('@/components/ui/textarea').then((m) => ({ default: m.Textarea })),
+// Lazy-load the reply composer — only needed when user opens a reply form.
+const ReplyComposer = lazy(() =>
+  import('@/components/thread/ReplyComposer').then((m) => ({ default: m.ReplyComposer })),
 )
+
+/** True if HTML has visible text or an embedded image. */
+function hasReplyContent(html: string): boolean {
+  if (!html) return false
+  if (/<img\b/i.test(html)) return true
+  return html.replace(/<[^>]+>/g, '').trim().length > 0
+}
 
 interface ThreadRow {
   id: string
@@ -118,7 +126,7 @@ const ReplyItem = memo(function ReplyItem({
 }: ReplyItemProps) {
   const name = r.profiles?.display_name ?? 'Member'
   const isOptimistic = (r as Reply & { _optimistic?: boolean })._optimistic
-  const safeHtml = useMemo(() => DOMPurify.sanitize(r.content), [r.content])
+  const safeHtml = useMemo(() => sanitizeThreadHtml(r.content), [r.content])
   const isOpen = replyingTo === r.id
   return (
     <li
@@ -137,7 +145,7 @@ const ReplyItem = memo(function ReplyItem({
         </span>
       </div>
       <div
-        className="prose prose-sm dark:prose-invert max-w-none"
+        className="thread-prose max-w-none"
         dangerouslySetInnerHTML={{ __html: safeHtml }}
       />
       <div className="flex items-center gap-1 mt-2">
@@ -167,17 +175,17 @@ const ReplyItem = memo(function ReplyItem({
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            if (!nestedDraft.trim()) return
+            if (!hasReplyContent(nestedDraft)) return
             onSubmitNested(r.id)
           }}
           className="mt-3 space-y-2"
         >
           <Suspense fallback={<div className="h-20 rounded-md bg-muted animate-pulse" />}>
-            <Textarea
+            <ReplyComposer
               value={nestedDraft}
-              onChange={(e) => onNestedDraftChange(e.target.value)}
+              onChange={onNestedDraftChange}
               placeholder={`Reply to ${name}…`}
-              rows={3}
+              minRows={3}
               maxLength={5000}
               autoFocus
             />
@@ -186,7 +194,7 @@ const ReplyItem = memo(function ReplyItem({
             <Button type="button" size="sm" variant="ghost" onClick={onCancelNested}>
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={submitting || !nestedDraft.trim()}>
+            <Button type="submit" size="sm" disabled={submitting || !hasReplyContent(nestedDraft)}>
               {submitting ? 'Posting…' : 'Post'}
             </Button>
           </div>
@@ -699,7 +707,7 @@ function Thread() {
   )
 
   const threadContent = threadQ.data?.content ?? ''
-  const safeBody = useMemo(() => DOMPurify.sanitize(threadContent), [threadContent])
+  const safeBody = useMemo(() => sanitizeThreadHtml(threadContent), [threadContent])
   const plainBody = useMemo(
     () => threadContent.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
     [threadContent],
@@ -726,15 +734,19 @@ function Thread() {
       if (!threadId) throw new Error('Missing thread')
       const { data: rows, error: fetchErr } = await supabase
         .from('replies')
-        .select('id')
+        .select('id, content')
         .eq('thread_id', threadId)
       if (fetchErr) throw fetchErr
       const ids = (rows ?? []).map((r) => r.id as string)
+      const paths = (rows ?? []).flatMap((r) =>
+        extractAttachmentPaths((r as { content?: string }).content),
+      )
       if (ids.length > 0) {
         await supabase.from('reply_votes').delete().in('reply_id', ids)
       }
       const { error } = await supabase.from('replies').delete().eq('thread_id', threadId)
       if (error) throw error
+      if (paths.length) await deleteAttachmentPaths(paths)
       return ids.length
     },
     onSuccess: (count) => {
@@ -839,7 +851,7 @@ function Thread() {
         </div>
 
         <div
-          className="prose prose-sm dark:prose-invert max-w-none"
+          className="thread-prose max-w-none"
           dangerouslySetInnerHTML={{ __html: safeBody }}
         />
 
@@ -988,16 +1000,16 @@ function Thread() {
               className="space-y-2"
             >
               <Suspense fallback={<div className="h-24 rounded-md bg-muted animate-pulse" />}>
-                <Textarea
+                <ReplyComposer
                   value={reply}
-                  onChange={(e) => setReply(e.target.value)}
+                  onChange={setReply}
                   placeholder="Write a reply…"
-                  rows={4}
+                  minRows={4}
                   maxLength={5000}
                 />
               </Suspense>
               <div className="flex justify-end">
-                <Button type="submit" disabled={submitReply.isPending || !reply.trim()}>
+                <Button type="submit" disabled={submitReply.isPending || !hasReplyContent(reply)}>
                   {submitReply.isPending ? 'Posting…' : 'Post Reply'}
                 </Button>
               </div>

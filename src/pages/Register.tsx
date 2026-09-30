@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { CheckCircle2, Loader2 } from 'lucide-react'
+import { CheckCircle2, Loader2, MailCheck } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +17,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { supabase } from '@/lib/supabase'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
@@ -89,6 +97,43 @@ export default function Register() {
   const [direction, setDirection] = useState(1)
   const [quiz, setQuiz] = useState(makeQuiz)
   const [done, setDone] = useState(false)
+  const [existingEmail, setExistingEmail] = useState<string | null>(null)
+  const [existingVerified, setExistingVerified] = useState<boolean | null>(null)
+  const [resending, setResending] = useState(false)
+
+  async function resendVerification(email: string) {
+    setResending(true)
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: 'https://abiaconnect.com/' },
+      })
+      if (error) toast.error(error.message)
+      else toast.success('Verification email sent. Please check your inbox.')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not resend email')
+    } finally {
+      setResending(false)
+    }
+  }
+
+  async function checkEmailExists(email: string) {
+    const value = email.trim().toLowerCase()
+    if (!value || !/^\S+@\S+\.\S+$/.test(value)) return
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)('email_registration_status', { _email: value })
+      const row = Array.isArray(data) ? data[0] : data
+      if (!error && row?.is_registered === true) {
+        setExistingVerified(row.is_verified === true)
+        setExistingEmail(value)
+      }
+    } catch {
+      // silent — non-blocking pre-check
+    }
+  }
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -117,7 +162,23 @@ export default function Register() {
 
   async function createAccount() {
     const v = form.getValues()
-    const { error } = await supabase.auth.signUp({
+    // Final server-side duplicate-email check — guards against skipped/racing onBlur.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error: rpcErr } = await (supabase.rpc as any)('email_registration_status', {
+        _email: v.email.trim().toLowerCase(),
+      })
+      const row = Array.isArray(data) ? data[0] : data
+      if (!rpcErr && row?.is_registered === true) {
+        setExistingVerified(row.is_verified === true)
+        setExistingEmail(v.email)
+        goTo(1)
+        return
+      }
+    } catch {
+      // non-blocking — fall through to signUp which still catches duplicates
+    }
+    const { data, error } = await supabase.auth.signUp({
       email: v.email,
       password: v.password,
       options: {
@@ -131,12 +192,33 @@ export default function Register() {
       },
     })
     if (error) {
-      toast.error(error.message)
+      const msg = error.message?.toLowerCase() ?? ''
+      if (
+        msg.includes('already') ||
+        msg.includes('registered') ||
+        msg.includes('exists') ||
+        msg.includes('user with this email')
+      ) {
+        setExistingVerified(null)
+        setExistingEmail(v.email)
+      } else {
+        toast.error(error.message)
+      }
+      goTo(1)
+      return
+    }
+    // Supabase obfuscates "already registered" by returning a user with an
+    // empty identities array (and no session). Detect that and guide the user.
+    const identities = data?.user?.identities ?? []
+    if (data?.user && identities.length === 0) {
+      setExistingVerified(null)
+      setExistingEmail(v.email)
       goTo(1)
       return
     }
     setDone(true)
   }
+
 
   const variants = useMemo(
     () => ({
@@ -158,7 +240,7 @@ export default function Register() {
             <form onSubmit={onStep1} className="space-y-4">
               <Field label="Full Name" error={form.formState.errors.name?.message}><Input {...form.register('name')} /></Field>
               <Field label="Username" error={form.formState.errors.username?.message}><Input {...form.register('username')} /></Field>
-              <Field label="Email" error={form.formState.errors.email?.message}><Input type="email" {...form.register('email')} /></Field>
+              <Field label="Email" error={form.formState.errors.email?.message}><Input type="email" {...form.register('email', { onBlur: (e) => checkEmailExists(e.target.value) })} /></Field>
               <Field label="Password" error={form.formState.errors.password?.message}><Input type="password" {...form.register('password')} /></Field>
               <Field label="Date of Birth" error={form.formState.errors.dob?.message}><Input type="date" {...form.register('dob')} /></Field>
               <Field label="LGA of Origin" error={form.formState.errors.lga?.message}>
@@ -202,6 +284,88 @@ export default function Register() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <Dialog open={!!existingEmail} onOpenChange={(o) => { if (!o) { setExistingEmail(null); setExistingVerified(null) } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <MailCheck className="size-6" />
+            </div>
+            <DialogTitle className="text-center">
+              {existingVerified === false
+                ? 'Email registered but not verified'
+                : 'This email is already registered'}
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              {existingVerified === true && (
+                <>An account with <span className="font-medium text-foreground">{existingEmail}</span> is already verified. Sign in to continue.</>
+              )}
+              {existingVerified === false && (
+                <>We found an account for <span className="font-medium text-foreground">{existingEmail}</span>, but the email hasn't been verified yet. Resend the verification email to activate it.</>
+              )}
+              {existingVerified === null && (
+                <>An account with <span className="font-medium text-foreground">{existingEmail}</span> already exists. Sign in to continue, or resend the verification email if you haven't confirmed it yet.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            {existingVerified === false ? (
+              <>
+                <Button
+                  className="w-full"
+                  disabled={resending}
+                  onClick={() => existingEmail && resendVerification(existingEmail)}
+                >
+                  {resending ? (
+                    <><Loader2 className="mr-2 size-4 animate-spin" />Resending…</>
+                  ) : (
+                    'Resend verification email'
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    const email = existingEmail
+                    setExistingEmail(null); setExistingVerified(null)
+                    navigate(`/login${email ? `?email=${encodeURIComponent(email)}` : ''}`)
+                  }}
+                >
+                  Sign in instead
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    const email = existingEmail
+                    setExistingEmail(null); setExistingVerified(null)
+                    navigate(`/login${email ? `?email=${encodeURIComponent(email)}` : ''}`)
+                  }}
+                >
+                  Sign in instead
+                </Button>
+                {existingVerified === null && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    disabled={resending}
+                    onClick={() => existingEmail && resendVerification(existingEmail)}
+                  >
+                    {resending ? (
+                      <><Loader2 className="mr-2 size-4 animate-spin" />Resending…</>
+                    ) : (
+                      'Resend verification email'
+                    )}
+                  </Button>
+                )}
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </>
   )
 
@@ -255,7 +419,7 @@ export default function Register() {
                   <Input {...form.register('username')} />
                 </Field>
                 <Field label="Email" error={form.formState.errors.email?.message}>
-                  <Input type="email" {...form.register('email')} />
+                  <Input type="email" {...form.register('email', { onBlur: (e) => checkEmailExists(e.target.value) })} />
                 </Field>
                 <Field label="Password" error={form.formState.errors.password?.message}>
                   <Input type="password" {...form.register('password')} />

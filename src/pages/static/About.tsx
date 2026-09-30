@@ -18,15 +18,16 @@ import {
   Code2,
   Wrench,
   Rocket,
+  Heart,
 } from 'lucide-react'
 
 const FEATURES = [
   { icon: MessagesSquare, title: 'Community Forums', body: 'Structured discussions across 14 topic categories, from business and politics to culture and faith.' },
+  { icon: Heart, title: 'Relationship Forum', body: 'Built for Abians seeking intentional relationships, it combines modern discovery with traditional cultural respect and absolute privacy.' },
   { icon: BarChart3, title: 'Live Polls', body: 'Real-time community polls that capture the pulse of Abia opinion on issues that matter.' },
   { icon: Users, title: 'Subgroups', body: 'Focused communities within the community — for LGAs, professions, diaspora cities, and shared interests.' },
   { icon: Mail, title: 'Private Messaging', body: 'Secure, direct messaging between members for trusted one-on-one conversations.' },
   { icon: Bell, title: 'Smart Notifications', body: 'Stay informed about replies, mentions, and community activity without noise.' },
-  { icon: Trophy, title: 'Success Stories', body: 'A dedicated space to celebrate Abian achievements and inspire the next generation.' },
 ]
 
 const STATS = [
@@ -230,16 +231,25 @@ export default function About() {
       <section className="not-prose mb-12">
         <p className="text-xs font-semibold uppercase tracking-widest text-secondary mb-2">05 — Platform</p>
         <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6">What AbiaConnect Offers</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {FEATURES.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="bg-card border border-border rounded-2xl p-6 hover:border-secondary/40 transition-colors">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shrink-0">
+            <div 
+              key={title} 
+              className="group relative bg-card border border-border rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-secondary/40"
+            >
+              <div className="flex items-start gap-4">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground transition-transform group-hover:scale-110 shrink-0">
                   <Icon className="size-5" />
                 </span>
-                <h3 className="font-semibold text-foreground">{title}</h3>
+                <div>
+                  <h3 className="font-bold text-lg mb-2 text-foreground">
+                    {title}
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed text-sm">
+                    {body}
+                  </p>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
             </div>
           ))}
         </div>

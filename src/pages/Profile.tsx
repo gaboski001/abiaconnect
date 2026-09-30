@@ -3,7 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Award, Briefcase, Heart, MapPin, Navigation, Pencil, User as UserIcon } from 'lucide-react'
+import { Award, Briefcase, Heart, Loader2, MapPin, Navigation, Pencil, User as UserIcon } from 'lucide-react'
+import { toWebP } from '@/lib/image'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,6 +65,7 @@ export default function Profile() {
 
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Partial<Profile>>({})
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   const profileQ = useQuery({
     queryKey: ['profile', viewedId, isSelf],
@@ -168,6 +170,37 @@ export default function Profile() {
     profileQ.refetch()
   }
 
+  const uploadAvatar = async (file: File) => {
+    if (!user) return
+    setUploadingAvatar(true)
+    try {
+      const webp = await toWebP(file)
+      const ext = webp.name.split('.').pop() || 'webp'
+      const path = `${user.id}/${Date.now()}.${ext}`
+      const { uploadAndScan } = await import('@/lib/scanAttachment')
+      const res = await uploadAndScan('avatars', path, webp, { contentType: webp.type, upsert: true })
+      if (!res.uploaded) {
+        toast.error(res.error || 'Avatar blocked by security scan')
+        return
+      }
+      const { error } = await supabase.from('profiles').update({ avatar_url: path }).eq('id', user.id)
+      if (error) return toast.error(error.message)
+      toast.success('Avatar updated')
+      profileQ.refetch()
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  const removeAvatar = async () => {
+    if (!user) return
+    const { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', user.id)
+    if (error) return toast.error(error.message)
+    toast.success('Avatar removed')
+    profileQ.refetch()
+  }
+
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <SEO
@@ -263,6 +296,38 @@ export default function Profile() {
               </>
             ) : (
               <div className="mt-4 space-y-3">
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                  <Label className="text-xs">Profile photo</Label>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadAvatar(f); e.currentTarget.value = '' }}
+                      />
+                      <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-accent">
+                        {uploadingAvatar ? <Loader2 className="size-4 animate-spin" /> : <Pencil className="size-4" />}
+                        {uploadingAvatar ? 'Uploading…' : 'Choose photo'}
+                      </span>
+                    </label>
+                    <label className="sm:hidden">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="user"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadAvatar(f); e.currentTarget.value = '' }}
+                      />
+                      <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-accent">
+                        Take photo
+                      </span>
+                    </label>
+                    {profile.avatar_url && (
+                      <Button type="button" size="sm" variant="ghost" onClick={removeAvatar}>Remove</Button>
+                    )}
+                  </div>
+                </div>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label>Display Name</Label>

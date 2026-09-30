@@ -387,6 +387,66 @@ export type Database = {
         }
         Relationships: []
       }
+      email_short_link_events: {
+        Row: {
+          created_at: string
+          id: string
+          ip_hint: string | null
+          outcome: string
+          purpose: string | null
+          token: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_hint?: string | null
+          outcome: string
+          purpose?: string | null
+          token: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_hint?: string | null
+          outcome?: string
+          purpose?: string | null
+          token?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      email_short_links: {
+        Row: {
+          created_at: string
+          expires_at: string
+          purpose: string | null
+          target_url: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          purpose?: string | null
+          target_url: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          purpose?: string | null
+          target_url?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       email_unsubscribe_tokens: {
         Row: {
           created_at: string
@@ -1745,6 +1805,13 @@ export type Database = {
         Args: { _conversation_id: string }
         Returns: number
       }
+      consume_email_short_link:
+        | { Args: { _token: string }; Returns: string }
+        | { Args: { _token: string; _user_agent?: string }; Returns: string }
+      create_email_short_link: {
+        Args: { _purpose?: string; _target_url: string; _ttl_seconds?: number }
+        Returns: string
+      }
       decide_join_request: {
         Args: { _approve: boolean; _request_id: string }
         Returns: undefined
@@ -1765,7 +1832,15 @@ export type Database = {
         Args: { _message_id: string; _new_content: string }
         Returns: undefined
       }
+      email_is_registered: { Args: { _email: string }; Returns: boolean }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      email_registration_status: {
+        Args: { _email: string }
+        Returns: {
+          is_registered: boolean
+          is_verified: boolean
+        }[]
+      }
       enforce_rate_limit: {
         Args: { _max: number; _scope: string; _window_seconds?: number }
         Returns: undefined
@@ -1905,6 +1980,7 @@ export type Database = {
         Args: { _pinned: boolean; _thread_id: string }
         Returns: undefined
       }
+      prune_email_short_links: { Args: never; Returns: undefined }
       prune_issue_report_contact_emails: { Args: never; Returns: undefined }
       prune_search_rate_limits: { Args: never; Returns: undefined }
       read_email_batch: {

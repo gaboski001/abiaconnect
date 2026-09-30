@@ -84,9 +84,7 @@ export function MainLayout() {
       {/* Native-only premium navigation shell */}
       {!hideBottomNav && <MobileBottomNav />}
 
-      {!isAuthPage && <InstallAppPrompt />}
-      {!isAuthPage && <IOSInstallPrompt />}
-      {!isAuthPage && <UpdateAvailablePrompt />}
+      {/* PWA notices removed by user request */}
       <ModerationBlockedDialog />
     </div>
   )

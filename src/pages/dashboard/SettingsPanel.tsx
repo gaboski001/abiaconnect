@@ -168,12 +168,35 @@ export default function SettingsPanel({
 
         <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center">
           <UserAvatar avatarUrl={profile.avatar_url} displayName={form.display_name || user?.email || 'User'} size="lg" className="h-20 w-20 border border-white/15" />
-          <label className="text-sm">
-            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadAvatar(e.target.files[0])} />
-            <span className="inline-flex cursor-pointer items-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 font-semibold text-slate-100 hover:bg-white/[0.08]">
-              {uploading ? 'Uploading…' : 'Change avatar'}
-            </span>
-          </label>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <label>
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadAvatar(f); e.currentTarget.value = '' }} />
+              <span className="inline-flex cursor-pointer items-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 font-semibold text-slate-100 hover:bg-white/[0.08]">
+                {uploading ? 'Uploading…' : 'Choose photo'}
+              </span>
+            </label>
+            <label className="sm:hidden">
+              <input type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadAvatar(f); e.currentTarget.value = '' }} />
+              <span className="inline-flex cursor-pointer items-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 font-semibold text-slate-100 hover:bg-white/[0.08]">
+                Take photo
+              </span>
+            </label>
+            {profile.avatar_url && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!user) return
+                  const { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', user.id)
+                  if (error) return toast.error(error.message)
+                  toast.success('Avatar removed')
+                  onSaved()
+                }}
+                className="inline-flex items-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 font-semibold text-slate-100 hover:bg-white/[0.08]"
+              >
+                Remove
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -252,12 +275,7 @@ export default function SettingsPanel({
       </section>
 
 
-      <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
-        <h2 className="text-lg font-black text-white">App tools</h2>
-        <div className="mt-4 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
-          <NativeAppDownload />
-        </div>
-      </section>
+      {/* NativeAppDownload section removed by user request */}
 
       <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
         <h2 className="text-lg font-black text-white">Change password</h2>

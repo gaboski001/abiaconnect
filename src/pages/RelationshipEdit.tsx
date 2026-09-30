@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Heart, Loader2, X } from 'lucide-react'
+import { ArrowLeft, Heart, Loader2, Upload, X } from 'lucide-react'
+import { toWebP } from '@/lib/image'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from '@/lib/toast'
@@ -53,6 +54,8 @@ export default function RelationshipEdit() {
   const [tagInput, setTagInput] = useState('')
   const [photoInput, setPhotoInput] = useState('')
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [useAsAvatar, setUseAsAvatar] = useState(true)
   const [prefill, setPrefill] = useState(false)
 
   useEffect(() => {
@@ -118,6 +121,41 @@ export default function RelationshipEdit() {
     setForm((f) => ({ ...f, photos: [url] }))
     setPhotoInput('')
   }
+
+  const uploadPhoto = async (file: File) => {
+    if (!user) return
+    if (!file.type.startsWith('image/')) return toast.error('Please choose an image')
+    if (file.size > 8 * 1024 * 1024) return toast.error('Image is too large (max 8MB)')
+    setUploading(true)
+    try {
+      const webp = await toWebP(file)
+      const ext = webp.name.split('.').pop() || 'webp'
+      const path = `${user.id}/rel-${Date.now()}.${ext}`
+      const { uploadAndScan } = await import('@/lib/scanAttachment')
+      const res = await uploadAndScan('avatars', path, webp, {
+        contentType: webp.type,
+        upsert: true,
+      })
+      if (!res.uploaded) {
+        return toast.error(res.error || 'Upload blocked by security scan')
+      }
+      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path)
+      const publicUrl = pub?.publicUrl
+      if (!publicUrl) return toast.error('Could not resolve uploaded image URL')
+      setForm((f) => ({ ...f, photos: [publicUrl] }))
+      if (useAsAvatar) {
+        const { error } = await supabase.from('profiles').update({ avatar_url: path }).eq('id', user.id)
+        if (error) toast.error(`Photo uploaded but avatar update failed: ${error.message}`)
+        else toast.success('Photo uploaded and set as your avatar')
+      } else {
+        toast.success('Photo uploaded')
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
+
+
 
 
   const save = async () => {
@@ -267,8 +305,34 @@ export default function RelationshipEdit() {
         </div>
 
         <div>
-          <Label>Profile picture (URL)</Label>
-          <div className="flex gap-2">
+          <Label>Profile picture</Label>
+          <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-muted">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void uploadPhoto(f)
+                  e.target.value = ''
+                }}
+              />
+              {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+              {uploading ? 'Uploading…' : 'Upload photo'}
+            </label>
+            <span className="text-xs text-muted-foreground">or paste an image URL below</span>
+          </div>
+          <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={useAsAvatar}
+              onChange={(e) => setUseAsAvatar(e.target.checked)}
+              className="size-3.5 rounded border-input"
+            />
+            Also use uploaded photo as my account avatar
+          </label>
+          <div className="mt-2 flex gap-2">
             <Input
               value={photoInput || form.photos[0] || ''}
               onChange={(e) => setPhotoInput(e.target.value)}
@@ -297,8 +361,9 @@ export default function RelationshipEdit() {
               </button>
             </div>
           )}
-          <p className="text-xs text-muted-foreground mt-1">One profile picture only. Use "Fill from my profile" to pull your account avatar.</p>
+          <p className="text-xs text-muted-foreground mt-1">One profile picture only. Uploads are stored securely and scanned before use.</p>
         </div>
+
 
 
         <label className="flex items-center gap-3 text-sm">

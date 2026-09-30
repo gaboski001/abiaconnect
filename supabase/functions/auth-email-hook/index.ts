@@ -218,17 +218,51 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
+  // Enqueue email for async processing by the dispatcher (process-email-queue).
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  )
+
+  // Hide the raw verification URL (which references the backend host) behind a
+  // short-lived, single-use token served from our own domain.
+  let confirmationUrl: string = payload.data.url
+  if (confirmationUrl) {
+    try {
+      const ttlByType: Record<string, number> = {
+        reauthentication: 900,   // 15 min — matches OTP window
+        recovery: 3600,          // 1 hour — matches Supabase password-reset window
+        magiclink: 3600,
+        email_change: 86400,
+        invite: 604800,
+      }
+      const { data: token, error: linkErr } = await supabase.rpc('create_email_short_link', {
+        _target_url: confirmationUrl,
+        _purpose: emailType,
+        _ttl_seconds: ttlByType[emailType] ?? 86400,
+      })
+      if (linkErr) {
+        console.error('short-link mint failed, falling back to raw url', { linkErr, run_id })
+      } else if (token) {
+        confirmationUrl = `https://${ROOT_DOMAIN}/go/${token}`
+      }
+    } catch (e) {
+      console.error('short-link mint threw, falling back to raw url', { e, run_id })
+    }
+  }
+
   // Build template props from payload.data (HookData structure)
   const templateProps = {
     siteName: SITE_NAME,
     siteUrl: `https://${ROOT_DOMAIN}`,
     recipient: payload.data.email,
-    confirmationUrl: payload.data.url,
+    confirmationUrl,
     token: payload.data.token,
     email: payload.data.email,
     oldEmail: payload.data.old_email,
     newEmail: payload.data.new_email,
   }
+
 
   // Render React Email to HTML and plain text
   const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
@@ -236,13 +270,8 @@ async function handleWebhook(req: Request): Promise<Response> {
     plainText: true,
   })
 
-  // Enqueue email for async processing by the dispatcher (process-email-queue).
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
-
   const messageId = crypto.randomUUID()
+
 
   // Log pending BEFORE enqueue so we have a record even if enqueue crashes
   await supabase.from('email_send_log').insert({
