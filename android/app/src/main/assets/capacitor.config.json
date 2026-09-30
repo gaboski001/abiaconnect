@@ -7,9 +7,7 @@
 		"androidScheme": "https",
 		"allowNavigation": [
 			"abiaconnect.com",
-			"*.abiaconnect.com",
-			"*.lovable.app",
-			"*.supabase.co"
+			"*.abiaconnect.com"
 		]
 	},
 	"plugins": {

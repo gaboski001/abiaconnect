@@ -147,7 +147,9 @@ export function useAppUpdate() {
 
   const q = useQuery({
     queryKey: ['app-update', platform],
-    enabled: ready && isNative && (platform === 'android' || platform === 'ios'),
+    // Android updates must come from Google Play (Play policy forbids
+    // self-updating via downloaded APKs), so only iOS checks here.
+    enabled: ready && isNative && platform === 'ios',
     staleTime: 5 * 60 * 1000,
     refetchInterval: 30 * 60 * 1000,
     queryFn: async (): Promise<AppUpdateRelease | null> => {

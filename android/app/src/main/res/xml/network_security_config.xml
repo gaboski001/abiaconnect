@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- Cleartext only for local dev servers. Everything else (incl. Supabase) is HTTPS-only. -->
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">localhost</domain>
-        <domain includeSubdomains="true">tnwgnowjmrbjugheorkv.supabase.co</domain>
+        <domain includeSubdomains="false">localhost</domain>
     </domain-config>
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>

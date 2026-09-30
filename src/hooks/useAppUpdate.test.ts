@@ -7,13 +7,14 @@ import { createElement } from 'react'
 // ---- Mocks --------------------------------------------------------------
 
 let installedVersion = '1.0.0'
+let mockPlatform: 'android' | 'ios' = 'ios'
 const resumeListeners: Array<(state: { isActive: boolean }) => void> = []
 const appStateListeners: Array<(state: { isActive: boolean }) => void> = []
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
     isNativePlatform: () => true,
-    getPlatform: () => 'android',
+    getPlatform: () => mockPlatform,
   },
 }))
 
@@ -23,6 +24,7 @@ vi.mock('@capacitor/core', () => ({
 const OriginalFunction = globalThis.Function
 beforeEach(() => {
   installedVersion = '1.0.0'
+  mockPlatform = 'ios'
   resumeListeners.length = 0
   appStateListeners.length = 0
 
@@ -59,9 +61,9 @@ vi.mock('@/lib/supabase', () => ({
                 maybeSingle: async () => ({
                   data: {
                     id: 'r1',
-                    platform: 'android',
+                    platform: 'ios',
                     version: '4.0.1',
-                    file_path: 'x.apk',
+                    file_path: 'x.ipa',
                     file_size: 1000,
                     changelog: null,
                     created_at: new Date().toISOString(),
@@ -98,8 +100,7 @@ describe('useAppUpdate', () => {
     await waitFor(() => expect(result.current.hasUpdate).toBe(true))
     await waitFor(() => expect(resumeListeners.length).toBeGreaterThan(0))
 
-    // Simulate the user returning from the Android install flow now running
-    // the newly-installed APK.
+    // Simulate the user returning to the app now running the new version.
     installedVersion = '4.0.1'
     await act(async () => {
       resumeListeners.forEach((cb) => cb({ isActive: true }))
@@ -120,6 +121,15 @@ describe('useAppUpdate', () => {
       appStateListeners.forEach((cb) => cb({ isActive: true }))
     })
     await waitFor(() => expect(result.current.hasUpdate).toBe(false))
+  })
+
+  it('never reports an update on Android (updates come from Google Play)', async () => {
+    mockPlatform = 'android'
+    const { result } = renderHook(() => useAppUpdate(), { wrapper })
+    await waitFor(() => expect(result.current.currentVersion).toBe('1.0.0'))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(result.current.hasUpdate).toBe(false)
+    expect(result.current.release).toBeNull()
   })
 
   it('does NOT show update when installed version cannot be read (plugin unavailable)', async () => {

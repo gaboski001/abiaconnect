@@ -62,17 +62,17 @@ public class MainActivity extends BaseActivity {
 
     private void handleNotificationIntent(Intent intent) {
         if (intent == null) return;
+        // MainActivity is exported: ignore notification extras unless the
+        // intent was built by us (see NotificationIntentGuard).
+        if (!NotificationIntentGuard.isTrusted(this, intent)) return;
 
         String type = intent.getStringExtra("notification_type");
         String callAction = intent.getStringExtra("call_action"); // "answer" | "open" | null
         String callId = intent.getStringExtra("call_id");
         String callerName = intent.getStringExtra("caller_name");
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            if ("call".equals(type) || "call_ongoing".equals(type)) {
-                setShowWhenLocked(true);
-                setTurnScreenOn(true);
-            }
+        if ("call".equals(type) || "call_ongoing".equals(type)) {
+            setLockScreenCallMode(true);
         }
 
         // Any call interaction (Answer or opening the ringing UI) must clear the
@@ -97,9 +97,37 @@ public class MainActivity extends BaseActivity {
         }
 
         final String route = intent.getStringExtra("url");
-        if (route == null || route.isEmpty()) return;
+        if (!isSafeInAppRoute(route)) return;
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> dispatchRouteToWeb(route), 300);
+    }
+
+    /** Only same-origin paths like "/messages/123" — no schemes, no "//host". */
+    private static boolean isSafeInAppRoute(String route) {
+        return route != null
+            && route.startsWith("/")
+            && !route.startsWith("//")
+            && !route.contains("\\")
+            && route.length() <= 512;
+    }
+
+    /**
+     * Show over the lock screen / wake the display only while a call is
+     * ringing or active — never for normal app use, otherwise anyone holding
+     * a locked phone could read the user's messages.
+     */
+    void setLockScreenCallMode(boolean enabled) {
+        runOnUiThread(() -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                setShowWhenLocked(enabled);
+                setTurnScreenOn(enabled);
+            } else {
+                int flags = android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                    | android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON;
+                if (enabled) getWindow().addFlags(flags);
+                else getWindow().clearFlags(flags);
+            }
+        });
     }
 
     private void dispatchCallAnswerToWeb(String callId) {
@@ -131,8 +159,6 @@ public class MainActivity extends BaseActivity {
     private void installCallJsBridge() {
         if (getBridge() == null || getBridge().getWebView() == null) return;
         getBridge().getWebView().addJavascriptInterface(new CallJsBridge(this), "AbiaCallBridge");
-        getBridge().getWebView().addJavascriptInterface(
-            new ApkInstallerBridge(this, getBridge()), "AbiaApkInstaller");
     }
 
     private void registerHangupReceiver() {
@@ -140,6 +166,7 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent == null || intent.getAction() == null) return;
+                setLockScreenCallMode(false);
                 String eventName = "com.abiaconnect.app.CALL_DECLINE".equals(intent.getAction())
                     ? "abiaconnect-native-call-decline"
                     : "abiaconnect-native-call-hangup";
@@ -158,29 +185,35 @@ public class MainActivity extends BaseActivity {
         IntentFilter filter = new IntentFilter();
         filter.addAction("com.abiaconnect.app.CALL_HANGUP");
         filter.addAction("com.abiaconnect.app.CALL_DECLINE");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(hangupReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            registerReceiver(hangupReceiver, filter);
-        }
+        // NOT_EXPORTED on every API level (ContextCompat protects it with a
+        // signature permission below Android 13) so other apps can't spoof hangups.
+        ContextCompat.registerReceiver(this, hangupReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     /** JS-facing bridge. Called from the web layer via window.AbiaCallBridge. */
     public static class CallJsBridge {
         private final Context context;
+        private final java.lang.ref.WeakReference<MainActivity> activity;
 
-        CallJsBridge(Context context) {
-            this.context = context.getApplicationContext();
+        CallJsBridge(MainActivity activity) {
+            this.context = activity.getApplicationContext();
+            this.activity = new java.lang.ref.WeakReference<>(activity);
         }
 
         @JavascriptInterface
         public void startCall(String callerName, String callId) {
-            CallForegroundService.start(context, callerName, callId);
+            CallForegroundService.start(context, clip(callerName, 80), clip(callId, 128));
         }
 
         @JavascriptInterface
         public void endCall() {
             CallForegroundService.stop(context);
+            MainActivity a = activity.get();
+            if (a != null) a.setLockScreenCallMode(false);
+        }
+
+        private static String clip(String s, int max) {
+            return s == null || s.length() <= max ? s : s.substring(0, max);
         }
     }
 }

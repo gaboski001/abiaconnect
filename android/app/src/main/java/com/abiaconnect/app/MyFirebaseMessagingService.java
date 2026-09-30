@@ -25,7 +25,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     @Override
     public void onNewToken(@NonNull String token) {
         super.onNewToken(token);
-        Log.d(TAG, "New token: " + token);
+        // Don't log the token itself — it's a credential for pushing to this device.
+        Log.d(TAG, "FCM token refreshed");
     }
 
     @Override
@@ -78,6 +79,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         intent.putExtra("caller_name", callerName);
         intent.putExtra("notification_id", notificationId);
         intent.putExtra("call_action", action); // "answer" | "open" | ""
+        NotificationIntentGuard.sign(this, intent);
         return PendingIntent.getActivity(
             this,
             requestCode,

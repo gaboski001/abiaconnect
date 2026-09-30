@@ -177,6 +177,7 @@ public class CallForegroundService extends Service {
         openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         openIntent.putExtra("notification_type", "call_ongoing");
         openIntent.putExtra("call_id", callId);
+        NotificationIntentGuard.sign(this, openIntent);
         PendingIntent contentIntent = PendingIntent.getActivity(
             this, 0, openIntent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE

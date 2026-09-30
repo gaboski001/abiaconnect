@@ -94,7 +94,9 @@ export function UpdateAvailablePrompt() {
         return
       }
 
-      if (platform !== 'android' && platform !== 'ios') return
+      // Android updates are delivered by Google Play only (Play policy
+      // forbids apps from updating themselves with downloaded APKs).
+      if (platform !== 'ios') return
       const current = await getCurrentNativeVersion()
       if (!current) return
 
