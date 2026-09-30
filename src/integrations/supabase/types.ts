@@ -1973,6 +1973,10 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_displayed_storage_object: {
+        Args: { _bucket: string; _name: string }
+        Returns: boolean
+      }
       is_subgroup_admin: {
         Args: { _subgroup_id: string; _user_id: string }
         Returns: boolean
