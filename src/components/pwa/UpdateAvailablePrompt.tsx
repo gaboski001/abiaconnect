@@ -137,9 +137,10 @@ export function UpdateAvailablePrompt() {
 
   const download = async () => {
     if (!release) return
-    const { data, error } = await supabase.storage
-      .from('app-releases')
-      .createSignedUrl(release.file_path, 60 * 10, { download: true })
+    const { data, error } = await supabase.functions.invoke<{ signedUrl?: string }>(
+      'release-download-url',
+      { body: { filePath: release.file_path } },
+    )
     if (error || !data?.signedUrl) {
       toast.error('Could not generate download link')
       return
