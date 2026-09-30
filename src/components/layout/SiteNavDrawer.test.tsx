@@ -15,6 +15,9 @@ vi.mock('@/hooks/useSiteSettings', () => ({
   useSiteSettings: () => ({ settings: { site_name: 'AbiaConnect', store_link: 'https://store.example.com' } }),
 }))
 vi.mock('@/hooks/useSignedUrl', () => ({ useSignedUrl: () => null }))
+vi.mock('@/lib/supabase', () => ({
+  supabase: { storage: { from: () => ({ createSignedUrl: async () => ({ data: null }) }) } },
+}))
 vi.mock('@/components/ui/UserAvatar', () => ({ UserAvatar: () => <span data-testid="avatar" /> }))
 
 import { SiteNavDrawer } from './SiteNavDrawer'
@@ -40,7 +43,8 @@ describe('SiteNavDrawer', () => {
     expect(screen.getByText('Community')).toBeInTheDocument()
     expect(screen.queryByText('Account')).not.toBeInTheDocument()
     expect(screen.queryByText('Admin Portal')).not.toBeInTheDocument()
-    expect(screen.getByText('AC')).toBeInTheDocument() // monogram when no logo
+    expect(screen.queryByText('AC')).not.toBeInTheDocument() // no placeholder badge
+    expect(screen.getByText('AbiaConnect')).toBeInTheDocument() // name only when no logo is set
     expect(screen.getByRole('link', { name: 'Sign In' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /store/i })).toHaveAttribute('target', '_blank')
   })

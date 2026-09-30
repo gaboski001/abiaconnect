@@ -1,54 +1,52 @@
 import { useEffect, useState } from 'react'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { useSignedUrl } from '@/hooks/useSignedUrl'
-import { GOLD_GRADIENT } from '@/lib/mobileBrand'
+import { useSiteLogo } from '@/hooks/useSiteLogo'
 import { cn } from '@/lib/utils'
 
 /**
- * Site logo for headers and menus. Shows the uploaded logo, or a branded
- * monogram + site name when there is no logo or it fails to load, so the
- * header never renders an empty gap.
+ * Site logo for headers and menus. Renders the real logo immediately on
+ * repeat visits (cached), an empty slot of the same size while it is still
+ * loading (never a placeholder icon), and the site name only when no logo
+ * is configured or the image fails.
  */
-export function SiteLogo({ className, imageClassName }: { className?: string; imageClassName?: string }) {
+export function SiteLogo({
+  className,
+  imageClassName,
+  nameFallback = true,
+}: {
+  className?: string
+  imageClassName?: string
+  /** Show the site name when there is no logo; false keeps it screen-reader only. */
+  nameFallback?: boolean
+}) {
   const { settings } = useSiteSettings()
   const siteName = settings.site_name || 'AbiaConnect'
-  const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
+  const { url, status } = useSiteLogo()
   const [failed, setFailed] = useState(false)
 
-  useEffect(() => setFailed(false), [logoUrl])
+  useEffect(() => setFailed(false), [url])
 
-  if (logoUrl && !failed) {
+  if (status === 'ready' && url && !failed) {
     return (
       <img
-        src={logoUrl}
+        src={url}
         alt={siteName}
         onError={() => setFailed(true)}
+        decoding="async"
         className={cn('h-9 w-auto max-w-[170px] object-contain', imageClassName)}
       />
     )
   }
 
-  const initials =
-    siteName
-      .replace(/([a-z])([A-Z])/g, '$1 $2')
-      .split(/\s+/)
-      .map((w) => w[0])
-      .filter(Boolean)
-      .slice(0, 2)
-      .join('')
-      .toUpperCase() || 'AC'
+  if (status === 'loading') {
+    // Reserve the space so the header doesn't jump when the logo arrives.
+    return <span className={cn('block h-9 w-24', className)} aria-hidden />
+  }
+
+  if (!nameFallback) return <span className="sr-only">{siteName}</span>
 
   return (
-    <span className={cn('flex items-center gap-2.5', className)}>
-      <span
-        className="flex size-9 items-center justify-center rounded-xl text-xs font-black text-slate-950 shadow-sm"
-        style={{ backgroundImage: GOLD_GRADIENT }}
-        aria-hidden
-      >
-        {initials}
-      </span>
-      <span className="text-base font-bold tracking-tight text-foreground">{siteName}</span>
-    </span>
+    <span className={cn('text-base font-bold tracking-tight text-foreground', className)}>{siteName}</span>
   )
 }
 
