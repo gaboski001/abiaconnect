@@ -9,6 +9,9 @@ vi.mock('./Footer', () => ({ Footer: () => <footer data-testid="footer" /> }))
 vi.mock('@/components/mobile/MobileBottomNav', () => ({
   MobileBottomNav: () => <div data-testid="mobile-nav" />,
 }))
+vi.mock('@/components/mobile/MobileTopBar', () => ({
+  MobileTopBar: () => <header data-testid="mobile-top-bar" />,
+}))
 vi.mock('@/hooks/useSiteSettings', () => ({
   useSiteSettings: () => ({ settings: { theme: 'default' } }),
 }))
