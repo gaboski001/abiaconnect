@@ -178,6 +178,27 @@ export type Database = {
         }
         Relationships: []
       }
+      client_rate_limits: {
+        Row: {
+          client_key: string
+          count: number
+          scope: string
+          window_start: string
+        }
+        Insert: {
+          client_key: string
+          count?: number
+          scope: string
+          window_start: string
+        }
+        Update: {
+          client_key?: string
+          count?: number
+          scope?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       conversation_states: {
         Row: {
           archived_at: string | null
@@ -1840,6 +1861,10 @@ export type Database = {
           is_registered: boolean
           is_verified: boolean
         }[]
+      }
+      enforce_client_rate_limit: {
+        Args: { _max: number; _scope: string; _window_seconds?: number }
+        Returns: undefined
       }
       enforce_rate_limit: {
         Args: { _max: number; _scope: string; _window_seconds?: number }
