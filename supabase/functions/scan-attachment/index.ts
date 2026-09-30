@@ -16,7 +16,8 @@ const corsHeaders = {
 const VT_API = 'https://www.virustotal.com/api/v3'
 const VT_KEY = Deno.env.get('VIRUSTOTAL_API_KEY') ?? ''
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+// Only buckets the app actually scans after upload.
+const SCANNABLE_BUCKETS = new Set(['avatars', 'site-assets', 'chat-attachments', 'thread-attachments'])
 const ANON = Deno.env.get('SUPABASE_ANON_KEY')!
 
 const MAX_RETRIES = 3
@@ -91,10 +92,14 @@ Deno.serve(async (req) => {
 
     const { bucket, path } = await req.json().catch(() => ({}))
     if (!bucket || !path) return json({ error: 'bucket and path required' }, 400)
+    if (!SCANNABLE_BUCKETS.has(bucket)) return json({ error: 'bucket not allowed' }, 400)
 
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE)
-    const { data: blob, error: dlErr } = await admin.storage.from(bucket).download(path)
-    if (dlErr || !blob) return json({ error: dlErr?.message || 'download failed' }, 400)
+    // Download AS THE CALLER so storage RLS decides access. Using the service
+    // role here let any signed-in user make us fetch someone else's private
+    // file (e.g. another conversation's chat attachment) and upload it to
+    // VirusTotal. Uploaders can always read their own freshly uploaded file.
+    const { data: blob, error: dlErr } = await userClient.storage.from(bucket).download(path)
+    if (dlErr || !blob) return json({ error: 'File not found or access denied' }, 403)
 
     if (blob.size > 32 * 1024 * 1024) {
       return json({ error: 'File too large to scan' }, 413)

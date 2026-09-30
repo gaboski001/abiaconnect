@@ -31,9 +31,21 @@ function extractStoragePath(pathOrUrl: string, bucket: string): string | null {
     .replace(new RegExp(`^${escapeRegExp(bucket)}/`), '')
 }
 
+// Buckets served publicly (profile pictures, site images). Files are readable
+// by exact URL only; there is no API read access, so createSignedUrl would fail.
+const PUBLIC_BUCKETS = new Set(['avatars', 'site-assets'])
+
+function publicUrlFor(pathOrUrl: string, bucket: string): string | null {
+  if (!PUBLIC_BUCKETS.has(bucket)) return null
+  const cleanPath = extractStoragePath(pathOrUrl, bucket)
+  if (!cleanPath) return pathOrUrl
+  return supabase.storage.from(bucket).getPublicUrl(cleanPath).data.publicUrl
+}
+
 /**
  * Returns a usable image URL for a stored path. If the value is already a full URL,
- * it's returned as-is. Otherwise a signed URL is requested from the given private bucket.
+ * it's returned as-is. Public buckets get their public URL; otherwise a signed URL
+ * is requested from the given private bucket.
  */
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>()
 
@@ -53,7 +65,7 @@ export function useSignedUrl(
   const [url, setUrl] = useState<string | null>(() => {
     if (!pathOrUrl) return null
     if (isExternalUrl(pathOrUrl)) return pathOrUrl
-    return cachedValid
+    return publicUrlFor(pathOrUrl, bucket) ?? cachedValid
   })
 
   useEffect(() => {
@@ -64,6 +76,11 @@ export function useSignedUrl(
     }
     if (isExternalUrl(pathOrUrl)) {
       setUrl(pathOrUrl)
+      return
+    }
+    const publicUrl = publicUrlFor(pathOrUrl, bucket)
+    if (publicUrl) {
+      setUrl(publicUrl)
       return
     }
     const key = `${bucket}::${pathOrUrl}`
