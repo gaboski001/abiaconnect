@@ -251,9 +251,10 @@ export function useReleaseDownload() {
           }
         }
 
-        const { data, error } = await supabase.storage
-          .from('app-releases')
-          .createSignedUrl(input.filePath, 60 * 10, { download: true })
+        const { data, error } = await supabase.functions.invoke<{ signedUrl?: string }>(
+          'release-download-url',
+          { body: { filePath: input.filePath } },
+        )
         if (error || !data?.signedUrl) {
           setState((s) => ({ ...s, status: 'failed', error: 'Could not generate download link.' }))
           toast.error('Could not generate download link.')
