@@ -258,6 +258,54 @@ export type Database = {
         }
         Relationships: []
       }
+      dating_likes: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          liked_id: string
+          liker_id: string
+          seen_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          liked_id: string
+          liker_id: string
+          seen_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          liked_id?: string
+          liker_id?: string
+          seen_at?: string | null
+        }
+        Relationships: []
+      }
+      dating_matches: {
+        Row: {
+          created_at: string
+          id: string
+          user_high: string
+          user_low: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_high: string
+          user_low: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_high?: string
+          user_low?: string
+        }
+        Relationships: []
+      }
       device_push_tokens: {
         Row: {
           created_at: string
@@ -489,6 +537,27 @@ export type Database = {
           id?: string
           token?: string
           used_at?: string | null
+        }
+        Relationships: []
+      }
+      feature_usage: {
+        Row: {
+          count: number
+          feature: string
+          period_start: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          feature: string
+          period_start: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          feature?: string
+          period_start?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -822,6 +891,60 @@ export type Database = {
         }
         Relationships: []
       }
+      monetization_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: number
+          new_value: Json | null
+          old_value: Json | null
+          target: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: number
+          new_value?: Json | null
+          old_value?: Json | null
+          target?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: number
+          new_value?: Json | null
+          old_value?: Json | null
+          target?: string | null
+        }
+        Relationships: []
+      }
+      monetization_events: {
+        Row: {
+          created_at: string
+          event: string
+          id: number
+          metadata: Json
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: number
+          metadata?: Json
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: number
+          metadata?: Json
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -876,6 +999,182 @@ export type Database = {
           id?: string
           ip?: string | null
           user_agent?: string | null
+        }
+        Relationships: []
+      }
+      payment_provider_logs: {
+        Row: {
+          action: string
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          http_status: number | null
+          id: number
+          ok: boolean
+          provider: string
+          reference: string | null
+          request: Json | null
+          response: Json | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          http_status?: number | null
+          id?: number
+          ok?: boolean
+          provider: string
+          reference?: string | null
+          request?: Json | null
+          response?: Json | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          http_status?: number | null
+          id?: number
+          ok?: boolean
+          provider?: string
+          reference?: string | null
+          request?: Json | null
+          response?: Json | null
+        }
+        Relationships: []
+      }
+      payment_providers: {
+        Row: {
+          contract_code: string | null
+          display_name: string
+          is_enabled: boolean
+          mode: string
+          provider: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          contract_code?: string | null
+          display_name: string
+          is_enabled?: boolean
+          mode?: string
+          provider: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          contract_code?: string | null
+          display_name?: string
+          is_enabled?: boolean
+          mode?: string
+          provider?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payment_transactions: {
+        Row: {
+          amount_minor: number
+          checkout_url: string | null
+          created_at: string
+          currency: string
+          failure_reason: string | null
+          id: string
+          mode: string
+          plan_id: string | null
+          provider: string
+          provider_reference: string | null
+          purpose: string
+          reference: string
+          refunded_at: string | null
+          status: string
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          amount_minor: number
+          checkout_url?: string | null
+          created_at?: string
+          currency: string
+          failure_reason?: string | null
+          id?: string
+          mode?: string
+          plan_id?: string | null
+          provider: string
+          provider_reference?: string | null
+          purpose?: string
+          reference: string
+          refunded_at?: string | null
+          status?: string
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          checkout_url?: string | null
+          created_at?: string
+          currency?: string
+          failure_reason?: string | null
+          id?: string
+          mode?: string
+          plan_id?: string | null
+          provider?: string
+          provider_reference?: string | null
+          purpose?: string
+          reference?: string
+          refunded_at?: string | null
+          status?: string
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_webhook_events: {
+        Row: {
+          event_key: string
+          event_type: string | null
+          id: string
+          payload: Json | null
+          process_result: string | null
+          processed_at: string | null
+          provider: string
+          received_at: string
+          reference: string | null
+          signature_valid: boolean
+        }
+        Insert: {
+          event_key: string
+          event_type?: string | null
+          id?: string
+          payload?: Json | null
+          process_result?: string | null
+          processed_at?: string | null
+          provider: string
+          received_at?: string
+          reference?: string | null
+          signature_valid: boolean
+        }
+        Update: {
+          event_key?: string
+          event_type?: string | null
+          id?: string
+          payload?: Json | null
+          process_result?: string | null
+          processed_at?: string | null
+          provider?: string
+          received_at?: string
+          reference?: string | null
+          signature_valid?: boolean
         }
         Relationships: []
       }
@@ -1542,6 +1841,69 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          billing_period: string
+          code: string
+          created_at: string
+          currency: string
+          description: string | null
+          duration_days: number
+          features: Json
+          id: string
+          is_active: boolean
+          is_recommended: boolean
+          is_visible: boolean
+          limits: Json
+          name: string
+          price_minor: number
+          promo_price_minor: number | null
+          sort_order: number
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          billing_period?: string
+          code: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_days?: number
+          features?: Json
+          id?: string
+          is_active?: boolean
+          is_recommended?: boolean
+          is_visible?: boolean
+          limits?: Json
+          name: string
+          price_minor?: number
+          promo_price_minor?: number | null
+          sort_order?: number
+          tier?: string
+          updated_at?: string
+        }
+        Update: {
+          billing_period?: string
+          code?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_days?: number
+          features?: Json
+          id?: string
+          is_active?: boolean
+          is_recommended?: boolean
+          is_visible?: boolean
+          limits?: Json
+          name?: string
+          price_minor?: number
+          promo_price_minor?: number | null
+          sort_order?: number
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -1738,6 +2100,121 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          ends_at: string
+          id: string
+          note: string | null
+          payment_id: string | null
+          plan_id: string
+          source: string
+          starts_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          id?: string
+          note?: string | null
+          payment_id?: string | null
+          plan_id: string
+          source: string
+          starts_at: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          id?: string
+          note?: string | null
+          payment_id?: string | null
+          plan_id?: string
+          source?: string
+          starts_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at: string
+          id: string
+          idempotency_key: string
+          metadata: Json
+          payment_id: string | null
+          reference_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          metadata?: Json
+          payment_id?: string | null
+          reference_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          metadata?: Json
+          payment_id?: string | null
+          reference_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payment_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallets: {
+        Row: {
+          balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       public_profiles: {
@@ -1792,6 +2269,15 @@ export type Database = {
           id: string
         }[]
       }
+      admin_grant_subscription: {
+        Args: {
+          _days: number
+          _note?: string
+          _plan_code: string
+          _user: string
+        }
+        Returns: string
+      }
       admin_list_users: {
         Args: {
           _ids?: string[]
@@ -1816,11 +2302,38 @@ export type Database = {
           username: string
         }[]
       }
+      admin_monetization_summary: { Args: never; Returns: Json }
+      admin_revoke_subscription: {
+        Args: { _note?: string; _subscription_id: string }
+        Returns: undefined
+      }
       admin_search_user_ids_by_email: {
         Args: { _term: string }
         Returns: {
           id: string
         }[]
+      }
+      admin_wallet_adjust: {
+        Args: { _amount: number; _reason: string; _user: string }
+        Returns: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at: string
+          id: string
+          idempotency_key: string
+          metadata: Json
+          payment_id: string | null
+          reference_id: string | null
+          type: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "wallet_transactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       clear_conversation: {
         Args: { _conversation_id: string }
@@ -1833,6 +2346,53 @@ export type Database = {
         Args: { _purpose?: string; _target_url: string; _ttl_seconds?: number }
         Returns: string
       }
+      dating_current_plan: {
+        Args: { _uid: string }
+        Returns: {
+          billing_period: string
+          code: string
+          created_at: string
+          currency: string
+          description: string | null
+          duration_days: number
+          features: Json
+          id: string
+          is_active: boolean
+          is_recommended: boolean
+          is_visible: boolean
+          limits: Json
+          name: string
+          price_minor: number
+          promo_price_minor: number | null
+          sort_order: number
+          tier: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscription_plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      dating_has_entitlement: {
+        Args: { _key: string; _uid: string }
+        Returns: boolean
+      }
+      dating_is_blocked: { Args: { _a: string; _b: string }; Returns: boolean }
+      dating_likes_received: {
+        Args: { _limit?: number; _offset?: number; _unseen_only?: boolean }
+        Returns: Json
+      }
+      dating_limit: { Args: { _key: string; _uid: string }; Returns: number }
+      dating_mark_likes_seen: { Args: never; Returns: undefined }
+      dating_my_matches: {
+        Args: { _limit?: number; _offset?: number }
+        Returns: Json
+      }
+      dating_react: { Args: { _kind: string; _target: string }; Returns: Json }
+      dating_today: { Args: never; Returns: string }
+      dating_user_in_good_standing: { Args: { _uid: string }; Returns: boolean }
       decide_join_request: {
         Args: { _approve: boolean; _request_id: string }
         Returns: undefined
@@ -1878,6 +2438,7 @@ export type Database = {
         Args: { _message_id: string; _to_conversation_id: string }
         Returns: string
       }
+      get_my_dating_entitlements: { Args: never; Returns: Json }
       get_my_profile: {
         Args: never
         Returns: {
@@ -1912,6 +2473,13 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_payment_options: {
+        Args: never
+        Returns: {
+          display_name: string
+          provider: string
+        }[]
       }
       get_poll_counts: {
         Args: { _poll_ids: string[] }
@@ -1985,6 +2553,10 @@ export type Database = {
         Args: { _subgroup_id: string; _user_id: string }
         Returns: boolean
       }
+      log_monetization_event: {
+        Args: { _event: string; _metadata?: Json; _uid: string }
+        Returns: undefined
+      }
       mark_conversation_read: {
         Args: { _conversation_id: string }
         Returns: number
@@ -2004,6 +2576,56 @@ export type Database = {
         Returns: {
           id: string
         }[]
+      }
+      payment_apply_refund: {
+        Args: { _provider: string; _ref: string }
+        Returns: string
+      }
+      payment_apply_result: {
+        Args: {
+          _currency: string
+          _paid_minor: number
+          _provider: string
+          _provider_reference?: string
+          _reference: string
+          _status: string
+        }
+        Returns: string
+      }
+      payment_attach_checkout: {
+        Args: {
+          _checkout_url: string
+          _provider_reference: string
+          _reference: string
+        }
+        Returns: undefined
+      }
+      payment_create_transaction: {
+        Args: { _plan_id: string; _provider: string; _user: string }
+        Returns: {
+          amount_minor: number
+          checkout_url: string | null
+          created_at: string
+          currency: string
+          failure_reason: string | null
+          id: string
+          mode: string
+          plan_id: string | null
+          provider: string
+          provider_reference: string | null
+          purpose: string
+          reference: string
+          refunded_at: string | null
+          status: string
+          user_id: string
+          verified_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payment_transactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       pin_subgroup_thread: {
         Args: { _pinned: boolean; _thread_id: string }
@@ -2052,6 +2674,40 @@ export type Database = {
           _user_note: string
         }
         Returns: string
+      }
+      track_monetization_event: {
+        Args: { _event: string; _metadata?: Json }
+        Returns: undefined
+      }
+      wallet_apply: {
+        Args: {
+          _amount: number
+          _idempotency_key: string
+          _metadata?: Json
+          _payment_id?: string
+          _reference_id?: string
+          _type: string
+          _user: string
+        }
+        Returns: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          created_at: string
+          id: string
+          idempotency_key: string
+          metadata: Json
+          payment_id: string | null
+          reference_id: string | null
+          type: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "wallet_transactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
