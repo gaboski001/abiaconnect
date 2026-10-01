@@ -47,7 +47,7 @@ export function useNavSections() {
 
   const primary: NavItem[] = [
     { label: 'Forums', to: '/', icon: MessagesSquare, end: true },
-    ...(subgroupsEnabled ? [{ label: 'Subgroups', to: '/subgroups', icon: Users }] : []),
+    ...(subgroupsEnabled ? [{ label: 'Groups', to: '/subgroups', icon: Users }] : []),
     { label: 'Polls', to: '/polls', icon: BarChart3 },
     { label: 'Contests', to: '/contests', icon: Vote },
   ]

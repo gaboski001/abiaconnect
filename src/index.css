@@ -382,3 +382,14 @@ body {
   padding-right: 0;
   padding-top: 0;
 }
+
+/* ---------------------------------------------------------------------------
+   Website identity (never the installed app, which has its own native look):
+   editorial serif headings for page titles and section headings.
+   --------------------------------------------------------------------------- */
+html:not(.native-app) main h1,
+html:not(.native-app) main h2,
+html:not(.native-app) footer .web-serif {
+  font-family: var(--font-serif);
+  letter-spacing: -0.01em;
+}

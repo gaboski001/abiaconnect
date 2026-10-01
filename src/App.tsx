@@ -43,6 +43,7 @@ const LgasGuide = lazy(() => import('@/pages/LgasGuide'))
 const KnownFor = lazy(() => import('@/pages/KnownFor'))
 const AbsuGuide = lazy(() => import('@/pages/AbsuGuide'))
 const About = lazy(() => import('@/pages/static/About'))
+const Search = lazy(() => import('@/pages/Search'))
 const Mission = lazy(() => import('@/pages/static/Mission'))
 const Team = lazy(() => import('@/pages/static/Team'))
 const Careers = lazy(() => import('@/pages/static/Careers'))
@@ -130,6 +131,7 @@ export default function App() {
                 <Route path="about/known-for" element={<KnownFor />} />
                 <Route path="about/absu" element={<AbsuGuide />} />
                 <Route path="about" element={<About />} />
+                <Route path="search" element={<Search />} />
                 
                 <Route path="mission" element={<Mission />} />
                 <Route path="team" element={<Team />} />

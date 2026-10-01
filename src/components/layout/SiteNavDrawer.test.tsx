@@ -9,6 +9,7 @@ const authState = vi.hoisted(() => ({
   signOut: vi.fn(),
 }))
 
+vi.mock('@/components/ThemeToggle', () => ({ ThemeToggle: () => null }))
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => authState }))
 vi.mock('@/hooks/useProfile', () => ({ useProfile: () => ({ data: { display_name: 'Ada', avatar_url: null } }) }))
 vi.mock('@/hooks/useSiteSettings', () => ({

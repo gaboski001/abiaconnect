@@ -1,6 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronLeft, LogOut } from 'lucide-react'
-import { ThemeToggle } from '@/components/ThemeToggle'
+import { ChevronLeft, Search } from 'lucide-react'
 import { MessagesBell } from '@/components/messages/MessagesBell'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { UserAvatar } from '@/components/ui/UserAvatar'
@@ -83,54 +82,43 @@ export function MobileTopBar() {
 }
 
 function WebMobileTopBar() {
-  const { user, signOut } = useAuth()
-  const navigate = useNavigate()
+  const { user } = useAuth()
   const { data: profile } = useProfile()
   const { settings } = useSiteSettings()
   const siteName = settings.site_name || 'AbiaConnect'
 
   return (
-    <header className="md:hidden sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl dark:border-white/10 dark:bg-[rgba(5,10,18,0.88)]">
-      <div className="flex h-14 items-center justify-between gap-2 px-3">
+    <header className="md:hidden sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-xl">
+      <div className="flex h-14 items-center justify-between gap-2 px-2">
         <div className="flex min-w-0 items-center gap-1">
           <MobileSideNav />
-          <Link to="/" className="flex min-w-0 items-center" aria-label={siteName}>
-            <SiteLogo nameFallback={false} imageClassName="h-8 max-w-[130px]" className="h-8 w-20" />
+          <Link to="/" className="flex min-w-0 items-center" aria-label={`${siteName} home`}>
+            <SiteLogo nameFallback={false} imageClassName="h-8 max-w-[120px]" className="h-8 w-20" />
           </Link>
         </div>
 
-        <div className="flex items-center gap-1">
-          <ThemeToggle />
+        <div className="flex items-center">
+          <Button asChild variant="ghost" size="icon" className="rounded-full" aria-label="Search">
+            <Link to="/search">
+              <Search className="size-5" />
+            </Link>
+          </Button>
           {user ? (
             <>
               <MessagesBell />
               <NotificationBell />
-              <Link to="/profile" aria-label="Profile" className="ml-1 flex rounded-full">
+              <Link to="/profile" aria-label="My profile" className="ml-1 flex rounded-full">
                 <UserAvatar
                   avatarUrl={profile?.avatar_url}
                   displayName={profile?.display_name || user.email}
                   size="xs"
-                  className="border-slate-200 dark:border-white/10"
+                  className="border-border"
                 />
               </Link>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={async () => { await signOut(); navigate('/') }}
-                aria-label="Sign out"
-                className="h-9 w-9 rounded-xl text-slate-700 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-white/[0.08]"
-              >
-                <LogOut className="size-4" />
-              </Button>
             </>
           ) : (
-            <Button
-              asChild
-              size="sm"
-              className="h-8 rounded-xl border-0 px-3 text-xs font-bold text-slate-950"
-              style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
-            >
-              <Link to="/login">Sign In</Link>
+            <Button asChild size="sm" className="ml-1 h-9 rounded-full px-4 text-[13px] font-semibold">
+              <Link to="/register">Join free</Link>
             </Button>
           )}
         </div>

@@ -26,6 +26,7 @@ const TITLES: Array<[string, string]> = [
   ['/profile', 'My profile'],
   ['/dashboard', 'Dashboard'],
   ['/polls', 'Polls'],
+  ['/search', 'Search'],
   ['/rewards', 'My rewards'],
   ['/leaderboard', 'Leaderboard'],
   ['/contests/new', 'New contest'],

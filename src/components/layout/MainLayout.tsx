@@ -70,7 +70,7 @@ export function MainLayout() {
             className={
               immersiveChat
                 ? 'h-[calc(100dvh-var(--kb-inset,0px))] transition-[height] duration-150'
-                : 'mx-auto max-w-[1400px] px-3 sm:px-4 md:px-6 py-6 md:py-12 native:px-4 native:pb-28 native:pt-4'
+                : 'mx-auto max-w-[1248px] px-4 md:px-6 py-6 md:py-10 native:px-4 native:pb-28 native:pt-4'
             }
           >
             <Outlet />

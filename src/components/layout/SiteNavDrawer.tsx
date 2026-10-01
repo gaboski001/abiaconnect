@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowUpRight, LogOut, Menu, Search } from 'lucide-react'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,7 +34,7 @@ export function SiteNavDrawer({ triggerClassName }: { triggerClassName?: string 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (!query.trim()) return
-    navigate(`/?q=${encodeURIComponent(query.trim())}`)
+    navigate(`/search?q=${encodeURIComponent(query.trim())}`)
     close()
   }
 
@@ -105,6 +106,7 @@ export function SiteNavDrawer({ triggerClassName }: { triggerClassName?: string 
                   <p className="truncate text-xs text-muted-foreground">{user.email}</p>
                 </div>
               </Link>
+              <ThemeToggle />
               <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sign out" className="shrink-0 rounded-xl">
                 <LogOut className="size-4" />
               </Button>

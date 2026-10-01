@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { SEO } from '@/components/SEO'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { AuthField, AuthSubmit, NativeAuthLayout, isNativeApp } from '@/components/mobile/NativeAuthLayout'
+import { WebAuthLayout } from '@/components/web/WebAuthLayout'
 import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton'
 import { BiometricOptInDialog } from '@/components/auth/BiometricOptInDialog'
 import {
@@ -21,6 +22,10 @@ import {
 
 export default function Login() {
   const navigate = useNavigate()
+  const location = useLocation()
+  // Members-only pages send visitors here with the page they wanted.
+  const returnTo = (location.state as { from?: string } | null)?.from ?? null
+  const afterSignIn = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/'
   const { settings } = useSiteSettings()
   const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
   const [identifier, setIdentifier] = useState('')
@@ -61,7 +66,7 @@ export default function Login() {
         return // wait for opt-in dialog to close before navigating
       }
 
-      navigate('/')
+      navigate(afterSignIn)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Sign in failed')
     } finally {
@@ -75,7 +80,7 @@ export default function Login() {
     setOptInOpen(false)
     setOptInEmail('')
     setOptInPassword('')
-    navigate('/')
+    navigate(afterSignIn)
   }
 
   if (isNativeApp()) {
@@ -134,7 +139,7 @@ export default function Login() {
             </div>
 
             <BiometricLoginButton
-              onSuccess={() => navigate('/')}
+              onSuccess={() => navigate(afterSignIn)}
               onFallbackToPassword={() => {
                 // Focus the email field so the user can immediately type
                 // credentials — this is what makes the recovery flow feel
@@ -161,22 +166,11 @@ export default function Login() {
   return (
     <>
       <SEO title="Sign in to AbiaConnect" description="Sign in to your AbiaConnect account to join discussions, vote in polls, and connect with Abians worldwide." path="/login" />
-    <div className="min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 rounded-3xl p-6">
-      <div className="w-full max-w-md rounded-3xl border border-border bg-card shadow-xl p-8">
-        <div className="flex flex-col items-center gap-3 mb-6">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground overflow-hidden">
-            {logoUrl ? (
-              <img src={logoUrl} alt={settings.site_name || 'AbiaConnect'} className="h-full w-full object-contain" />
-            ) : (
-              <span className="text-lg font-bold">{(settings.site_name || 'A').charAt(0)}</span>
-            )}
-          </span>
-          <h1 className="text-2xl font-bold">Sign in to AbiaConnect</h1>
-          <p className="text-sm text-muted-foreground text-center">
-            Sign in to continue to AbiaConnect
-          </p>
-        </div>
-
+    <WebAuthLayout
+      title="Welcome back"
+      subtitle="Sign in to continue to your community."
+      notice={returnTo ? 'Please sign in to continue. We’ll take you straight back.' : null}
+    >
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="identifier">Email</Label>
@@ -229,8 +223,7 @@ export default function Login() {
             </Link>
           </p>
         </form>
-      </div>
-    </div>
+    </WebAuthLayout>
     </>
   )
 }

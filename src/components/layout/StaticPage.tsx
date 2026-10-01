@@ -11,7 +11,7 @@ export function StaticPage({ badge, title, subtitle, children }: StaticPageProps
   return (
     <div className="min-h-screen bg-background native:min-h-0 native:bg-transparent">
       {/* In the app the title is in the app bar, so the banner becomes a short intro. */}
-      <header className="bg-gradient-to-br from-primary/10 via-background to-secondary/5 py-16 px-6 text-center native:rounded-2xl native:border native:border-border native:px-5 native:py-5 native:text-left">
+      <header className="rounded-3xl border border-border bg-gradient-to-br from-primary/[0.07] via-background to-secondary/[0.08] py-14 px-6 text-center md:py-16 native:rounded-2xl native:border native:border-border native:px-5 native:py-5 native:text-left">
         {badge && (
           <span className="text-xs font-semibold uppercase tracking-widest bg-secondary/15 text-secondary border border-secondary/30 px-3 py-1 rounded-full mb-4 inline-block native:mb-2">
             {badge}

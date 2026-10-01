@@ -11,7 +11,6 @@ import { useProfile } from '@/hooks/useProfile'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
-import { RealtimeStatus } from '@/components/RealtimeStatus'
 import { MessagesBell } from '@/components/messages/MessagesBell'
 import { cn } from '@/lib/utils'
 import { SiteLogo } from './SiteLogo'
@@ -34,7 +33,7 @@ export function Navbar() {
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (!query.trim()) return
-    navigate(`/?q=${encodeURIComponent(query.trim())}`)
+    navigate(`/search?q=${encodeURIComponent(query.trim())}`)
     setSearchOpen(false)
   }
 
@@ -54,12 +53,12 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-6">
+      <div className="mx-auto flex h-16 max-w-[1248px] items-center gap-4 px-6">
         {/* Left: menu (tablet) + brand */}
         <div className="flex shrink-0 items-center gap-2">
           <SiteNavDrawer triggerClassName="lg:hidden" />
           <Link to="/" className="flex items-center rounded-lg" aria-label={`${siteName} home`}>
-            <SiteLogo />
+            <SiteLogo imageClassName="h-10 max-w-[190px]" />
           </Link>
         </div>
 
@@ -103,7 +102,6 @@ export function Navbar() {
 
           <Separator orientation="vertical" className="mx-1 hidden h-6 lg:block" />
 
-          <RealtimeStatus className="hidden xl:inline-flex" />
           <ThemeToggle />
 
           {user ? (
@@ -129,12 +127,15 @@ export function Navbar() {
 }
 
 function HeaderLink({ item, active }: { item: NavItem; active: boolean }) {
+  // Website style: text links with an underline for the current section
+  // (the app uses tabs and pills instead).
   const className = cn(
-    'inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-medium transition-colors',
+    'relative inline-flex h-16 items-center gap-1 px-3 text-[15px] font-medium transition-colors',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+    'after:absolute after:inset-x-3 after:bottom-0 after:h-[3px] after:rounded-t-full after:transition-colors',
     active
-      ? 'bg-primary/10 text-primary dark:bg-primary/15'
-      : 'text-foreground/70 hover:bg-muted hover:text-foreground',
+      ? 'text-primary after:bg-primary'
+      : 'text-foreground/70 hover:text-foreground after:bg-transparent hover:after:bg-border',
   )
   if (item.external) {
     return (
