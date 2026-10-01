@@ -3,6 +3,8 @@ package com.abiaconnect.app;
 import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.media.AudioDeviceInfo;
+import android.media.AudioManager;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
@@ -210,6 +212,51 @@ public class MainActivity extends BaseActivity {
             CallForegroundService.stop(context);
             MainActivity a = activity.get();
             if (a != null) a.setLockScreenCallMode(false);
+        }
+
+        /**
+         * Call audio routing: "speaker", "earpiece" or "reset" (call over).
+         * "earpiece" prefers a connected headset (wired, USB or Bluetooth) so
+         * we never pull audio away from someone's earphones.
+         */
+        @JavascriptInterface
+        public void setAudioRoute(String route) {
+            AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+            if (am == null) return;
+            try {
+                if ("reset".equals(route)) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) am.clearCommunicationDevice();
+                    else am.setSpeakerphoneOn(false);
+                    am.setMode(AudioManager.MODE_NORMAL);
+                    return;
+                }
+                boolean speaker = "speaker".equals(route);
+                am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    AudioDeviceInfo chosen = null;
+                    for (AudioDeviceInfo d : am.getAvailableCommunicationDevices()) {
+                        int t = d.getType();
+                        if (speaker) {
+                            if (t == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) { chosen = d; break; }
+                        } else if (t == AudioDeviceInfo.TYPE_WIRED_HEADSET
+                            || t == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
+                            || t == AudioDeviceInfo.TYPE_USB_HEADSET
+                            || t == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+                            || t == AudioDeviceInfo.TYPE_BLE_HEADSET) {
+                            chosen = d;
+                            break;
+                        } else if (t == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE && chosen == null) {
+                            chosen = d;
+                        }
+                    }
+                    if (chosen != null) am.setCommunicationDevice(chosen);
+                } else {
+                    // Off = default routing, which already prefers a headset.
+                    am.setSpeakerphoneOn(speaker);
+                }
+            } catch (Exception ignored) {
+                // Routing is best effort; never break the call over it.
+            }
         }
 
         private static String clip(String s, int max) {

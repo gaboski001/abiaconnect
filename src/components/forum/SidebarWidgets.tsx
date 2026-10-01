@@ -125,7 +125,7 @@ export function SidebarWidgets() {
       <Card title="Quick Links">
         <ul className="space-y-2 text-sm">
           <li>
-            <Link to="/guidelines" className="flex items-center gap-2 hover:text-primary">
+            <Link to="/forum-guidelines" className="flex items-center gap-2 hover:text-primary">
               <BookOpen className="size-4" /> Forum Rules
             </Link>
           </li>

@@ -31,3 +31,5 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = true
   [functions.payments-webhook]
     verify_jwt = false
+  [functions.call-ice-servers]
+    verify_jwt = false

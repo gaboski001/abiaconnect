@@ -40,7 +40,7 @@ interface CallEntry {
 
 /** Parse the `[call:*]` marker stored in messages when a call ends. */
 function parseCallMessage(content: string): { kind: 'ended' | 'missed'; duration: number; reason: string | null } | null {
-  const m = content.match(/^\[call:(ended|missed)\]\s*(.*)$/)
+  const m = content.match(/^\[call:(ended|missed)(?::video)?\]\s*(.*)$/)
   if (!m) return null
   const kind = m[1] as 'ended' | 'missed'
   const rest = (m[2] || '').trim()

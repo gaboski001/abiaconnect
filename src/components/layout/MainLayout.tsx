@@ -35,15 +35,13 @@ export function MainLayout() {
   }, [])
 
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register'
-  // Hide the site footer on the chat page in the native app so the chat
-  // composer sits flush against the bottom nav — a proper messenger feel.
-  const isChatRoute = /^\/messages(\/|$)/.test(location.pathname)
   // A specific chat detail (e.g. /messages/abc123). On native we want a
   // full-bleed WhatsApp-style chat: no top bar, no bottom nav, no page padding.
   const isChatDetail = /^\/messages\/[^/]+/.test(location.pathname)
   const native = isNativeApp()
   const immersiveChat = isChatDetail && native
-  const hideFooter = isAuthPage || (isChatRoute && native)
+  // The app has no website footer: its links all live in the More menu.
+  const hideFooter = isAuthPage || native
   const hideTopBar = isAuthPage || immersiveChat
   const hideBottomNav = isAuthPage || immersiveChat
 

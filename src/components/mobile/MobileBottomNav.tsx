@@ -1,116 +1,103 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Capacitor } from '@capacitor/core'
-import {
-  Bell,
-  Users,
-  MessageCircleMore,
-  UserRound,
-  Home,
-  Heart,
-  LayoutDashboard,
-  MoreHorizontal,
-  type LucideIcon,
-} from 'lucide-react'
+import { useState } from 'react'
+import { Handshake, Home, LayoutGrid, MessageCircle, Users, type LucideIcon } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
-import { useSiteSettings } from '@/hooks/useSiteSettings'
-import { GOLD_GRADIENT, GOLD_SHADOW, MOBILE_BRAND, PREMIUM_SHADOW } from '@/lib/mobileBrand'
 import { useAppUpdate } from '@/hooks/useAppUpdate'
+import { useUnreadMessagesCount } from '@/components/messages/MessagesBell'
+import { isNativeApp } from './NativeAuthLayout'
+import { NativeMoreSheet } from './NativeMoreSheet'
 
-type Item = {
+type Tab = {
   to: string
   label: string
   icon: LucideIcon
   match: (pathname: string) => boolean
 }
 
+const TABS: Tab[] = [
+  { to: '/', label: 'Home', icon: Home, match: (p) => p === '/' || p.startsWith('/category') || p.startsWith('/thread') },
+  { to: '/subgroups', label: 'Community', icon: Users, match: (p) => p.startsWith('/subgroups') },
+  { to: '/messages', label: 'Messages', icon: MessageCircle, match: (p) => p.startsWith('/messages') },
+  { to: '/relationship', label: 'Connect', icon: Handshake, match: (p) => p.startsWith('/relationship') },
+]
+
+/**
+ * App-only bottom navigation: four main sections plus "More", which slides up
+ * a sheet with every other feature (see NativeMoreSheet). Replaces the side
+ * drawer in the app, so each destination has exactly one entry point.
+ */
 export function MobileBottomNav() {
+  if (!isNativeApp()) return null
+  return <NativeBottomNav />
+}
+
+function NativeBottomNav() {
   const location = useLocation()
-  const { user, role } = useAuth()
-  const { settings } = useSiteSettings()
-  const [isNative, setIsNative] = useState(false)
+  const { user } = useAuth()
   const { hasUpdate } = useAppUpdate()
+  const unread = useUnreadMessagesCount()
+  const [moreOpen, setMoreOpen] = useState(false)
 
-  useEffect(() => {
-    const check = () => setIsNative(Capacitor.isNativePlatform());
-    check();
-    const t = setInterval(check, 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  const items = useMemo<Item[]>(() => {
-    const list: Item[] = [
-      { to: '/', label: 'Home', icon: Home, match: (p) => p === '/' },
-      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, match: (p) => p === '/dashboard' },
-      { to: '/subgroups', label: 'Community', icon: Users, match: (p) => p.startsWith('/subgroups') },
-      { to: '/messages', label: 'Messages', icon: MessageCircleMore, match: (p) => p.startsWith('/messages') },
-      { to: '/relationship', label: 'Connect', icon: Heart, match: (p) => p.startsWith('/relationship') },
-      { to: '/notifications', label: 'Alerts', icon: Bell, match: (p) => p.startsWith('/notifications') },
-      { to: '/profile', label: 'Profile', icon: UserRound, match: (p) => p.startsWith('/profile') },
-      { to: '/version', label: 'More', icon: MoreHorizontal, match: (p) => p === '/version' },
-    ]
-
-    if (!user || role === 'guest') {
-      // hide dashboard for guests
-      const idx = list.findIndex((i) => i.to === '/dashboard')
-      if (idx >= 0) list.splice(idx, 1)
-    }
-    return list
-  }, [role, user])
-
-  if (!isNative) return null;
+  const itemClass = (active: boolean) =>
+    cn(
+      'relative flex h-full flex-1 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-medium transition-colors active:bg-white/[0.06]',
+      active ? 'text-amber-300' : 'text-slate-400',
+    )
 
   return (
-    <nav
-      className="fixed inset-x-3 z-40 rounded-[1.8rem] border border-white/10 bg-[rgba(5,10,18,0.96)] px-1.5 py-2 backdrop-blur-2xl md:hidden"
-      style={{ boxShadow: PREMIUM_SHADOW, bottom: 'max(env(safe-area-inset-bottom), 0.75rem)' }}
-      aria-label="Mobile navigation"
-    >
-      <div
-        className="scrollbar-none flex flex-1 snap-x snap-mandatory items-stretch gap-1 overflow-x-auto scroll-smooth px-0.5"
-        role="tablist"
+    <>
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[rgba(8,13,23,0.97)] backdrop-blur-2xl md:hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        aria-label="Main navigation"
       >
-        {items.map((item) => {
-          const active = item.match(location.pathname)
-          const Icon = item.icon
-          const showUpdateDot = hasUpdate && item.to === '/version'
-          const inner = (
-            <>
-              <span className="relative">
-                <Icon className="size-[1.08rem] shrink-0" />
-                {showUpdateDot && (
-                  <span
-                    aria-label="Update available"
-                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-[#050A12] animate-pulse"
-                  />
-                )}
-              </span>
-              <span className="truncate text-[9px] uppercase tracking-[0.14em]">{item.label}</span>
-            </>
-          )
-          const className = cn(
-            'flex min-h-[4.25rem] w-[4.75rem] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-[1.2rem] px-1 py-2 text-[10px] font-semibold leading-none transition-transform active:scale-[0.98]',
-            !active && 'text-slate-300/72 hover:bg-white/[0.04]'
-          )
-          const style = active
-            ? { backgroundImage: GOLD_GRADIENT, color: MOBILE_BRAND.ink, boxShadow: GOLD_SHADOW }
-            : undefined
-
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              aria-label={item.label}
-              className={className}
-              style={style}
-            >
-              {inner}
-            </Link>
-          )
-        })}
-      </div>
-    </nav>
+        <div className="mx-auto flex h-16 max-w-lg items-stretch px-1.5 py-1.5">
+          {TABS.map((tab) => {
+            const active = !moreOpen && tab.match(location.pathname)
+            const badge = tab.to === '/messages' && user && unread > 0 ? unread : 0
+            return (
+              <Link
+                key={tab.to}
+                to={tab.to}
+                aria-label={badge ? `${tab.label}, ${badge} unread` : tab.label}
+                aria-current={active ? 'page' : undefined}
+                className={itemClass(active)}
+              >
+                {active ? <span className="absolute top-0 h-[3px] w-8 rounded-full bg-amber-300" aria-hidden /> : null}
+                <span className="relative">
+                  <tab.icon className="size-[22px]" strokeWidth={active ? 2.3 : 1.9} />
+                  {badge ? (
+                    <span className="absolute -right-2.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-[#080D17]">
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  ) : null}
+                </span>
+                {tab.label}
+              </Link>
+            )
+          })}
+          <button
+            type="button"
+            onClick={() => setMoreOpen(true)}
+            aria-label="More"
+            aria-haspopup="dialog"
+            aria-expanded={moreOpen}
+            className={itemClass(moreOpen)}
+          >
+            {moreOpen ? <span className="absolute top-0 h-[3px] w-8 rounded-full bg-amber-300" aria-hidden /> : null}
+            <span className="relative">
+              <LayoutGrid className="size-[22px]" strokeWidth={moreOpen ? 2.3 : 1.9} />
+              {hasUpdate ? (
+                <span className="absolute -right-1 -top-1 size-2 rounded-full bg-red-500 ring-2 ring-[#080D17]" aria-label="Update available" />
+              ) : null}
+            </span>
+            More
+          </button>
+        </div>
+      </nav>
+      <NativeMoreSheet open={moreOpen} onOpenChange={setMoreOpen} />
+    </>
   )
 }
 

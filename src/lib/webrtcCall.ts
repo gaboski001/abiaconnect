@@ -1,4 +1,4 @@
-// Peer-to-peer voice call manager backed by Supabase Realtime broadcast signaling.
+// Peer-to-peer voice and video call manager backed by Supabase Realtime broadcast signaling.
 //
 // Signaling channels:
 //   - Each authenticated user subscribes to `call-user:{userId}` and listens for
@@ -6,8 +6,9 @@
 //   - Once a call is accepted, both peers exchange `sdp` and `ice` payloads on a
 //     dedicated `call-session:{callId}` channel.
 //
-// Audio only. STUN-only by default. For strict NATs add TURN servers in
-// `getIceServers()` (e.g. Twilio NTS or a self-hosted coturn).
+// Voice or video. ICE servers (STUN + TURN relay) come from the
+// `call-ice-servers` edge function; without TURN configured there it falls
+// back to STUN only, which fails behind strict / carrier-grade NAT.
 
 import { supabase } from '@/lib/supabase'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -89,19 +90,128 @@ export interface CallState {
    * in flight) from "Ringing…" (peer notified).
    */
   remoteRinging: boolean
+  /** Video call (camera) rather than voice only. */
+  video: boolean
+  /** Our camera is sending (video calls). */
+  cameraOn: boolean
+  /** The other person's camera is on (video calls). */
+  remoteCameraOn: boolean
+  /** Which camera we use. */
+  facing: 'user' | 'environment'
+  /** Audio plays on the loudspeaker (vs earpiece / headset). */
+  speakerOn: boolean
+  /** Bumped whenever the local or remote media streams change, so video views rebind. */
+  mediaVersion: number
+  /** Short message for the call screen, e.g. why a video call became voice only. */
+  notice: string | null
+}
+
+/** Fields reset at the start / end of every call. */
+const MEDIA_DEFAULTS = {
+  video: false,
+  cameraOn: false,
+  remoteCameraOn: false,
+  facing: 'user' as const,
+  speakerOn: false,
 }
 
 
 
 type Listener = (state: CallState) => void
 
-function getIceServers(): RTCIceServer[] {
-  return [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:global.stun.twilio.com:3478' },
-  ]
+const FALLBACK_ICE_SERVERS: RTCIceServer[] = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:global.stun.twilio.com:3478' },
+]
+
+let iceCache: { servers: RTCIceServer[]; expiresAt: number } | null = null
+let iceInflight: Promise<RTCIceServer[]> | null = null
+
+/**
+ * STUN + TURN servers from the `call-ice-servers` edge function, cached for
+ * half their lifetime. Never blocks a call for long: falls back to public STUN
+ * after 3s or on any error.
+ */
+async function getIceServers(): Promise<RTCIceServer[]> {
+  if (iceCache && Date.now() < iceCache.expiresAt) return iceCache.servers
+  if (!iceInflight) {
+    iceInflight = (async () => {
+      try {
+        const res = await Promise.race([
+          supabase.functions.invoke('call-ice-servers', { body: {} }),
+          new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('timeout')), 3000)),
+        ])
+        const servers = (res as { data?: { iceServers?: RTCIceServer[]; ttl?: number } }).data
+        if (servers?.iceServers?.length) {
+          const ttlMs = Math.max(60, servers.ttl ?? 3600) * 1000
+          iceCache = { servers: servers.iceServers, expiresAt: Date.now() + ttlMs / 2 }
+          return servers.iceServers
+        }
+      } catch {
+        // fall through to public STUN
+      } finally {
+        iceInflight = null
+      }
+      return FALLBACK_ICE_SERVERS
+    })()
+  }
+  return iceInflight
 }
+
+type AudioRoute = 'speaker' | 'earpiece' | 'reset'
+
+/** Native Android audio routing (MainActivity.CallJsBridge). No-op elsewhere. */
+function setNativeAudioRoute(route: AudioRoute) {
+  try {
+    const bridge = (window as unknown as { AbiaCallBridge?: { setAudioRoute?: (r: string) => void } })
+      .AbiaCallBridge
+    bridge?.setAudioRoute?.(route)
+  } catch {
+    // ignore
+  }
+}
+
+export function canSwitchAudioRoute(): boolean {
+  const bridge = (window as unknown as { AbiaCallBridge?: { setAudioRoute?: unknown } }).AbiaCallBridge
+  return typeof bridge?.setAudioRoute === 'function'
+}
+
+function mediaErrorMessage(err: unknown, video: boolean): string {
+  const name = (err as { name?: string })?.name ?? ''
+  if (name === 'NotAllowedError' || name === 'SecurityError') {
+    return video
+      ? 'Allow camera and microphone access to make video calls.'
+      : 'Allow microphone access to make calls.'
+  }
+  if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+    return video ? 'No camera or microphone was found.' : 'No microphone was found.'
+  }
+  if (name === 'NotReadableError') {
+    return 'Your microphone or camera is being used by another app.'
+  }
+  return 'Could not access your microphone.'
+}
+
+const AUDIO_CONSTRAINTS = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+  channelCount: 1,
+  sampleRate: 48000,
+} as MediaTrackConstraints
+
+function videoConstraints(facing: 'user' | 'environment'): MediaTrackConstraints {
+  return {
+    facingMode: facing,
+    width: { ideal: 640 },
+    height: { ideal: 480 },
+    frameRate: { ideal: 24, max: 30 },
+  }
+}
+
+/** Time allowed from "answered" to media actually flowing before we give up. */
+const CONNECT_TIMEOUT_MS = 25_000
 
 function newId() {
   return `c-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
@@ -132,6 +242,9 @@ class CallManager {
     maxReconnectAttempts: 3,
     timeline: [],
     remoteRinging: false,
+    ...MEDIA_DEFAULTS,
+    mediaVersion: 0,
+    notice: null,
   }
 
   private userId: string | null = null
@@ -142,7 +255,9 @@ class CallManager {
   private localStream: MediaStream | null = null
   private remoteAudio: HTMLAudioElement | null = null
   private pendingCandidates: RTCIceCandidateInit[] = []
-  private pendingOffer: { from: CallPeer; sdp: RTCSessionDescriptionInit; callId: string } | null = null
+  private pendingOffer: { from: CallPeer; sdp: RTCSessionDescriptionInit; callId: string; video: boolean } | null = null
+  private remoteStream: MediaStream | null = null
+  private connectTimer: number | null = null
   private statsTimer: number | null = null
   private lastBytesReceived = 0
   private lastBytesTimestamp = 0
@@ -196,6 +311,10 @@ class CallManager {
 
 
 
+  getState(): CallState {
+    return this.state
+  }
+
   subscribe(fn: Listener) {
     this.listeners.add(fn)
     fn(this.state)
@@ -226,6 +345,18 @@ class CallManager {
     ch.on('broadcast', { event: 'ringing' }, ({ payload }) => this.onRingingAck(payload))
     ch.subscribe()
     this.userChannel = ch
+    // Warm the TURN credentials so the first call doesn't wait for them.
+    void getIceServers()
+  }
+
+  /** Remote media (audio + video) for the call screen. */
+  getRemoteStream(): MediaStream | null {
+    return this.remoteStream
+  }
+
+  /** Our camera/mic stream, for the self-view. */
+  getLocalStream(): MediaStream | null {
+    return this.localStream
   }
 
   shutdown() {
@@ -306,24 +437,46 @@ class CallManager {
     }
   }
 
-  /** Outgoing call to a peer. */
-  async startCall(target: CallPeer) {
-    if (!this.userId || !this.selfPeer) throw new Error('Call manager not initialised')
+  /**
+   * Get the microphone (and camera for video calls). If the camera fails on a
+   * video call we continue as a voice call rather than failing outright.
+   */
+  private async acquireMedia(video: boolean): Promise<{ stream: MediaStream; video: boolean }> {
+    if (video) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: AUDIO_CONSTRAINTS,
+          video: videoConstraints('user'),
+        })
+        return { stream, video: true }
+      } catch {
+        // Camera refused/unavailable (or an app version without camera
+        // permission): fall back to a voice call below.
+      }
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: AUDIO_CONSTRAINTS, video: false })
+    return { stream, video: false }
+  }
+
+  /** Outgoing call to a peer. Throws a user-readable Error if it can't start. */
+  async startCall(target: CallPeer, opts: { video?: boolean } = {}) {
+    if (!this.userId || !this.selfPeer) throw new Error('Calling is not ready yet. Please try again.')
     if (!areCallsEnabled()) throw new Error('Calling is turned off in your settings')
     if (this.state.status !== 'idle' && this.state.status !== 'ended') return
+    const wantVideo = !!opts.video
+
+    // Ask for the mic/camera BEFORE ringing the other person, so a refused
+    // permission never leaves them with a phantom call.
+    let media: { stream: MediaStream; video: boolean }
+    try {
+      media = await this.acquireMedia(wantVideo)
+    } catch (err) {
+      throw new Error(mediaErrorMessage(err, wantVideo))
+    }
+
     const callId = newId()
     this.wasConnected = false
-    // Register the call session so realtime RLS grants both participants
-    // access to the private `call-session:{callId}` channel.
-    const { error: sessErr } = await supabase.from('call_sessions').insert({
-      call_id: callId,
-      caller_id: this.userId,
-      callee_id: target.id,
-    })
-    if (sessErr) {
-      this.patch({ status: 'idle', error: 'Could not start call' })
-      return
-    }
+    this.localStream = media.stream
     this.patch({
       status: 'calling',
       callId,
@@ -332,9 +485,33 @@ class CallManager {
       error: null,
       startedAt: null,
       remoteRinging: false,
+      ...MEDIA_DEFAULTS,
+      video: media.video,
+      cameraOn: media.video,
+      speakerOn: media.video,
+      mediaVersion: this.state.mediaVersion + 1,
+      notice: wantVideo && !media.video ? 'Camera unavailable — calling with voice only.' : null,
     })
-    await this.openSessionChannel(callId, true)
-    await this.setupPeer(true)
+
+    try {
+      // Register the call session so realtime RLS grants both participants
+      // access to the private `call-session:{callId}` channel.
+      const { error: sessErr } = await supabase.from('call_sessions').insert({
+        call_id: callId,
+        caller_id: this.userId,
+        callee_id: target.id,
+      })
+      if (sessErr) throw sessErr
+      await this.openSessionChannel(callId, true)
+      await this.setupPeer(true)
+    } catch {
+      if (this.state.callId === callId) {
+        void this.endCall(false, 'Could not start the call. Check your internet connection.')
+      }
+      return
+    }
+    if (this.state.callId !== callId) return // hung up while setting up
+
     await this.sendInvite(target, callId)
     this.startInviteRetryLoop(target, callId)
     void this.sendIncomingCallPush(target, callId)
@@ -346,18 +523,144 @@ class CallManager {
     }, 35000)
   }
 
-  /** Accept the pending incoming invite. */
-  async accept() {
-    if (!this.pendingOffer) return
-    const { from, callId } = this.pendingOffer
+  /**
+   * Accept the pending incoming invite. `video: false` answers a video call
+   * as voice only.
+   */
+  async accept(opts: { video?: boolean } = {}) {
+    const offer = this.pendingOffer
+    if (!offer) return
+    // Claim it immediately so a double tap can't set up two connections.
+    this.pendingOffer = null
+    const { from, callId } = offer
     this.clearInviteRetryLoop()
     this.wasConnected = false
-    this.patch({ status: 'connecting', callId, direction: 'incoming', peer: from })
-    await this.openSessionChannel(callId, false)
-    await this.setupPeer(false)
-    // Notify caller we accepted; they will create and send the offer.
-    await this.sessionSend('accept', { from: this.selfPeer })
-    this.pendingOffer = null
+    const wantVideo = offer.video && opts.video !== false
+
+    let media: { stream: MediaStream; video: boolean }
+    try {
+      media = await this.acquireMedia(wantVideo)
+    } catch (err) {
+      // Can't answer without a microphone: decline cleanly and explain why.
+      this.rememberCancelled(callId)
+      this.sendCancelWithRetries(from.id, callId, 'unavailable')
+      this.patch({ status: 'ended', callId, peer: from, direction: 'incoming', error: mediaErrorMessage(err, wantVideo) })
+      this.scheduleIdleReset()
+      return
+    }
+    if (this.cancelledCallIds.has(callId)) {
+      // Caller hung up while we were asking for permissions.
+      media.stream.getTracks().forEach((t) => t.stop())
+      return
+    }
+    this.localStream = media.stream
+    this.patch({
+      status: 'connecting',
+      callId,
+      direction: 'incoming',
+      peer: from,
+      video: offer.video,
+      cameraOn: media.video,
+      speakerOn: offer.video,
+      mediaVersion: this.state.mediaVersion + 1,
+      notice: wantVideo && !media.video ? 'Camera unavailable — they can still hear you.' : null,
+    })
+    try {
+      await this.openSessionChannel(callId, false)
+      await this.setupPeer(false)
+      // Notify caller we accepted; they will create and send the offer.
+      await this.sessionSend('accept', { from: this.selfPeer })
+      await this.sessionSend('media', { cameraOn: media.video })
+    } catch {
+      void this.endCall(true, 'Could not connect the call. Check your internet connection.')
+    }
+  }
+
+  /** Turn our camera on/off (video calls). */
+  toggleCamera() {
+    const track = this.localStream?.getVideoTracks()[0]
+    if (!track) return
+    const next = !this.state.cameraOn
+    track.enabled = next
+    this.patch({ cameraOn: next })
+    void this.sessionSend('media', { cameraOn: next }).catch(() => undefined)
+  }
+
+  /** Swap between front and back camera (video calls). */
+  async switchCamera() {
+    const pc = this.pc
+    const stream = this.localStream
+    const oldTrack = stream?.getVideoTracks()[0]
+    if (!pc || !stream || !oldTrack) return
+    const facing = this.state.facing === 'user' ? 'environment' : 'user'
+    try {
+      // Release the current camera first: many phones can't open both at once.
+      oldTrack.stop()
+      const next = await navigator.mediaDevices.getUserMedia({ video: videoConstraints(facing), audio: false })
+      const newTrack = next.getVideoTracks()[0]
+      newTrack.enabled = this.state.cameraOn
+      const sender = pc.getSenders().find((s) => s.track?.kind === 'video' || s.track === oldTrack)
+      await sender?.replaceTrack(newTrack)
+      stream.removeTrack(oldTrack)
+      stream.addTrack(newTrack)
+      this.patch({ facing, mediaVersion: this.state.mediaVersion + 1 })
+    } catch {
+      // Couldn't open the other camera: reopen the original one.
+      try {
+        const back = await navigator.mediaDevices.getUserMedia({
+          video: videoConstraints(this.state.facing),
+          audio: false,
+        })
+        const t = back.getVideoTracks()[0]
+        t.enabled = this.state.cameraOn
+        await pc.getSenders().find((s) => s.track === oldTrack || s.track?.kind === 'video')?.replaceTrack(t)
+        stream.removeTrack(oldTrack)
+        stream.addTrack(t)
+        this.patch({ mediaVersion: this.state.mediaVersion + 1 })
+      } catch {
+        // leave as is
+      }
+    }
+  }
+
+  /** Loudspeaker on/off (Android app). */
+  setSpeaker(on: boolean) {
+    setNativeAudioRoute(on ? 'speaker' : 'earpiece')
+    this.patch({ speakerOn: on })
+  }
+
+  private scheduleIdleReset() {
+    window.setTimeout(() => {
+      if (this.state.status === 'ended') {
+        this.patch({
+          status: 'idle',
+          callId: null,
+          direction: null,
+          peer: null,
+          startedAt: null,
+          error: null,
+          timeline: [],
+        })
+      }
+    }, 2500)
+  }
+
+  private clearConnectTimer() {
+    if (this.connectTimer != null) {
+      window.clearTimeout(this.connectTimer)
+      this.connectTimer = null
+    }
+  }
+
+  /** Fail fast instead of spinning on "Connecting…" forever (e.g. blocked network). */
+  private armConnectTimer(callId: string) {
+    this.clearConnectTimer()
+    this.connectTimer = window.setTimeout(() => {
+      this.connectTimer = null
+      if (this.state.callId === callId && this.state.status === 'connecting' && !this.wasConnected) {
+        void this.endCall(true, "Couldn't connect the call. Please try again.")
+      }
+    }, CONNECT_TIMEOUT_MS)
   }
 
   reject() {
@@ -422,6 +725,7 @@ class CallManager {
     await this.broadcastToUser(target.id, 'invite', {
       callId,
       from: this.selfPeer,
+      video: this.state.video,
     })
   }
 
@@ -456,6 +760,7 @@ class CallManager {
       // the app is closed. Build a strings-only object.
       const data: Record<string, string> = {
         type: 'call',
+        callType: this.state.video ? 'video' : 'voice',
         callId,
         callerId: this.selfPeer?.id ?? '',
         callerName: this.selfPeer?.name ?? 'Someone',
@@ -465,8 +770,8 @@ class CallManager {
       await supabase.functions.invoke('send-push', {
         body: {
           userId: target.id,
-          title: 'Incoming call',
-          message: `${this.selfPeer?.name || 'Someone'} is calling you on AbiaConnect`,
+          title: this.state.video ? 'Incoming video call' : 'Incoming call',
+          message: `${this.selfPeer?.name || 'Someone'} is ${this.state.video ? 'video ' : ''}calling you on AbiaConnect`,
           data,
         },
       })
@@ -504,9 +809,10 @@ class CallManager {
       const startedAt = this.state.startedAt
       const durationSec =
         wasConnected && startedAt ? Math.max(1, Math.round((Date.now() - startedAt) / 1000)) : 0
+      const tag = this.state.video ? ':video' : ''
       const content = wasConnected
-        ? `[call:ended] ${durationSec}s`
-        : `[call:missed] ${error || 'No answer'}`
+        ? `[call:ended${tag}] ${durationSec}s`
+        : `[call:missed${tag}] ${error || 'No answer'}`
       void (async () => {
         try {
           await supabase.from('messages').insert({
@@ -525,7 +831,11 @@ class CallManager {
     }
     this.wasConnected = false
     this.clearInviteRetryLoop()
+    this.clearConnectTimer()
     this.stopStatsLoop()
+    if (this.state.speakerOn || this.state.status === 'connected' || this.state.status === 'connecting') {
+      setNativeAudioRoute('reset')
+    }
     this.pc?.getSenders().forEach((s) => s.track?.stop())
     this.pc?.close()
     this.pc = null
@@ -539,6 +849,7 @@ class CallManager {
     if (this.remoteAudio) {
       this.remoteAudio.srcObject = null
     }
+    this.remoteStream = null
     this.poorSince = null
     this.currentJitterTargetMs = 80
     this.clearAutoReconnect()
@@ -553,22 +864,14 @@ class CallManager {
       reconnecting: false,
       reconnectAttempts: 0,
       remoteRinging: false,
+      cameraOn: false,
+      remoteCameraOn: false,
+      speakerOn: false,
+      notice: null,
+      mediaVersion: this.state.mediaVersion + 1,
       timeline: this.appendTimeline(this.state.timeline, 'unknown', error ?? 'Call ended'),
     })
-
-    window.setTimeout(() => {
-      if (this.state.status === 'ended') {
-        this.patch({
-          status: 'idle',
-          callId: null,
-          direction: null,
-          peer: null,
-          startedAt: null,
-          error: null,
-          timeline: [],
-        })
-      }
-    }, 2500)
+    this.scheduleIdleReset()
   }
 
 
@@ -602,7 +905,8 @@ class CallManager {
       this.sendCancelWithRetries(payload.from.id, payload.callId, 'busy')
       return
     }
-    this.pendingOffer = { from: payload.from, sdp: payload.sdp, callId: payload.callId }
+    const video = payload.video === true
+    this.pendingOffer = { from: payload.from, sdp: payload.sdp, callId: payload.callId, video }
     // If the user already tapped Answer on the system notification before
     // this realtime invite arrived, connect right away — no second ring,
     // no lingering "ringing" icon.
@@ -619,6 +923,10 @@ class CallManager {
       callId: payload.callId,
       direction: 'incoming',
       peer: payload.from,
+      error: null,
+      notice: null,
+      ...MEDIA_DEFAULTS,
+      video,
     })
     // Tell the caller their invite reached us and our device is now ringing,
     // so their UI can flip from "Calling…" to "Ringing…".
@@ -666,15 +974,29 @@ class CallManager {
     ch.on('broadcast', { event: 'sdp' }, ({ payload }) => this.onSdp(payload, isCaller))
     ch.on('broadcast', { event: 'ice' }, ({ payload }) => this.onIce(payload))
     ch.on('broadcast', { event: 'bye' }, () => this.endCall(false))
+    ch.on('broadcast', { event: 'media' }, ({ payload }) => {
+      if (typeof payload?.cameraOn === 'boolean') this.patch({ remoteCameraOn: payload.cameraOn })
+    })
     ch.on('broadcast', { event: 'restart' }, () => {
       // Peer asked us to renegotiate with ICE restart.
       if (isCaller) void this.performIceRestart()
     })
 
-    await new Promise<void>((resolve) => {
+    // Never wait forever: a channel that can't subscribe fails the call setup.
+    await new Promise<void>((resolve, reject) => {
+      const timer = window.setTimeout(() => reject(new Error('signaling timeout')), 10_000)
       ch.subscribe((status) => {
-        if (status === 'SUBSCRIBED') resolve()
+        if (status === 'SUBSCRIBED') {
+          window.clearTimeout(timer)
+          resolve()
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          window.clearTimeout(timer)
+          reject(new Error(`signaling ${status}`))
+        }
       })
+    }).catch((err) => {
+      supabase.removeChannel(ch).catch(() => undefined)
+      throw err
     })
     this.sessionChannel = ch
   }
@@ -695,32 +1017,35 @@ class CallManager {
       this.remoteAudio.volume = 1
     }
 
-    const pc = new RTCPeerConnection({ iceServers: getIceServers() })
+    const pc = new RTCPeerConnection({ iceServers: await getIceServers(), bundlePolicy: 'max-bundle' })
     this.pc = pc
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        channelCount: 1,
-        sampleRate: 48000,
-      } as MediaTrackConstraints,
-      video: false,
-    })
-    this.localStream = stream
+    const stream = this.localStream
+    if (!stream) throw new Error('No local media')
     stream.getTracks().forEach((t) => pc.addTrack(t, stream))
+    // A voice call can still RECEIVE nothing but audio; a video call must be
+    // able to receive video even if our own camera failed.
+    if (this.state.video && stream.getVideoTracks().length === 0) {
+      pc.addTransceiver('video', { direction: 'recvonly' })
+    }
 
     // Apply initial encoder bitrate cap (Opus speech ~32kbps).
     this.currentTargetBitrateKbps = 32
     this.applyBitrate(this.currentTargetBitrateKbps).catch(() => undefined)
+    this.applyVideoBitrate('good')
 
     // Build a dedicated remote MediaStream so we only ever attach REMOTE
     // tracks to the playback element — never the local mic — regardless of
     // what the browser's ontrack event hands us.
     const remoteStream = new MediaStream()
+    this.remoteStream = remoteStream
     if (this.remoteAudio) this.remoteAudio.srcObject = remoteStream
 
     pc.ontrack = (e) => {
+      if (e.track.kind === 'video') {
+        try { remoteStream.addTrack(e.track) } catch { /* ignore duplicates */ }
+        this.patch({ mediaVersion: this.state.mediaVersion + 1 })
+        return
+      }
       if (e.track.kind !== 'audio') return
       try { remoteStream.addTrack(e.track) } catch { /* ignore duplicates */ }
       if (this.remoteAudio) {
@@ -749,6 +1074,11 @@ class CallManager {
       const s = pc.connectionState
       if (s === 'connected') {
         const wasConnecting = this.state.status !== 'connected'
+        if (wasConnecting && !this.wasConnected) {
+          // Voice calls start on the earpiece, video calls on the loudspeaker.
+          setNativeAudioRoute(this.state.speakerOn ? 'speaker' : 'earpiece')
+        }
+        this.clearConnectTimer()
         this.wasConnected = true
         this.patch({
           status: 'connected',
@@ -792,6 +1122,19 @@ class CallManager {
     } catch {
       // ignore browsers that reject mid-call updates
     }
+  }
+
+  /** Cap the camera bitrate to suit the network (no-op on voice calls). */
+  private applyVideoBitrate(quality: CallQuality) {
+    const pc = this.pc
+    if (!pc) return
+    const sender = pc.getSenders().find((s) => s.track?.kind === 'video')
+    if (!sender) return
+    const kbps = quality === 'poor' ? 200 : quality === 'fair' ? 400 : quality === 'good' ? 700 : 1000
+    const params = sender.getParameters()
+    if (!params.encodings || params.encodings.length === 0) params.encodings = [{}]
+    params.encodings[0].maxBitrate = kbps * 1000
+    sender.setParameters(params).catch(() => undefined)
   }
 
   private startStatsLoop() {
@@ -869,6 +1212,7 @@ class CallManager {
       timeline,
     })
     this.adaptBitrate(quality)
+    if (quality !== prev && quality !== 'unknown') this.applyVideoBitrate(quality)
     this.trackPersistentPoor(quality)
   }
 
@@ -1063,17 +1407,31 @@ class CallManager {
     // Callee has answered — stop retrying the invite so a late retry can't
     // race with their new call state and get bounced back as "busy".
     this.clearInviteRetryLoop()
+    if (this.state.status !== 'calling') return // duplicate accept
     this.patch({ status: 'connecting' })
-    const offer = await this.pc.createOffer({ offerToReceiveAudio: true })
-    await this.pc.setLocalDescription(offer)
-    await this.sessionSend('sdp', { sdp: offer })
+    if (this.state.callId) this.armConnectTimer(this.state.callId)
+    void this.sessionSend('media', { cameraOn: this.state.cameraOn }).catch(() => undefined)
+    try {
+      const offer = await this.pc.createOffer()
+      await this.pc.setLocalDescription(offer)
+      await this.sessionSend('sdp', { sdp: offer })
+    } catch {
+      void this.endCall(true, "Couldn't connect the call. Please try again.")
+    }
   }
 
   private async onSdp(payload: any, isCaller: boolean) {
     const pc = this.pc
     if (!pc || !payload?.sdp) return
     const desc = new RTCSessionDescription(payload.sdp)
-    await pc.setRemoteDescription(desc)
+    // A duplicate/late answer would throw "wrong state" and break the call.
+    if (desc.type === 'answer' && pc.signalingState !== 'have-local-offer') return
+    if (!isCaller && desc.type === 'offer' && this.state.callId) this.armConnectTimer(this.state.callId)
+    try {
+      await pc.setRemoteDescription(desc)
+    } catch {
+      return
+    }
     // Flush queued ICE candidates.
     for (const c of this.pendingCandidates) {
       try {
@@ -1084,9 +1442,13 @@ class CallManager {
     }
     this.pendingCandidates = []
     if (!isCaller && desc.type === 'offer') {
-      const answer = await pc.createAnswer()
-      await pc.setLocalDescription(answer)
-      await this.sessionSend('sdp', { sdp: answer })
+      try {
+        const answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+        await this.sessionSend('sdp', { sdp: answer })
+      } catch {
+        void this.endCall(true, "Couldn't connect the call. Please try again.")
+      }
     }
   }
 

@@ -11,8 +11,47 @@ import { Button } from '@/components/ui/button'
 import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { SiteLogo } from '@/components/layout/SiteLogo'
 import { MobileSideNav } from './MobileSideNav'
+import { isNativeApp } from './NativeAuthLayout'
+
+/**
+ * App header: logo + notifications only. Everything else lives in the bottom
+ * navigation and its "More" sheet, so no button is duplicated.
+ */
+function NativeTopBar() {
+  const { user } = useAuth()
+  const { settings } = useSiteSettings()
+  const siteName = settings.site_name || 'AbiaConnect'
+  return (
+    <header className="md:hidden sticky top-0 z-50 border-b border-white/[0.08] bg-[rgba(8,13,23,0.94)] backdrop-blur-xl">
+      <div className="flex h-14 items-center justify-between gap-2 px-4">
+        <Link to="/" className="flex min-w-0 items-center" aria-label={`${siteName} home`}>
+          <SiteLogo nameFallback={false} imageClassName="h-8 max-w-[130px]" className="h-8 w-20" />
+        </Link>
+        {user ? (
+          <div className="dark flex items-center text-slate-100">
+            <NotificationBell />
+          </div>
+        ) : (
+          <Button
+            asChild
+            size="sm"
+            className="h-9 rounded-xl border-0 px-4 text-[13px] font-bold text-slate-950"
+            style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
+          >
+            <Link to="/login">Sign in</Link>
+          </Button>
+        )}
+      </div>
+    </header>
+  )
+}
 
 export function MobileTopBar() {
+  if (isNativeApp()) return <NativeTopBar />
+  return <WebMobileTopBar />
+}
+
+function WebMobileTopBar() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const { data: profile } = useProfile()

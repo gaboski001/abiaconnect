@@ -18,24 +18,7 @@ export function CallProvider() {
   const { user } = useAuth()
   const userId = user?.id ?? null
 
-  const [state, setState] = useState<CallState>({
-    status: 'idle',
-    callId: null,
-    direction: null,
-    peer: null,
-    muted: false,
-    startedAt: null,
-    error: null,
-    quality: 'unknown',
-    stats: { rttMs: null, jitterMs: null, packetLossPct: null, bitrateKbps: null },
-    degraded: false,
-    reconnecting: false,
-    reconnectAttempts: 0,
-    maxReconnectAttempts: 3,
-    timeline: [],
-    remoteRinging: false,
-  })
-
+  const [state, setState] = useState<CallState>(() => callManager.getState())
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   // Callback ref: fires the instant React attaches (or detaches) the <audio>

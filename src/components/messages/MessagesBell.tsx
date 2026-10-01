@@ -8,7 +8,12 @@ import { supabase } from '@/lib/supabase'
 import { playNotificationChime } from '@/lib/notificationSound'
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 
-export function MessagesBell() {
+/**
+ * Unread direct-message count, kept live over realtime, with the new-message
+ * chime. Mount it once per screen (MessagesBell on web, the bottom-nav
+ * Messages tab in the app) so the chime never plays twice.
+ */
+export function useUnreadMessagesCount(): number {
   const { user } = useAuth()
   const qc = useQueryClient()
 
@@ -64,8 +69,13 @@ export function MessagesBell() {
     deps: [user?.id],
   })
 
+  return user ? unreadQ.data ?? 0 : 0
+}
+
+export function MessagesBell() {
+  const { user } = useAuth()
+  const count = useUnreadMessagesCount()
   if (!user) return null
-  const count = unreadQ.data ?? 0
 
   return (
     <Button asChild variant="ghost" size="icon" aria-label="Messages" className="relative">

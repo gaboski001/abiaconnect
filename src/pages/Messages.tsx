@@ -1457,35 +1457,35 @@ function ConversationView({
         {/* Native-only WhatsApp-style call cluster. Hidden on the web project. */}
         {native && other?.id && (
           <>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full text-white hover:bg-white/10 hover:text-white active:scale-95 transition-transform"
-              aria-label="Video call (coming soon)"
-              onClick={() => toast.info('Video calls are coming soon')}
-            >
-              <Video className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full text-white hover:bg-white/10 hover:text-white active:scale-95 transition-transform"
-              aria-label={`Call ${other.display_name || other.username || 'user'}`}
-              onClick={() => {
-                try {
-                  callManager.startCall({
-                    id: other.id!,
-                    name: other.display_name || other.username || 'User',
-                    avatarUrl: other.avatar_url ?? null,
-                    conversationId,
-                  })
-                } catch (e) {
-                  toast.error((e as Error).message || 'Could not start call')
-                }
-              }}
-            >
-              <Phone className="h-5 w-5" />
-            </Button>
+            {([
+              { video: true, Icon: Video, label: 'Video call' },
+              { video: false, Icon: Phone, label: 'Voice call' },
+            ] as const).map(({ video, Icon, label }) => (
+              <Button
+                key={label}
+                variant="ghost"
+                size="icon"
+                className="rounded-full text-white hover:bg-white/10 hover:text-white active:scale-95 transition-transform"
+                aria-label={`${label} ${other.display_name || other.username || 'user'}`}
+                onClick={async () => {
+                  try {
+                    await callManager.startCall(
+                      {
+                        id: other.id!,
+                        name: other.display_name || other.username || 'User',
+                        avatarUrl: other.avatar_url ?? null,
+                        conversationId,
+                      },
+                      { video },
+                    )
+                  } catch (e) {
+                    toast.error((e as Error).message || 'Could not start the call')
+                  }
+                }}
+              >
+                <Icon className="h-5 w-5" />
+              </Button>
+            ))}
           </>
         )}
         {other?.id && (
@@ -2250,19 +2250,20 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
 // second table. Formats we recognise:
 //   `[call:ended] 42s`         -> completed voice call, duration in seconds
 //   `[call:missed] No answer`  -> missed / cancelled / rejected call
+//   `[call:ended:video] 42s` / `[call:missed:video] …` -> the same for video calls
 //
 // `parseCallLog` returns null for regular chat messages so the normal bubble
 // path is used.
 export type CallLogInfo =
-  | { kind: 'ended'; durationSec: number }
-  | { kind: 'missed'; reason: string }
+  | { kind: 'ended'; durationSec: number; video: boolean }
+  | { kind: 'missed'; reason: string; video: boolean }
 
 export function parseCallLog(content: string | null | undefined): CallLogInfo | null {
   if (!content) return null
-  const ended = /^\[call:ended\]\s+(\d+)s\s*$/i.exec(content)
-  if (ended) return { kind: 'ended', durationSec: parseInt(ended[1], 10) || 0 }
-  const missed = /^\[call:missed\]\s*(.*)$/i.exec(content)
-  if (missed) return { kind: 'missed', reason: missed[1]?.trim() || 'No answer' }
+  const ended = /^\[call:ended(:video)?\]\s+(\d+)s\s*$/i.exec(content)
+  if (ended) return { kind: 'ended', durationSec: parseInt(ended[2], 10) || 0, video: !!ended[1] }
+  const missed = /^\[call:missed(:video)?\]\s*(.*)$/i.exec(content)
+  if (missed) return { kind: 'missed', reason: missed[2]?.trim() || 'No answer', video: !!missed[1] }
   return null
 }
 
@@ -2288,9 +2289,10 @@ function CallLogRow({
   const tone = isMissed
     ? 'text-rose-600 dark:text-rose-400'
     : 'text-emerald-600 dark:text-emerald-400'
+  const kind = info.video ? 'video call' : 'voice call'
   const label = isMissed
-    ? mine ? 'Cancelled call' : 'Missed voice call'
-    : mine ? 'Outgoing voice call' : 'Incoming voice call'
+    ? mine ? 'Cancelled call' : `Missed ${kind}`
+    : mine ? `Outgoing ${kind}` : `Incoming ${kind}`
   const detail = info.kind === 'ended' ? formatCallDuration(info.durationSec) : info.reason
 
   return (
