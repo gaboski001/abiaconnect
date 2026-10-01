@@ -174,7 +174,7 @@ function HeroCarousel({ slides }: { slides: HeroSlideLike[] }) {
       <button
         type="button"
         onClick={() => handleNav('prev')}
-        className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white flex items-center justify-center hover:bg-black/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary"
+        className="absolute left-3 top-1/2 -translate-y-1/2 z-10 hidden sm:flex w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white items-center justify-center hover:bg-black/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary"
         aria-label="Previous slide"
       >
         <ChevronLeft className="w-5 h-5" />
@@ -183,7 +183,7 @@ function HeroCarousel({ slides }: { slides: HeroSlideLike[] }) {
       <button
         type="button"
         onClick={() => handleNav('next')}
-        className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white flex items-center justify-center hover:bg-black/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary"
+        className="absolute right-3 top-1/2 -translate-y-1/2 z-10 hidden sm:flex w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white items-center justify-center hover:bg-black/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary"
         aria-label="Next slide"
       >
         <ChevronRight className="w-5 h-5" />
