@@ -75,15 +75,11 @@ async function checkAndNotifyNewDevice(userId: string, email: string | undefined
       .insert({ user_id: userId, fingerprint, user_agent: navigator.userAgent })
     if (insertError) return
 
-    await supabase.functions.invoke('send-transactional-email', {
+    await supabase.functions.invoke('notify-new-device', {
       body: {
-        templateName: 'new-device-login',
-        recipientEmail: email,
-        idempotencyKey: `new-device-${userId}-${fingerprint}`,
-        templateData: {
-          device: describeDevice(),
-          when: new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' }),
-        },
+        fingerprint,
+        device: describeDevice(),
+        when: new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' }),
       },
     })
   } catch {

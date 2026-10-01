@@ -21,8 +21,11 @@ function cleanOpts(opts?: ExternalToast): ExternalToast | undefined {
   return next
 }
 
-function wrap<T extends (msg: Message, opts?: ExternalToast) => unknown>(fn: T) {
-  return ((msg: Message, opts?: ExternalToast) => fn(clean(msg) as string, cleanOpts(opts))) as T
+type ToastFn = (msg: Message, opts?: ExternalToast) => string | number
+
+function wrap(fn: unknown): ToastFn {
+  const f = fn as (msg: string, opts?: ExternalToast) => string | number
+  return (msg: Message, opts?: ExternalToast) => f(clean(msg) as string, cleanOpts(opts))
 }
 
 export const toast = Object.assign(
@@ -32,7 +35,7 @@ export const toast = Object.assign(
     error: wrap(sonnerToast.error),
     info: wrap(sonnerToast.info),
     warning: wrap(sonnerToast.warning),
-    message: wrap(sonnerToast.message as unknown as (msg: Message, opts?: ExternalToast) => unknown),
+    message: wrap(sonnerToast.message),
     loading: wrap(sonnerToast.loading),
     dismiss: sonnerToast.dismiss,
     promise: sonnerToast.promise,
