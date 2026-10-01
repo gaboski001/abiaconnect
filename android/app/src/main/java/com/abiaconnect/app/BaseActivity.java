@@ -8,12 +8,15 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
+import android.webkit.WebView;
 
 import androidx.core.content.ContextCompat;
 import androidx.core.splashscreen.SplashScreen;
 import androidx.core.view.WindowCompat;
 
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.WebViewListener;
 
 @SuppressWarnings("deprecation")
 public class BaseActivity extends BridgeActivity {
@@ -33,23 +36,52 @@ public class BaseActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
         sAppInForeground = true;
     }
 
     @Override
-    protected void onPause() {
+    public void onPause() {
         sAppInForeground = false;
         super.onPause();
     }
 
+    /**
+     * Keep the launch splash (real logo) up until the web app has painted, so
+     * members never see a blank white WebView or a half-loaded page. Capped so
+     * a slow or failed network can never trap the app on the splash.
+     */
+    private static final long SPLASH_MAX_MS = 3000;
+    private volatile boolean webContentReady = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        SplashScreen.installSplashScreen(this);
+        SplashScreen splash = SplashScreen.installSplashScreen(this);
+        final long splashDeadline = SystemClock.uptimeMillis() + SPLASH_MAX_MS;
+        splash.setKeepOnScreenCondition(
+            () -> !webContentReady && SystemClock.uptimeMillis() < splashDeadline
+        );
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
 
         super.onCreate(savedInstanceState);
+
+        if (getBridge() != null) {
+            getBridge().addWebViewListener(new WebViewListener() {
+                @Override
+                public void onPageLoaded(WebView webView) {
+                    webContentReady = true;
+                }
+
+                @Override
+                public void onReceivedError(WebView webView) {
+                    // Show the app's own offline/error UI instead of waiting.
+                    webContentReady = true;
+                }
+            });
+        } else {
+            webContentReady = true;
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             getWindow().setStatusBarColor(ContextCompat.getColor(this, R.color.status_bar_color));
@@ -57,6 +89,9 @@ public class BaseActivity extends BridgeActivity {
         }
 
         if (getBridge() != null && getBridge().getWebView() != null) {
+            // Same colour as the splash, so there is no white flash between the
+            // splash and the first painted page.
+            getBridge().getWebView().setBackgroundColor(ContextCompat.getColor(this, R.color.splash_background));
             getBridge().getWebView().getSettings().setLoadWithOverviewMode(true);
             getBridge().getWebView().getSettings().setUseWideViewPort(true);
             getBridge().getWebView().setClipChildren(false);

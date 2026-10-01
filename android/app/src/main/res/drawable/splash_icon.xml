@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launch splash icon: the real AbiaConnect logo, centred on the 288dp splash
+  icon canvas and sized (100x58dp) so the full wordmark sits inside the
+  circular mask Android applies to splash icons (verified on a Pixel 8a).
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="288dp"
+        android:height="288dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+    <item
+        android:width="100dp"
+        android:height="58dp"
+        android:gravity="center"
+        android:drawable="@drawable/splash_logo" />
+</layer-list>

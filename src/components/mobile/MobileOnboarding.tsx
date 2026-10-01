@@ -14,8 +14,8 @@ import {
   ShieldCheck,
   Zap,
   Rocket,
-  Globe2,
-  Heart,
+  Handshake,
+  Phone,
   Sparkles,
   Target,
   Eye,
@@ -142,7 +142,7 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0 }: MobileOnboardin
       id: 1,
       type: 'welcome',
       tagline: settings.site_tagline || 'Connect, Communicate, Collaborate',
-      subtitle: 'One People. One Voice. One Platform.',
+      subtitle: 'The trusted digital home for Abians at home and across the world.',
     },
     {
       id: 2,
@@ -152,17 +152,17 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0 }: MobileOnboardin
         {
           icon: Target,
           label: 'Mission',
-          body: 'Bridge home and diaspora so culture, knowledge, commerce and community thrive together.',
+          body: 'To unite Abians at home and abroad through meaningful conversation, opportunity and collaboration.',
         },
         {
           icon: Eye,
           label: 'Vision',
-          body: 'Geography should never separate a people from their identity, community, or voice.',
+          body: 'A connected Abia community where distance never limits identity, voice or progress.',
         },
         {
           icon: HandHeart,
           label: 'Values',
-          body: 'Integrity, unity, progress — for every indigenous Abian, anywhere in the world.',
+          body: 'Integrity, respect, unity and progress in every interaction.',
         },
       ],
     },
@@ -171,19 +171,19 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0 }: MobileOnboardin
       type: 'features',
       title: 'Everything you need',
       features: [
-        { icon: MessagesSquare, name: 'Forums', desc: '14 categories of structured talk' },
-        { icon: Users, name: 'Subgroups', desc: 'LGA, profession, interest' },
-        { icon: Zap, name: 'Live Polls', desc: 'Real-time community pulse' },
-        { icon: Bell, name: 'Smart Alerts', desc: 'Never miss what matters' },
-        { icon: Heart, name: 'Voice & Chat', desc: 'Premium messaging and calling' },
-        { icon: Globe2, name: 'Worldwide', desc: 'Diaspora-first design' },
+        { icon: MessagesSquare, name: 'Community Forums', desc: 'Thoughtful discussions on the issues that matter' },
+        { icon: Handshake, name: 'Connect', desc: 'Meet professionals, partners and friends' },
+        { icon: Users, name: 'Subgroups', desc: 'Spaces for your LGA, profession and interests' },
+        { icon: Phone, name: 'Messages & Calls', desc: 'Private, secure chats and voice calls' },
+        { icon: Zap, name: 'Live Polls', desc: 'Shape community decisions in real time' },
+        { icon: Bell, name: 'Smart Alerts', desc: 'Stay informed on what matters to you' },
       ],
     },
     {
       id: 4,
       type: 'start',
       title: 'Ready to join?',
-      subtitle: 'Join 10,000+ Abians with premium messaging, smart alerts, and community tools built for mobile.',
+      subtitle: 'Build your network, share your voice and grow together.',
     },
   ];
 
@@ -210,13 +210,38 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0 }: MobileOnboardin
 
   const isLast = currentSlide === slides.length - 1;
 
+  // The intro is an overlay on top of the app. Lock the page underneath so
+  // vertical swipes don't scroll it (that showed a moving edge/stretch line).
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      htmlOverscroll: html.style.overscrollBehavior,
+      bodyOverscroll: body.style.overscrollBehavior,
+    };
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    html.style.overscrollBehavior = 'none';
+    body.style.overscrollBehavior = 'none';
+    return () => {
+      html.style.overflow = prev.htmlOverflow;
+      body.style.overflow = prev.bodyOverflow;
+      html.style.overscrollBehavior = prev.htmlOverscroll;
+      body.style.overscrollBehavior = prev.bodyOverscroll;
+    };
+  }, []);
+
   return (
     <motion.div
-      initial={{ opacity: 0 }}
+      // Opaque from the first frame (it replaces the brand cover); fading in
+      // from transparent let the page underneath show through.
+      initial={false}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="fixed inset-0 z-[100] flex flex-col overflow-hidden font-sans"
+      className="fixed inset-0 z-[100] flex flex-col overflow-hidden overscroll-none font-sans"
       style={{ background: BRAND.bg, color: BRAND.text }}
       role="dialog"
       aria-label="Welcome to AbiaConnect"
@@ -259,13 +284,14 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0 }: MobileOnboardin
       </div>
 
       {/* Slides */}
-      <div className="flex-1 overflow-hidden relative z-10" ref={emblaRef}>
+      <div className="flex-1 overflow-hidden relative z-10" ref={emblaRef} style={{ touchAction: 'pan-y pinch-zoom' }}>
         <div className="flex h-full">
           {slides.map((slide, idx) => (
             <div
               key={slide.id}
-              className="flex-[0_0_100%] h-full flex flex-col items-center justify-center px-6 text-center relative"
+              className="flex-[0_0_100%] h-full overflow-y-auto overscroll-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
+              <div className="min-h-full flex flex-col items-center justify-center px-6 py-4 text-center relative">
               <AnimatePresence mode="wait">
                 {currentSlide === idx && (
                   <motion.div
@@ -295,6 +321,7 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0 }: MobileOnboardin
                   </motion.div>
                 )}
               </AnimatePresence>
+              </div>
             </div>
           ))}
         </div>
@@ -367,7 +394,7 @@ const WelcomeView = ({ slide }: { slide: WelcomeSlide }) => (
       initial={{ scale: 0.7, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.7, ease: 'easeOut' }}
-      className="mb-10 relative"
+      className="mb-8 relative"
     >
       <motion.div
         className="absolute inset-0 rounded-full blur-3xl scale-150"
@@ -375,11 +402,18 @@ const WelcomeView = ({ slide }: { slide: WelcomeSlide }) => (
         animate={{ scale: [1.5, 1.8, 1.5], opacity: [0.4, 0.7, 0.4] }}
         transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
       />
+      {/* One smooth 3D entrance that always ends facing forward, then a gentle
+          float. (A continuous spin showed the logo mirrored half the time.) */}
       <motion.div
-        animate={{ rotateY: 360 }}
-        transition={{ duration: 14, repeat: Infinity, ease: 'linear' }}
+        initial={{ rotateY: -70, opacity: 0 }}
+        animate={{ rotateY: 0, opacity: 1, y: [0, -6, 0] }}
+        transition={{
+          rotateY: { duration: 0.9, ease: [0.22, 1, 0.36, 1] },
+          opacity: { duration: 0.5 },
+          y: { delay: 1, duration: 4, repeat: Infinity, ease: 'easeInOut' },
+        }}
         className="relative w-44 h-44 flex items-center justify-center"
-        style={{ transformStyle: 'preserve-3d' }}
+        style={{ transformPerspective: 900, backfaceVisibility: 'hidden' }}
       >
         <img
           src="/email-logo.png"
@@ -424,25 +458,25 @@ const WelcomeView = ({ slide }: { slide: WelcomeSlide }) => (
 const AboutView = ({ slide }: { slide: AboutSlide }) => (
   <div className="w-full max-w-sm">
     <div
-      className="mb-8 inline-flex p-4 rounded-3xl shadow-xl"
+      className="mb-5 inline-flex p-3.5 rounded-3xl shadow-xl"
       style={{ background: `${BRAND.green}60`, color: BRAND.gold, border: `1px solid ${BRAND.gold}30` }}
     >
       <ShieldCheck className="size-10" />
     </div>
-    <h2 className="text-4xl font-black mb-3 tracking-tight" style={{ color: BRAND.text }}>
+    <h2 className="text-3xl font-black mb-2 tracking-tight" style={{ color: BRAND.text }}>
       {slide.title}
     </h2>
-    <p className="text-lg font-bold mb-8" style={{ color: BRAND.gold }}>
-      The digital home of indigenous Abians
+    <p className="text-base font-bold mb-6" style={{ color: BRAND.gold }}>
+      The trusted digital home for indigenous Abians
     </p>
-    <div className="space-y-4 text-left">
+    <div className="space-y-3 text-left">
       {slide.cards.map((c, i) => (
         <motion.div
           key={c.label}
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.15 + i * 0.12, duration: 0.4 }}
-          className="flex gap-4 p-5 rounded-[1.5rem] backdrop-blur-md shadow-lg"
+          className="flex gap-4 p-4 rounded-[1.5rem] backdrop-blur-md shadow-lg"
           style={{
             background: `${BRAND.surface}90`,
             border: `1px solid ${BRAND.border}`,
@@ -470,27 +504,27 @@ const AboutView = ({ slide }: { slide: AboutSlide }) => (
 
 const FeaturesView = ({ slide }: { slide: FeaturesSlide }) => (
   <div className="w-full max-w-md">
-    <h2 className="text-4xl font-black mb-3 tracking-tight" style={{ color: BRAND.text }}>
+    <h2 className="text-3xl font-black mb-2 tracking-tight" style={{ color: BRAND.text }}>
       {slide.title}
     </h2>
-    <p className="text-lg font-bold mb-10" style={{ color: BRAND.gold }}>
-      Built for community & progress
+    <p className="text-base font-bold mb-6" style={{ color: BRAND.gold }}>
+      One platform for community, opportunity and connection
     </p>
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-3">
       {slide.features.map((f, i) => (
         <motion.div
           key={f.name}
           initial={{ opacity: 0, y: 16, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.1 + i * 0.08, duration: 0.35, ease: 'easeOut' }}
-          className="p-5 rounded-[1.5rem] flex flex-col items-center text-center backdrop-blur-md shadow-xl"
+          className="p-4 rounded-[1.5rem] flex flex-col items-center text-center backdrop-blur-md shadow-xl"
           style={{
             background: `${BRAND.surface}99`,
             border: `1px solid ${BRAND.border}`,
           }}
         >
           <div
-            className="p-3 rounded-2xl mb-3.5 shadow-lg"
+            className="p-2.5 rounded-2xl mb-2.5 shadow-lg"
             style={{ background: `linear-gradient(135deg, ${BRAND.gold}30 0%, ${BRAND.gold}10 100%)`, color: BRAND.gold }}
           >
             <f.icon className="size-6" />
@@ -498,7 +532,7 @@ const FeaturesView = ({ slide }: { slide: FeaturesSlide }) => (
           <h3 className="font-black text-sm mb-1 tracking-tight" style={{ color: BRAND.text }}>
             {f.name}
           </h3>
-          <p className="text-xs leading-tight font-bold" style={{ color: BRAND.textMuted }}>
+          <p className="text-xs leading-snug font-semibold" style={{ color: BRAND.textMuted }}>
             {f.desc}
           </p>
         </motion.div>
@@ -521,7 +555,7 @@ const StartView = ({
       initial={{ scale: 0.8, opacity: 0, y: 20 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 120, damping: 20, delay: 0.1 }}
-      className="relative size-32 mx-auto mb-10"
+      className="relative size-24 mx-auto mb-8"
     >
       {/* Premium Glow Effect */}
       <div
@@ -537,7 +571,7 @@ const StartView = ({
       >
         {/* Subtle glass reflection */}
         <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-50" />
-        <Rocket className="size-16 drop-shadow-lg" style={{ color: BRAND.bg }} />
+        <Rocket className="size-12 drop-shadow-lg" style={{ color: BRAND.bg }} />
       </div>
     </motion.div>
 
@@ -546,16 +580,16 @@ const StartView = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3, duration: 0.6 }}
     >
-      <h2 className="text-4xl font-black mb-4 tracking-tight" style={{ color: BRAND.text }}>
+      <h2 className="text-3xl font-black mb-3 tracking-tight" style={{ color: BRAND.text }}>
         Your Community.<br />
         <span className="text-transparent bg-clip-text" style={{ backgroundImage: `linear-gradient(to right, ${BRAND.gold}, #FDE68A)` }}>
           Your Identity.
         </span>
       </h2>
 
-      <p className="text-lg leading-relaxed mb-10 font-medium" style={{ color: BRAND.textMuted }}>
-        Join the official digital home for <span className="text-white">indigenous Abians</span> worldwide.
-        Stay connected, stay informed, and grow with us.
+      <p className="text-base leading-relaxed mb-8 font-medium" style={{ color: BRAND.textMuted }}>
+        Join the trusted digital home for <span className="text-white">indigenous Abians</span> worldwide.
+        {' '}{slide.subtitle}
       </p>
     </motion.div>
 
@@ -575,7 +609,7 @@ const StartView = ({
           boxShadow: `0 12px 30px -10px ${BRAND.gold}90`,
         }}
       >
-        Join the Community
+        Create a free account
       </Button>
 
       <Button
@@ -587,7 +621,7 @@ const StartView = ({
           color: BRAND.text,
         }}
       >
-        Sign in to your Account
+        Sign in
       </Button>
     </motion.div>
 
@@ -595,10 +629,10 @@ const StartView = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 0.5 }}
       transition={{ delay: 1, duration: 1 }}
-      className="mt-10 pt-6 border-t border-white/5"
+      className="mt-8 pt-5 border-t border-white/5"
     >
       <p className="text-[11px] uppercase tracking-widest font-bold opacity-60" style={{ color: BRAND.textDim }}>
-        AbiaConnect &copy; 2026 • One People. One Voice.
+        &copy; 2026 AbiaConnect · One People. One Voice.
       </p>
     </motion.div>
   </div>

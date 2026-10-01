@@ -9,6 +9,11 @@ const MobileOnboarding = lazy(() =>
 
 const STORAGE_KEY = 'hasSeenOnboarding';
 
+/** Solid brand backdrop matching the onboarding, shown while it loads. */
+const BrandCover = () => (
+  <div className="fixed inset-0 z-[100]" style={{ background: '#0B1F0B' }} aria-hidden />
+);
+
 /**
  * Native-only onboarding and authentication gate.
  *
@@ -48,10 +53,15 @@ export const NativeOnboardingGate = () => {
     return () => clearInterval(interval);
   }, [user, loading, location.pathname]);
 
-  if (!show || loading) return null;
+  // While auth is still loading on the native home screen, cover the page with
+  // the brand background so the forum never flashes behind the intro slides.
+  if (loading) {
+    return Capacitor.isNativePlatform() && location.pathname === '/' ? <BrandCover /> : null;
+  }
+  if (!show) return null;
 
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<BrandCover />}>
       <MobileOnboarding
         onFinish={() => setShow(false)}
         initialSlide={startAtLast ? 3 : 0}
