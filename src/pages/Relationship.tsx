@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, MessageCircle, Sparkles, X, LayoutGrid, Layers, MapPin, Pencil, Filter, RefreshCw, AlertCircle, Crown } from 'lucide-react'
+import { Heart, MessageCircle, Sparkles, X, LayoutGrid, Layers, MapPin, Pencil, Filter, RefreshCw, AlertCircle, Crown, ChevronDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from '@/lib/toast'
@@ -22,12 +22,15 @@ import { isValidHttpUrl } from '@/lib/images'
 import { selectRelationshipCards } from '@/lib/relationshipFeed'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { useDatingEntitlements } from '@/hooks/useDatingEntitlements'
-import { canPurchaseHere, getLikesReceived, reactToProfile, track, type ReactResult } from '@/lib/monetization/api'
+import { canPurchaseHere, getLikesReceived, getMyReactedIds, reactToProfile, track, type ReactResult } from '@/lib/monetization/api'
 import { t } from '@/lib/monetization/strings'
 import { PaywallDialog } from '@/components/dating/PaywallDialog'
 import { MatchDialog, type MatchPartner } from '@/components/dating/MatchDialog'
 
 const PAGE_SIZE = 24
+
+const FILTER_SELECT =
+  'w-full min-w-0 truncate rounded-full border border-border bg-background px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500/40 sm:w-auto sm:py-1.5'
 
 type SexFilter = 'all' | 'male' | 'female'
 type AgeBracket = 'all' | '18-24' | '25-34' | '35-44' | '45-54' | '55+'
@@ -235,8 +238,9 @@ export default function Relationship() {
     ],
   })
 
-  const hasActiveFilters =
-    filters.lookingFor !== 'all' || filters.lga !== 'all' || filters.sex !== 'all' || filters.age !== 'all'
+  const activeFilterCount = [filters.lookingFor, filters.lga, filters.sex, filters.age].filter((v) => v !== 'all').length
+  const hasActiveFilters = activeFilterCount > 0
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   // Stable per-mount seed so the "random 10" order doesn't reshuffle on every render
   const shuffleSeedRef = useRef(Math.random())
@@ -263,128 +267,149 @@ export default function Relationship() {
   const clearFilters = () => setFilters({ lookingFor: 'all', lga: 'all', sex: 'all', age: 'all' })
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="mx-auto w-full max-w-6xl overflow-x-clip">
       <SEO
         title="Relationship — Meet Abia members"
         description="Discover Abia members open to friendship, dating, and serious relationships. Chat directly with profiles you like."
         path="/relationship"
       />
 
-      <header className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 grid place-items-center shadow-lg shadow-pink-500/25">
-            <Heart className="size-5 text-white" fill="white" />
+      <header className="mb-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg shadow-pink-500/25">
+              <Heart className="size-5 text-white" fill="white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-bold leading-tight sm:text-2xl">Relationship</h1>
+              <p className="truncate text-xs text-muted-foreground">
+                <span className="sm:hidden">Meet Abia members</span>
+                <span className="hidden sm:inline">Meet real Abia members near you</span>
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold leading-tight">Relationship</h1>
-            <p className="text-xs text-muted-foreground">Meet real Abia members near you</p>
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <DatingHeaderLinks />
+            <Button
+              asChild
+              variant="outline"
+              className="size-10 rounded-full border-border bg-card p-0 shadow-sm hover:bg-muted sm:h-10 sm:w-auto sm:px-4"
+            >
+              <Link to="/relationship/edit" aria-label={myProfile ? 'Edit my profile' : 'Create my profile'}>
+                {myProfile ? <Pencil className="size-4" /> : <Sparkles className="size-4" />}
+                <span className="hidden sm:inline">{myProfile ? 'Edit profile' : 'Create profile'}</span>
+              </Link>
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1 rounded-full bg-muted p-1">
-            <button
-              onClick={() => setMode('grid')}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition-colors ${
-                mode === 'grid' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
-              }`}
-            >
-              <LayoutGrid className="size-3.5" /> Grid
-            </button>
-            <button
-              onClick={() => setMode('discover')}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition-colors ${
-                mode === 'discover' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
-              }`}
-            >
-              <Layers className="size-3.5" /> Discover
-            </button>
-          </div>
-          <DatingHeaderLinks />
-          <Button asChild variant="secondary" className="rounded-full">
-            <Link to="/relationship/edit">
-              {myProfile ? (
-                <><Pencil className="size-4" /> Edit my profile</>
-              ) : (
-                <><Sparkles className="size-4" /> Create my profile</>
-              )}
-            </Link>
-          </Button>
+
+        <div className="grid grid-cols-2 gap-1 rounded-full bg-muted p-1 sm:inline-grid sm:w-auto" role="tablist" aria-label="View">
+          <button
+            role="tab"
+            aria-selected={mode === 'grid'}
+            onClick={() => setMode('grid')}
+            className={`inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+              mode === 'grid' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+            }`}
+          >
+            <LayoutGrid className="size-4" /> Grid
+          </button>
+          <button
+            role="tab"
+            aria-selected={mode === 'discover'}
+            onClick={() => setMode('discover')}
+            className={`inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+              mode === 'discover' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+            }`}
+          >
+            <Layers className="size-4" /> Discover
+          </button>
         </div>
       </header>
 
       {user && (
-        <div className="flex flex-wrap items-center gap-2 mb-5 rounded-2xl border border-border bg-card/60 p-3">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground pl-1 pr-2">
-            <Filter className="size-3.5" /> Filters
-          </div>
-          <select
-            aria-label="Looking for"
-            value={filters.lookingFor}
-            onChange={(e) =>
-              setFilters((f) => ({ ...f, lookingFor: e.target.value as FeedFilters['lookingFor'] }))
-            }
-            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500/40"
-          >
-            <option value="all">Looking for — Any</option>
-            {(Object.keys(LOOKING_FOR_LABELS) as LookingFor[]).map((k) => (
-              <option key={k} value={k}>{LOOKING_FOR_LABELS[k]}</option>
-            ))}
-          </select>
-          <select
-            aria-label="LGA"
-            value={filters.lga}
-            onChange={(e) => setFilters((f) => ({ ...f, lga: e.target.value }))}
-            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500/40"
-          >
-            <option value="all">LGA — Any</option>
-            {lgaOptions.map((l) => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
-          <select
-            aria-label="Gender"
-            value={filters.sex}
-            onChange={(e) => setFilters((f) => ({ ...f, sex: e.target.value as SexFilter }))}
-            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500/40"
-          >
-            <option value="all">Gender — Any</option>
-            <option value="male">Men</option>
-            <option value="female">Women</option>
-          </select>
-          <select
-            aria-label="Age"
-            value={filters.age}
-            onChange={(e) => setFilters((f) => ({ ...f, age: e.target.value as AgeBracket }))}
-            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500/40"
-          >
-            <option value="all">Age — Any</option>
-            {(Object.keys(AGE_BRACKETS) as Exclude<AgeBracket, 'all'>[]).map((k) => (
-              <option key={k} value={k}>{k}</option>
-            ))}
-          </select>
-          {(filters.sex !== 'all' || filters.age !== 'all') && (
+        <div className="mb-5 rounded-2xl border border-border bg-card/60 p-3">
+          <div className="flex items-center justify-between gap-2 sm:mb-2">
+            {/* Phones: filters collapse behind this toggle to keep the cards on screen. */}
             <button
               type="button"
-              onClick={() => setFilters((f) => ({ ...f, sex: 'all', age: 'all' }))}
-              className="inline-flex items-center gap-1 rounded-full border border-pink-500/40 bg-pink-600/10 text-pink-700 dark:text-pink-300 px-3 py-1.5 text-xs font-semibold hover:bg-pink-600/20 transition"
-              aria-label="Reset gender and age filters"
+              onClick={() => setFiltersOpen((o) => !o)}
+              aria-expanded={filtersOpen}
+              aria-controls="relationship-filters"
+              className="inline-flex items-center gap-1.5 rounded-full text-xs font-semibold text-muted-foreground sm:pointer-events-none"
             >
-              <RefreshCw className="size-3" /> Reset gender & age
+              <Filter className="size-3.5" /> Filters
+              {activeFilterCount > 0 && (
+                <span className="rounded-full bg-pink-600 px-1.5 text-[10px] font-bold leading-4 text-white">{activeFilterCount}</span>
+              )}
+              <ChevronDown className={`size-3.5 transition-transform sm:hidden ${filtersOpen ? 'rotate-180' : ''}`} aria-hidden />
             </button>
-          )}
-          {hasActiveFilters && (
-            <button
-              onClick={clearFilters}
-              className="text-xs font-medium text-pink-600 hover:underline inline-flex items-center gap-1"
+            <div className="flex items-center gap-3">
+              {isFetching && !isFetchingNextPage && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <RefreshCw className="size-3 animate-spin" /> Updating…
+                </span>
+              )}
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-pink-600 hover:underline"
+                >
+                  <X className="size-3" /> Clear
+                </button>
+              )}
+            </div>
+          </div>
+          <div
+            id="relationship-filters"
+            className={`${filtersOpen ? 'mt-2 grid' : 'hidden'} grid-cols-2 gap-2 sm:mt-0 sm:flex sm:flex-wrap`}
+          >
+            <select
+              aria-label="Looking for"
+              value={filters.lookingFor}
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, lookingFor: e.target.value as FeedFilters['lookingFor'] }))
+              }
+              className={FILTER_SELECT}
             >
-              <X className="size-3" /> Clear
-            </button>
-          )}
-          {isFetching && !isFetchingNextPage && (
-            <span className="ml-auto text-[11px] text-muted-foreground inline-flex items-center gap-1">
-              <RefreshCw className="size-3 animate-spin" /> Updating…
-            </span>
-          )}
+              <option value="all">Looking for: Any</option>
+              {(Object.keys(LOOKING_FOR_LABELS) as LookingFor[]).map((k) => (
+                <option key={k} value={k}>{LOOKING_FOR_LABELS[k]}</option>
+              ))}
+            </select>
+            <select
+              aria-label="LGA"
+              value={filters.lga}
+              onChange={(e) => setFilters((f) => ({ ...f, lga: e.target.value }))}
+              className={FILTER_SELECT}
+            >
+              <option value="all">LGA: Any</option>
+              {lgaOptions.map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+            <select
+              aria-label="Gender"
+              value={filters.sex}
+              onChange={(e) => setFilters((f) => ({ ...f, sex: e.target.value as SexFilter }))}
+              className={FILTER_SELECT}
+            >
+              <option value="all">Gender: Any</option>
+              <option value="male">Men</option>
+              <option value="female">Women</option>
+            </select>
+            <select
+              aria-label="Age"
+              value={filters.age}
+              onChange={(e) => setFilters((f) => ({ ...f, age: e.target.value as AgeBracket }))}
+              className={FILTER_SELECT}
+            >
+              <option value="all">Age: Any</option>
+              {(Object.keys(AGE_BRACKETS) as Exclude<AgeBracket, 'all'>[]).map((k) => (
+                <option key={k} value={k}>{k}</option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
 
@@ -592,22 +617,22 @@ function DatingHeaderLinks() {
   const pending = likes?.total ?? 0
   return (
     <>
-      <Button asChild variant="secondary" className="rounded-full">
+      <Button asChild variant="outline" className="relative size-10 rounded-full border-border bg-card p-0 shadow-sm hover:bg-muted sm:h-10 sm:w-auto sm:px-4">
         <Link to="/relationship/likes" aria-label={`Likes${pending ? `, ${pending} pending` : ''}`}>
           <Heart className="size-4 text-pink-600" />
-          Likes
+          <span className="hidden sm:inline">Likes</span>
           {pending > 0 && (
-            <span className="ml-0.5 rounded-full bg-pink-600 px-1.5 text-[11px] font-bold leading-5 text-white">
+            <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-pink-600 px-1 text-center text-[10px] font-bold leading-5 text-white sm:static sm:ml-0.5">
               {pending > 99 ? '99+' : pending}
             </span>
           )}
         </Link>
       </Button>
       {(ent?.is_premium || canPurchaseHere()) && (
-        <Button asChild variant="secondary" className="rounded-full">
-          <Link to="/relationship/premium">
+        <Button asChild variant="outline" className="size-10 rounded-full border-border bg-card p-0 shadow-sm hover:bg-muted sm:h-10 sm:w-auto sm:px-4">
+          <Link to="/relationship/premium" aria-label={ent?.is_premium ? `${ent.plan_name} plan` : 'Premium'}>
             <Crown className="size-4 text-amber-500" />
-            {ent?.is_premium ? ent.plan_name : 'Premium'}
+            <span className="hidden sm:inline">{ent?.is_premium ? ent.plan_name : 'Premium'}</span>
           </Link>
         </Button>
       )}
@@ -615,8 +640,19 @@ function DatingHeaderLinks() {
   )
 }
 
-function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
+function DiscoverView({ cards: allCards }: { cards: RelationshipCard[] }) {
   const { user } = useAuth()
+  const { data: reacted } = useQuery({
+    queryKey: ['dating-my-reactions', user?.id],
+    queryFn: getMyReactedIds,
+    enabled: !!user,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  })
+  const cards = useMemo(
+    () => (reacted ? allCards.filter((c) => !reacted.has(c.user_id)) : allCards),
+    [allCards, reacted],
+  )
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: ent } = useDatingEntitlements()
@@ -705,7 +741,7 @@ function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
     <div className="mx-auto max-w-md">
       <DiscoverCard card={current} />
 
-      <div className="flex items-center justify-center gap-4 mt-5">
+      <div className="mt-4 flex items-center justify-center gap-4 sm:mt-5">
         <button
           onClick={() => react('pass')}
           disabled={busy}
@@ -731,7 +767,7 @@ function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
           <MessageCircle className="size-6 text-pink-600" />
         </button>
       </div>
-      <p className="text-center text-xs text-muted-foreground mt-3">
+      <p className="mt-2 text-center text-xs text-muted-foreground sm:mt-3">
         {remaining} {remaining === 1 ? 'profile' : 'profiles'} to discover
         {typeof shownLikesLeft === 'number' && <> · {t('discover.likes_left', { count: shownLikesLeft })}</>}
       </p>
@@ -753,7 +789,9 @@ function DiscoverCard({ card }: { card: RelationshipCard }) {
   const cover = !broken ? (isValidHttpUrl(rawPhoto) ? rawPhoto : fallback) : null
 
   return (
-    <div className="relative aspect-[3/4] rounded-3xl overflow-hidden bg-gradient-to-br from-pink-500/20 to-rose-600/20 border border-border shadow-2xl">
+    // Phones: cap the height so the card and the like/pass buttons fit on one
+    // screen; larger screens keep the classic 3:4 card.
+    <div className="relative h-[min(calc((100vw-1.5rem)*4/3),47svh)] w-full overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-pink-500/20 to-rose-600/20 shadow-2xl sm:h-auto sm:aspect-[3/4]">
       <AnimatePresence mode="wait">
         <motion.div
           key={card.id}

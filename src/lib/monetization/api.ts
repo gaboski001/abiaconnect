@@ -115,6 +115,13 @@ export const markLikesSeen = () => rpc<void>('dating_mark_likes_seen')
 export const getMatches = (limit = 50, offset = 0) => rpc<MatchItem[]>('dating_my_matches', { _limit: limit, _offset: offset })
 export const getPaymentOptions = () => rpc<PaymentOption[]>('get_payment_options')
 
+/** People the signed-in user already liked or passed (RLS: own rows only). */
+export async function getMyReactedIds(): Promise<Set<string>> {
+  const { data, error } = await db.from('dating_likes').select('liked_id').limit(5000)
+  if (error) throw error
+  return new Set((data as Array<{ liked_id: string }>).map((r) => r.liked_id))
+}
+
 /** Fire-and-forget funnel tracking; never blocks or breaks the UI. */
 export function track(event: string, metadata: Record<string, unknown> = {}) {
   db.rpc('track_monetization_event', { _event: event, _metadata: metadata }).then(

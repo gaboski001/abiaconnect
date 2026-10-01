@@ -145,7 +145,8 @@ export default function DatingPremium() {
           )}
 
           <div className="grid gap-4 md:grid-cols-3">
-            {free && <PlanCard plan={free} current={ent?.plan_code === 'free'} />}
+            {/* Phones: paid plans first, Free last; desktop keeps Free on the left. */}
+            {free && <PlanCard plan={free} current={ent?.plan_code === 'free'} className="order-last md:order-none" />}
             {paid.map((plan) => (
               <PlanCard
                 key={plan.id}
@@ -227,8 +228,10 @@ function PlanCard({
   onChoose,
   loading,
   disabled,
+  className,
 }: {
   plan: Plan
+  className?: string
   current?: boolean
   onChoose?: () => void
   loading?: boolean
@@ -240,6 +243,7 @@ function PlanCard({
     <article
       className={cn(
         'relative flex flex-col rounded-3xl border bg-card p-6',
+        className,
         plan.is_recommended ? 'border-pink-500 shadow-lg shadow-pink-500/10' : 'border-border',
       )}
       aria-label={plan.name}
