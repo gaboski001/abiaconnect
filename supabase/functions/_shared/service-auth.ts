@@ -48,7 +48,12 @@ async function verifyHs256(token: string, secret: string): Promise<Record<string
     )
     const sig = b64urlToBytes(sigB64)
     const data = new TextEncoder().encode(`${headerB64}.${payloadB64}`)
-    const ok = await crypto.subtle.verify('HMAC', key, sig, data)
+    const ok = await crypto.subtle.verify(
+      'HMAC',
+      key,
+      sig.buffer as ArrayBuffer,
+      data.buffer as ArrayBuffer,
+    )
     if (!ok) return null
     const claims = JSON.parse(new TextDecoder().decode(b64urlToBytes(payloadB64))) as Record<string, unknown>
     const exp = typeof claims.exp === 'number' ? claims.exp : null
