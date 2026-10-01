@@ -46,6 +46,7 @@ import { NotificationSoundToggle } from '@/components/notifications/Notification
 import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { NativeDashboard } from '@/components/mobile/NativeDashboard'
+import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
 import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'calls' | 'notifications' | 'settings'
@@ -275,6 +276,7 @@ function Overview({ displayName, stats, chartData, recentThreads }: {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Welcome back, {displayName}!</h1>
+      <BirthdayGreeting />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {cards.map((c) => (

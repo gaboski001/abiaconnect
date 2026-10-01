@@ -1330,7 +1330,6 @@ function ConversationView({
             (prev ?? []).filter((m) => m.id !== optimistic.id),
           )
           showModerationBlocked({ surface: 'message', content: text, ...mod })
-          toast.error('Message blocked by AI moderation.')
           setDraft((d) => d || text)
           return
         }

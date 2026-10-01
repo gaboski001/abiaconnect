@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react'
 import { Link } from 'react-router-dom'
 import { Star, FileText, MessageCircle, Bookmark, TrendingUp, ChevronRight, Plus } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
 import { Button } from '@/components/ui/button'
 import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { formatDistanceToNow } from 'date-fns'
@@ -32,6 +33,8 @@ export function NativeDashboard({ profile, stats, chartData, recentThreads }: Na
     <div className="flex flex-col gap-6 pb-32 animate-in fade-in duration-500">
       {/* App update banner removed by user request */}
 
+
+      <BirthdayGreeting />
 
       {/* Header Section */}
       <section className="relative overflow-hidden rounded-[2.5rem] bg-[#0B1220] p-6 text-white shadow-2xl">

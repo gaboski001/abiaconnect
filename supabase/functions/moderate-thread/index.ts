@@ -1,115 +1,81 @@
-// AI-powered moderation for user-generated content.
+// Ugo, AbiaConnect's AI Community Guardian: checks content before it is posted.
 // Body: { title?: string, content: string, surface?: 'thread' | 'reply' | 'message' | 'subgroup' }
-// Returns: { allowed: boolean, reason?: string, categories?: string[] }
+// Returns: { allowed, verdict: 'allow'|'warn'|'block', reason?, suggestion?, categories, severity, moderator }
+// "allowed" is kept for older app versions (warn => allowed: true).
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2'
+import { UGO_NAME, contentHash, stripHtml, ugoReview, type Surface } from '../_shared/ugo.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-
-
-const SYSTEM_PROMPT = `You are a strict content moderator for AbiaConnect, a community forum for Abia State, Nigeria.
-
-Review the user's thread for: hate speech, slurs, harassment, threats, sexual content, graphic violence, self-harm encouragement, doxxing, illegal activities, scams/phishing links, spam, or tribal/ethnic incitement.
-
-Respect: respectful debate, criticism, cultural/political discussion, and constructive disagreement ARE allowed.
-
-Respond with ONLY valid JSON in this exact shape (no markdown, no prose):
-{"allowed": true|false, "reason": "short user-facing reason if not allowed", "categories": ["..."]}`
+const SURFACES: Surface[] = ['thread', 'reply', 'message', 'subgroup']
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors })
 
   try {
-    const body = await req.json()
-    const title = body?.title
-    const content = body?.content
-    const surface = (body?.surface as string) || 'thread'
-    const allowedSurfaces = ['thread', 'reply', 'message', 'subgroup']
-    const safeSurface = allowedSurfaces.includes(surface) ? surface : 'thread'
-    const cleanContent = String(content ?? '').replace(/<[^>]+>/g, ' ')
-    const text = `Surface: ${safeSurface}\nTitle: ${String(title ?? '').slice(0, 300)}\n\nContent: ${cleanContent.slice(0, 4000)}`
+    const body = await req.json().catch(() => ({}))
+    const surface: Surface = SURFACES.includes(body?.surface) ? body.surface : 'thread'
+    const title = String(body?.title ?? '').slice(0, 300)
+    const content = String(body?.content ?? '').slice(0, 20000)
 
-    // Identify caller (best-effort) so we can attribute the log to a user.
+    // Who is posting (for the audit log and to recognise checked content later).
     let userId: string | null = null
-    try {
-      const authHeader = req.headers.get('Authorization')
-      if (authHeader) {
-        const userClient = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
-          global: { headers: { Authorization: authHeader } },
-        })
-        const { data } = await userClient.auth.getUser()
-        userId = data?.user?.id ?? null
-      }
-    } catch { /* ignore */ }
-
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE)
-
-    const logDecision = async (allowed: boolean, reason: string | null, categories: string[], degraded: boolean) => {
+    const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+    if (token) {
       try {
-        await admin.from('moderation_log').insert({
-          user_id: userId,
-          surface: safeSurface,
-          allowed,
-          reason,
-          categories,
-          title: String(title ?? '').slice(0, 300),
-          content_excerpt: cleanContent.slice(0, 1000),
-          degraded,
+        const userClient = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
+          global: { headers: { Authorization: `Bearer ${token}` } },
+          auth: { persistSession: false },
         })
-      } catch { /* never block the response */ }
+        const { data } = await userClient.auth.getClaims(token)
+        userId = (data?.claims?.sub as string | undefined) ?? null
+      } catch {
+        /* anonymous */
+      }
     }
 
-    if (!LOVABLE_API_KEY) {
-      await logDecision(true, null, [], true)
-      return Response.json({ allowed: true, degraded: true }, { headers: cors })
-    }
+    const decision = await ugoReview({ surface, title, content })
+    const allowed = decision.verdict !== 'block'
 
-    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Lovable-API-Key': LOVABLE_API_KEY,
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: text },
-        ],
-        response_format: { type: 'json_object' },
-      }),
-    })
-
-    if (res.status === 429 || res.status === 402 || !res.ok) {
-      await logDecision(true, `AI gateway ${res.status}`, [], true)
-      return Response.json({ allowed: true, degraded: true, status: res.status }, { headers: cors })
-    }
-
-    const data = await res.json()
-    const raw = data?.choices?.[0]?.message?.content ?? '{}'
-    let parsed: { allowed?: boolean; reason?: string; categories?: string[] } = {}
     try {
-      parsed = JSON.parse(raw)
+      const admin = createClient(SUPABASE_URL, SERVICE_ROLE)
+      await admin.from('moderation_log').insert({
+        user_id: userId,
+        surface,
+        allowed,
+        reason: decision.reason,
+        categories: decision.categories,
+        title,
+        content_excerpt: stripHtml(content).slice(0, 1000),
+        degraded: decision.degraded,
+        verdict: decision.verdict,
+        actor: 'pre_check',
+        content_hash: userId && allowed ? await contentHash(userId, content) : null,
+      })
     } catch {
-      await logDecision(true, 'AI returned unparseable JSON', [], true)
-      return Response.json({ allowed: true, degraded: true }, { headers: cors })
+      /* logging never blocks the member */
     }
 
-    const allowed = parsed.allowed !== false
-    const reason = parsed.reason ?? null
-    const categories = parsed.categories ?? []
-    await logDecision(allowed, reason, categories, false)
-
-    return Response.json({ allowed, reason, categories }, { headers: cors })
+    return Response.json(
+      {
+        allowed,
+        verdict: decision.verdict,
+        reason: decision.reason,
+        suggestion: decision.suggestion,
+        categories: decision.categories,
+        severity: decision.severity,
+        degraded: decision.degraded,
+        moderator: UGO_NAME,
+      },
+      { headers: cors },
+    )
   } catch (err) {
-    return Response.json({ allowed: true, degraded: true, error: String(err) }, { headers: cors })
+    return Response.json({ allowed: true, verdict: 'allow', degraded: true, error: String(err) }, { headers: cors })
   }
 })
-

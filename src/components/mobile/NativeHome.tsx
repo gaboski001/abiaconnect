@@ -9,6 +9,7 @@ import { HeroSlider } from '@/components/forum/HeroSlider'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
+import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
 import { NewDiscussionsBanner, OnlineMembersPill } from '@/components/engagement/LiveCommunity'
 import { ContestCard } from '@/pages/Contests'
 import { contestPhase, listContests } from '@/lib/engagement'
@@ -130,6 +131,7 @@ export function NativeHome() {
               Catch up on what Abians are talking about today.
             </p>
             <OnlineMembersPill className="mt-3" />
+            <BirthdayGreeting className="mt-4" />
             <Link
               to="/create-thread"
               className="mt-5 flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-bold text-[#0B1F0B] active:scale-[0.98]"

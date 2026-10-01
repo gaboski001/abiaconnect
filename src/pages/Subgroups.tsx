@@ -12,7 +12,7 @@ import {
 import { toast } from '@/lib/toast'
 import { supabase } from '@/lib/supabase'
 import { moderateContent } from '@/lib/moderateContent'
-import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
+import { confirmModerationWarning, showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 import { SUBGROUP_MEMBERS_UPSERT_OPTIONS } from '@/lib/subgroupMembers'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -399,9 +399,20 @@ function CreateSubgroupDialog({
           title: name.trim(),
           ...mod,
         })
-        toast.error('Subgroup blocked by AI moderation.')
         setSaving(false)
         return
+      }
+      if (mod.verdict === 'warn') {
+        const goAhead = await confirmModerationWarning({
+          surface: 'subgroup',
+          content: `${name.trim()}\n\n${description.trim()}`,
+          title: name.trim(),
+          ...mod,
+        })
+        if (!goAhead) {
+          setSaving(false)
+          return
+        }
       }
       const { data, error } = await supabase
         .from('subgroups')

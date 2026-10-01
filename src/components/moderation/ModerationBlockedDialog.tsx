@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
-import type { ModerationSurface, ModerationResult } from '@/lib/moderateContent'
+import { MODERATOR_NAME, type ModerationSurface, type ModerationResult } from '@/lib/moderateContent'
 
 interface BlockedPayload extends ModerationResult {
   surface: ModerationSurface
@@ -24,10 +24,40 @@ interface BlockedPayload extends ModerationResult {
 }
 
 const EVENT = 'abia:moderation-blocked'
+const WARN_EVENT = 'abia:moderation-warn'
 
 export function showModerationBlocked(payload: BlockedPayload) {
   if (typeof window === 'undefined') return
   window.dispatchEvent(new CustomEvent<BlockedPayload>(EVENT, { detail: payload }))
+}
+
+/**
+ * Ugo allowed the content but has a suggestion. Resolves true to post anyway,
+ * false to go back and edit.
+ */
+export function confirmModerationWarning(payload: BlockedPayload): Promise<boolean> {
+  if (typeof window === 'undefined') return Promise.resolve(true)
+  return new Promise((resolve) => {
+    window.dispatchEvent(new CustomEvent(WARN_EVENT, { detail: { payload, resolve } }))
+  })
+}
+
+const CATEGORY_LABEL: Record<string, string> = {
+  threat: 'Threats',
+  hate: 'Hate speech',
+  harassment: 'Harassment',
+  sexual: 'Sexual content',
+  child_safety: 'Child safety',
+  scam: 'Possible scam',
+  phishing: 'Unsafe link',
+  doxxing: 'Private information',
+  illegal: 'Illegal activity',
+  self_harm: 'Self-harm',
+  spam: 'Spam',
+  privacy: 'Privacy',
+  profanity: 'Strong language',
+  misinformation: 'Unverified claim',
+  other: 'Other',
 }
 
 const SURFACE_LABEL: Record<ModerationSurface, string> = {
@@ -42,7 +72,8 @@ const NOTE_MAX = 1000
 
 export function ModerationBlockedDialog() {
   const [payload, setPayload] = useState<BlockedPayload | null>(null)
-  const [view, setView] = useState<'blocked' | 'appeal'>('blocked')
+  const [view, setView] = useState<'blocked' | 'appeal' | 'warn'>('blocked')
+  const [warnResolve, setWarnResolve] = useState<((ok: boolean) => void) | null>(null)
   const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -55,14 +86,34 @@ export function ModerationBlockedDialog() {
         setNote('')
       }
     }
+    const warnHandler = (e: Event) => {
+      const detail = (e as CustomEvent<{ payload: BlockedPayload; resolve: (ok: boolean) => void }>).detail
+      if (detail) {
+        setPayload(detail.payload)
+        setView('warn')
+        setWarnResolve(() => detail.resolve)
+      }
+    }
     window.addEventListener(EVENT, handler)
-    return () => window.removeEventListener(EVENT, handler)
+    window.addEventListener(WARN_EVENT, warnHandler)
+    return () => {
+      window.removeEventListener(EVENT, handler)
+      window.removeEventListener(WARN_EVENT, warnHandler)
+    }
   }, [])
+
+  const answerWarning = (ok: boolean) => {
+    warnResolve?.(ok)
+    setWarnResolve(null)
+    setPayload(null)
+    setView('blocked')
+  }
 
   const open = !!payload
   const label = payload ? SURFACE_LABEL[payload.surface] ?? 'Content' : 'Content'
 
   const close = () => {
+    if (view === 'warn') return answerWarning(false)
     setPayload(null)
     setView('blocked')
     setNote('')
@@ -103,7 +154,7 @@ export function ModerationBlockedDialog() {
         toast.error(msg)
         return
       }
-      toast.success('Appeal submitted. An admin will review it shortly.')
+      toast.success(`Appeal submitted. ${MODERATOR_NAME} will review it within minutes, and an admin steps in if needed.`)
       close()
     } finally {
       setSubmitting(false)
@@ -120,11 +171,11 @@ export function ModerationBlockedDialog() {
                 <ShieldAlert className="h-6 w-6" aria-hidden />
               </div>
               <DialogTitle className="text-center">
-                {label} blocked by AI moderation
+                {MODERATOR_NAME} paused your {label.toLowerCase()}
               </DialogTitle>
               <DialogDescription className="text-center">
-                Our automated review flagged this content as a possible violation of the
-                community guidelines. It was not posted.
+                {MODERATOR_NAME}, our AI community guardian, found something that may break our community
+                guidelines, so it was not posted.
               </DialogDescription>
             </DialogHeader>
 
@@ -137,19 +188,26 @@ export function ModerationBlockedDialog() {
               </div>
             )}
 
+            {payload?.suggestion && (
+              <div className="rounded-md border bg-muted/40 p-3 text-sm">
+                <p className="mb-1 font-medium">Suggestion</p>
+                <p className="text-foreground/90">{payload.suggestion}</p>
+              </div>
+            )}
+
             {payload?.categories && payload.categories.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {payload.categories.map((c) => (
-                  <Badge key={c} variant="destructive" className="capitalize">
-                    {c.replace(/[_-]/g, ' ')}
+                  <Badge key={c} variant="destructive">
+                    {CATEGORY_LABEL[c] ?? c.replace(/[_-]/g, ' ')}
                   </Badge>
                 ))}
               </div>
             )}
 
             <p className="text-xs text-muted-foreground">
-              Think this is a mistake? Edit your wording and try again, or appeal to
-              moderators for a manual review.
+              Think this is a mistake? Edit your wording and try again, or appeal: {MODERATOR_NAME} re-checks
+              appeals within minutes and an admin steps in whenever needed.
             </p>
 
             <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -163,6 +221,35 @@ export function ModerationBlockedDialog() {
               >
                 <MessageSquare className="h-4 w-4" aria-hidden />
                 Appeal to moderators
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {view === 'warn' && (
+          <>
+            <DialogHeader>
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                <ShieldAlert className="h-6 w-6" aria-hidden />
+              </div>
+              <DialogTitle className="text-center">A quick suggestion from {MODERATOR_NAME}</DialogTitle>
+              <DialogDescription className="text-center">
+                Your {label.toLowerCase()} can be posted. {MODERATOR_NAME}, our AI community guardian, has a tip
+                that may help it land well.
+              </DialogDescription>
+            </DialogHeader>
+            {payload?.reason && (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+                <p className="text-foreground/90">{payload.reason}</p>
+                {payload.suggestion ? <p className="mt-2 font-medium text-foreground">{payload.suggestion}</p> : null}
+              </div>
+            )}
+            <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={() => answerWarning(true)} className="w-full sm:w-auto">
+                Post anyway
+              </Button>
+              <Button onClick={() => answerWarning(false)} className="w-full sm:w-auto">
+                Edit my {label.toLowerCase()}
               </Button>
             </DialogFooter>
           </>

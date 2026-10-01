@@ -4,10 +4,17 @@ export type ModerationSurface = 'thread' | 'reply' | 'message' | 'subgroup'
 
 export interface ModerationResult {
   allowed: boolean
+  /** allow, warn (may post, with a suggestion) or block. */
+  verdict?: 'allow' | 'warn' | 'block'
   reason?: string
+  /** Ugo's tip for rewording. */
+  suggestion?: string
   categories?: string[]
   degraded?: boolean
 }
+
+/** The AI moderator's name, shown to members. */
+export const MODERATOR_NAME = 'Ugo'
 
 /**
  * Calls the AI moderation edge function. Fail-open on infra errors so legitimate
@@ -28,9 +35,12 @@ export async function moderateContent(
       body: { surface, title, content: trimmed },
     })
     if (error || !data) return { allowed: true, degraded: true }
+    const allowed = data.allowed !== false
     return {
-      allowed: data.allowed !== false,
-      reason: data.reason,
+      allowed,
+      verdict: data.verdict ?? (allowed ? 'allow' : 'block'),
+      reason: data.reason ?? undefined,
+      suggestion: data.suggestion ?? undefined,
       categories: data.categories,
       degraded: !!data.degraded,
     }

@@ -710,6 +710,11 @@ function ModerationSection() {
                   {r.details && (
                     <p className="text-xs text-muted-foreground mt-1">{r.details}</p>
                   )}
+                  {r.ai_note && (
+                    <p className="mt-2 rounded-lg bg-primary/5 px-2.5 py-1.5 text-xs text-foreground/80">
+                      <span className="font-semibold">Ugo (AI guardian):</span> {r.ai_note}
+                    </p>
+                  )}
                 </div>
                 <span className="text-xs text-muted-foreground">
                   {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}

@@ -30,7 +30,10 @@ import {
 import { Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { moderateContent } from '@/lib/moderateContent'
-import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
+import { confirmModerationWarning, showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
+
+/** Reply not sent so the member can edit it (Ugo's dialog explains why). */
+const EDIT_REPLY = 'ugo:edit-reply'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
@@ -535,7 +538,11 @@ function Thread() {
       const mod = await moderateContent('reply', trimmed)
       if (!mod.allowed) {
         showModerationBlocked({ surface: 'reply', content: trimmed, ...mod })
-        throw new Error(mod.reason || 'Reply blocked by AI moderation.')
+        throw new Error(EDIT_REPLY)
+      }
+      if (mod.verdict === 'warn') {
+        const postAnyway = await confirmModerationWarning({ surface: 'reply', content: trimmed, ...mod })
+        if (!postAnyway) throw new Error(EDIT_REPLY)
       }
       const { data, error } = await supabase
         .from('replies')
@@ -622,6 +629,8 @@ function Thread() {
         if (ctx.parentId) setNestedDraft(ctx.prevReply)
         else setReply(ctx.prevReply)
       }
+      // Ugo's dialog already explained; the draft is back in the box to edit.
+      if (e instanceof Error && e.message === EDIT_REPLY) return
       toast.error(e instanceof Error ? e.message : 'Reply failed')
     },
   })

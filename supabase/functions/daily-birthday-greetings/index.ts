@@ -3,11 +3,11 @@
 //   • Inserts a warm in-app notification (deduped per user per day).
 //   • Enqueues a transactional birthday email (skipped if no email on file).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { requireServiceRole } from "../_shared/service-auth.ts";
+import { requireScheduler } from "../_shared/cron-auth.ts";
 import { sendAndLog } from "../_shared/transactional-email-templates/log-send.ts";
 
 Deno.serve(async (req) => {
-  const denied = await requireServiceRole(req);
+  const denied = await requireScheduler(req);
   if (denied) return denied;
 
   try {
@@ -36,10 +36,13 @@ Deno.serve(async (req) => {
       .eq("is_deleted", false);
     if (error) throw error;
 
+    // Members born on 29 February are celebrated on 28 February in non-leap years.
+    const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    const celebrateLeapDay = !isLeap && mm === "02" && dd === "28";
     const todays = (profiles ?? []).filter((p: any) => {
       if (!p.dob) return false;
       const [, m, d] = String(p.dob).split("-");
-      return m === mm && d === dd;
+      return (m === mm && d === dd) || (celebrateLeapDay && m === "02" && d === "29");
     });
 
     let notified = 0;

@@ -20,7 +20,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
-import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
+import { confirmModerationWarning, showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 import { ThreadEditor } from '@/components/thread/ThreadEditor'
 import { clearDraft, loadDraft, saveDraft } from '@/lib/threadDraft'
 
@@ -223,7 +223,7 @@ export default function CreateThread() {
     const moderating = toast.loading('Checking your post…')
     try {
       const { data: mod, error: modErr } = await supabase.functions.invoke('moderate-thread', {
-        body: { title: values.title, content: values.content },
+        body: { surface: 'thread', title: values.title, content: values.content },
       })
       toast.dismiss(moderating)
       if (!modErr && mod && mod.allowed === false) {
@@ -231,12 +231,23 @@ export default function CreateThread() {
           surface: 'thread',
           allowed: false,
           reason: mod.reason,
+          suggestion: mod.suggestion,
           categories: mod.categories,
           title: values.title,
           content: values.content,
         })
-        toast.error('Your post was blocked by AI moderation.')
         return
+      }
+      if (!modErr && mod?.verdict === 'warn') {
+        const postAnyway = await confirmModerationWarning({
+          surface: 'thread',
+          allowed: true,
+          reason: mod.reason,
+          suggestion: mod.suggestion,
+          title: values.title,
+          content: values.content,
+        })
+        if (!postAnyway) return
       }
     } catch {
       toast.dismiss(moderating)
