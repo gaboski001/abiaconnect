@@ -138,11 +138,19 @@ async function getIceServers(): Promise<RTCIceServer[]> {
   if (!iceInflight) {
     iceInflight = (async () => {
       try {
-        const res = await Promise.race([
-          supabase.functions.invoke('call-ice-servers', { body: {} }),
-          new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('timeout')), 3000)),
-        ])
-        const servers = (res as { data?: { iceServers?: RTCIceServer[]; ttl?: number } }).data
+        const invoke = () =>
+          Promise.race([
+            supabase.functions.invoke('call-ice-servers', { body: {} }),
+            new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('timeout')), 3000)),
+          ]) as Promise<{ data?: { iceServers?: RTCIceServer[]; ttl?: number } | null; error?: unknown }>
+        let res = await invoke()
+        if (res.error && !res.data) {
+          // Usually an expired login token: phones whose clock runs slow keep
+          // using a token the server already considers expired. Refresh once.
+          await supabase.auth.refreshSession().catch(() => undefined)
+          res = await invoke()
+        }
+        const servers = res.data
         if (servers?.iceServers?.length) {
           const ttlMs = Math.max(60, servers.ttl ?? 3600) * 1000
           iceCache = { servers: servers.iceServers, expiresAt: Date.now() + ttlMs / 2 }
