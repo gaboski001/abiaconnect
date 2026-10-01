@@ -199,6 +199,191 @@ export type Database = {
         }
         Relationships: []
       }
+      contest_ballots: {
+        Row: {
+          candidate_id: string
+          contest_id: string
+          id: string
+        }
+        Insert: {
+          candidate_id: string
+          contest_id: string
+          id?: string
+        }
+        Update: {
+          candidate_id?: string
+          contest_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contest_ballots_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "contest_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contest_ballots_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contest_candidates: {
+        Row: {
+          bio: string | null
+          contest_id: string
+          id: string
+          name: string
+          photo_url: string | null
+          position: number
+        }
+        Insert: {
+          bio?: string | null
+          contest_id: string
+          id?: string
+          name: string
+          photo_url?: string | null
+          position?: number
+        }
+        Update: {
+          bio?: string | null
+          contest_id?: string
+          id?: string
+          name?: string
+          photo_url?: string | null
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contest_candidates_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contest_voter_codes: {
+        Row: {
+          code_hash: string
+          contest_id: string
+          created_at: string
+          id: string
+          used_at: string | null
+        }
+        Insert: {
+          code_hash: string
+          contest_id: string
+          created_at?: string
+          id?: string
+          used_at?: string | null
+        }
+        Update: {
+          code_hash?: string
+          contest_id?: string
+          created_at?: string
+          id?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contest_voter_codes_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contest_voters: {
+        Row: {
+          contest_id: string
+          voter_key: string
+        }
+        Insert: {
+          contest_id: string
+          voter_key: string
+        }
+        Update: {
+          contest_id?: string
+          voter_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contest_voters_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contests: {
+        Row: {
+          allow_code_voters: boolean
+          allow_group_voters: boolean
+          created_at: string
+          created_by: string
+          description: string | null
+          ends_at: string
+          id: string
+          results_visibility: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          starts_at: string
+          status: string
+          subgroup_id: string | null
+          title: string
+        }
+        Insert: {
+          allow_code_voters?: boolean
+          allow_group_voters?: boolean
+          created_at?: string
+          created_by: string
+          description?: string | null
+          ends_at: string
+          id?: string
+          results_visibility?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          starts_at: string
+          status?: string
+          subgroup_id?: string | null
+          title: string
+        }
+        Update: {
+          allow_code_voters?: boolean
+          allow_group_voters?: boolean
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          ends_at?: string
+          id?: string
+          results_visibility?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          starts_at?: string
+          status?: string
+          subgroup_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contests_subgroup_id_fkey"
+            columns: ["subgroup_id"]
+            isOneToOne: false
+            referencedRelation: "subgroups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_states: {
         Row: {
           archived_at: string | null
@@ -687,6 +872,51 @@ export type Database = {
           status?: string
           type?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      member_badges: {
+        Row: {
+          awarded_at: string
+          badge: string
+          user_id: string
+        }
+        Insert: {
+          awarded_at?: string
+          badge: string
+          user_id: string
+        }
+        Update: {
+          awarded_at?: string
+          badge?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      member_stats: {
+        Row: {
+          current_streak: number
+          last_checkin: string | null
+          longest_streak: number
+          points: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_streak?: number
+          last_checkin?: string | null
+          longest_streak?: number
+          points?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_streak?: number
+          last_checkin?: string | null
+          longest_streak?: number
+          points?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1223,6 +1453,36 @@ export type Database = {
           received_at?: string
           reference?: string | null
           signature_valid?: boolean
+        }
+        Relationships: []
+      }
+      points_ledger: {
+        Row: {
+          amount: number
+          created_at: string
+          day: string
+          id: number
+          reason: string
+          ref_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          day?: string
+          id?: never
+          reason: string
+          ref_id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          day?: string
+          id?: never
+          reason?: string
+          ref_id?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2398,10 +2658,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      award_points: {
+        Args: { _amount: number; _reason: string; _ref: string; _user: string }
+        Returns: number
+      }
+      can_view_contest: {
+        Args: { _contest: string; _uid: string }
+        Returns: boolean
+      }
+      cancel_contest: { Args: { _contest: string }; Returns: undefined }
+      cast_contest_vote: {
+        Args: { _candidate: string; _code?: string; _contest: string }
+        Returns: Json
+      }
+      check_badges: { Args: { _user: string }; Returns: undefined }
+      claim_daily_reward: { Args: never; Returns: Json }
       clear_conversation: {
         Args: { _conversation_id: string }
         Returns: number
       }
+      community_today: { Args: never; Returns: string }
       connections_blocked_with: { Args: { _owner: string }; Returns: boolean }
       connections_profile_visible: {
         Args: { _owner: string }
@@ -2410,9 +2686,28 @@ export type Database = {
       consume_email_short_link:
         | { Args: { _token: string }; Returns: string }
         | { Args: { _token: string; _user_agent?: string }; Returns: string }
+      contest_code_hash: {
+        Args: { _code: string; _contest: string }
+        Returns: string
+      }
+      contest_code_normalize: { Args: { _code: string }; Returns: string }
       conversation_send_status: {
         Args: { _conversation_id: string }
         Returns: Json
+      }
+      create_contest: {
+        Args: {
+          _allow_code_voters: boolean
+          _allow_group_voters: boolean
+          _candidates: Json
+          _description: string
+          _ends_at: string
+          _results_visibility: string
+          _starts_at: string
+          _subgroup_id: string
+          _title: string
+        }
+        Returns: string
       }
       create_email_short_link: {
         Args: { _purpose?: string; _target_url: string; _ttl_seconds?: number }
@@ -2520,6 +2815,23 @@ export type Database = {
         Args: { _message_id: string; _to_conversation_id: string }
         Returns: string
       }
+      generate_contest_codes: {
+        Args: { _contest: string; _count: number }
+        Returns: string[]
+      }
+      get_contest: { Args: { _contest: string }; Returns: Json }
+      get_leaderboard: {
+        Args: { _limit?: number; _period?: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          level: number
+          points: number
+          rank: number
+          user_id: string
+          username: string
+        }[]
+      }
       get_my_dating_entitlements: { Args: never; Returns: Json }
       get_my_privacy: { Args: never; Returns: Json }
       get_my_profile: {
@@ -2558,6 +2870,8 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_my_rank: { Args: { _period?: string }; Returns: Json }
+      get_my_rewards: { Args: never; Returns: Json }
       get_payment_options: {
         Args: never
         Returns: {
@@ -2725,6 +3039,8 @@ export type Database = {
         Args: { _pinned: boolean; _thread_id: string }
         Returns: undefined
       }
+      points_daily_cap: { Args: { _reason: string }; Returns: number }
+      points_level: { Args: { _points: number }; Returns: number }
       prune_email_short_links: { Args: never; Returns: undefined }
       prune_issue_report_contact_emails: { Args: never; Returns: undefined }
       prune_search_rate_limits: { Args: never; Returns: undefined }
@@ -2740,6 +3056,10 @@ export type Database = {
       resolve_username_to_email: {
         Args: { _username: string }
         Returns: string
+      }
+      review_contest: {
+        Args: { _approve: boolean; _contest: string; _note?: string }
+        Returns: undefined
       }
       search_public_profiles: {
         Args: { _limit?: number; _term: string }
@@ -2773,6 +3093,7 @@ export type Database = {
         }
         Returns: string
       }
+      sync_reputation: { Args: { _user: string }; Returns: undefined }
       track_monetization_event: {
         Args: { _event: string; _metadata?: Json }
         Returns: undefined
