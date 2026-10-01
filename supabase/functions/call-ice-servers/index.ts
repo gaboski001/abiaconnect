@@ -13,7 +13,7 @@
 // Without either, only STUN is returned (calls still work on friendly networks).
 // Signed-in users only, so relay credentials can't be harvested anonymously.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -79,8 +79,10 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false },
   })
-  const { data: userData, error: userErr } = await supa.auth.getUser(token)
-  if (userErr || !userData?.user) return json({ error: 'unauthorized' }, 401)
+  // getClaims verifies the token signature (works with the project's ES256
+  // signing keys); getUser round-trips to the auth API and was rejected here.
+  const { data: claims, error: claimErr } = await supa.auth.getClaims(token)
+  if (claimErr || !claims?.claims?.sub) return json({ error: 'unauthorized' }, 401)
 
   let turn: RTCIceServerLike[] = []
   let source = 'stun-only'
