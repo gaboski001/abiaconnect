@@ -360,7 +360,7 @@ describe('push internal secret rotation', () => {
     await db.as(null)
     await db.query(`UPDATE vault.secrets SET secret = $1 WHERE name = 'push_internal_secret'`, [LEAKED])
     const sql = (await import('node:fs')).readFileSync(
-      (await import('node:path')).resolve(__dirname, '../../../supabase/migrations/20261001160000_rotate_push_internal_secret.sql'),
+      (await import('node:path')).resolve(__dirname, '../../../supabase/migrations/20261001005037_937c9a17-4495-4370-9102-437ee6cc64f8.sql'),
       'utf8',
     )
     await db.exec(sql)

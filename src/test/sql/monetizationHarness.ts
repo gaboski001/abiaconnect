@@ -98,12 +98,13 @@ const PRELUDE = `
   REVOKE ALL ON SCHEMA vault FROM PUBLIC;
 `
 
+// The applied copies Lovable saved (identical to the files we wrote).
 const MIGRATIONS = [
-  '20261001120000_dating_monetization_phase1.sql',
-  '20261001140000_payment_secrets_in_vault.sql',
-  '20261001160000_rotate_push_internal_secret.sql',
-  '20261001180000_dating_messaging_rules.sql',
-  '20261001200000_connections_privacy_and_antispam.sql',
+  '20261001002603_45051399-2f3f-4fc8-be7b-1cfc15363c80.sql', // dating monetization phase 1
+  '20261001004510_e313c9e0-4e15-43dc-9b9c-20975177811d.sql', // payment secrets in Vault
+  '20261001005037_937c9a17-4495-4370-9102-437ee6cc64f8.sql', // rotate push internal secret
+  '20261001080830_82a05280-c6b1-4752-b6e0-1913c625ea84.sql', // dating messaging rules
+  '20261001090012_bfec59ea-30a3-4538-8abd-90a5962ac62d.sql', // connections privacy + anti-spam
 ]
 
 export type Db = PGlite & {
