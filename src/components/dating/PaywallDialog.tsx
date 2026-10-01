@@ -1,16 +1,17 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Crown, Heart } from 'lucide-react'
+import { Crown, Heart, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { canPurchaseHere, track } from '@/lib/monetization/api'
 import { t } from '@/lib/monetization/strings'
 
-export type PaywallReason = 'likes_limit' | 'see_likes'
+export type PaywallReason = 'likes_limit' | 'see_likes' | 'message_first'
 
 const COPY = {
   likes_limit: { title: 'paywall.likes.title', body: 'paywall.likes.body', cta: 'paywall.likes.cta', dismiss: 'paywall.likes.later', Icon: Heart },
   see_likes: { title: 'paywall.see_likes.title', body: 'paywall.see_likes.body', cta: 'paywall.see_likes.cta', dismiss: 'paywall.not_now', Icon: Crown },
+  message_first: { title: 'paywall.message.title', body: 'paywall.message.body', cta: 'paywall.message.cta', dismiss: 'paywall.message.later', Icon: MessageCircle },
 } as const
 
 /**

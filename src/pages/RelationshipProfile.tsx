@@ -25,10 +25,14 @@ import {
   LOOKING_FOR_LABELS,
   RelationshipCard,
   RelationshipProfile,
-  startConversationWith,
 } from '@/lib/relationship'
 import { isValidHttpUrl } from '@/lib/images'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
+import { useStartDatingChat } from '@/hooks/useStartDatingChat'
+import { reactToProfile } from '@/lib/monetization/api'
+import { t } from '@/lib/monetization/strings'
+import { PaywallDialog } from '@/components/dating/PaywallDialog'
+import { MatchDialog, type MatchPartner } from '@/components/dating/MatchDialog'
 
 async function loadProfile(userId: string): Promise<RelationshipCard | null> {
   const { data, error } = await supabase
@@ -54,7 +58,19 @@ export default function RelationshipProfilePage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [chatting, setChatting] = useState(false)
+  const chat = useStartDatingChat()
+  const [liking, setLiking] = useState(false)
+  const [likePaywall, setLikePaywall] = useState(false)
+  const [match, setMatch] = useState<MatchPartner | null>(null)
+  const { data: myReaction, refetch: refetchReaction } = useQuery({
+    queryKey: ['dating-my-reaction', userId],
+    enabled: !!userId && !!user && user.id !== userId,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any).from('dating_likes').select('kind').eq('liked_id', userId).maybeSingle()
+      return (data?.kind as 'like' | 'pass' | undefined) ?? null
+    },
+  })
 
   const { data: card, isLoading, error } = useQuery({
     queryKey: ['relationship-profile', userId],
@@ -80,15 +96,30 @@ export default function RelationshipProfilePage() {
     }
   }, [userId, queryClient])
 
-  const startChat = async () => {
-    if (!user || !card) return
-    setChatting(true)
+  const startChat = () => {
+    if (user && card) chat.start(card.user_id)
+  }
+
+  const like = async () => {
+    if (!user || !card || liking) return
+    setLiking(true)
     try {
-      const id = await startConversationWith(card.user_id, user.id)
-      navigate(`/messages/${id}`)
-    } catch (e: any) {
-      toast.error(e.message || 'Could not start chat')
-      setChatting(false)
+      const r = await reactToProfile(card.user_id, 'like')
+      if (r.status === 'limit_reached') setLikePaywall(true)
+      else if (r.status === 'profile_required') {
+        toast.error(t('discover.profile_required'))
+        navigate('/relationship/edit')
+      } else if (r.status !== 'ok') toast.error(t('discover.unavailable'))
+      else {
+        if (r.matched) setMatch({ userId: card.user_id, name: card.display_name || card.username || 'them' })
+        else toast.success(`You liked ${card.display_name || card.username || 'them'}`)
+        refetchReaction()
+        queryClient.invalidateQueries({ queryKey: ['dating-my-reactions'] })
+      }
+    } catch {
+      toast.error('Something went wrong. Please try again.')
+    } finally {
+      setLiking(false)
     }
   }
 
@@ -142,7 +173,7 @@ export default function RelationshipProfilePage() {
             <div className="flex items-center gap-3">
               <UserAvatar avatarUrl={card.avatar_url} displayName={name} size="lg" />
               <div className="min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-extrabold truncate">
+                <h1 className="line-clamp-2 break-words text-xl font-extrabold leading-tight sm:text-3xl">
                   {name}{age ? `, ${age}` : ''}
                 </h1>
                 {card.username && <p className="text-sm opacity-90">@{card.username}</p>}
@@ -157,14 +188,25 @@ export default function RelationshipProfilePage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mt-4">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {user && user.id !== card.user_id && (
+          <Button
+            onClick={like}
+            disabled={liking || myReaction === 'like'}
+            className="rounded-full bg-gradient-to-br from-pink-500 to-rose-600 text-white hover:opacity-95"
+          >
+            {liking ? <Loader2 className="size-4 animate-spin" /> : <Heart className="size-4" fill={myReaction === 'like' ? 'white' : 'none'} />}
+            {myReaction === 'like' ? t('profile.liked') : t('profile.like')}
+          </Button>
+        )}
         <Button
           onClick={startChat}
-          disabled={chatting || !user || user.id === card.user_id}
-          className="rounded-full bg-gradient-to-br from-pink-500 to-rose-600 hover:opacity-95 text-white"
+          variant="outline"
+          disabled={!!chat.busyWith || !user || user.id === card.user_id}
+          className="rounded-full"
         >
-          {chatting ? <Loader2 className="animate-spin size-4" /> : <MessageCircle className="size-4" />}
-          Chat now
+          {chat.busyWith ? <Loader2 className="size-4 animate-spin" /> : <MessageCircle className="size-4" />}
+          {t('profile.chat')}
         </Button>
 
         {user && user.id !== card.user_id && (
@@ -189,6 +231,13 @@ export default function RelationshipProfilePage() {
           </AlertDialog>
         )}
       </div>
+
+      {user && user.id !== card.user_id && (
+        <p className="mt-2 text-xs text-muted-foreground">{t('profile.match_hint')}</p>
+      )}
+      <PaywallDialog reason="message_first" open={chat.paywallOpen} onOpenChange={chat.setPaywallOpen} />
+      <PaywallDialog reason="likes_limit" open={likePaywall} onOpenChange={setLikePaywall} />
+      <MatchDialog partner={match} onClose={() => setMatch(null)} />
 
       <div className="grid md:grid-cols-3 gap-4 mt-6">
         <div className="md:col-span-2 space-y-4">

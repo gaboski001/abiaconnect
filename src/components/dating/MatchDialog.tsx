@@ -4,7 +4,7 @@ import { Heart, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
-import { startConversationWith } from '@/lib/relationship'
+import { startDatingChat } from '@/lib/monetization/api'
 import { t } from '@/lib/monetization/strings'
 import { toast } from '@/lib/toast'
 
@@ -22,9 +22,10 @@ export function MatchDialog({ partner, onClose }: { partner: MatchPartner | null
     if (!partner || !user || busy) return
     setBusy(true)
     try {
-      const convo = await startConversationWith(partner.userId, user.id)
+      const r = await startDatingChat(partner.userId)
+      if (r.status !== 'ok' || !r.conversation_id) throw new Error(r.status)
       onClose()
-      navigate(`/messages/${convo}`)
+      navigate(`/messages/${r.conversation_id}`)
     } catch {
       toast.error('Could not open the chat. Please try again.')
     } finally {

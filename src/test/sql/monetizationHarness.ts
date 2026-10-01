@@ -47,6 +47,17 @@ const PRELUDE = `
     type text NOT NULL, message text, link text, is_read boolean NOT NULL DEFAULT false,
     created_at timestamptz NOT NULL DEFAULT now()
   );
+  CREATE TABLE public.conversations (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user1_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    user2_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now()
+  );
+  ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "Participants read conversations" ON public.conversations FOR SELECT TO authenticated
+    USING (auth.uid() = user1_id OR auth.uid() = user2_id);
+  CREATE POLICY "Users create conversations" ON public.conversations FOR INSERT TO authenticated
+    WITH CHECK (auth.uid() = user1_id OR auth.uid() = user2_id);
   CREATE TABLE public.admins (user_id uuid PRIMARY KEY);
   CREATE FUNCTION public.is_admin(_user_id uuid) RETURNS boolean LANGUAGE sql STABLE AS
     $$ SELECT EXISTS (SELECT 1 FROM public.admins WHERE user_id = _user_id) $$;
@@ -70,6 +81,7 @@ const MIGRATIONS = [
   '20261001120000_dating_monetization_phase1.sql',
   '20261001140000_payment_secrets_in_vault.sql',
   '20261001160000_rotate_push_internal_secret.sql',
+  '20261001180000_dating_messaging_rules.sql',
 ]
 
 export type Db = PGlite & {

@@ -3,8 +3,26 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
+// jsdom has no PointerEvent; framer-motion's drag needs coordinates on it.
+if (typeof window.PointerEvent === 'undefined') {
+  class PointerEventPolyfill extends MouseEvent {
+    pointerId: number
+    pointerType: string
+    isPrimary: boolean
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init)
+      this.pointerId = init.pointerId ?? 1
+      this.pointerType = init.pointerType ?? 'mouse'
+      this.isPrimary = init.isPrimary ?? true
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window as any).PointerEvent = PointerEventPolyfill
+}
+
 const api = vi.hoisted(() => ({
   reactToProfile: vi.fn(),
+  startDatingChat: vi.fn(),
   reacted: new Set<string>(),
 }))
 
@@ -63,6 +81,7 @@ vi.mock('@/lib/monetization/api', async (orig) => ({
   getLikesReceived: async () => ({ entitled: false, total: 0, unseen: 0, preview_count: 0, items: [] }),
   getMyReactedIds: async () => api.reacted,
   reactToProfile: api.reactToProfile,
+  startDatingChat: api.startDatingChat,
 }))
 
 import Relationship from './Relationship'
@@ -76,7 +95,8 @@ async function openDiscover() {
       </MemoryRouter>
     </QueryClientProvider>,
   )
-  fireEvent.click(await screen.findByRole('tab', { name: /discover/i }))
+  // Discover is the default view.
+  await screen.findByRole('button', { name: 'Like' })
 }
 
 // hidden: true so the card is still found while a dialog marks the page aria-hidden.
@@ -86,6 +106,14 @@ describe('Discover', () => {
   beforeEach(() => {
     api.reactToProfile.mockReset()
     api.reacted = new Set()
+    localStorage.clear()
+  })
+
+  it('opens on Discover with plain-language guidance and swipe hint', async () => {
+    await openDiscover()
+    expect(screen.getByText('How it works')).toBeInTheDocument()
+    expect(screen.getByText(/Swipe right to like · Swipe left to pass/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /likes/i })).toHaveAttribute('href', '/relationship/likes')
   })
 
   it('skips profiles already liked or passed', async () => {
@@ -123,5 +151,54 @@ describe('Discover', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Like' }))
     expect(await screen.findByText("It's a match!")).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /send a message/i })).toBeInTheDocument()
+  })
+
+  it('asks free users to match (or upgrade) before messaging someone new', async () => {
+    api.startDatingChat.mockResolvedValue({ status: 'match_required' })
+    await openDiscover()
+    await waitFor(() => expect(currentName()).not.toBe(''))
+    fireEvent.click(screen.getByRole('button', { name: 'Message' }))
+    expect(await screen.findByText('Match first to start chatting')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /message without waiting/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /maybe later/i })).toBeInTheDocument()
+  })
+
+  async function swipe(dx: number) {
+    const card = document.querySelector('.cursor-grab') as HTMLElement
+    const opts = (x: number, buttons: number) => ({ bubbles: true, pointerId: 1, isPrimary: true, clientX: x, clientY: 200, buttons })
+    fireEvent.pointerDown(card, opts(150, 1))
+    for (let i = 1; i <= 12; i++) {
+      await new Promise((r) => setTimeout(r, 16))
+      fireEvent.pointerMove(window, opts(150 + (dx / 12) * i, 1))
+    }
+    fireEvent.pointerUp(window, opts(150 + dx, 0))
+  }
+
+  it('swiping right likes and swiping left passes', async () => {
+    api.reactToProfile.mockResolvedValue({ status: 'ok', matched: false, likes_remaining: 20 })
+    await openDiscover()
+    await waitFor(() => expect(currentName()).not.toBe(''))
+    await swipe(220)
+    await waitFor(() => expect(api.reactToProfile).toHaveBeenCalledWith(expect.any(String), 'like'))
+    // Wait for the liked card's exit animation to finish before the next swipe.
+    await waitFor(() => expect(document.querySelectorAll('.cursor-grab')).toHaveLength(1))
+    await swipe(-220)
+    await waitFor(() => expect(api.reactToProfile).toHaveBeenLastCalledWith(expect.any(String), 'pass'))
+  })
+
+  it('a short drag snaps back without reacting', async () => {
+    await openDiscover()
+    await waitFor(() => expect(currentName()).not.toBe(''))
+    await swipe(40)
+    await new Promise((r) => setTimeout(r, 100))
+    expect(api.reactToProfile).not.toHaveBeenCalled()
+  })
+
+  it('arrow keys like and pass', async () => {
+    api.reactToProfile.mockResolvedValue({ status: 'ok', matched: false, likes_remaining: 20 })
+    await openDiscover()
+    await waitFor(() => expect(currentName()).not.toBe(''))
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
+    await waitFor(() => expect(api.reactToProfile).toHaveBeenCalledWith(expect.any(String), 'like'))
   })
 })

@@ -94,7 +94,7 @@ const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'email', label: 'Email Settings', Icon: Mail },
   { id: 'native-apps', label: 'Native Apps', Icon: DownloadIcon },
   { id: 'test-push', label: 'Test Push', Icon: BellRing },
-  { id: 'monetization', label: 'Dating Monetization', Icon: HeartHandshake },
+  { id: 'monetization', label: 'Relationship & Premium', Icon: HeartHandshake },
 ]
 
 export default function AdminDashboard() {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Crown, Heart, Lock, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -11,8 +11,9 @@ import { UserAvatar } from '@/components/ui/UserAvatar'
 import { SEO } from '@/components/SEO'
 import { PaywallDialog } from '@/components/dating/PaywallDialog'
 import { MatchDialog, type MatchPartner } from '@/components/dating/MatchDialog'
+import { useStartDatingChat } from '@/hooks/useStartDatingChat'
 import { useAuth } from '@/contexts/AuthContext'
-import { calcAge, startConversationWith } from '@/lib/relationship'
+import { calcAge } from '@/lib/relationship'
 import {
   getLikesReceived,
   getMatches,
@@ -202,21 +203,10 @@ function LikesYou() {
 
 function Matches() {
   const { user } = useAuth()
-  const navigate = useNavigate()
-  const [opening, setOpening] = useState<string | null>(null)
+  const chat = useStartDatingChat()
   const q = useQuery({ queryKey: ['dating-matches', user?.id], queryFn: () => getMatches(), enabled: !!user })
-
-  const message = async (m: MatchItem) => {
-    if (!user) return
-    setOpening(m.user_id)
-    try {
-      const convo = await startConversationWith(m.user_id, user.id)
-      navigate(`/messages/${convo}`)
-    } catch {
-      toast.error('Could not open the chat. Please try again.')
-      setOpening(null)
-    }
-  }
+  const message = (m: MatchItem) => chat.start(m.user_id)
+  const opening = chat.busyWith
 
   if (q.isLoading) return <GridSkeleton />
   if (q.isError) return <p className="py-10 text-center text-sm text-muted-foreground">Could not load matches. Please try again.</p>

@@ -12,6 +12,7 @@ export interface PlanLimits {
   advanced_filters?: boolean
   premium_badge?: boolean
   remove_ads?: boolean
+  message_without_match?: boolean
 }
 
 export interface Entitlements {
@@ -114,6 +115,14 @@ export const getLikesReceived = (limit = 20, offset = 0, unseenOnly = false) =>
 export const markLikesSeen = () => rpc<void>('dating_mark_likes_seen')
 export const getMatches = (limit = 50, offset = 0) => rpc<MatchItem[]>('dating_my_matches', { _limit: limit, _offset: offset })
 export const getPaymentOptions = () => rpc<PaymentOption[]>('get_payment_options')
+
+export interface StartChatResult {
+  status: 'ok' | 'match_required' | 'unavailable' | 'account_restricted'
+  conversation_id?: string
+  created?: boolean
+}
+/** Start or reopen a chat from the Relationship area (server enforces match/plan rules). */
+export const startDatingChat = (target: string) => rpc<StartChatResult>('dating_start_conversation', { _target: target })
 
 /** People the signed-in user already liked or passed (RLS: own rows only). */
 export async function getMyReactedIds(): Promise<Set<string>> {

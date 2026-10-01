@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { formatMoney } from '@/lib/monetization/strings'
 import type { Plan, PlanLimits } from '@/lib/monetization/api'
 import { toast } from '@/lib/toast'
+import { DatingGettingStarted, type MonetizationTab } from './DatingGettingStarted'
 
 // Monetization tables are newer than the generated Supabase types.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -23,24 +24,28 @@ const db = supabase as any
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : (e as { message?: string })?.message) || 'Something went wrong'
 
 export default function DatingMonetizationSection() {
+  const [tab, setTab] = useState<MonetizationTab>('start')
   return (
     <section className="rounded-2xl border bg-card p-5 space-y-4">
       <div>
-        <h2 className="font-bold">Dating Monetization</h2>
+        <h2 className="font-bold">Relationship & Premium</h2>
         <p className="text-sm text-muted-foreground">
-          Plans, limits and payment providers are configured here; nothing is hard-coded. All changes are audited.
+          Set up the Relationship area: free-member rules, Premium plans and payments. Every change is saved in the change
+          history.
         </p>
       </div>
-      <Tabs defaultValue="overview">
+      <Tabs value={tab} onValueChange={(v) => setTab(v as MonetizationTab)}>
         <TabsList className="flex h-auto flex-wrap justify-start gap-1">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="providers">Payment providers</TabsTrigger>
-          <TabsTrigger value="plans">Plans & limits</TabsTrigger>
+          <TabsTrigger value="start">Getting started</TabsTrigger>
+          <TabsTrigger value="overview">Revenue</TabsTrigger>
+          <TabsTrigger value="plans">Plans & prices</TabsTrigger>
+          <TabsTrigger value="providers">Payments</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="logs">Provider logs</TabsTrigger>
-          <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
-          <TabsTrigger value="audit">Audit log</TabsTrigger>
+          <TabsTrigger value="subscriptions">Members' plans</TabsTrigger>
+          <TabsTrigger value="logs">Payment logs</TabsTrigger>
+          <TabsTrigger value="audit">Change history</TabsTrigger>
         </TabsList>
+        <TabsContent value="start"><DatingGettingStarted goTo={setTab} /></TabsContent>
         <TabsContent value="overview"><OverviewTab /></TabsContent>
         <TabsContent value="providers"><ProvidersTab /></TabsContent>
         <TabsContent value="plans"><PlansTab /></TabsContent>
@@ -669,6 +674,11 @@ function PlanEditor({
           <Toggle label="Advanced filters" checked={!!p.limits.advanced_filters} onChange={(v) => setLimit('advanced_filters', v)} />
           <Toggle label="Premium badge" checked={!!p.limits.premium_badge} onChange={(v) => setLimit('premium_badge', v)} />
           <Toggle label="Ad-free" checked={!!p.limits.remove_ads} onChange={(v) => setLimit('remove_ads', v)} />
+          <Toggle
+            label="Message before matching"
+            checked={!!p.limits.message_without_match}
+            onChange={(v) => setLimit('message_without_match', v)}
+          />
           <p className="sm:col-span-2 pt-2 text-sm font-semibold">Visibility</p>
           {!isFree && <Toggle label="Active (can be bought)" checked={p.is_active} onChange={(v) => set('is_active', v)} />}
           <Toggle label="Visible on pricing page" checked={p.is_visible} onChange={(v) => set('is_visible', v)} />

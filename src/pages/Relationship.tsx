@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import { Heart, MessageCircle, Sparkles, X, LayoutGrid, Layers, MapPin, Pencil, Filter, RefreshCw, AlertCircle, Crown, ChevronDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -16,7 +16,6 @@ import {
   LookingFor,
   RelationshipCard,
   RelationshipProfile,
-  startConversationWith,
 } from '@/lib/relationship'
 import { isValidHttpUrl } from '@/lib/images'
 import { selectRelationshipCards } from '@/lib/relationshipFeed'
@@ -26,8 +25,11 @@ import { canPurchaseHere, getLikesReceived, getMyReactedIds, reactToProfile, tra
 import { t } from '@/lib/monetization/strings'
 import { PaywallDialog } from '@/components/dating/PaywallDialog'
 import { MatchDialog, type MatchPartner } from '@/components/dating/MatchDialog'
+import { HowItWorks } from '@/components/dating/HowItWorks'
+import { useStartDatingChat } from '@/hooks/useStartDatingChat'
 
 const PAGE_SIZE = 24
+const MODE_KEY = 'abia:dating-mode'
 
 const FILTER_SELECT =
   'w-full min-w-0 truncate rounded-full border border-border bg-background px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-pink-500/40 sm:w-auto sm:py-1.5'
@@ -179,7 +181,21 @@ async function fetchLgaOptions(): Promise<string[]> {
 export default function Relationship() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const [mode, setMode] = useState<'grid' | 'discover'>('grid')
+  const [mode, setMode] = useState<'grid' | 'discover'>(() => {
+    try {
+      return localStorage.getItem(MODE_KEY) === 'grid' ? 'grid' : 'discover'
+    } catch {
+      return 'discover'
+    }
+  })
+  const changeMode = (m: 'grid' | 'discover') => {
+    setMode(m)
+    try {
+      localStorage.setItem(MODE_KEY, m)
+    } catch {
+      /* ignore */
+    }
+  }
 
   const { data: myProfile } = useQuery({
     queryKey: ['my-relationship-profile', user?.id],
@@ -276,12 +292,12 @@ export default function Relationship() {
 
       <header className="mb-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg shadow-pink-500/25">
-              <Heart className="size-5 text-white" fill="white" />
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg shadow-pink-500/25 sm:size-11 sm:rounded-2xl">
+              <Heart className="size-4 text-white sm:size-5" fill="white" />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-xl font-bold leading-tight sm:text-2xl">Relationship</h1>
+              <h1 className="truncate text-lg font-bold leading-tight sm:text-2xl">Relationship</h1>
               <p className="truncate text-xs text-muted-foreground">
                 <span className="sm:hidden">Meet Abia members</span>
                 <span className="hidden sm:inline">Meet real Abia members near you</span>
@@ -289,43 +305,60 @@ export default function Relationship() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <DatingHeaderLinks />
-            <Button
-              asChild
-              variant="outline"
-              className="size-10 rounded-full border-border bg-card p-0 shadow-sm hover:bg-muted sm:h-10 sm:w-auto sm:px-4"
-            >
-              <Link to="/relationship/edit" aria-label={myProfile ? 'Edit my profile' : 'Create my profile'}>
-                {myProfile ? <Pencil className="size-4" /> : <Sparkles className="size-4" />}
-                <span className="hidden sm:inline">{myProfile ? 'Edit profile' : 'Create profile'}</span>
-              </Link>
-            </Button>
+            <PremiumLink />
+            {myProfile !== undefined && (
+              <Button
+                asChild
+                variant="outline"
+                className="h-10 rounded-full border-border bg-card px-3 text-sm shadow-sm hover:bg-muted sm:px-4"
+              >
+                <Link to="/relationship/edit">
+                  {myProfile ? <Pencil className="size-4" /> : <Sparkles className="size-4" />}
+                  <span>{myProfile ? 'Profile' : 'Create'}</span>
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-1 rounded-full bg-muted p-1 sm:inline-grid sm:w-auto" role="tablist" aria-label="View">
+        <nav className="grid grid-cols-3 gap-1 rounded-full bg-muted p-1 sm:inline-grid sm:w-auto" aria-label="Relationship sections">
           <button
-            role="tab"
-            aria-selected={mode === 'grid'}
-            onClick={() => setMode('grid')}
-            className={`inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-              mode === 'grid' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
-            }`}
-          >
-            <LayoutGrid className="size-4" /> Grid
-          </button>
-          <button
-            role="tab"
-            aria-selected={mode === 'discover'}
-            onClick={() => setMode('discover')}
-            className={`inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+            onClick={() => changeMode('discover')}
+            aria-current={mode === 'discover' ? 'page' : undefined}
+            className={`inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-colors sm:px-5 ${
               mode === 'discover' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
             }`}
           >
-            <Layers className="size-4" /> Discover
+            <Layers className="size-4" /> {t('tabs.discover')}
           </button>
-        </div>
+          <button
+            onClick={() => changeMode('grid')}
+            aria-current={mode === 'grid' ? 'page' : undefined}
+            className={`inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-colors sm:px-5 ${
+              mode === 'grid' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+            }`}
+          >
+            <LayoutGrid className="size-4" /> {t('tabs.browse')}
+          </button>
+          <LikesTabLink />
+        </nav>
       </header>
+
+      {user && <HowItWorks />}
+
+      {user && myProfile === null && (
+        <section className="mb-4 flex flex-col items-start gap-3 rounded-2xl border border-pink-500/30 bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold">{t('profile_cta.title')}</p>
+            <p className="text-sm text-muted-foreground">{t('profile_cta.body')}</p>
+          </div>
+          <Button asChild className="w-full shrink-0 rounded-full bg-gradient-to-r from-pink-500 to-rose-600 text-white sm:w-auto">
+            <Link to="/relationship/edit">
+              <Sparkles className="size-4" /> {t('profile_cta.button')}
+            </Link>
+          </Button>
+        </section>
+      )}
 
       {user && (
         <div className="mb-5 rounded-2xl border border-border bg-card/60 p-3">
@@ -604,10 +637,9 @@ const CardTile = memo(function CardTile({ card }: { card: RelationshipCard }) {
   )
 }, (prev, next) => prev.card.id === next.card.id && prev.card.updated_at === next.card.updated_at)
 
-/** "Likes" (with pending count) and "Premium" shortcuts in the page header. */
-function DatingHeaderLinks() {
+/** Likes tab with the number of people waiting for a reply. */
+function LikesTabLink() {
   const { user } = useAuth()
-  const { data: ent } = useDatingEntitlements()
   const { data: likes } = useQuery({
     queryKey: ['dating-likes-count', user?.id],
     queryFn: () => getLikesReceived(1, 0),
@@ -616,32 +648,40 @@ function DatingHeaderLinks() {
   })
   const pending = likes?.total ?? 0
   return (
-    <>
-      <Button asChild variant="outline" className="relative size-10 rounded-full border-border bg-card p-0 shadow-sm hover:bg-muted sm:h-10 sm:w-auto sm:px-4">
-        <Link to="/relationship/likes" aria-label={`Likes${pending ? `, ${pending} pending` : ''}`}>
-          <Heart className="size-4 text-pink-600" />
-          <span className="hidden sm:inline">Likes</span>
-          {pending > 0 && (
-            <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-pink-600 px-1 text-center text-[10px] font-bold leading-5 text-white sm:static sm:ml-0.5">
-              {pending > 99 ? '99+' : pending}
-            </span>
-          )}
-        </Link>
-      </Button>
-      {(ent?.is_premium || canPurchaseHere()) && (
-        <Button asChild variant="outline" className="size-10 rounded-full border-border bg-card p-0 shadow-sm hover:bg-muted sm:h-10 sm:w-auto sm:px-4">
-          <Link to="/relationship/premium" aria-label={ent?.is_premium ? `${ent.plan_name} plan` : 'Premium'}>
-            <Crown className="size-4 text-amber-500" />
-            <span className="hidden sm:inline">{ent?.is_premium ? ent.plan_name : 'Premium'}</span>
-          </Link>
-        </Button>
+    <Link
+      to="/relationship/likes"
+      aria-label={`${t('tabs.likes')}${pending ? `, ${pending} waiting` : ''}`}
+      className="relative inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground sm:px-5"
+    >
+      <Heart className="size-4 text-pink-600" /> {t('tabs.likes')}
+      {pending > 0 && (
+        <span className="min-w-5 rounded-full bg-pink-600 px-1 text-center text-[10px] font-bold leading-5 text-white">
+          {pending > 99 ? '99+' : pending}
+        </span>
       )}
-    </>
+    </Link>
+  )
+}
+
+/** Premium shortcut (hidden in the Android app unless already premium). */
+function PremiumLink() {
+  const { data: ent } = useDatingEntitlements()
+  if (!(ent?.is_premium || canPurchaseHere())) return null
+  return (
+    <Button asChild variant="outline" className="size-10 rounded-full border-amber-500/40 bg-card p-0 shadow-sm hover:bg-amber-500/10 min-[400px]:w-auto min-[400px]:px-3 sm:px-4">
+      <Link to="/relationship/premium" aria-label={ent?.is_premium ? `${ent.plan_name} plan` : 'Upgrade to Premium'}>
+        <Crown className="size-4 text-amber-500" />
+        <span className="hidden min-[400px]:inline">{ent?.is_premium ? ent.plan_name : 'Premium'}</span>
+      </Link>
+    </Button>
   )
 }
 
 function DiscoverView({ cards: allCards }: { cards: RelationshipCard[] }) {
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { data: ent } = useDatingEntitlements()
   const { data: reacted } = useQuery({
     queryKey: ['dating-my-reactions', user?.id],
     queryFn: getMyReactedIds,
@@ -653,16 +693,15 @@ function DiscoverView({ cards: allCards }: { cards: RelationshipCard[] }) {
     () => (reacted ? allCards.filter((c) => !reacted.has(c.user_id)) : allCards),
     [allCards, reacted],
   )
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const { data: ent } = useDatingEntitlements()
   const [index, setIndex] = useState(0)
   const [busy, setBusy] = useState(false)
   const [paywall, setPaywall] = useState(false)
   const [match, setMatch] = useState<MatchPartner | null>(null)
   const [likesLeft, setLikesLeft] = useState<number | null>(null)
+  const [direction, setDirection] = useState<'like' | 'pass'>('pass')
+  const chat = useStartDatingChat()
   const current = cards[index]
-  const remaining = useMemo(() => cards.length - index, [cards, index])
+  const remaining = cards.length - index
 
   useEffect(() => {
     track('DISCOVERY_VIEWED')
@@ -703,6 +742,7 @@ function DiscoverView({ cards: allCards }: { cards: RelationshipCard[] }) {
   const react = async (kind: 'like' | 'pass') => {
     if (!current || !user || busy) return
     setBusy(true)
+    setDirection(kind)
     const name = current.display_name || current.username || 'them'
     try {
       const r = await reactToProfile(current.user_id, kind)
@@ -714,38 +754,47 @@ function DiscoverView({ cards: allCards }: { cards: RelationshipCard[] }) {
     }
   }
 
-  const message = async () => {
-    if (!current || !user || busy) return
-    setBusy(true)
-    try {
-      const convo = await startConversationWith(current.user_id, user.id)
-      toast.success(`Say hi to ${current.display_name || current.username || 'them'}`)
-      navigate(`/messages/${convo}`)
-    } catch (e: any) {
-      toast.error(e.message || 'Could not start chat')
-      setBusy(false)
+  // Keyboard: right arrow = like, left arrow = pass (ignored while typing or in dialogs).
+  const reactRef = useRef(react)
+  reactRef.current = react
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null
+      if (el && (el.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName))) return
+      if (document.querySelector('[role="dialog"]')) return
+      if (e.key === 'ArrowRight') reactRef.current('like')
+      if (e.key === 'ArrowLeft') reactRef.current('pass')
     }
-  }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   if (!current) {
     return (
       <div className="rounded-2xl border border-border bg-card p-10 text-center">
         <p className="font-semibold">You're all caught up</p>
-        <p className="text-sm text-muted-foreground mt-1">Check back later for more profiles.</p>
-        <Button className="mt-4 rounded-full" onClick={() => setIndex(0)}>Start over</Button>
+        <p className="mt-1 text-sm text-muted-foreground">Check back later for more profiles, or see who likes you.</p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <Button asChild className="rounded-full">
+            <Link to="/relationship/likes">See likes & matches</Link>
+          </Button>
+          <Button variant="outline" className="rounded-full" onClick={() => setIndex(0)}>
+            Start over
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="mx-auto max-w-md">
-      <DiscoverCard card={current} />
+      <SwipeDeck card={current} direction={direction} disabled={busy} onSwipe={react} />
 
       <div className="mt-4 flex items-center justify-center gap-4 sm:mt-5">
         <button
           onClick={() => react('pass')}
           disabled={busy}
-          className="h-14 w-14 rounded-full bg-card border border-border grid place-items-center shadow-md hover:bg-muted transition disabled:opacity-60"
+          className="grid h-14 w-14 place-items-center rounded-full border border-border bg-card shadow-md transition hover:bg-muted disabled:opacity-60"
           aria-label={t('discover.pass')}
         >
           <X className="size-6 text-muted-foreground" />
@@ -753,82 +802,172 @@ function DiscoverView({ cards: allCards }: { cards: RelationshipCard[] }) {
         <button
           onClick={() => react('like')}
           disabled={busy}
-          className="h-16 w-16 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 grid place-items-center shadow-lg shadow-pink-500/40 hover:scale-105 active:scale-95 transition disabled:opacity-60"
+          className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg shadow-pink-500/40 transition hover:scale-105 active:scale-95 disabled:opacity-60"
           aria-label={t('discover.like')}
         >
           <Heart className="size-7 text-white" fill="white" />
         </button>
         <button
-          onClick={message}
-          disabled={busy}
-          className="h-14 w-14 rounded-full bg-card border border-border grid place-items-center shadow-md hover:bg-muted transition disabled:opacity-60"
+          onClick={() => chat.start(current.user_id)}
+          disabled={busy || !!chat.busyWith}
+          className="grid h-14 w-14 place-items-center rounded-full border border-border bg-card shadow-md transition hover:bg-muted disabled:opacity-60"
           aria-label={t('discover.message')}
         >
           <MessageCircle className="size-6 text-pink-600" />
         </button>
       </div>
       <p className="mt-2 text-center text-xs text-muted-foreground sm:mt-3">
+        <span className="font-medium">{t('discover.hint')}</span>
+        <br />
         {remaining} {remaining === 1 ? 'profile' : 'profiles'} to discover
         {typeof shownLikesLeft === 'number' && <> · {t('discover.likes_left', { count: shownLikesLeft })}</>}
       </p>
 
       <PaywallDialog reason="likes_limit" open={paywall} onOpenChange={setPaywall} />
+      <PaywallDialog reason="message_first" open={chat.paywallOpen} onOpenChange={chat.setPaywallOpen} />
       <MatchDialog partner={match} onClose={() => setMatch(null)} />
     </div>
   )
 }
 
-function DiscoverCard({ card }: { card: RelationshipCard }) {
+const SWIPE_DISTANCE = 110
+const SWIPE_VELOCITY = 700
+
+/**
+ * The current Discover card. Drag right to like, left to pass (touch or
+ * mouse); a "LIKE"/"NOPE" stamp follows the drag. Short drags snap back.
+ */
+function SwipeDeck({
+  card,
+  direction,
+  disabled,
+  onSwipe,
+}: {
+  card: RelationshipCard
+  direction: 'like' | 'pass'
+  disabled: boolean
+  onSwipe: (kind: 'like' | 'pass') => void
+}) {
+  return (
+    // Phones: cap the height so the card and the like/pass buttons fit on one
+    // screen; larger screens keep the classic 3:4 card.
+    <div className="relative h-[min(calc((100vw-1.5rem)*4/3),47svh)] w-full sm:h-auto sm:aspect-[3/4]">
+      <AnimatePresence initial={false} custom={direction}>
+        <SwipeCard key={card.id} card={card} disabled={disabled} onSwipe={onSwipe} />
+      </AnimatePresence>
+    </div>
+  )
+}
+
+const cardVariants = {
+  enter: { opacity: 0, scale: 0.96 },
+  center: { opacity: 1, scale: 1, x: 0, rotate: 0 },
+  exit: (dir: 'like' | 'pass') => ({ x: dir === 'like' ? 480 : -480, rotate: dir === 'like' ? 18 : -18, opacity: 0 }),
+}
+
+function SwipeCard({
+  card,
+  disabled,
+  onSwipe,
+}: {
+  card: RelationshipCard
+  disabled: boolean
+  onSwipe: (kind: 'like' | 'pass') => void
+}) {
   const age = calcAge(card.dob)
   const name = card.display_name || card.username || 'Member'
   const [broken, setBroken] = useState(false)
-  useEffect(() => { setBroken(false) }, [card.id])
   const rawPhoto = card.photos?.[0] ?? null
   const signedAvatar = useSignedUrl(card.avatar_url, 'avatars')
   const fallback = signedAvatar || (isValidHttpUrl(card.avatar_url) ? card.avatar_url : null)
   const cover = !broken ? (isValidHttpUrl(rawPhoto) ? rawPhoto : fallback) : null
 
+  const x = useMotionValue(0)
+  const rotate = useTransform(x, [-220, 220], [-14, 14])
+  const likeOpacity = useTransform(x, [30, SWIPE_DISTANCE], [0, 1])
+  const nopeOpacity = useTransform(x, [-SWIPE_DISTANCE, -30], [1, 0])
+  const dragged = useRef(false)
+
   return (
-    // Phones: cap the height so the card and the like/pass buttons fit on one
-    // screen; larger screens keep the classic 3:4 card.
-    <div className="relative h-[min(calc((100vw-1.5rem)*4/3),47svh)] w-full overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-pink-500/20 to-rose-600/20 shadow-2xl sm:h-auto sm:aspect-[3/4]">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={card.id}
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, x: -60 }}
-          transition={{ duration: 0.25 }}
-          className="absolute inset-0"
-        >
-          {cover && (
-            <img src={cover} alt={name} onError={() => setBroken(true)} className="absolute inset-0 h-full w-full object-cover" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-          <Link
-            to={`/relationship/${card.user_id}`}
-            className="absolute bottom-0 left-0 right-0 p-5 text-white"
-          >
-            <p className="text-2xl font-extrabold leading-tight">
-              {name}{age ? `, ${age}` : ''}
-            </p>
-            {(card.current_location || card.lga) && (
-              <p className="text-sm opacity-90 flex items-center gap-1 mt-1">
-                <MapPin className="size-3.5" /> {card.current_location || card.lga}
-              </p>
-            )}
-            {card.headline && (
-              <p className="text-sm opacity-90 mt-1 line-clamp-2">{card.headline}</p>
-            )}
-            {card.looking_for && (
-              <span className="mt-2 inline-block rounded-full bg-pink-600 text-white text-xs font-semibold px-2.5 py-0.5">
-                {LOOKING_FOR_LABELS[card.looking_for]}
-              </span>
-            )}
-            <p className="text-[10px] opacity-70 mt-2">Tap card to view full profile</p>
-          </Link>
-        </motion.div>
-      </AnimatePresence>
-    </div>
+    <motion.div
+      className="absolute inset-0 cursor-grab touch-pan-y overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-pink-500/20 to-rose-600/20 shadow-2xl active:cursor-grabbing"
+      style={{ x, rotate }}
+      variants={cardVariants}
+      initial="enter"
+      animate="center"
+      exit="exit"
+      transition={{ duration: 0.28 }}
+      drag={disabled ? false : 'x'}
+      dragSnapToOrigin
+      dragElastic={0.9}
+      onDragStart={() => {
+        dragged.current = true
+      }}
+      onDragEnd={(_, info) => {
+        const kind =
+          info.offset.x > SWIPE_DISTANCE || info.velocity.x > SWIPE_VELOCITY
+            ? 'like'
+            : info.offset.x < -SWIPE_DISTANCE || info.velocity.x < -SWIPE_VELOCITY
+              ? 'pass'
+              : null
+        if (kind) onSwipe(kind)
+        // Let the click that ends a drag be ignored by the profile link.
+        setTimeout(() => {
+          dragged.current = false
+        }, 0)
+      }}
+    >
+      {cover && (
+        <img
+          src={cover}
+          alt={name}
+          draggable={false}
+          onError={() => setBroken(true)}
+          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+        />
+      )}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+
+      <motion.span
+        style={{ opacity: likeOpacity }}
+        className="pointer-events-none absolute left-5 top-6 -rotate-12 rounded-xl border-4 border-emerald-400 px-3 py-1 text-2xl font-black tracking-wider text-emerald-400"
+        aria-hidden
+      >
+        LIKE
+      </motion.span>
+      <motion.span
+        style={{ opacity: nopeOpacity }}
+        className="pointer-events-none absolute right-5 top-6 rotate-12 rounded-xl border-4 border-rose-500 px-3 py-1 text-2xl font-black tracking-wider text-rose-500"
+        aria-hidden
+      >
+        NOPE
+      </motion.span>
+
+      <Link
+        to={`/relationship/${card.user_id}`}
+        draggable={false}
+        onClickCapture={(e) => {
+          if (dragged.current) e.preventDefault()
+        }}
+        className="absolute bottom-0 left-0 right-0 p-5 text-white"
+      >
+        <p className="text-2xl font-extrabold leading-tight">
+          {name}
+          {age ? `, ${age}` : ''}
+        </p>
+        {(card.current_location || card.lga) && (
+          <p className="mt-1 flex items-center gap-1 text-sm opacity-90">
+            <MapPin className="size-3.5" /> {card.current_location || card.lga}
+          </p>
+        )}
+        {card.headline && <p className="mt-1 line-clamp-2 text-sm opacity-90">{card.headline}</p>}
+        {card.looking_for && (
+          <span className="mt-2 inline-block rounded-full bg-pink-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+            {LOOKING_FOR_LABELS[card.looking_for]}
+          </span>
+        )}
+        <p className="mt-2 text-[10px] opacity-70">Tap card to view full profile</p>
+      </Link>
+    </motion.div>
   )
 }
