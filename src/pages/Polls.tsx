@@ -141,10 +141,10 @@ export default function Polls() {
       <SEO title="Community Polls" description="Vote on issues that matter to the AbiaConnect community." path="/polls" />
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
+          <h1 className="text-3xl font-bold flex items-center gap-2 native:hidden">
             <Vote className="size-7 text-primary" /> Community Polls
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 native:mt-0 native:text-[15px]">
             Vote on issues that matter to the AbiaConnect community.
           </p>
         </div>

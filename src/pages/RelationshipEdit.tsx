@@ -202,7 +202,7 @@ export default function RelationshipEdit() {
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold">Your Connect profile</h1>
+        <h1 className="text-2xl font-bold native:hidden">Your Connect profile</h1>
         <p className="text-sm text-muted-foreground">
           Introduce yourself professionally. Say what you do and what you are looking for: business, networking,
           friendship or a relationship.

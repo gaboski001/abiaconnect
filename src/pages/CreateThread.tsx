@@ -281,7 +281,7 @@ export default function CreateThread() {
         path="/create-thread"
       />
       <form onSubmit={onSubmit} className="lg:col-span-2 space-y-6">
-        <h1 className="text-2xl font-bold">Create a Thread</h1>
+        <h1 className="text-2xl font-bold native:hidden">Create a Thread</h1>
 
         {presetSubgroup ? (
           <div className="rounded-xl border border-border bg-card p-3 text-sm">

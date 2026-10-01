@@ -185,13 +185,13 @@ export default function Subgroups() {
   return (
     <div className="container mx-auto px-4 py-8">
       <SEO title="Community Subgroups" description="Discover and join subgroups of like-minded Abians on AbiaConnect." path="/subgroups" />
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6 native:mb-4 native:gap-3">
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-secondary/10 p-2 text-secondary">
+          <div className="rounded-xl bg-secondary/10 p-2 text-secondary native:hidden">
             <Users className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Community Subgroups</h1>
+            <h1 className="text-2xl font-bold native:hidden">Community Subgroups</h1>
             <p className="text-sm text-muted-foreground">
               Discover and join groups of like-minded Abians
             </p>

@@ -103,7 +103,7 @@ export function NativeHome() {
   })
 
   return (
-    <div className="-mx-3 -mt-6 space-y-7 pb-28 sm:-mx-4">
+    <div className="-mx-4 -mt-4 space-y-7">
       {/* Welcome */}
       <section className="relative overflow-hidden px-4 pb-1 pt-6">
         <div

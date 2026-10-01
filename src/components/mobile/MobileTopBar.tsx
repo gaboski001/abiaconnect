@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { LogOut } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ChevronLeft, LogOut } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { MessagesBell } from '@/components/messages/MessagesBell'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
@@ -12,35 +12,66 @@ import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { SiteLogo } from '@/components/layout/SiteLogo'
 import { MobileSideNav } from './MobileSideNav'
 import { isNativeApp } from './NativeAuthLayout'
+import { nativeScreenFor } from './nativeRoutes'
 
 /**
- * App header: logo + notifications only. Everything else lives in the bottom
- * navigation and its "More" sheet, so no button is duplicated.
+ * App header. Home: logo. Tab roots (Community, Messages, Connect): a large
+ * title. Inner screens: back button + title. Notifications bell on the right
+ * for members. Everything else lives in the bottom tabs and "More".
  */
 function NativeTopBar() {
   const { user } = useAuth()
   const { settings } = useSiteSettings()
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
   const siteName = settings.site_name || 'AbiaConnect'
+  const screen = nativeScreenFor(pathname)
+  const goBack = () => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0
+    if (idx > 0) navigate(-1)
+    else navigate('/')
+  }
+
   return (
     <header className="md:hidden sticky top-0 z-50 border-b border-white/[0.08] bg-[rgba(8,13,23,0.94)] backdrop-blur-xl">
-      <div className="flex h-14 items-center justify-between gap-2 px-4">
-        <Link to="/" className="flex min-w-0 items-center" aria-label={`${siteName} home`}>
-          <SiteLogo nameFallback={false} imageClassName="h-8 max-w-[130px]" className="h-8 w-20" />
-        </Link>
-        {user ? (
-          <div className="dark flex items-center text-slate-100">
-            <NotificationBell />
-          </div>
+      <div className="flex h-14 items-center gap-2 px-2">
+        {screen.kind === 'home' ? (
+          <Link to="/" className="ml-2 flex min-w-0 items-center" aria-label={`${siteName} home`}>
+            <SiteLogo nameFallback={false} imageClassName="h-8 max-w-[130px]" className="h-8 w-20" />
+          </Link>
+        ) : screen.kind === 'tab' ? (
+          <h1 className="ml-2 truncate text-[22px] font-bold tracking-tight text-white">{screen.title}</h1>
         ) : (
-          <Button
-            asChild
-            size="sm"
-            className="h-9 rounded-xl border-0 px-4 text-[13px] font-bold text-slate-950"
-            style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
-          >
-            <Link to="/login">Sign in</Link>
-          </Button>
+          <>
+            <button
+              type="button"
+              onClick={goBack}
+              aria-label="Back"
+              className="flex size-10 shrink-0 items-center justify-center rounded-full text-slate-100 active:bg-white/10"
+            >
+              <ChevronLeft className="size-6" />
+            </button>
+            <p className="min-w-0 truncate text-[17px] font-semibold text-white">{screen.title}</p>
+          </>
         )}
+        <div className="ml-auto flex items-center pr-1">
+          {user ? (
+            pathname === '/notifications' ? null : (
+              <div className="dark flex items-center text-slate-100">
+                <NotificationBell />
+              </div>
+            )
+          ) : (
+            <Button
+              asChild
+              size="sm"
+              className="h-9 rounded-xl border-0 px-4 text-[13px] font-bold text-slate-950"
+              style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
+            >
+              <Link to="/login">Sign in</Link>
+            </Button>
+          )}
+        </div>
       </div>
     </header>
   )

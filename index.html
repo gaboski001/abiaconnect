@@ -48,8 +48,11 @@
       (function () {
         try {
           var cap = window.Capacitor;
-          if (!cap || !cap.isNativePlatform || !cap.isNativePlatform() || location.pathname !== '/') return;
+          if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
           var root = document.documentElement;
+          // App-only styling hook (Tailwind `native:` variant, see index.css).
+          root.classList.add('native-app');
+          if (location.pathname !== '/') return;
           root.classList.add('cap-launch');
           setTimeout(function () { root.classList.remove('cap-launch'); }, 8000);
         } catch (e) {}

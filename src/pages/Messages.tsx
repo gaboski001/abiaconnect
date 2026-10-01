@@ -312,7 +312,7 @@ function ConversationRow({
         </div>
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground truncate">
-            {c.last_message || 'No messages yet'}
+            {previewText(c.last_message)}
           </p>
           {!!c.unread_count && (
             <span className="text-[10px] font-bold bg-secondary text-secondary-foreground rounded-full px-1.5 min-w-[18px] text-center">
@@ -611,23 +611,24 @@ export default function Messages() {
   return (
     <>
       <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
-    <div className={cn('container mx-auto px-0 md:px-4 py-0 md:py-6', isNativeApp() && conversationId && 'h-full max-w-full p-0')}>
-      <div className={cn('md:rounded-2xl md:border md:bg-card overflow-hidden flex bg-gradient-to-b from-background to-muted/30 transition-[height] duration-150', isNativeApp() && conversationId ? 'h-full md:h-[calc(100vh-8rem)]' : 'h-[calc(100dvh-var(--kb-inset,0px)-3.5rem)] md:h-[calc(100vh-8rem)]')}>
+    <div className={cn('container mx-auto px-0 md:px-4 py-0 md:py-6', isNativeApp() && conversationId && 'h-full max-w-full p-0', isNativeApp() && !conversationId && '-mx-4 -mt-4 -mb-28')}>
+      <div className={cn('md:rounded-2xl md:border md:bg-card overflow-hidden flex bg-gradient-to-b from-background to-muted/30 transition-[height] duration-150', isNativeApp() && conversationId ? 'h-full md:h-[calc(100vh-8rem)]' : isNativeApp() ? 'h-[calc(100dvh-var(--kb-inset,0px)-7.5rem-env(safe-area-inset-bottom))]' : 'h-[calc(100dvh-var(--kb-inset,0px)-3.5rem)] md:h-[calc(100vh-8rem)]')}>
 
 
         {/* LEFT */}
         <aside
           className={cn(
-            'w-full md:w-80 border-r flex-col bg-background',
+            'w-full md:w-80 border-r flex-col bg-background native:border-r-0',
             conversationId ? 'hidden md:flex' : 'flex',
           )}
         >
-          <div className="p-4 border-b flex items-center justify-between gap-2">
-            <h1 className="text-lg font-bold">Messages</h1>
+          <div className="p-4 border-b flex items-center justify-between gap-2 native:justify-end native:border-b-0 native:px-3 native:pb-0 native:pt-3">
+            <h1 className="text-lg font-bold native:hidden">Messages</h1>
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
               <DialogTrigger asChild>
-                <Button size="icon" variant="ghost" aria-label="New message">
+                <Button size="icon" variant="ghost" aria-label="New message" className="native:w-auto native:gap-2 native:rounded-full native:bg-amber-400/15 native:px-4 native:font-semibold native:text-amber-600 dark:native:text-amber-300">
                   <MessageSquarePlus className="h-5 w-5" />
+                  <span className="hidden native:inline">New message</span>
                 </Button>
               </DialogTrigger>
               <NewMessageDialog onClose={() => setNewOpen(false)} />
@@ -2257,6 +2258,15 @@ function NewMessageDialog({ onClose }: { onClose: () => void }) {
 export type CallLogInfo =
   | { kind: 'ended'; durationSec: number; video: boolean }
   | { kind: 'missed'; reason: string; video: boolean }
+
+/** Conversation-list preview: readable text for call-log entries. */
+function previewText(content: string | null | undefined): string {
+  if (!content) return 'No messages yet'
+  const call = parseCallLog(content)
+  if (!call) return content
+  const kind = call.video ? 'Video call' : 'Voice call'
+  return call.kind === 'missed' ? `Missed ${kind.toLowerCase()}` : `${kind} · ${formatCallDuration(call.durationSec)}`
+}
 
 export function parseCallLog(content: string | null | undefined): CallLogInfo | null {
   if (!content) return null

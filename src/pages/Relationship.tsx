@@ -294,11 +294,11 @@ export default function Relationship() {
       <header className="mb-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg shadow-pink-500/25 sm:size-11 sm:rounded-2xl">
+            <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg shadow-pink-500/25 sm:size-11 sm:rounded-2xl native:hidden">
               <Heart className="size-4 text-white sm:size-5" fill="white" />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-bold leading-tight sm:text-2xl">Connect</h1>
+              <h1 className="truncate text-lg font-bold leading-tight sm:text-2xl native:hidden">Connect</h1>
               <p className="truncate text-xs text-muted-foreground">
                 <span className="sm:hidden">Business, friendship &amp; more</span>
                 <span className="hidden sm:inline">Meet Abia professionals, friends and partners</span>

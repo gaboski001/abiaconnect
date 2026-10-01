@@ -115,8 +115,8 @@ export default function DeviceNotifications() {
   return (
     <div className="container max-w-2xl py-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Notification devices</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <h1 className="text-2xl font-bold native:hidden">Notification devices</h1>
+        <p className="text-sm text-muted-foreground mt-1 native:mt-0">
           Choose which of your devices get pop-up alerts for new app updates and other notifications.
         </p>
       </div>

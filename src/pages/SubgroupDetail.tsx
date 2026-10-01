@@ -519,7 +519,7 @@ export default function SubgroupDetail() {
         description={s?.description || 'Join this subgroup on AbiaConnect.'}
         path={`/subgroups/${subgroupId ?? ''}`}
       />
-      <Button asChild variant="ghost" size="sm" className="mb-4">
+      <Button asChild variant="ghost" size="sm" className="mb-4 native:hidden">
         <Link to="/subgroups"><ArrowLeft className="h-4 w-4 mr-1" /> All subgroups</Link>
       </Button>
 

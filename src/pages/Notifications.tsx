@@ -115,8 +115,8 @@ export default function Notifications() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <SEO title="Notifications" description="See your latest alerts and updates on AbiaConnect." path="/notifications" />
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between mb-6 native:mb-4 native:justify-end">
+        <div className="flex items-center gap-3 native:hidden">
           <div className="rounded-xl bg-secondary/10 p-2 text-secondary">
             <Bell className="h-6 w-6" />
           </div>
@@ -128,7 +128,7 @@ export default function Notifications() {
       </div>
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)} className="mb-4">
-        <TabsList>
+        <TabsList className="native:flex native:w-full native:justify-start native:overflow-x-auto native:[scrollbar-width:none]">
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="unread">Unread</TabsTrigger>
           <TabsTrigger value="reply">Replies</TabsTrigger>

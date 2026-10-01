@@ -5,6 +5,8 @@
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
+/* Installed Android/iOS app only (class set in index.html / main.tsx). */
+@custom-variant native (&:where(.native-app, .native-app *));
 
 @theme inline {
   --font-sans: 'Nunito Sans', ui-sans-serif, system-ui, sans-serif;
@@ -371,3 +373,12 @@ body {
 .te-bubble button.bg-primary { background: var(--primary); color: var(--primary-foreground); }
 .te-sep { display:inline-block; width:1px; height:16px; margin:0 4px; background: color-mix(in oklab, var(--background) 28%, transparent); }
 .te-floating { z-index: 40; }
+
+/* Installed app: pages share the layout's padding instead of adding their own
+   website-style container padding (which doubled the side margins). */
+.native-app main .container {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0;
+}

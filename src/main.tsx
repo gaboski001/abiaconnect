@@ -19,6 +19,10 @@ import '@fontsource/nunito-sans/600.css'
 import '@fontsource/nunito-sans/700.css'
 import './index.css'
 
+// App-only styling hook (Tailwind `native:` variant). index.html sets it early;
+// this is the fallback if Capacitor wasn't ready then.
+if (Capacitor.isNativePlatform()) document.documentElement.classList.add('native-app')
+
 // Diagnostics for native bridge
 if (typeof window !== 'undefined') {
   console.log('[NativeBridge] Initializing web bundle...');
