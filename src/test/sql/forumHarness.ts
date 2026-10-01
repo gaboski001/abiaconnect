@@ -24,20 +24,24 @@ const PRELUDE = `
     $$ SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
   GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated, service_role;
+  CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS
+    $$ SELECT NULLIF(current_setting('request.jwt.claim.role', true), '') $$;
+  GRANT EXECUTE ON FUNCTION auth.role() TO anon, authenticated, service_role;
 
   CREATE TABLE public.profiles (
     id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    display_name text, username text, avatar_url text,
+    display_name text, username text, avatar_url text, bio text, lga text,
+    created_at timestamptz NOT NULL DEFAULT now(),
     reputation integer NOT NULL DEFAULT 0,
     is_banned boolean NOT NULL DEFAULT false, is_deleted boolean NOT NULL DEFAULT false
   );
   -- Mirrors the live database's existing privileged-fields rule (role, ban
   -- status and reputation are admin-only), which the migration must coexist with.
   CREATE TYPE public.app_role AS ENUM ('Super Admin', 'Admin', 'Member');
-  ALTER TABLE public.profiles ADD COLUMN role public.app_role NOT NULL DEFAULT 'Member';
+  ALTER TABLE public.profiles ADD COLUMN role text NOT NULL DEFAULT 'Member';
   CREATE FUNCTION public.has_role(_user_id uuid, _role public.app_role) RETURNS boolean
     LANGUAGE sql STABLE AS
-    $$ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = _user_id AND role = _role) $$;
+    $$ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = _user_id AND role = _role::text) $$;
   CREATE FUNCTION public.prevent_privileged_profile_changes() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
   BEGIN
@@ -81,6 +85,7 @@ const PRELUDE = `
   CREATE TABLE public.threads (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(), title text NOT NULL DEFAULT 't',
     author_id uuid, user_id uuid, is_deleted boolean NOT NULL DEFAULT false,
+    view_count integer NOT NULL DEFAULT 0,
     created_at timestamptz NOT NULL DEFAULT now()
   );
   CREATE TABLE public.replies (
@@ -95,13 +100,28 @@ const PRELUDE = `
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(), reply_id uuid NOT NULL, user_id uuid NOT NULL,
     value integer NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), UNIQUE (reply_id, user_id)
   );
+  -- Simplified stand-in for the live per-client rate limiter.
+  CREATE TABLE public.client_rate_limits (client_key text, scope text, n integer NOT NULL DEFAULT 0, PRIMARY KEY (client_key, scope));
+  CREATE FUNCTION public.enforce_client_rate_limit(_scope text, _max int, _window_seconds int DEFAULT 60)
+    RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+  DECLARE c integer;
+  BEGIN
+    INSERT INTO public.client_rate_limits AS r (client_key, scope, n)
+    VALUES (COALESCE(auth.uid()::text, 'anon'), _scope, 1)
+    ON CONFLICT (client_key, scope) DO UPDATE SET n = r.n + 1 RETURNING n INTO c;
+    IF c > _max THEN RAISE EXCEPTION 'rate_limited'; END IF;
+  END $$;
+
   CREATE TABLE public.poll_votes (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(), poll_id uuid NOT NULL, poll_option_id uuid NOT NULL,
     user_id uuid NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
   );
 `
 
-const MIGRATION = '20261001200000_forum_points_and_contests.sql'
+const MIGRATIONS = [
+  '20261001200000_forum_points_and_contests.sql',
+  '20261001210000_security_review_fixes.sql',
+]
 
 export type ForumDb = PGlite & {
   as: (userId: string | null) => Promise<void>
@@ -131,11 +151,13 @@ export async function createForumDb(seed?: (db: ForumDb) => Promise<void>): Prom
   }
   db.asMember = async (userId, fn) => {
     await db.as(userId)
+    await db.query(`SELECT set_config('request.jwt.claim.role', 'authenticated', false)`)
     await db.query(`SET ROLE authenticated`)
     try {
       return await fn()
     } finally {
       await db.query(`RESET ROLE`)
+      await db.query(`SELECT set_config('request.jwt.claim.role', '', false)`)
     }
   }
   db.error = async (fn) => {
@@ -148,6 +170,8 @@ export async function createForumDb(seed?: (db: ForumDb) => Promise<void>): Prom
   }
 
   if (seed) await seed(db)
-  await db.exec(readFileSync(resolve(__dirname, '../../../supabase/migrations', MIGRATION), 'utf8'))
+  for (const file of MIGRATIONS) {
+    await db.exec(readFileSync(resolve(__dirname, '../../../supabase/migrations', file), 'utf8'))
+  }
   return db
 }
