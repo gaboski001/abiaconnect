@@ -45,7 +45,7 @@ export function MobileBottomNav() {
       { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, match: (p) => p === '/dashboard' },
       { to: '/subgroups', label: 'Community', icon: Users, match: (p) => p.startsWith('/subgroups') },
       { to: '/messages', label: 'Messages', icon: MessageCircleMore, match: (p) => p.startsWith('/messages') },
-      { to: '/relationship', label: 'Relationship', icon: Heart, match: (p) => p.startsWith('/relationship') },
+      { to: '/relationship', label: 'Connect', icon: Heart, match: (p) => p.startsWith('/relationship') },
       { to: '/notifications', label: 'Alerts', icon: Bell, match: (p) => p.startsWith('/notifications') },
       { to: '/profile', label: 'Profile', icon: UserRound, match: (p) => p.startsWith('/profile') },
       { to: '/version', label: 'More', icon: MoreHorizontal, match: (p) => p === '/version' },

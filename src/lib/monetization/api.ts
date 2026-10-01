@@ -117,12 +117,33 @@ export const getMatches = (limit = 50, offset = 0) => rpc<MatchItem[]>('dating_m
 export const getPaymentOptions = () => rpc<PaymentOption[]>('get_payment_options')
 
 export interface StartChatResult {
-  status: 'ok' | 'match_required' | 'unavailable' | 'account_restricted'
+  status: 'ok' | 'match_required' | 'unavailable' | 'account_restricted' | 'messages_off' | 'connections_only'
   conversation_id?: string
   created?: boolean
 }
 /** Start or reopen a chat from the Relationship area (server enforces match/plan rules). */
 export const startDatingChat = (target: string) => rpc<StartChatResult>('dating_start_conversation', { _target: target })
+
+export type MessagePrivacy = 'everyone' | 'connections' | 'nobody'
+export interface PrivacySettings {
+  message_privacy: MessagePrivacy
+  incognito: boolean
+  has_connections_profile: boolean
+}
+export const getMyPrivacy = () => rpc<PrivacySettings>('get_my_privacy')
+export const setMyPrivacy = (patch: { messagePrivacy?: MessagePrivacy; incognito?: boolean }) =>
+  rpc<PrivacySettings>('set_my_privacy', {
+    _message_privacy: patch.messagePrivacy ?? null,
+    _incognito: patch.incognito ?? null,
+  })
+
+export interface SendStatus {
+  can_send: boolean
+  remaining?: number
+  limit?: number
+}
+export const getConversationSendStatus = (conversationId: string) =>
+  rpc<SendStatus>('conversation_send_status', { _conversation_id: conversationId })
 
 /** People the signed-in user already liked or passed (RLS: own rows only). */
 export async function getMyReactedIds(): Promise<Set<string>> {

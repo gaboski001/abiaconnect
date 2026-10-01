@@ -24,6 +24,10 @@ export function useStartDatingChat() {
         navigate(`/messages/${r.conversation_id}`)
       } else if (r.status === 'match_required') {
         setPaywallOpen(true)
+      } else if (r.status === 'messages_off') {
+        toast.error(t('discover.messages_off'))
+      } else if (r.status === 'connections_only') {
+        toast.error(t('discover.connections_only'))
       } else if (r.status === 'account_restricted') {
         toast.error(t('discover.restricted'))
       } else {

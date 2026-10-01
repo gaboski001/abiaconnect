@@ -220,7 +220,7 @@ export default function RelationshipProfilePage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Block {name}?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  They won't see your Relationship profile and won't appear in your feed.
+                  They won't see your Connect profile, won't appear in your feed and can't message you.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -235,7 +235,12 @@ export default function RelationshipProfilePage() {
       {user && user.id !== card.user_id && (
         <p className="mt-2 text-xs text-muted-foreground">{t('profile.match_hint')}</p>
       )}
-      <PaywallDialog reason="message_first" open={chat.paywallOpen} onOpenChange={chat.setPaywallOpen} />
+      <PaywallDialog
+        reason="message_first"
+        open={chat.paywallOpen}
+        onOpenChange={chat.setPaywallOpen}
+        onSecondary={myReaction === 'like' ? undefined : like}
+      />
       <PaywallDialog reason="likes_limit" open={likePaywall} onOpenChange={setLikePaywall} />
       <MatchDialog partner={match} onClose={() => setMatch(null)} />
 

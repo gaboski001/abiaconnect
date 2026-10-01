@@ -78,6 +78,8 @@ import { VoiceRecorderButton } from '@/components/messages/VoiceRecorder'
 import { uploadQueue } from '@/lib/uploadQueue'
 import { useUploadQueue } from '@/hooks/useUploadQueue'
 import { moderateContent } from '@/lib/moderateContent'
+import { canPurchaseHere, getConversationSendStatus } from '@/lib/monetization/api'
+import { messagingRuleText, t } from '@/lib/monetization/strings'
 import { showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 import { useKeyboardInset } from '@/hooks/useKeyboardInset'
 import { useMessageReactions, type ReactionAgg } from '@/hooks/useMessageReactions'
@@ -1341,7 +1343,8 @@ function ConversationView({
           qc.setQueryData<Message[]>(queryKey, (prev) =>
             (prev ?? []).filter((m) => m.id !== optimistic.id),
           )
-          toast.error(error.message || 'Failed to send')
+          toast.error(messagingRuleText(error.message) ?? (error.message || 'Failed to send'))
+          qc.invalidateQueries({ queryKey: ['conversation-send-status', conversationId] })
           setDraft((d) => d || text)
           return
         }
@@ -1396,7 +1399,16 @@ function ConversationView({
   }, [messagesQ.data, searchQuery])
 
 
-  const canSend = !!draft.trim() || !!pendingFile
+  // First-message anti-spam: free members wait for a reply before sending more
+  // (enforced by the database; this only explains it and disables Send).
+  const sendStatusQ = useQuery({
+    queryKey: ['conversation-send-status', conversationId, (messagesQ.data ?? []).length],
+    queryFn: () => getConversationSendStatus(conversationId),
+    enabled: !!conversationId,
+    staleTime: 30_000,
+  })
+  const awaitingReply = sendStatusQ.data?.can_send === false
+  const canSend = (!!draft.trim() || !!pendingFile) && !awaitingReply
   const messageById = useMemo(() => {
     const map = new Map<string, Message>()
     ;(messagesQ.data ?? []).forEach((m) => map.set(m.id, m))
@@ -1941,6 +1953,19 @@ function ConversationView({
 
 
 
+      {awaitingReply && (
+        <div
+          role="status"
+          className="mx-3 mb-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-foreground"
+        >
+          {t('chat.awaiting_reply_banner')}{' '}
+          {canPurchaseHere() && (
+            <Link to="/relationship/premium" className="font-semibold underline underline-offset-2">
+              Premium members can follow up anytime.
+            </Link>
+          )}
+        </div>
+      )}
       <form
         onSubmit={handleSend}
         className={cn(

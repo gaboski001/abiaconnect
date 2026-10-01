@@ -34,7 +34,7 @@ export default function DatingLikes() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <SEO title="Likes & matches" description="See who likes you and your matches." path="/relationship/likes" />
+      <SEO title="Requests & connections" description="See who wants to connect with you and your connections." path="/relationship/likes" />
       <div className="mb-4 flex items-center gap-2">
         <Button asChild variant="ghost" size="icon" className="rounded-full" aria-label="Back to Relationship">
           <Link to="/relationship">

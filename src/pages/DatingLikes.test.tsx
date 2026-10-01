@@ -33,16 +33,16 @@ function renderPage() {
   )
 }
 
-describe('Likes you', () => {
+describe('Requests', () => {
   beforeEach(() => {
     state.likes = { entitled: false, total: 2, unseen: 2, preview_count: 2, items: [] }
   })
 
   it('free users see a count and a locked preview, never identities', async () => {
     renderPage()
-    expect(await screen.findByText('2 people like you')).toBeInTheDocument()
+    expect(await screen.findByText('2 people want to connect with you')).toBeInTheDocument()
     expect(screen.getByText('Upgrade to see who they are.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /see who likes you/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /see who wants to connect/i })).toBeInTheDocument()
     expect(screen.queryByTestId('avatar')).not.toBeInTheDocument()
   })
 
@@ -70,6 +70,6 @@ describe('Likes you', () => {
     renderPage()
     expect(await screen.findByText('Ada')).toBeInTheDocument()
     expect(screen.getByText('Umuahia North')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /like back/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /accept/i })).toBeInTheDocument()
   })
 })

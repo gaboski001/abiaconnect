@@ -42,6 +42,15 @@ const PRELUDE = `
   CREATE TABLE public.relationship_blocks (
     user_id uuid NOT NULL, blocked_id uuid NOT NULL, PRIMARY KEY (user_id, blocked_id)
   );
+  ALTER TABLE public.relationship_profiles ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "Users manage their own relationship profile" ON public.relationship_profiles FOR ALL TO authenticated
+    USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+  CREATE POLICY "Authenticated can view active relationship profiles" ON public.relationship_profiles FOR SELECT TO authenticated
+    USING (is_active = true AND NOT EXISTS (SELECT 1 FROM public.relationship_blocks b
+      WHERE b.user_id = relationship_profiles.user_id AND b.blocked_id = auth.uid()));
+  ALTER TABLE public.relationship_blocks ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "Users manage their own blocks" ON public.relationship_blocks FOR ALL TO authenticated
+    USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
   CREATE TABLE public.notifications (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL,
     type text NOT NULL, message text, link text, is_read boolean NOT NULL DEFAULT false,
@@ -58,6 +67,18 @@ const PRELUDE = `
     USING (auth.uid() = user1_id OR auth.uid() = user2_id);
   CREATE POLICY "Users create conversations" ON public.conversations FOR INSERT TO authenticated
     WITH CHECK (auth.uid() = user1_id OR auth.uid() = user2_id);
+  CREATE TABLE public.messages (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id uuid NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
+    sender_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    content text, is_read boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now()
+  );
+  ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "Participants read messages" ON public.messages FOR SELECT TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.conversations c WHERE c.id = conversation_id AND auth.uid() IN (c.user1_id, c.user2_id)));
+  CREATE POLICY "Sender inserts messages in own conversations" ON public.messages FOR INSERT TO authenticated
+    WITH CHECK (auth.uid() = sender_id AND EXISTS (SELECT 1 FROM public.conversations c
+      WHERE c.id = messages.conversation_id AND auth.uid() IN (c.user1_id, c.user2_id)));
   CREATE TABLE public.admins (user_id uuid PRIMARY KEY);
   CREATE FUNCTION public.is_admin(_user_id uuid) RETURNS boolean LANGUAGE sql STABLE AS
     $$ SELECT EXISTS (SELECT 1 FROM public.admins WHERE user_id = _user_id) $$;
@@ -82,6 +103,7 @@ const MIGRATIONS = [
   '20261001140000_payment_secrets_in_vault.sql',
   '20261001160000_rotate_push_internal_secret.sql',
   '20261001180000_dating_messaging_rules.sql',
+  '20261001200000_connections_privacy_and_antispam.sql',
 ]
 
 export type Db = PGlite & {

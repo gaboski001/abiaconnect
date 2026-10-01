@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Check, Crown, Loader2, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, Check, Crown, Home, Loader2, ShieldCheck, Sparkles, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEO } from '@/components/SEO'
@@ -78,7 +78,7 @@ export default function DatingPremium() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <SEO title="Premium" description="Upgrade your AbiaConnect dating experience." path="/relationship/premium" />
+      <SEO title="Premium" description="AbiaConnect Premium membership." path="/relationship/premium" />
       <div className="mb-2 flex items-center gap-2">
         <Button asChild variant="ghost" size="icon" className="rounded-full" aria-label="Back to Relationship">
           <Link to="/relationship">
@@ -106,6 +106,8 @@ export default function DatingPremium() {
           )}
         </section>
       )}
+
+      <WhyMembership />
 
       {!purchasable ? (
         <p className="mx-auto max-w-xl rounded-2xl bg-muted p-4 text-center text-sm text-muted-foreground">
@@ -219,6 +221,34 @@ export default function DatingPremium() {
         )}
       </section>
     </div>
+  )
+}
+
+/** Respectful explanation of why paid membership exists. */
+function WhyMembership() {
+  const reasons = [
+    { Icon: ShieldCheck, text: t('why.safety') },
+    { Icon: Users, text: t('why.free') },
+    { Icon: Sparkles, text: t('why.growth') },
+    { Icon: Home, text: t('why.local') },
+  ]
+  return (
+    <section aria-labelledby="why-membership" className="mx-auto mb-8 max-w-3xl rounded-3xl border border-border bg-card p-5 sm:p-6">
+      <h2 id="why-membership" className="text-lg font-semibold">
+        {t('why.title')}
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">{t('why.intro')}</p>
+      <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+        {reasons.map(({ Icon, text }) => (
+          <li key={text} className="flex items-start gap-3 text-sm">
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+              <Icon className="size-4" aria-hidden />
+            </span>
+            {text}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

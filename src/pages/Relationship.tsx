@@ -26,6 +26,7 @@ import { t } from '@/lib/monetization/strings'
 import { PaywallDialog } from '@/components/dating/PaywallDialog'
 import { MatchDialog, type MatchPartner } from '@/components/dating/MatchDialog'
 import { HowItWorks } from '@/components/dating/HowItWorks'
+import { PrivacySettingsDialog } from '@/components/dating/PrivacySettingsDialog'
 import { useStartDatingChat } from '@/hooks/useStartDatingChat'
 
 const PAGE_SIZE = 24
@@ -285,8 +286,8 @@ export default function Relationship() {
   return (
     <div className="mx-auto w-full max-w-6xl overflow-x-clip">
       <SEO
-        title="Relationship — Meet Abia members"
-        description="Discover Abia members open to friendship, dating, and serious relationships. Chat directly with profiles you like."
+        title="Connect — Meet Abia professionals, friends and partners"
+        description="Connect with Abia members for business, networking, friendship and relationships. Build trusted connections across Abia and beyond."
         path="/relationship"
       />
 
@@ -297,14 +298,15 @@ export default function Relationship() {
               <Heart className="size-4 text-white sm:size-5" fill="white" />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-bold leading-tight sm:text-2xl">Relationship</h1>
+              <h1 className="truncate text-lg font-bold leading-tight sm:text-2xl">Connect</h1>
               <p className="truncate text-xs text-muted-foreground">
-                <span className="sm:hidden">Meet Abia members</span>
-                <span className="hidden sm:inline">Meet real Abia members near you</span>
+                <span className="sm:hidden">Business, friendship &amp; more</span>
+                <span className="hidden sm:inline">Meet Abia professionals, friends and partners</span>
               </p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <PrivacySettingsDialog />
             <PremiumLink />
             {myProfile !== undefined && (
               <Button
@@ -321,7 +323,7 @@ export default function Relationship() {
           </div>
         </div>
 
-        <nav className="grid grid-cols-3 gap-1 rounded-full bg-muted p-1 sm:inline-grid sm:w-auto" aria-label="Relationship sections">
+        <nav className="grid grid-cols-3 gap-1 rounded-full bg-muted p-1 sm:inline-grid sm:w-auto" aria-label="Connect sections">
           <button
             onClick={() => changeMode('discover')}
             aria-current={mode === 'discover' ? 'page' : undefined}
@@ -448,7 +450,7 @@ export default function Relationship() {
 
       {!user && (
         <div className="rounded-2xl border border-border bg-card p-6 text-center">
-          <p className="text-sm text-muted-foreground">Sign in to browse and chat.</p>
+          <p className="text-sm text-muted-foreground">Sign in to discover members and grow your network.</p>
         </div>
       )}
 
@@ -477,12 +479,12 @@ export default function Relationship() {
         <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
           <Heart className="size-8 mx-auto text-pink-500 mb-3" />
           <p className="font-semibold">
-            {hasActiveFilters ? 'No profiles match your filters' : 'No profiles yet'}
+            {hasActiveFilters ? 'No members match your filters' : 'No members to show yet'}
           </p>
           <p className="text-sm text-muted-foreground mt-1">
             {hasActiveFilters
               ? 'Try widening your search or clearing filters.'
-              : 'Be the first — create your relationship profile and get discovered.'}
+              : 'Be among the first: create your Connect profile so the right people can find you.'}
           </p>
           {hasActiveFilters ? (
             <Button className="mt-4 rounded-full" onClick={clearFilters} variant="secondary">
@@ -562,7 +564,7 @@ export default function Relationship() {
               )}
               {!hasNextPage && cards.length >= PAGE_SIZE && (
                 <p className="text-center text-xs text-muted-foreground mt-6">
-                  You've reached the end — check back soon for new profiles.
+                  You've seen everyone for now. New members join every day.
                 </p>
               )}
             </>
@@ -668,10 +670,10 @@ function PremiumLink() {
   const { data: ent } = useDatingEntitlements()
   if (!(ent?.is_premium || canPurchaseHere())) return null
   return (
-    <Button asChild variant="outline" className="size-10 rounded-full border-amber-500/40 bg-card p-0 shadow-sm hover:bg-amber-500/10 min-[400px]:w-auto min-[400px]:px-3 sm:px-4">
+    <Button asChild variant="outline" className="size-10 rounded-full border-amber-500/40 bg-card p-0 shadow-sm hover:bg-amber-500/10 sm:w-auto sm:px-4">
       <Link to="/relationship/premium" aria-label={ent?.is_premium ? `${ent.plan_name} plan` : 'Upgrade to Premium'}>
         <Crown className="size-4 text-amber-500" />
-        <span className="hidden min-[400px]:inline">{ent?.is_premium ? ent.plan_name : 'Premium'}</span>
+        <span className="hidden sm:inline">{ent?.is_premium ? ent.plan_name : 'Premium'}</span>
       </Link>
     </Button>
   )
@@ -773,10 +775,10 @@ function DiscoverView({ cards: allCards }: { cards: RelationshipCard[] }) {
     return (
       <div className="rounded-2xl border border-border bg-card p-10 text-center">
         <p className="font-semibold">You're all caught up</p>
-        <p className="mt-1 text-sm text-muted-foreground">Check back later for more profiles, or see who likes you.</p>
+        <p className="mt-1 text-sm text-muted-foreground">You have seen everyone for now. Check your requests, or come back later.</p>
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           <Button asChild className="rounded-full">
-            <Link to="/relationship/likes">See likes & matches</Link>
+            <Link to="/relationship/likes">View requests & connections</Link>
           </Button>
           <Button variant="outline" className="rounded-full" onClick={() => setIndex(0)}>
             Start over
@@ -824,7 +826,12 @@ function DiscoverView({ cards: allCards }: { cards: RelationshipCard[] }) {
       </p>
 
       <PaywallDialog reason="likes_limit" open={paywall} onOpenChange={setPaywall} />
-      <PaywallDialog reason="message_first" open={chat.paywallOpen} onOpenChange={chat.setPaywallOpen} />
+      <PaywallDialog
+        reason="message_first"
+        open={chat.paywallOpen}
+        onOpenChange={chat.setPaywallOpen}
+        onSecondary={() => react('like')}
+      />
       <MatchDialog partner={match} onClose={() => setMatch(null)} />
     </div>
   )
@@ -835,7 +842,7 @@ const SWIPE_VELOCITY = 700
 
 /**
  * The current Discover card. Drag right to like, left to pass (touch or
- * mouse); a "LIKE"/"NOPE" stamp follows the drag. Short drags snap back.
+ * mouse); a "CONNECT"/"SKIP" stamp follows the drag. Short drags snap back.
  */
 function SwipeDeck({
   card,
@@ -933,14 +940,14 @@ function SwipeCard({
         className="pointer-events-none absolute left-5 top-6 -rotate-12 rounded-xl border-4 border-emerald-400 px-3 py-1 text-2xl font-black tracking-wider text-emerald-400"
         aria-hidden
       >
-        LIKE
+        CONNECT
       </motion.span>
       <motion.span
         style={{ opacity: nopeOpacity }}
         className="pointer-events-none absolute right-5 top-6 rotate-12 rounded-xl border-4 border-rose-500 px-3 py-1 text-2xl font-black tracking-wider text-rose-500"
         aria-hidden
       >
-        NOPE
+        SKIP
       </motion.span>
 
       <Link

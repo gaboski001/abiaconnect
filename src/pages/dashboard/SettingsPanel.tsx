@@ -29,6 +29,7 @@ import { Phone, PhoneOff } from 'lucide-react'
 import { areCallsEnabled, hydrateCallsEnabledFromProfile, setCallsEnabled, subscribeCallsEnabled } from '@/lib/callPreferences'
 import { toWebP } from '@/lib/image'
 import { GOLD_GRADIENT, GOLD_SHADOW, PREMIUM_SHADOW } from '@/lib/mobileBrand'
+import { PrivacySettingsPanel } from '@/components/dating/PrivacySettingsDialog'
 
 export interface SettingsProfile {
   id?: string
@@ -276,6 +277,11 @@ export default function SettingsPanel({
 
 
       {/* NativeAppDownload section removed by user request */}
+
+      <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 text-white backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
+        <h2 className="mb-4 text-lg font-black text-white">Privacy &amp; messages</h2>
+        <PrivacySettingsPanel />
+      </section>
 
       <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
         <h2 className="text-lg font-black text-white">Change password</h2>

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { messagingRuleText } from '@/lib/monetization/strings'
 
 export type LookingFor = 'friendship' | 'dating' | 'serious' | 'marriage' | 'networking'
 export type RelSex = 'male' | 'female' | 'other' | 'prefer_not_to_say'
@@ -38,12 +39,13 @@ export interface RelationshipCard extends RelationshipProfile {
   avatar_url: string | null
 }
 
+// Order matters: it is the order shown in filters and forms.
 export const LOOKING_FOR_LABELS: Record<LookingFor, string> = {
+  networking: 'Business & networking',
   friendship: 'Friendship',
   dating: 'Dating',
-  serious: 'Serious relationship',
+  serious: 'Long-term relationship',
   marriage: 'Marriage',
-  networking: 'Networking',
 }
 
 export function calcAge(dob?: string | null): number | null {
@@ -71,7 +73,7 @@ export async function startConversationWith(otherUserId: string, myUserId: strin
     .insert({ user1_id: a, user2_id: b })
     .select('id')
     .single()
-  if (error) throw error
+  if (error) throw new Error(messagingRuleText(error.message) ?? error.message)
   return created.id as string
 }
 

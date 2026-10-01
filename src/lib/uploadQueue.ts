@@ -7,6 +7,7 @@
 import { supabase } from '@/lib/supabase'
 import { ATTACHMENT_TTL_HOURS, isImage } from '@/lib/chatAttachments'
 import { scanStorageObject } from '@/lib/scanAttachment'
+import { messagingRuleText } from '@/lib/monetization/strings'
 
 export type QueueStatus = 'queued' | 'uploading' | 'scanning' | 'sending' | 'done' | 'error' | 'blocked'
 
@@ -182,6 +183,11 @@ class UploadQueue {
       // Drop from queue shortly after; Realtime will surface the real message.
       setTimeout(() => this.remove(item.id), 400)
     } catch (e: any) {
+      const rule = messagingRuleText(e?.message)
+      if (rule) {
+        this.update(item.id, { status: 'error', error: rule })
+        return
+      }
       const msg = e?.message || 'Upload failed'
       if (item.attempt < MAX_ATTEMPTS) {
         const backoff = Math.min(8000, 500 * 2 ** (item.attempt - 1))

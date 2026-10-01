@@ -22,10 +22,13 @@ export function PaywallDialog({
   reason,
   open,
   onOpenChange,
+  onSecondary,
 }: {
   reason: PaywallReason
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Optional action for the secondary button (e.g. send a connection request). */
+  onSecondary?: () => void
 }) {
   const navigate = useNavigate()
   const copy = COPY[reason]
@@ -59,7 +62,14 @@ export function PaywallDialog({
               <Crown className="size-4" /> {t(copy.cta)}
             </Button>
           )}
-          <Button variant="ghost" className="w-full rounded-full" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="ghost"
+            className="w-full rounded-full"
+            onClick={() => {
+              onOpenChange(false)
+              onSecondary?.()
+            }}
+          >
             {t(copy.dismiss)}
           </Button>
         </DialogFooter>

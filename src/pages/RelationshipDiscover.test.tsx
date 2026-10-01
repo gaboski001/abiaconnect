@@ -96,7 +96,7 @@ async function openDiscover() {
     </QueryClientProvider>,
   )
   // Discover is the default view.
-  await screen.findByRole('button', { name: 'Like' })
+  await screen.findByRole('button', { name: 'Connect' })
 }
 
 // hidden: true so the card is still found while a dialog marks the page aria-hidden.
@@ -111,9 +111,12 @@ describe('Discover', () => {
 
   it('opens on Discover with plain-language guidance and swipe hint', async () => {
     await openDiscover()
-    expect(screen.getByText('How it works')).toBeInTheDocument()
-    expect(screen.getByText(/Swipe right to like · Swipe left to pass/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /likes/i })).toHaveAttribute('href', '/relationship/likes')
+    expect(screen.getByText('How Connect works')).toBeInTheDocument()
+    expect(screen.getByText(/Swipe right to connect · Swipe left to skip/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /requests/i })).toHaveAttribute('href', '/relationship/likes')
+    // Professional framing, not dating-only.
+    expect(screen.getByRole('heading', { level: 1, name: 'Connect' })).toBeInTheDocument()
+    expect(screen.queryByText(/dating profile/i)).not.toBeInTheDocument()
   })
 
   it('skips profiles already liked or passed', async () => {
@@ -128,7 +131,7 @@ describe('Discover', () => {
     await openDiscover()
     await waitFor(() => expect(currentName()).not.toBe(''))
     const first = currentName()
-    fireEvent.click(screen.getByRole('button', { name: 'Pass' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Skip' }))
     await waitFor(() => expect(currentName()).not.toBe(first))
     expect(api.reactToProfile).toHaveBeenCalledWith(expect.any(String), 'pass')
   })
@@ -138,18 +141,18 @@ describe('Discover', () => {
     await openDiscover()
     await waitFor(() => expect(currentName()).not.toBe(''))
     const first = currentName()
-    fireEvent.click(screen.getByRole('button', { name: 'Like' }))
-    expect(await screen.findByText("You're out of likes for today")).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Connect' }))
+    expect(await screen.findByText("You've reached today's connection requests")).toBeInTheDocument()
     expect(currentName()).toBe(first)
-    expect(screen.getByText(/0 likes left today/)).toBeInTheDocument()
+    expect(screen.getByText(/0 requests left today/)).toBeInTheDocument()
   })
 
   it('celebrates a match', async () => {
     api.reactToProfile.mockResolvedValue({ status: 'ok', matched: true, likes_remaining: 24 })
     await openDiscover()
     await waitFor(() => expect(currentName()).not.toBe(''))
-    fireEvent.click(screen.getByRole('button', { name: 'Like' }))
-    expect(await screen.findByText("It's a match!")).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Connect' }))
+    expect(await screen.findByText("You're connected")).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /send a message/i })).toBeInTheDocument()
   })
 
@@ -158,9 +161,11 @@ describe('Discover', () => {
     await openDiscover()
     await waitFor(() => expect(currentName()).not.toBe(''))
     fireEvent.click(screen.getByRole('button', { name: 'Message' }))
-    expect(await screen.findByText('Match first to start chatting')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /message without waiting/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /maybe later/i })).toBeInTheDocument()
+    expect(await screen.findByText('Connect first to start a conversation')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /introduce myself with premium/i })).toBeInTheDocument()
+    api.reactToProfile.mockResolvedValue({ status: 'ok', matched: false, likes_remaining: 20 })
+    fireEvent.click(screen.getByRole('button', { name: /send a request instead/i }))
+    await waitFor(() => expect(api.reactToProfile).toHaveBeenCalledWith(expect.any(String), 'like'))
   })
 
   async function swipe(dx: number) {

@@ -183,7 +183,7 @@ export default function RelationshipEdit() {
       .upsert(payload as never, { onConflict: 'user_id' })
     setSaving(false)
     if (error) return toast.error(error.message)
-    toast.success('Relationship profile saved')
+    toast.success('Connect profile saved')
     navigate('/relationship')
   }
 
@@ -192,13 +192,21 @@ export default function RelationshipEdit() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <SEO title="Edit relationship profile" description="Create or update your Relationship profile on AbiaConnect." path="/relationship/edit" />
+      <SEO title="Your Connect profile" description="Create or update your Connect profile on AbiaConnect." path="/relationship/edit" />
       <div className="flex items-center justify-between">
         <Button asChild variant="ghost"><Link to="/relationship"><ArrowLeft className="size-4" /> Back</Link></Button>
         <Button type="button" variant="secondary" onClick={prefillFromProfile} disabled={prefill}>
           {prefill ? <Loader2 className="animate-spin size-4" /> : <Heart className="size-4" />}
           Fill from my profile
         </Button>
+      </div>
+
+      <div>
+        <h1 className="text-2xl font-bold">Your Connect profile</h1>
+        <p className="text-sm text-muted-foreground">
+          Introduce yourself professionally. Say what you do and what you are looking for: business, networking,
+          friendship or a relationship.
+        </p>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
@@ -208,7 +216,7 @@ export default function RelationshipEdit() {
             value={form.headline}
             onChange={(e) => setForm((f) => ({ ...f, headline: e.target.value }))}
             maxLength={120}
-            placeholder="A short line that describes you"
+            placeholder="e.g. Agro-business founder in Aba, open to partnerships"
           />
         </div>
         <div>
@@ -218,7 +226,7 @@ export default function RelationshipEdit() {
             onChange={(e) => setForm((f) => ({ ...f, about: e.target.value }))}
             rows={4}
             maxLength={2000}
-            placeholder="Tell people who you are and what you're looking for"
+            placeholder="Your work, interests and the kind of connections you are looking for"
           />
         </div>
 
@@ -368,7 +376,7 @@ export default function RelationshipEdit() {
 
         <label className="flex items-center gap-3 text-sm">
           <Switch checked={form.is_active} onCheckedChange={(v) => setForm((f) => ({ ...f, is_active: v }))} />
-          Visible in the Relationship feed
+          Profile active (turn off to pause your profile)
         </label>
 
         <Button onClick={save} disabled={saving} className="w-full rounded-full bg-gradient-to-br from-pink-500 to-rose-600 text-white">

@@ -25,8 +25,8 @@ describe('PaywallDialog', () => {
 
   it('offers an upgrade and an easy way out on the website', () => {
     renderDialog()
-    expect(screen.getByText("You're out of likes for today")).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /upgrade to premium/i })).toBeInTheDocument()
+    expect(screen.getByText("You've reached today's connection requests")).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /explore premium/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /continue tomorrow/i })).toBeInTheDocument()
   })
 
@@ -34,7 +34,7 @@ describe('PaywallDialog', () => {
     platform.native = true
     platform.name = 'android'
     renderDialog()
-    expect(screen.queryByRole('button', { name: /upgrade to premium/i })).not.toBeInTheDocument()
-    expect(screen.getByText('Upgrades are not available in this app.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /explore premium/i })).not.toBeInTheDocument()
+    expect(screen.getByText('Membership upgrades are not available in this app.')).toBeInTheDocument()
   })
 })
