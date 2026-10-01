@@ -4,6 +4,7 @@
 //   • Enqueues a transactional birthday email (skipped if no email on file).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireServiceRole } from "../_shared/service-auth.ts";
+import { sendAndLog } from "../_shared/transactional-email-templates/log-send.ts";
 
 Deno.serve(async (req) => {
   const denied = await requireServiceRole(req);
@@ -72,20 +73,20 @@ Deno.serve(async (req) => {
         if (!nErr) notified++;
       }
 
-      // 2. Transactional email — skip if no email on file.
+      // 2. Birthday email — skip if no email on file.
       if (p.email) {
-        const { error: eErr } = await supabase.functions.invoke(
-          "send-transactional-email",
-          {
-            body: {
-              templateName: "birthday-greeting",
-              recipientEmail: p.email,
-              idempotencyKey: `birthday-${p.id}-${year}${mm}${dd}`,
-              templateData: { name },
-            },
-          },
-        );
-        if (!eErr) emailed++;
+        try {
+          const outcome = await sendAndLog(supabase as any, "birthday-greeting", p.email, {
+            idempotencyKey: `birthday-${p.id}-${year}${mm}${dd}`,
+            templateData: { name },
+          });
+          if (outcome === "sent") emailed++;
+        } catch (e: any) {
+          if (e?.status === 429) {
+            await new Promise((r) => setTimeout(r, (e.retryAfterSeconds ?? 60) * 1000));
+          }
+          console.error("birthday email failed", { message: String(e?.message ?? e) });
+        }
       }
     }
 
