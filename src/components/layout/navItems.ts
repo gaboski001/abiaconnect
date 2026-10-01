@@ -2,6 +2,7 @@ import {
   BarChart3,
   Gift,
   HandHeart,
+  Handshake,
   Info,
   LayoutDashboard,
   MessagesSquare,
@@ -50,6 +51,7 @@ export function useNavSections() {
     ...(subgroupsEnabled ? [{ label: 'Groups', to: '/subgroups', icon: Users }] : []),
     { label: 'Polls', to: '/polls', icon: BarChart3 },
     { label: 'Contests', to: '/contests', icon: Vote },
+    { label: 'Connect', to: '/relationship', icon: Handshake },
   ]
 
   const community: NavItem[] = [
