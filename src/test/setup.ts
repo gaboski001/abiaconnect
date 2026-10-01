@@ -1,6 +1,9 @@
 import '@testing-library/jest-dom'
 
-Object.defineProperty(window, 'matchMedia', {
+// Some suites (e.g. the SQL tests) run in the plain Node environment.
+const hasWindow = typeof window !== 'undefined'
+
+if (hasWindow) Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: (query: string) => ({
     matches: false,
@@ -49,6 +52,6 @@ for (const name of ['localStorage', 'sessionStorage'] as const) {
   if (!usable) {
     const storage = createMemoryStorage()
     Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: storage })
-    Object.defineProperty(window, name, { configurable: true, writable: true, value: storage })
+    if (hasWindow) Object.defineProperty(window, name, { configurable: true, writable: true, value: storage })
   }
 }

@@ -23,3 +23,11 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = true
   [functions.upload-release]
     verify_jwt = false
+  [functions.payments-checkout]
+    verify_jwt = true
+  [functions.payments-verify]
+    verify_jwt = true
+  [functions.payments-admin-status]
+    verify_jwt = true
+  [functions.payments-webhook]
+    verify_jwt = false

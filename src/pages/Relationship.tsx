@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, MessageCircle, Sparkles, X, LayoutGrid, Layers, MapPin, Pencil, Filter, RefreshCw, AlertCircle } from 'lucide-react'
+import { Heart, MessageCircle, Sparkles, X, LayoutGrid, Layers, MapPin, Pencil, Filter, RefreshCw, AlertCircle, Crown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from '@/lib/toast'
@@ -21,6 +21,11 @@ import {
 import { isValidHttpUrl } from '@/lib/images'
 import { selectRelationshipCards } from '@/lib/relationshipFeed'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
+import { useDatingEntitlements } from '@/hooks/useDatingEntitlements'
+import { canPurchaseHere, getLikesReceived, reactToProfile, track, type ReactResult } from '@/lib/monetization/api'
+import { t } from '@/lib/monetization/strings'
+import { PaywallDialog } from '@/components/dating/PaywallDialog'
+import { MatchDialog, type MatchPartner } from '@/components/dating/MatchDialog'
 
 const PAGE_SIZE = 24
 
@@ -294,6 +299,7 @@ export default function Relationship() {
               <Layers className="size-3.5" /> Discover
             </button>
           </div>
+          <DatingHeaderLinks />
           <Button asChild variant="secondary" className="rounded-full">
             <Link to="/relationship/edit">
               {myProfile ? (
@@ -573,17 +579,106 @@ const CardTile = memo(function CardTile({ card }: { card: RelationshipCard }) {
   )
 }, (prev, next) => prev.card.id === next.card.id && prev.card.updated_at === next.card.updated_at)
 
+/** "Likes" (with pending count) and "Premium" shortcuts in the page header. */
+function DatingHeaderLinks() {
+  const { user } = useAuth()
+  const { data: ent } = useDatingEntitlements()
+  const { data: likes } = useQuery({
+    queryKey: ['dating-likes-count', user?.id],
+    queryFn: () => getLikesReceived(1, 0),
+    enabled: !!user,
+    staleTime: 60_000,
+  })
+  const pending = likes?.total ?? 0
+  return (
+    <>
+      <Button asChild variant="secondary" className="rounded-full">
+        <Link to="/relationship/likes" aria-label={`Likes${pending ? `, ${pending} pending` : ''}`}>
+          <Heart className="size-4 text-pink-600" />
+          Likes
+          {pending > 0 && (
+            <span className="ml-0.5 rounded-full bg-pink-600 px-1.5 text-[11px] font-bold leading-5 text-white">
+              {pending > 99 ? '99+' : pending}
+            </span>
+          )}
+        </Link>
+      </Button>
+      {(ent?.is_premium || canPurchaseHere()) && (
+        <Button asChild variant="secondary" className="rounded-full">
+          <Link to="/relationship/premium">
+            <Crown className="size-4 text-amber-500" />
+            {ent?.is_premium ? ent.plan_name : 'Premium'}
+          </Link>
+        </Button>
+      )}
+    </>
+  )
+}
+
 function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { data: ent } = useDatingEntitlements()
   const [index, setIndex] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [paywall, setPaywall] = useState(false)
+  const [match, setMatch] = useState<MatchPartner | null>(null)
+  const [likesLeft, setLikesLeft] = useState<number | null>(null)
   const current = cards[index]
   const remaining = useMemo(() => cards.length - index, [cards, index])
 
+  useEffect(() => {
+    track('DISCOVERY_VIEWED')
+  }, [])
+
+  // Free-plan counter (the server is authoritative; this is display only).
+  const dailyLimit = ent?.limits?.daily_likes
+  const shownLikesLeft =
+    likesLeft ?? (typeof dailyLimit === 'number' ? Math.max(dailyLimit - (ent?.likes_used_today ?? 0), 0) : null)
+
   const next = () => setIndex((i) => Math.min(i + 1, cards.length))
 
-  const like = async () => {
+  /** Returns true when the card should advance. */
+  const handleResult = (r: ReactResult, name: string, userId: string) => {
+    if (r.status === 'limit_reached') {
+      setLikesLeft(0)
+      setPaywall(true)
+      return false
+    }
+    if (r.status === 'profile_required') {
+      toast.error(t('discover.profile_required'))
+      navigate('/relationship/edit')
+      return false
+    }
+    if (r.status === 'account_restricted') {
+      toast.error(t('discover.restricted'))
+      return false
+    }
+    if (r.status === 'unavailable') toast.error(t('discover.unavailable'))
+    if (typeof r.likes_remaining === 'number') setLikesLeft(r.likes_remaining)
+    if (r.matched) {
+      setMatch({ userId, name })
+      queryClient.invalidateQueries({ queryKey: ['dating-matches'] })
+    }
+    return true
+  }
+
+  const react = async (kind: 'like' | 'pass') => {
+    if (!current || !user || busy) return
+    setBusy(true)
+    const name = current.display_name || current.username || 'them'
+    try {
+      const r = await reactToProfile(current.user_id, kind)
+      if (handleResult(r, name, current.user_id)) next()
+    } catch {
+      toast.error('Something went wrong. Please try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const message = async () => {
     if (!current || !user || busy) return
     setBusy(true)
     try {
@@ -606,77 +701,96 @@ function DiscoverView({ cards }: { cards: RelationshipCard[] }) {
     )
   }
 
-  const age = calcAge(current.dob)
-  const name = current.display_name || current.username || 'Member'
-  const [broken, setBroken] = useState(false)
-  useEffect(() => { setBroken(false) }, [current?.id])
-  const rawPhoto = current.photos?.[0] ?? null
-  const signedAvatar = useSignedUrl(current.avatar_url, 'avatars')
-  const fallback = signedAvatar || (isValidHttpUrl(current.avatar_url) ? current.avatar_url : null)
-  const cover = !broken ? (isValidHttpUrl(rawPhoto) ? rawPhoto : fallback) : null
-
   return (
     <div className="mx-auto max-w-md">
-      <div className="relative aspect-[3/4] rounded-3xl overflow-hidden bg-gradient-to-br from-pink-500/20 to-rose-600/20 border border-border shadow-2xl">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={current.id}
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, x: -60 }}
-            transition={{ duration: 0.25 }}
-            className="absolute inset-0"
-          >
-            {cover && (
-              <img src={cover} alt={name} onError={() => setBroken(true)} className="absolute inset-0 h-full w-full object-cover" />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-            <Link
-              to={`/relationship/${current.user_id}`}
-              className="absolute bottom-0 left-0 right-0 p-5 text-white"
-            >
-              <p className="text-2xl font-extrabold leading-tight">
-                {name}{age ? `, ${age}` : ''}
-              </p>
-              {(current.current_location || current.lga) && (
-                <p className="text-sm opacity-90 flex items-center gap-1 mt-1">
-                  <MapPin className="size-3.5" /> {current.current_location || current.lga}
-                </p>
-              )}
-              {current.headline && (
-                <p className="text-sm opacity-90 mt-1 line-clamp-2">{current.headline}</p>
-              )}
-              {current.looking_for && (
-                <span className="mt-2 inline-block rounded-full bg-pink-600 text-white text-xs font-semibold px-2.5 py-0.5">
-                  {LOOKING_FOR_LABELS[current.looking_for]}
-                </span>
-              )}
-              <p className="text-[10px] opacity-70 mt-2">Tap card to view full profile</p>
-            </Link>
-          </motion.div>
-        </AnimatePresence>
-      </div>
+      <DiscoverCard card={current} />
 
       <div className="flex items-center justify-center gap-4 mt-5">
         <button
-          onClick={next}
-          className="h-14 w-14 rounded-full bg-card border border-border grid place-items-center shadow-md hover:bg-muted transition"
-          aria-label="Skip"
+          onClick={() => react('pass')}
+          disabled={busy}
+          className="h-14 w-14 rounded-full bg-card border border-border grid place-items-center shadow-md hover:bg-muted transition disabled:opacity-60"
+          aria-label={t('discover.pass')}
         >
           <X className="size-6 text-muted-foreground" />
         </button>
         <button
-          onClick={like}
+          onClick={() => react('like')}
           disabled={busy}
           className="h-16 w-16 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 grid place-items-center shadow-lg shadow-pink-500/40 hover:scale-105 active:scale-95 transition disabled:opacity-60"
-          aria-label="Say hi"
+          aria-label={t('discover.like')}
         >
-          <MessageCircle className="size-7 text-white" />
+          <Heart className="size-7 text-white" fill="white" />
+        </button>
+        <button
+          onClick={message}
+          disabled={busy}
+          className="h-14 w-14 rounded-full bg-card border border-border grid place-items-center shadow-md hover:bg-muted transition disabled:opacity-60"
+          aria-label={t('discover.message')}
+        >
+          <MessageCircle className="size-6 text-pink-600" />
         </button>
       </div>
       <p className="text-center text-xs text-muted-foreground mt-3">
         {remaining} {remaining === 1 ? 'profile' : 'profiles'} to discover
+        {typeof shownLikesLeft === 'number' && <> · {t('discover.likes_left', { count: shownLikesLeft })}</>}
       </p>
+
+      <PaywallDialog reason="likes_limit" open={paywall} onOpenChange={setPaywall} />
+      <MatchDialog partner={match} onClose={() => setMatch(null)} />
+    </div>
+  )
+}
+
+function DiscoverCard({ card }: { card: RelationshipCard }) {
+  const age = calcAge(card.dob)
+  const name = card.display_name || card.username || 'Member'
+  const [broken, setBroken] = useState(false)
+  useEffect(() => { setBroken(false) }, [card.id])
+  const rawPhoto = card.photos?.[0] ?? null
+  const signedAvatar = useSignedUrl(card.avatar_url, 'avatars')
+  const fallback = signedAvatar || (isValidHttpUrl(card.avatar_url) ? card.avatar_url : null)
+  const cover = !broken ? (isValidHttpUrl(rawPhoto) ? rawPhoto : fallback) : null
+
+  return (
+    <div className="relative aspect-[3/4] rounded-3xl overflow-hidden bg-gradient-to-br from-pink-500/20 to-rose-600/20 border border-border shadow-2xl">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={card.id}
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, x: -60 }}
+          transition={{ duration: 0.25 }}
+          className="absolute inset-0"
+        >
+          {cover && (
+            <img src={cover} alt={name} onError={() => setBroken(true)} className="absolute inset-0 h-full w-full object-cover" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+          <Link
+            to={`/relationship/${card.user_id}`}
+            className="absolute bottom-0 left-0 right-0 p-5 text-white"
+          >
+            <p className="text-2xl font-extrabold leading-tight">
+              {name}{age ? `, ${age}` : ''}
+            </p>
+            {(card.current_location || card.lga) && (
+              <p className="text-sm opacity-90 flex items-center gap-1 mt-1">
+                <MapPin className="size-3.5" /> {card.current_location || card.lga}
+              </p>
+            )}
+            {card.headline && (
+              <p className="text-sm opacity-90 mt-1 line-clamp-2">{card.headline}</p>
+            )}
+            {card.looking_for && (
+              <span className="mt-2 inline-block rounded-full bg-pink-600 text-white text-xs font-semibold px-2.5 py-0.5">
+                {LOOKING_FOR_LABELS[card.looking_for]}
+              </span>
+            )}
+            <p className="text-[10px] opacity-70 mt-2">Tap card to view full profile</p>
+          </Link>
+        </motion.div>
+      </AnimatePresence>
     </div>
   )
 }

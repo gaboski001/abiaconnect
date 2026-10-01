@@ -63,6 +63,8 @@ import HeroSlidesSection, {
 import { Image as ImageIcon } from 'lucide-react'
 import AppReleasesSection from '@/components/admin/AppReleasesSection'
 import TestPushSection from '@/components/admin/TestPushSection'
+import DatingMonetizationSection from '@/components/admin/DatingMonetizationSection'
+import { HeartHandshake } from 'lucide-react'
 import { Download as DownloadIcon, BellRing } from 'lucide-react'
 import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
@@ -78,6 +80,7 @@ type SectionId =
   | 'email'
   | 'native-apps'
   | 'test-push'
+  | 'monetization'
 
 const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'overview', label: 'Overview', Icon: BarChart3 },
@@ -91,6 +94,7 @@ const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'email', label: 'Email Settings', Icon: Mail },
   { id: 'native-apps', label: 'Native Apps', Icon: DownloadIcon },
   { id: 'test-push', label: 'Test Push', Icon: BellRing },
+  { id: 'monetization', label: 'Dating Monetization', Icon: HeartHandshake },
 ]
 
 export default function AdminDashboard() {
@@ -144,6 +148,7 @@ export default function AdminDashboard() {
           {section === 'email' && <EmailSettingsSection />}
           {section === 'native-apps' && <AppReleasesSection />}
           {section === 'test-push' && <TestPushSection />}
+          {section === 'monetization' && <DatingMonetizationSection />}
         </main>
       </div>
     </div>
