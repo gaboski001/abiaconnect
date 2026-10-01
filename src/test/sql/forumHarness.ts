@@ -121,6 +121,7 @@ const PRELUDE = `
 const MIGRATIONS = [
   '20261001200000_forum_points_and_contests.sql',
   '20261001210000_security_review_fixes.sql',
+  '20261002100000_restrict_member_stats_badges.sql',
 ]
 
 export type ForumDb = PGlite & {

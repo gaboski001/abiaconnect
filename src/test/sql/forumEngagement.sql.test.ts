@@ -87,6 +87,19 @@ describe('forum points', () => {
     expect((await db.one<{ is_banned: boolean }>(`SELECT is_banned FROM profiles WHERE id = $1`, [ben])).is_banned).toBe(false)
   })
 
+  it('lets members read only their own points and badges', async () => {
+    await newThread(db, ada)
+    await newThread(db, ben)
+    const stats = (await db.asMember(ada, () => db.query(`SELECT user_id FROM member_stats`))).rows as Array<{ user_id: string }>
+    expect(stats.map((r) => r.user_id)).toEqual([ada])
+    const badges = (await db.asMember(ada, () => db.query(`SELECT user_id FROM member_badges`))).rows as Array<{ user_id: string }>
+    expect(badges.every((r) => r.user_id === ada)).toBe(true)
+    expect(badges.length).toBeGreaterThan(0)
+    // The leaderboard still shows everyone (through its server function).
+    const board = (await db.asMember(ada, () => db.query(`SELECT user_id FROM get_leaderboard('all')`))).rows
+    expect(board).toHaveLength(2)
+  })
+
   it('awards a badge for the first post and tells the member', async () => {
     await newThread(db, ada)
     expect((await db.query(`SELECT badge FROM member_badges WHERE user_id = $1`, [ada])).rows).toEqual([{ badge: 'first_post' }])
