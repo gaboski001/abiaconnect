@@ -98,9 +98,9 @@ export const BiometricLoginButton = ({ onSuccess, onFallbackToPassword }: Props)
         variant="outline"
         onClick={handleClick}
         disabled={loading}
-        className="h-14 w-full gap-2 rounded-2xl border-white/10 bg-white/[0.03] text-slate-50 hover:bg-white/[0.06]"
+        className="h-[52px] w-full gap-2.5 rounded-xl border-white/12 bg-white/[0.04] text-[15px] font-semibold text-slate-50 hover:bg-white/[0.07]"
       >
-        <Fingerprint className="size-4 text-amber-300" />
+        <Fingerprint className="size-5 text-amber-300" />
         {loading ? 'Verifying…' : 'Sign in with biometrics'}
       </Button>
 

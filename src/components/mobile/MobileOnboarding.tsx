@@ -25,6 +25,8 @@ import {
 interface MobileOnboardingProps {
   onFinish: () => void;
   initialSlide?: number;
+  /** Called once the intro has painted (lets the native launch overlay go). */
+  onReady?: () => void;
 }
 
 // Brand palette — dark forest green + AbiaConnect gold for the onboarding canvas.
@@ -114,7 +116,7 @@ interface StartSlide extends BaseSlide {
 }
 type Slide = WelcomeSlide | AboutSlide | FeaturesSlide | StartSlide;
 
-export const MobileOnboarding = ({ onFinish, initialSlide = 0 }: MobileOnboardingProps) => {
+export const MobileOnboarding = ({ onFinish, initialSlide = 0, onReady }: MobileOnboardingProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { settings } = useSiteSettings();
@@ -210,6 +212,12 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0 }: MobileOnboardin
 
   const isLast = currentSlide === slides.length - 1;
 
+  useEffect(() => {
+    const id = requestAnimationFrame(() => onReady?.());
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // The intro is an overlay on top of the app. Lock the page underneath so
   // vertical swipes don't scroll it (that showed a moving edge/stretch line).
   useEffect(() => {
@@ -235,12 +243,12 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0 }: MobileOnboardin
 
   return (
     <motion.div
-      // Opaque from the first frame (it replaces the brand cover); fading in
-      // from transparent let the page underneath show through.
+      // Opaque from the first frame: fading in from transparent would let the
+      // page underneath show through.
       initial={false}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.45, ease: 'easeOut' }}
       className="fixed inset-0 z-[100] flex flex-col overflow-hidden overscroll-none font-sans"
       style={{ background: BRAND.bg, color: BRAND.text }}
       role="dialog"

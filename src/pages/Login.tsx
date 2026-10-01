@@ -1,16 +1,15 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
-import { NativeAuthLayout, isNativeApp } from '@/components/mobile/NativeAuthLayout'
+import { AuthField, AuthSubmit, NativeAuthLayout, isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton'
 import { BiometricOptInDialog } from '@/components/auth/BiometricOptInDialog'
 import {
@@ -22,7 +21,6 @@ import {
 
 export default function Login() {
   const navigate = useNavigate()
-  const { isAdmin } = useAuth()
   const { settings } = useSiteSettings()
   const logoUrl = useSignedUrl(settings.site_logo || settings.logo_url, 'site-assets')
   const [identifier, setIdentifier] = useState('')
@@ -86,56 +84,54 @@ export default function Login() {
         <SEO title="Sign in to AbiaConnect" description="Sign in to your AbiaConnect account." path="/login" />
         <NativeAuthLayout
           title="Welcome back"
-          subtitle="Sign in to continue to AbiaConnect"
-          logoUrl={logoUrl}
+          subtitle="Sign in to continue to your community."
           siteName={settings.site_name || 'AbiaConnect'}
+          backTo="/"
+          footer={
+            <>
+              New to AbiaConnect?{' '}
+              <Link to="/register" className="font-semibold text-amber-300">Create an account</Link>
+            </>
+          }
         >
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="identifier-native" className="text-xs font-bold uppercase tracking-[0.2em] text-slate-300/80">Email</Label>
-              <Input
-                id="identifier-native"
-                type="email"
-                required
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                autoComplete="email"
-                className="h-12 rounded-2xl border-white/10 bg-white/[0.04] text-white placeholder:text-slate-300/60"
-              />
+          <form onSubmit={onSubmit} className="space-y-5">
+            <AuthField
+              id="identifier-native"
+              label="Email address"
+              icon={Mail}
+              type="email"
+              inputMode="email"
+              required
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              autoComplete="email"
+              placeholder="you@example.com"
+            />
+            <AuthField
+              id="password-native"
+              label="Password"
+              icon={Lock}
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              placeholder="Enter your password"
+              labelAction={
+                <Link to="/forgot-password" className="text-[13px] font-semibold text-amber-300">
+                  Forgot password?
+                </Link>
+              }
+            />
+            <div className="pt-1">
+              <AuthSubmit loading={loading} loadingText="Signing in…">Sign in</AuthSubmit>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password-native" className="text-xs font-bold uppercase tracking-[0.2em] text-slate-300/80">Password</Label>
-                <Link to="/forgot-password" className="text-xs text-amber-300 hover:underline">Forgot?</Link>
-              </div>
-              <div className="relative">
-                <Input
-                  id="password-native"
-                  type={show ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  className="h-12 rounded-2xl border-white/10 bg-white/[0.04] text-white pr-10 placeholder:text-slate-300/60"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShow((s) => !s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                  aria-label={show ? 'Hide password' : 'Show password'}
-                >
-                  {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
+
+            <div className="flex items-center gap-3 py-1" aria-hidden>
+              <span className="h-px flex-1 bg-white/10" />
+              <span className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400/80">or</span>
+              <span className="h-px flex-1 bg-white/10" />
             </div>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="h-12 w-full rounded-2xl text-base font-bold text-[#0B1F0B]"
-              style={{ backgroundImage: 'linear-gradient(135deg,#F8C301 0%,#E87015 100%)' }}
-            >
-              {loading ? 'Signing in…' : 'Sign In'}
-            </Button>
 
             <BiometricLoginButton
               onSuccess={() => navigate('/')}
@@ -150,15 +146,8 @@ export default function Login() {
                 }, 50)
               }}
             />
-
-            <p className="pt-1 text-center text-sm text-slate-300/80">
-              New here?{' '}
-              <Link to="/register" className="font-semibold text-amber-300 hover:underline">Create account</Link>
-            </p>
           </form>
         </NativeAuthLayout>
-        {/* Admin fast path retained */}
-        {isAdmin ? null : null}
         <BiometricOptInDialog
           open={optInOpen}
           email={optInEmail}

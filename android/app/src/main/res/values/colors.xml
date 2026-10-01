@@ -22,6 +22,7 @@
 
     <!-- UI Color Mapping -->
     <color name="status_bar_color">#1CA9D9</color>
-    <color name="splash_background">#F7F5EF</color>
+    <!-- Same navy in light and dark mode: matches the logo, the web launch cover and the intro. -->
+    <color name="splash_background">#0B1220</color>
     <color name="ic_launcher_background">#000000</color>
 </resources>

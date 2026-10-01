@@ -8,8 +8,13 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
+import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.WebView;
+import android.widget.FrameLayout;
 
 import androidx.core.content.ContextCompat;
 import androidx.core.splashscreen.SplashScreen;
@@ -53,7 +58,14 @@ public class BaseActivity extends BridgeActivity {
      * a slow or failed network can never trap the app on the splash.
      */
     private static final long SPLASH_MAX_MS = 3000;
+    /** Longest the launch overlay waits for the web app after the page loads. */
+    private static final long OVERLAY_MAX_MS = 5000;
+    private static final long OVERLAY_POLL_MS = 80;
+    private static final long OVERLAY_FADE_MS = 350;
     private volatile boolean webContentReady = false;
+    private View launchOverlay;
+    private long overlayDeadline = 0;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +74,9 @@ public class BaseActivity extends BridgeActivity {
         splash.setKeepOnScreenCondition(
             () -> !webContentReady && SystemClock.uptimeMillis() < splashDeadline
         );
+        // The launch overlay underneath is an exact copy of the splash, so remove
+        // the splash instantly rather than fading it (a fade dims the logo).
+        splash.setOnExitAnimationListener(provider -> provider.remove());
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
 
         super.onCreate(savedInstanceState);
@@ -71,12 +86,14 @@ public class BaseActivity extends BridgeActivity {
                 @Override
                 public void onPageLoaded(WebView webView) {
                     webContentReady = true;
+                    waitForWebLaunchThenReveal();
                 }
 
                 @Override
                 public void onReceivedError(WebView webView) {
                     // Show the app's own offline/error UI instead of waiting.
                     webContentReady = true;
+                    hideLaunchOverlay();
                 }
             });
         } else {
@@ -89,8 +106,7 @@ public class BaseActivity extends BridgeActivity {
         }
 
         if (getBridge() != null && getBridge().getWebView() != null) {
-            // Same colour as the splash, so there is no white flash between the
-            // splash and the first painted page.
+            // Same colour as the splash, so there is never a white flash.
             getBridge().getWebView().setBackgroundColor(ContextCompat.getColor(this, R.color.splash_background));
             getBridge().getWebView().getSettings().setLoadWithOverviewMode(true);
             getBridge().getWebView().getSettings().setUseWideViewPort(true);
@@ -98,7 +114,65 @@ public class BaseActivity extends BridgeActivity {
             getBridge().getWebView().setClipToPadding(false);
         }
 
+        showLaunchOverlay();
         createNotificationChannels();
+    }
+
+    /**
+     * Launch overlay: a native copy of the splash (navy + logo, centred on the
+     * whole screen) laid over the WebView. When the system splash goes away the
+     * member keeps seeing the same logo — never a blank frame while the web app
+     * paints — and it fades out once the web app says its first screen is ready
+     * (index.html sets the `cap-launch` class; the app removes it when ready).
+     */
+    private void showLaunchOverlay() {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        // Also the window background, which covers the very first frame after
+        // the system splash, before any view has drawn.
+        getWindow().setBackgroundDrawableResource(R.drawable.launch_background);
+        launchOverlay = new View(this);
+        launchOverlay.setBackgroundResource(R.drawable.launch_background);
+        launchOverlay.setClickable(true); // swallow taps until revealed
+        ((ViewGroup) getWindow().getDecorView()).addView(
+            launchOverlay,
+            new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        );
+    }
+
+    private void waitForWebLaunchThenReveal() {
+        if (launchOverlay == null) return;
+        if (overlayDeadline == 0) overlayDeadline = SystemClock.uptimeMillis() + OVERLAY_MAX_MS;
+        if (SystemClock.uptimeMillis() > overlayDeadline || getBridge() == null || getBridge().getWebView() == null) {
+            hideLaunchOverlay();
+            return;
+        }
+        getBridge().getWebView().evaluateJavascript(
+            "document.documentElement.classList.contains('cap-launch')",
+            value -> {
+                if ("true".equals(value)) {
+                    mainHandler.postDelayed(this::waitForWebLaunchThenReveal, OVERLAY_POLL_MS);
+                } else {
+                    hideLaunchOverlay();
+                }
+            }
+        );
+    }
+
+    private void hideLaunchOverlay() {
+        mainHandler.post(() -> {
+            final View overlay = launchOverlay;
+            if (overlay == null) return;
+            launchOverlay = null;
+            overlay.animate()
+                .alpha(0f)
+                .setDuration(OVERLAY_FADE_MS)
+                .withEndAction(() -> {
+                    ViewGroup parent = (ViewGroup) overlay.getParent();
+                    if (parent != null) parent.removeView(overlay);
+                    getWindow().setBackgroundDrawableResource(R.color.splash_background);
+                })
+                .start();
+        });
     }
 
     private void createNotificationChannels() {

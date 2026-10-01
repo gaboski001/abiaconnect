@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { CheckCircle2, Loader2, MailCheck } from 'lucide-react'
+import { AtSign, CalendarDays, CheckCircle2, Loader2, Lock, Mail, MailCheck, MapPin, User } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,7 +28,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
-import { NativeAuthLayout, isNativeApp } from '@/components/mobile/NativeAuthLayout'
+import { AuthField, AuthSubmit, NativeAuthLayout, isNativeApp } from '@/components/mobile/NativeAuthLayout'
 
 const ABIA_LGAS = [
   'Aba North', 'Aba South', 'Arochukwu', 'Bende', 'Ikwuano',
@@ -53,16 +53,16 @@ function makeQuiz() {
 }
 
 const schema = z.object({
-  name: z.string().trim().min(2, 'Full name is required').max(100),
+  name: z.string().trim().min(2, 'Enter your full name').max(100),
   username: z
     .string()
     .trim()
-    .min(3, 'At least 3 characters')
+    .min(3, 'Use at least 3 characters')
     .max(30)
     .regex(/^[A-Za-z0-9_]+$/, 'Letters, numbers, and underscores only'),
-  email: z.string().trim().email('Invalid email').max(255),
-  password: z.string().min(8, 'At least 8 characters').max(72),
-  dob: z.string().min(1, 'Date of birth is required'),
+  email: z.string().trim().email('Enter a valid email address').max(255),
+  password: z.string().min(8, 'Use at least 8 characters').max(72),
+  dob: z.string().min(1, 'Enter your date of birth'),
   lga: z.enum(LGA_OPTIONS, { message: 'Select your LGA' }),
 })
 
@@ -85,6 +85,23 @@ function StepDots({ step }: { step: number }) {
           {n < 3 && <span className={`h-0.5 w-8 ${n < step ? 'bg-primary' : 'bg-muted'}`} />}
         </div>
       ))}
+    </div>
+  )
+}
+
+const NATIVE_STEP_LABELS = ['Your details', 'Verify roots', 'Confirm email'] as const
+
+function NativeSteps({ step }: { step: 1 | 2 | 3 }) {
+  return (
+    <div>
+      <div className="flex gap-1.5" aria-hidden>
+        {[1, 2, 3].map((n) => (
+          <span key={n} className={`h-1 flex-1 rounded-full transition-colors ${n <= step ? 'bg-amber-300' : 'bg-white/12'}`} />
+        ))}
+      </div>
+      <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-amber-300/90">
+        Step {step} of 3 · {NATIVE_STEP_LABELS[step - 1]}
+      </p>
     </div>
   )
 }
@@ -229,57 +246,139 @@ export default function Register() {
     [],
   )
 
+  const errors = form.formState.errors
+  const nativeCopy = {
+    1: {
+      title: 'Create your account',
+      subtitle: 'Join the trusted digital home for Abians worldwide. It only takes a minute.',
+    },
+    2: {
+      title: 'Confirm your Abia roots',
+      subtitle: 'Which of these is a Local Government Area in Abia State?',
+    },
+    3: done
+      ? { title: 'Check your inbox', subtitle: 'One last step to activate your account.' }
+      : { title: 'Setting up your account', subtitle: 'This will only take a moment.' },
+  }[step]
+
   const stepContent = (
     <>
-      <StepDots step={step} />
       <AnimatePresence mode="wait" custom={direction}>
         {step === 1 && (
           <motion.div key="s1" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
-            <h2 className="text-lg font-bold mb-1 text-center">Create your account</h2>
-            <p className="text-sm text-muted-foreground text-center mb-6">Tell us a bit about yourself.</p>
-            <form onSubmit={onStep1} className="space-y-4">
-              <Field label="Full Name" error={form.formState.errors.name?.message}><Input {...form.register('name')} /></Field>
-              <Field label="Username" error={form.formState.errors.username?.message}><Input {...form.register('username')} /></Field>
-              <Field label="Email" error={form.formState.errors.email?.message}><Input type="email" {...form.register('email', { onBlur: (e) => checkEmailExists(e.target.value) })} /></Field>
-              <Field label="Password" error={form.formState.errors.password?.message}><Input type="password" {...form.register('password')} /></Field>
-              <Field label="Date of Birth" error={form.formState.errors.dob?.message}><Input type="date" {...form.register('dob')} /></Field>
-              <Field label="LGA of Origin" error={form.formState.errors.lga?.message}>
+            <form onSubmit={onStep1} className="space-y-5">
+              <AuthField label="Full name" icon={User} autoComplete="name" placeholder="e.g. Chidi Okafor" error={errors.name?.message} {...form.register('name')} />
+              <AuthField
+                label="Username"
+                icon={AtSign}
+                autoComplete="username"
+                autoCapitalize="none"
+                placeholder="e.g. chidi_okafor"
+                hint="Letters, numbers and underscores only."
+                error={errors.username?.message}
+                {...form.register('username')}
+              />
+              <AuthField
+                label="Email address"
+                icon={Mail}
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                error={errors.email?.message}
+                {...form.register('email', { onBlur: (e) => checkEmailExists(e.target.value) })}
+              />
+              <AuthField
+                label="Password"
+                icon={Lock}
+                type="password"
+                autoComplete="new-password"
+                placeholder="Create a password"
+                hint="At least 8 characters."
+                error={errors.password?.message}
+                {...form.register('password')}
+              />
+              <AuthField
+                label="Date of birth"
+                icon={CalendarDays}
+                type="date"
+                max={new Date().toISOString().slice(0, 10)}
+                error={errors.dob?.message}
+                {...form.register('dob')}
+              />
+              <div className="space-y-2">
+                <span className="text-[13px] font-semibold text-slate-200" id="lga-label">LGA of origin</span>
                 <Select value={form.watch('lga')} onValueChange={(v) => form.setValue('lga', v as FormValues['lga'], { shouldValidate: true })}>
-                  <SelectTrigger><SelectValue placeholder="Select your LGA" /></SelectTrigger>
-                  <SelectContent>{LGA_OPTIONS.map((l) => (<SelectItem key={l} value={l}>{l}</SelectItem>))}</SelectContent>
+                  <SelectTrigger
+                    aria-labelledby="lga-label"
+                    aria-invalid={errors.lga ? true : undefined}
+                    className={`relative h-[52px] rounded-xl bg-white/[0.05] pl-11 text-[15px] text-white data-[placeholder]:text-slate-400/70 ${
+                      errors.lga ? 'border-red-400/75' : 'border-white/12'
+                    }`}
+                  >
+                    <MapPin aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-slate-400" />
+                    <SelectValue placeholder="Select your LGA" />
+                  </SelectTrigger>
+                  <SelectContent className="dark max-h-72">
+                    {LGA_OPTIONS.map((l) => (<SelectItem key={l} value={l}>{l}</SelectItem>))}
+                  </SelectContent>
                 </Select>
-              </Field>
-              <Button type="submit" className="w-full">Continue to Verification →</Button>
-              <p className="text-sm text-center text-muted-foreground">Already have an account? <Link to="/login" className="text-primary font-medium hover:underline">Sign In</Link></p>
+                {errors.lga?.message ? <p className="text-[13px] text-red-300">{errors.lga.message}</p> : null}
+              </div>
+              <p className="pt-1 text-[13px] leading-5 text-slate-400">
+                By continuing, you agree to our{' '}
+                <Link to="/terms-of-service" className="font-medium text-slate-200 underline underline-offset-2">Terms of Service</Link>{' '}
+                and{' '}
+                <Link to="/privacy-policy" className="font-medium text-slate-200 underline underline-offset-2">Privacy Policy</Link>.
+              </p>
+              <AuthSubmit>Continue</AuthSubmit>
             </form>
           </motion.div>
         )}
         {step === 2 && (
           <motion.div key="s2" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
-            <h2 className="text-lg font-bold mb-1 text-center">Verify Your Abia Roots</h2>
-            <p className="text-sm text-muted-foreground text-center mb-6">Select the LGA that belongs to Abia State.</p>
-            <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-3" role="list">
               {quiz.options.map((opt) => (
-                <button key={opt} type="button" onClick={() => onQuizAnswer(opt)} className="rounded-xl border border-border bg-background p-4 text-left font-medium hover:border-primary hover:bg-primary/5 transition-colors">{opt}</button>
+                <button
+                  key={opt}
+                  type="button"
+                  role="listitem"
+                  onClick={() => onQuizAnswer(opt)}
+                  className="flex h-14 w-full items-center gap-3 rounded-xl border border-white/12 bg-white/[0.04] px-4 text-left text-[15px] font-semibold text-white transition-colors active:border-amber-300/70 active:bg-amber-300/10"
+                >
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-white/[0.06]">
+                    <MapPin className="size-4 text-amber-300" />
+                  </span>
+                  {opt}
+                </button>
               ))}
             </div>
-            <Button variant="ghost" className="w-full mt-6" onClick={() => goTo(1)}>← Back</Button>
+            <p className="mt-5 text-[13px] leading-5 text-slate-400">
+              This quick check keeps AbiaConnect a trusted space for our community.
+            </p>
           </motion.div>
         )}
         {step === 3 && (
-          <motion.div key="s3" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }} className="text-center py-6">
+          <motion.div key="s3" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
             {!done ? (
-              <>
-                <Loader2 className="size-10 mx-auto animate-spin text-primary mb-4" />
-                <p className="text-sm text-muted-foreground">Creating your account…</p>
-              </>
+              <div className="flex flex-col items-center py-10">
+                <Loader2 className="size-10 animate-spin text-amber-300" />
+                <p className="mt-4 text-[15px] text-slate-300">Creating your account…</p>
+              </div>
             ) : (
-              <>
-                <CheckCircle2 className="size-14 mx-auto text-primary mb-4" />
-                <h2 className="text-xl font-bold mb-2">You're all set!</h2>
-                <p className="text-sm text-muted-foreground mb-6">Check your email to verify your account, then sign in.</p>
-                <Button className="w-full" onClick={() => navigate('/login')}>Go to Sign In</Button>
-              </>
+              <div className="space-y-6">
+                <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-emerald-400/15">
+                    <MailCheck className="size-5 text-emerald-300" />
+                  </span>
+                  <p className="text-[15px] leading-6 text-slate-300">
+                    We sent a verification link to{' '}
+                    <span className="font-semibold text-white">{form.getValues('email')}</span>. Open it to activate your
+                    account, then sign in. Check your spam folder if you can’t find it.
+                  </p>
+                </div>
+                <AuthSubmit type="button" onClick={() => navigate('/login')}>Go to sign in</AuthSubmit>
+              </div>
             )}
           </motion.div>
         )}
@@ -373,7 +472,22 @@ export default function Register() {
     return (
       <>
         <SEO title="Create your AbiaConnect account" description="Join AbiaConnect." path="/register" />
-        <NativeAuthLayout title="Create account" subtitle="Join the community in a few taps." logoUrl={logoUrl} siteName={settings.site_name || 'AbiaConnect'}>
+        <NativeAuthLayout
+          title={nativeCopy.title}
+          subtitle={nativeCopy.subtitle}
+          siteName={settings.site_name || 'AbiaConnect'}
+          eyebrow={<NativeSteps step={step} />}
+          onBack={step === 2 ? () => goTo(1) : undefined}
+          backTo={step === 3 && done ? '/login' : undefined}
+          footer={
+            step === 1 ? (
+              <>
+                Already have an account?{' '}
+                <Link to="/login" className="font-semibold text-amber-300">Sign in</Link>
+              </>
+            ) : undefined
+          }
+        >
           {stepContent}
         </NativeAuthLayout>
       </>

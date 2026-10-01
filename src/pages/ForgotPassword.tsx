@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CheckCircle2, Zap } from 'lucide-react'
+import { CheckCircle2, Mail, MailCheck, Zap } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
 import { SEO } from '@/components/SEO'
+import { AuthField, AuthSubmit, NativeAuthLayout, isNativeApp } from '@/components/mobile/NativeAuthLayout'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -25,6 +26,64 @@ export default function ForgotPassword() {
       return
     }
     setSent(true)
+  }
+
+  if (isNativeApp()) {
+    return (
+      <>
+        <SEO title="Reset your AbiaConnect password" description="Request a password reset link for your AbiaConnect account." path="/forgot-password" />
+        <NativeAuthLayout
+          title={sent ? 'Check your email' : 'Reset your password'}
+          subtitle={
+            sent
+              ? 'Follow the link we sent to choose a new password.'
+              : "Enter the email you signed up with and we'll send you a secure reset link."
+          }
+          backTo="/login"
+          footer={
+            <>
+              Remembered it?{' '}
+              <Link to="/login" className="font-semibold text-amber-300">Back to sign in</Link>
+            </>
+          }
+        >
+          {sent ? (
+            <div className="space-y-6">
+              <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-emerald-400/15">
+                  <MailCheck className="size-5 text-emerald-300" />
+                </span>
+                <p className="text-[15px] leading-6 text-slate-300">
+                  If an account exists for <span className="font-semibold text-white">{email}</span>, a reset link is on its
+                  way. Check your spam folder if it doesn't arrive in a few minutes.
+                </p>
+              </div>
+              <Link
+                to="/login"
+                className="flex h-[52px] w-full items-center justify-center rounded-xl border border-white/12 bg-white/[0.04] text-[15px] font-semibold text-white"
+              >
+                Back to sign in
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={onSubmit} className="space-y-5">
+              <AuthField
+                label="Email address"
+                icon={Mail}
+                type="email"
+                inputMode="email"
+                required
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <AuthSubmit loading={loading} loadingText="Sending…">Send reset link</AuthSubmit>
+            </form>
+          )}
+        </NativeAuthLayout>
+      </>
+    )
   }
 
   return (

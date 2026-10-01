@@ -8,11 +8,13 @@ const MobileOnboarding = lazy(() =>
 );
 
 const STORAGE_KEY = 'hasSeenOnboarding';
-
-/** Solid brand backdrop matching the onboarding, shown while it loads. */
-const BrandCover = () => (
-  <div className="fixed inset-0 z-[100]" style={{ background: '#0B1F0B' }} aria-hidden />
-);
+/**
+ * Ends the native launch state (the `cap-launch` flag set in index.html). The
+ * Android app keeps a splash overlay (navy + logo) on screen while the flag is
+ * set and fades it out once cleared, so it must only be cleared when the first
+ * real screen has painted.
+ */
+const endLaunch = () => document.documentElement.classList.remove('cap-launch');
 
 /**
  * Native-only onboarding and authentication gate.
@@ -20,12 +22,16 @@ const BrandCover = () => (
  * 1. First-time users see the full 4-slide onboarding.
  * 2. Unauthenticated users (logged out or guests) on native platforms
  *    are shown the "Starter Page" (Slide 4) as the landing screen.
+ *
+ * On a cold start the Android splash overlay fades out to reveal the intro,
+ * giving one smooth transition from the splash to the app.
  */
 export const NativeOnboardingGate = () => {
   const { user, loading } = useAuth();
   const location = useLocation();
   const [show, setShow] = useState(false);
   const [startAtLast, setStartAtLast] = useState(false);
+  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
     const check = () => {
@@ -34,6 +40,7 @@ export const NativeOnboardingGate = () => {
       // Never cover real app screens.
       if (location.pathname !== '/') {
         setShow(false);
+        setChecked(true);
         return;
       }
 
@@ -46,6 +53,7 @@ export const NativeOnboardingGate = () => {
         setShow(!hasSeen);
         setStartAtLast(false);
       }
+      setChecked(true);
     };
 
     check();
@@ -53,17 +61,24 @@ export const NativeOnboardingGate = () => {
     return () => clearInterval(interval);
   }, [user, loading, location.pathname]);
 
-  // While auth is still loading on the native home screen, cover the page with
-  // the brand background so the forum never flashes behind the intro slides.
-  if (loading) {
-    return Capacitor.isNativePlatform() && location.pathname === '/' ? <BrandCover /> : null;
-  }
-  if (!show) return null;
+  // No intro to show (e.g. signed-in member): reveal the app straight away.
+  useEffect(() => {
+    if (!loading && checked && !show) endLaunch();
+  }, [loading, checked, show]);
+
+  // Never leave the page hidden, whatever happens.
+  useEffect(() => {
+    const t = setTimeout(endLaunch, 6000);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (!show || loading) return null;
 
   return (
-    <Suspense fallback={<BrandCover />}>
+    <Suspense fallback={null}>
       <MobileOnboarding
         onFinish={() => setShow(false)}
+        onReady={endLaunch}
         initialSlide={startAtLast ? 3 : 0}
       />
     </Suspense>

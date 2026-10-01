@@ -41,6 +41,20 @@
         e.preventDefault();
       });
     </script>
+    <!-- Native app launch: flag the launch so the Android app keeps its splash
+         overlay (navy + logo) up until the first screen has painted.
+         NativeOnboardingGate clears it; it self-clears after 8s as a safety net. -->
+    <script>
+      (function () {
+        try {
+          var cap = window.Capacitor;
+          if (!cap || !cap.isNativePlatform || !cap.isNativePlatform() || location.pathname !== '/') return;
+          var root = document.documentElement;
+          root.classList.add('cap-launch');
+          setTimeout(function () { root.classList.remove('cap-launch'); }, 8000);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

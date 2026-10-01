@@ -143,6 +143,23 @@ body {
   color: oklch(0.66 0.03 145);
 }
 
+/* Native app sign-in / sign-up fields (NativeAuthLayout). */
+.dark input.auth-input {
+  background-color: rgb(255 255 255 / 0.05);
+  border-color: rgb(255 255 255 / 0.12);
+  color: #fff;
+}
+.dark input.auth-input:focus {
+  background-color: rgb(255 255 255 / 0.07);
+  border-color: rgb(252 211 77 / 0.7);
+}
+.dark input.auth-input[aria-invalid='true'] {
+  border-color: rgb(248 113 113 / 0.75);
+}
+.dark input.auth-input::placeholder {
+  color: rgb(148 163 184 / 0.6);
+}
+
 /* Common low-contrast text classes → readable muted foreground. */
 .dark .text-gray-400,
 .dark .text-gray-500,

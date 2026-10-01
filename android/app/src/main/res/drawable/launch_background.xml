@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launch overlay (see BaseActivity.showLaunchOverlay): the splash look, navy +
+  logo centred on the whole screen, kept over the WebView until the first web
+  screen has painted. 178x103dp is how large Android draws the 100x58dp splash
+  icon, so the logo does not move or resize at the handover.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_background" />
+    <item
+        android:width="178dp"
+        android:height="103dp"
+        android:gravity="center"
+        android:drawable="@drawable/splash_logo" />
+</layer-list>
