@@ -1074,6 +1074,36 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_secret_settings: {
+        Row: {
+          mode: string
+          name: string
+          preview: string
+          provider: string
+          updated_at: string
+          updated_by: string | null
+          vault_id: string
+        }
+        Insert: {
+          mode: string
+          name: string
+          preview: string
+          provider: string
+          updated_at?: string
+          updated_by?: string | null
+          vault_id: string
+        }
+        Update: {
+          mode?: string
+          name?: string
+          preview?: string
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+          vault_id?: string
+        }
+        Relationships: []
+      }
       payment_transactions: {
         Row: {
           amount_minor: number
@@ -2261,6 +2291,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_clear_payment_secret: {
+        Args: { _name: string }
+        Returns: undefined
+      }
       admin_delete_user: { Args: { _user_id: string }; Returns: undefined }
       admin_get_user_emails: {
         Args: { _ids: string[] }
@@ -2312,6 +2346,10 @@ export type Database = {
         Returns: {
           id: string
         }[]
+      }
+      admin_set_payment_secret: {
+        Args: { _name: string; _value: string }
+        Returns: string
       }
       admin_wallet_adjust: {
         Args: { _amount: number; _reason: string; _user: string }
@@ -2481,6 +2519,13 @@ export type Database = {
           provider: string
         }[]
       }
+      get_payment_secrets: {
+        Args: never
+        Returns: {
+          name: string
+          value: string
+        }[]
+      }
       get_poll_counts: {
         Args: { _poll_ids: string[] }
         Returns: {
@@ -2562,6 +2607,7 @@ export type Database = {
         Returns: number
       }
       mark_message_read: { Args: { _message_id: string }; Returns: undefined }
+      mask_payment_secret: { Args: { _value: string }; Returns: string }
       move_to_dlq: {
         Args: {
           dlq_name: string
