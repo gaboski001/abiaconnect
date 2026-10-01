@@ -393,3 +393,26 @@ html:not(.native-app) footer .web-serif {
   font-family: var(--font-serif);
   letter-spacing: -0.01em;
 }
+
+/* ---------------------------------------------------------------------------
+   Brand gold: one gradient everywhere a solid yellow/gold fill is used
+   (buttons, badges, pills, slider dots), matching the logo and app.
+   Faint tints such as bg-secondary/10 keep their flat colour.
+   --------------------------------------------------------------------------- */
+:root {
+  --gold-gradient: linear-gradient(135deg, #E87015 0%, #F8C301 52%, #FFD65A 100%);
+}
+.bg-gold,
+.bg-secondary,
+.bg-amber-400,
+.bg-amber-500,
+.bg-yellow-400,
+.bg-yellow-500 {
+  background-image: var(--gold-gradient);
+}
+.text-gold-gradient {
+  background-image: var(--gold-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

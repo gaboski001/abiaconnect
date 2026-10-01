@@ -91,7 +91,7 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
               {slide.subtitle && (
                 <>
                   <br />
-                  <span className="bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-600 bg-clip-text text-transparent">
+                  <span className="text-gold-gradient">
                     {slide.subtitle}
                   </span>
                 </>
@@ -117,7 +117,7 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
             {slide.cta_label && slide.cta_url && (
               <SlideLink
                 href={slide.cta_url}
-                className="px-6 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-amber-400 to-yellow-600 text-black hover:opacity-90 transition-opacity shadow-[0_8px_30px_-8px_rgba(245,200,80,0.7)]"
+                className="px-6 py-2.5 rounded-xl font-semibold text-sm bg-gold text-black hover:opacity-90 transition-opacity shadow-[0_8px_30px_-8px_rgba(245,200,80,0.7)]"
               >
                 {slide.cta_label}
               </SlideLink>

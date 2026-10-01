@@ -157,6 +157,9 @@ export function WebHome() {
         </section>
       )}
 
+      {/* Announcements and advertisements (managed by admins) */}
+      <HeroSlider />
+
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-10">
           {/* Discussions */}
@@ -280,8 +283,6 @@ export function WebHome() {
             </div>
           </section>
 
-          {/* Admin banners */}
-          <HeroSlider />
         </div>
 
         {/* Sidebar */}
