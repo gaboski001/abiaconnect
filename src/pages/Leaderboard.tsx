@@ -17,8 +17,13 @@ const MEDALS = ['🥇', '🥈', '🥉']
 
 export default function Leaderboard() {
   const { user, loading } = useAuth()
-  const [period, setPeriod] = useState<LeaderboardPeriod>('week')
-  const board = useQuery({ queryKey: ['leaderboard', period], queryFn: () => getLeaderboard(period), enabled: !!user })
+  const [chosen, setChosen] = useState<LeaderboardPeriod | null>(null)
+  // Open on "This week", but fall back to "All time" while the week is still
+  // empty, so the board never looks dead.
+  const week = useQuery({ queryKey: ['leaderboard', 'week'], queryFn: () => getLeaderboard('week'), enabled: !!user })
+  const period: LeaderboardPeriod = chosen ?? (week.isSuccess && week.data.length === 0 ? 'all' : 'week')
+  const setPeriod = setChosen
+  const board = useQuery({ queryKey: ['leaderboard', period], queryFn: () => getLeaderboard(period), enabled: !!user && (period !== 'week' || week.isSuccess) })
   const mine = useQuery({ queryKey: ['my-rank', period], queryFn: () => getMyRank(period), enabled: !!user })
 
   if (!loading && !user) return <Navigate to="/login" replace />
