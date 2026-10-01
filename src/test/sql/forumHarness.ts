@@ -31,6 +31,25 @@ const PRELUDE = `
     reputation integer NOT NULL DEFAULT 0,
     is_banned boolean NOT NULL DEFAULT false, is_deleted boolean NOT NULL DEFAULT false
   );
+  -- Mirrors the live database's existing privileged-fields rule (role, ban
+  -- status and reputation are admin-only), which the migration must coexist with.
+  CREATE TYPE public.app_role AS ENUM ('Super Admin', 'Admin', 'Member');
+  ALTER TABLE public.profiles ADD COLUMN role public.app_role NOT NULL DEFAULT 'Member';
+  CREATE FUNCTION public.has_role(_user_id uuid, _role public.app_role) RETURNS boolean
+    LANGUAGE sql STABLE AS
+    $$ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = _user_id AND role = _role) $$;
+  CREATE FUNCTION public.prevent_privileged_profile_changes() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+  BEGIN
+    IF (NEW.role IS DISTINCT FROM OLD.role OR NEW.is_banned IS DISTINCT FROM OLD.is_banned
+        OR NEW.reputation IS DISTINCT FROM OLD.reputation)
+       AND NOT (public.has_role(auth.uid(), 'Admin') OR public.has_role(auth.uid(), 'Super Admin')) THEN
+      RAISE EXCEPTION 'Not allowed to modify privileged profile fields';
+    END IF;
+    RETURN NEW;
+  END $$;
+  CREATE TRIGGER prevent_privileged_profile_changes BEFORE UPDATE ON public.profiles
+    FOR EACH ROW EXECUTE FUNCTION public.prevent_privileged_profile_changes();
   ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
   CREATE POLICY "read profiles" ON public.profiles FOR SELECT TO authenticated USING (true);
   CREATE POLICY "update own profile" ON public.profiles FOR UPDATE TO authenticated

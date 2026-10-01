@@ -74,6 +74,19 @@ describe('forum points', () => {
     )
   })
 
+  it('still stops members from changing their role or ban status', async () => {
+    await newThread(db, ada) // points system updates reputation fine
+    expect(await db.error(() => db.asMember(ada, () => db.query(`UPDATE profiles SET role = 'Admin' WHERE id = $1`, [ada])))).toMatch(
+      /Not allowed to modify privileged profile fields/,
+    )
+    expect(await db.error(() => db.asMember(ada, () => db.query(`UPDATE profiles SET is_banned = true WHERE id = $1`, [ada])))).toMatch(
+      /Not allowed to modify privileged profile fields/,
+    )
+    // Other people's profiles are simply out of reach.
+    await db.asMember(ada, () => db.query(`UPDATE profiles SET is_banned = true WHERE id = $1`, [ben]))
+    expect((await db.one<{ is_banned: boolean }>(`SELECT is_banned FROM profiles WHERE id = $1`, [ben])).is_banned).toBe(false)
+  })
+
   it('awards a badge for the first post and tells the member', async () => {
     await newThread(db, ada)
     expect((await db.query(`SELECT badge FROM member_badges WHERE user_id = $1`, [ada])).rows).toEqual([{ badge: 'first_post' }])
@@ -129,7 +142,14 @@ describe('leaderboard', () => {
     await newThread(db, ada)
     await newThread(db, ben)
     await newThread(db, bad)
+    // Banning is an admin action (the privileged-fields rule enforces that).
+    const mod = await db.addUser()
+    await db.query(`ALTER TABLE profiles DISABLE TRIGGER prevent_privileged_profile_changes`)
+    await db.query(`UPDATE profiles SET role = 'Admin' WHERE id = $1`, [mod])
+    await db.query(`ALTER TABLE profiles ENABLE TRIGGER prevent_privileged_profile_changes`)
+    await db.as(mod)
     await db.query(`UPDATE profiles SET is_banned = true WHERE id = $1`, [bad])
+    await db.as(null)
     const rows = (await db.asMember(ben, () => db.query(`SELECT user_id, points, rank FROM get_leaderboard('week')`))).rows as Array<{
       user_id: string
       points: number

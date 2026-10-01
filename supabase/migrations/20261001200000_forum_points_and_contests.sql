@@ -115,6 +115,31 @@ DROP TRIGGER IF EXISTS guard_profile_reputation ON public.profiles;
 CREATE TRIGGER guard_profile_reputation BEFORE UPDATE OF reputation ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.guard_profile_reputation();
 
+-- The existing rule that stops non-admins changing role, ban status or
+-- reputation must let the points system update reputation. The points system
+-- sets 'abia.points_write' for the current transaction only, inside SECURITY
+-- DEFINER functions; clients cannot set it. Role and ban checks are unchanged.
+CREATE OR REPLACE FUNCTION public.prevent_privileged_profile_changes()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  points_system boolean := COALESCE(current_setting('abia.points_write', true), '') = 'on';
+BEGIN
+  IF (NEW.role IS DISTINCT FROM OLD.role
+      OR NEW.is_banned IS DISTINCT FROM OLD.is_banned
+      OR (NEW.reputation IS DISTINCT FROM OLD.reputation AND NOT points_system))
+     AND NOT (public.has_role(auth.uid(), 'Admin'::app_role)
+              OR public.has_role(auth.uid(), 'Super Admin'::app_role))
+  THEN
+    RAISE EXCEPTION 'Not allowed to modify privileged profile fields';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.sync_reputation(_user uuid)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
