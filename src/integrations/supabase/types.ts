@@ -2550,6 +2550,7 @@ export type Database = {
           username: string
         }[]
       }
+      get_push_internal_secret: { Args: never; Returns: string }
       get_reply_vote_counts: {
         Args: { _reply_ids: string[] }
         Returns: {
