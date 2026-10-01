@@ -126,11 +126,11 @@ describe('likes, limits and matches', () => {
     const me = await db.addUser()
     const other = await db.addUser()
     await db.as(me)
-    await db.query(`SET ROLE authenticated`)
-    await expect(
-      db.query(`INSERT INTO public.dating_likes (liker_id, liked_id, kind) VALUES ($1, $2, 'like')`, [me, other]),
-    ).rejects.toThrow(/permission denied/)
-    await db.query(`RESET ROLE`)
+    await db.asRole('authenticated', () =>
+      expect(
+        db.query(`INSERT INTO public.dating_likes (liker_id, liked_id, kind) VALUES ($1, $2, 'like')`, [me, other]),
+      ).rejects.toThrow(/permission denied/),
+    )
   })
 })
 
@@ -276,5 +276,66 @@ describe('admin controls', () => {
       `SELECT count(*)::int n FROM public.monetization_audit_log WHERE action = 'subscription_plans.update' AND target = 'vip_monthly'`,
     )
     expect(n).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe('payment API keys in Vault', () => {
+  const KEY = 'sk_test_4f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c'
+
+  it('only admins can save keys; the dashboard only ever sees a masked preview', async () => {
+    const admin = await db.addUser({ admin: true })
+    const user = await db.addUser()
+    await db.as(user)
+    await expect(db.query(`SELECT public.admin_set_payment_secret('PAYSTACK_TEST_SECRET_KEY', $1)`, [KEY])).rejects.toThrow(/Forbidden/)
+
+    await db.as(admin)
+    const { preview } = await db.one<{ preview: string }>(
+      `SELECT public.admin_set_payment_secret('PAYSTACK_TEST_SECRET_KEY', $1) AS preview`,
+      [KEY],
+    )
+    expect(preview).toBe('sk_test_xxxxxxxxxx')
+    await expect(db.query(`SELECT public.admin_set_payment_secret('PAYSTACK_TEST_SECRET_KEY', 'short')`)).rejects.toThrow(/valid API key/)
+    await expect(db.query(`SELECT public.admin_set_payment_secret('SOMETHING_ELSE', $1)`, [KEY])).rejects.toThrow(/Unknown key name/)
+
+    // Nothing readable by signed-in users (admins included) contains the key.
+    const meta = await db.asRole('authenticated', async () => {
+      await expect(db.query(`SELECT * FROM public.get_payment_secrets()`)).rejects.toThrow(/permission denied/)
+      await expect(db.query(`SELECT * FROM vault.decrypted_secrets`)).rejects.toThrow(/permission denied/)
+      return db.query(`SELECT * FROM public.payment_secret_settings`)
+    })
+    expect(JSON.stringify(meta.rows)).not.toContain(KEY)
+    expect(meta.rows).toHaveLength(1)
+
+    // The service role (edge functions) can decrypt it.
+    await db.as(null)
+    const { value } = await db.one<{ value: string }>(`SELECT value FROM public.get_payment_secrets() WHERE name = 'PAYSTACK_TEST_SECRET_KEY'`)
+    expect(value).toBe(KEY)
+
+    // Replacing keeps a single vault entry and updates the preview.
+    await db.as(admin)
+    await db.query(`SELECT public.admin_set_payment_secret('PAYSTACK_TEST_SECRET_KEY', 'sk_test_REPLACEDKEY0000000000')`)
+    await db.as(null)
+    const { n } = await db.one<{ n: number }>(`SELECT count(*)::int n FROM vault.secrets WHERE name = 'payment:PAYSTACK_TEST_SECRET_KEY'`)
+    expect(n).toBe(1)
+    const audit = await db.query<{ action: string; new_value: unknown }>(
+      `SELECT action, new_value FROM public.monetization_audit_log WHERE target = 'PAYSTACK_TEST_SECRET_KEY' ORDER BY id`,
+    )
+    expect(audit.rows.map((r) => r.action)).toEqual(['payment_secret.set', 'payment_secret.replace'])
+    expect(JSON.stringify(audit.rows)).not.toContain('REPLACEDKEY')
+  })
+
+  it('removing a key deletes it from Vault and switches that provider off', async () => {
+    const admin = await db.addUser({ admin: true })
+    await db.as(admin)
+    await db.query(`SELECT public.admin_set_payment_secret('SQUAD_TEST_SECRET_KEY', 'sandbox_sk_94f2b798466408ef4d19')`)
+    await db.as(null)
+    await db.query(`UPDATE public.payment_providers SET is_enabled = true, mode = 'test' WHERE provider = 'squad'`)
+    await db.as(admin)
+    await db.query(`SELECT public.admin_clear_payment_secret('SQUAD_TEST_SECRET_KEY')`)
+    await db.as(null)
+    const { n } = await db.one<{ n: number }>(`SELECT count(*)::int n FROM vault.secrets WHERE name = 'payment:SQUAD_TEST_SECRET_KEY'`)
+    expect(n).toBe(0)
+    const { is_enabled } = await db.one<{ is_enabled: boolean }>(`SELECT is_enabled FROM public.payment_providers WHERE provider = 'squad'`)
+    expect(is_enabled).toBe(false)
   })
 })

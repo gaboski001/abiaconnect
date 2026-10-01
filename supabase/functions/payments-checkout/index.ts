@@ -5,7 +5,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { z } from 'npm:zod@3'
 import { PROVIDERS, type Provider } from '../_shared/payment-core.ts'
-import { initializePayment, ProviderError, type ProviderRow } from '../_shared/payment-providers.ts'
+import { initializePayment, ProviderError, type ProviderRow, loadPaymentSecrets } from '../_shared/payment-providers.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const ANON = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
   if (!parsed.success) return json({ error: 'Invalid request' }, 400)
 
   const admin = createClient(SUPABASE_URL, SERVICE)
+  await loadPaymentSecrets(admin)
 
   const { data: enabled } = await admin
     .from('payment_providers')

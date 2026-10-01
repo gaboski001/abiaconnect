@@ -3,10 +3,11 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { PROVIDERS } from '../_shared/payment-core.ts'
-import { isConfigured, SECRET_NAMES } from '../_shared/payment-providers.ts'
+import { isConfigured, loadPaymentSecrets, SECRET_NAMES } from '../_shared/payment-providers.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const ANON = Deno.env.get('SUPABASE_ANON_KEY')!
+const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
@@ -21,6 +22,8 @@ Deno.serve(async (req) => {
   if (!userId) return json({ error: 'Unauthorized' }, 401)
   const { data: isAdmin } = await userClient.rpc('is_admin', { _user_id: userId })
   if (!isAdmin) return json({ error: 'Forbidden' }, 403)
+
+  await loadPaymentSecrets(createClient(SUPABASE_URL, SERVICE), { force: true })
 
   return json({
     siteUrlConfigured: !!Deno.env.get('PUBLIC_SITE_URL'),

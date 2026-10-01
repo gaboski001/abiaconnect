@@ -18,7 +18,7 @@ import {
   verifyWebhookSignature,
   type Provider,
 } from '../_shared/payment-core.ts'
-import { verifyPayment, webhookSecrets, type Mode } from '../_shared/payment-providers.ts'
+import { verifyPayment, webhookSecrets, type Mode, loadPaymentSecrets } from '../_shared/payment-providers.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
   if (!provider || !PROVIDERS.includes(provider)) return reply(400, { error: 'Unknown provider' })
 
   const admin = createClient(SUPABASE_URL, SERVICE)
+  await loadPaymentSecrets(admin)
   const rawBody = await req.text()
   const signature = req.headers.get(SIGNATURE_HEADER[provider])
 

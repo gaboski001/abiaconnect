@@ -147,6 +147,24 @@ interface ProviderStatus {
   webhookUrl: string
 }
 
+interface SecretPreview {
+  name: string
+  preview: string
+  updated_at: string
+}
+
+/** Friendly label + the prefix each provider's keys normally start with. */
+const SECRET_INFO: Record<string, { label: string; hint: string; prefix?: RegExp }> = {
+  PAYSTACK_TEST_SECRET_KEY: { label: 'Secret key', hint: 'Starts with sk_test_', prefix: /^sk_test_/ },
+  PAYSTACK_LIVE_SECRET_KEY: { label: 'Secret key', hint: 'Starts with sk_live_', prefix: /^sk_live_/ },
+  MONNIFY_TEST_API_KEY: { label: 'API key', hint: 'Usually starts with MK_TEST_', prefix: /^MK_TEST_/i },
+  MONNIFY_TEST_SECRET_KEY: { label: 'Secret key', hint: 'From Developer → API Keys (test)' },
+  MONNIFY_LIVE_API_KEY: { label: 'API key', hint: 'Usually starts with MK_PROD_', prefix: /^MK_PROD_/i },
+  MONNIFY_LIVE_SECRET_KEY: { label: 'Secret key', hint: 'From Developer → API Keys (live)' },
+  SQUAD_TEST_SECRET_KEY: { label: 'Secret key', hint: 'Sandbox key, usually starts with sandbox_sk_', prefix: /^sandbox_sk_/ },
+  SQUAD_LIVE_SECRET_KEY: { label: 'Secret key', hint: 'Live secret key from your Squad dashboard' },
+}
+
 function ProvidersTab() {
   const qc = useQueryClient()
   const rows = useQuery({
@@ -165,6 +183,14 @@ function ProvidersTab() {
       return data as { providers: ProviderStatus[]; siteUrlConfigured: boolean }
     },
   })
+  const previews = useQuery({
+    queryKey: ['admin-payment-secret-previews'],
+    queryFn: async () => {
+      const { data, error } = await db.from('payment_secret_settings').select('name, preview, updated_at')
+      if (error) throw error
+      return new Map((data as SecretPreview[]).map((r) => [r.name, r]))
+    },
+  })
   const save = useMutation({
     mutationFn: async (row: Partial<ProviderRow> & { provider: string }) => {
       const { provider, ...patch } = row
@@ -177,6 +203,11 @@ function ProvidersTab() {
     },
     onError: (e) => toast.error(errMsg(e)),
   })
+  const refreshSecrets = () => {
+    qc.invalidateQueries({ queryKey: ['admin-payment-secret-previews'] })
+    qc.invalidateQueries({ queryKey: ['admin-payment-status'] })
+    qc.invalidateQueries({ queryKey: ['admin-payment-providers'] })
+  }
 
   if (rows.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>
   if (rows.error) return <p className="text-sm text-destructive">{errMsg(rows.error)}</p>
@@ -184,8 +215,9 @@ function ProvidersTab() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Switch on any provider. If more than one is on, members choose at checkout. API keys are stored as server
-        secrets (never in the app); this page only shows whether they are set.
+        Switch on any provider. If more than one is on, members choose at checkout. API keys are encrypted in the
+        database vault: once saved they are shown masked (e.g. <code>sk_test_xxxxxxxxxx</code>) and can be replaced or
+        removed, but never viewed again.
       </p>
       {status.data && !status.data.siteUrlConfigured && (
         <p className="rounded-lg bg-amber-500/10 p-3 text-sm">
@@ -194,9 +226,11 @@ function ProvidersTab() {
       )}
       {rows.data!.map((p) => {
         const st = status.data?.providers.find((s) => s.provider === p.provider)
-        const ready = st?.configured[p.mode] ?? false
+        const names = st?.secretNames ?? defaultSecretNames(p.provider)
+        const savedAll = (m: 'test' | 'live') => names[m].every((n) => previews.data?.has(n))
+        const ready = (m: 'test' | 'live') => savedAll(m) || (st?.configured[m] ?? false)
         return (
-          <div key={p.provider} className="space-y-3 rounded-xl border p-4">
+          <div key={p.provider} className="space-y-4 rounded-xl border p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <p className="font-semibold">{p.display_name}</p>
@@ -209,8 +243,8 @@ function ProvidersTab() {
                   id={`en-${p.provider}`}
                   checked={p.is_enabled}
                   onCheckedChange={(v) => {
-                    if (v && !ready) {
-                      toast.error(`Set the ${p.mode} secrets for ${p.display_name} first.`)
+                    if (v && !ready(p.mode)) {
+                      toast.error(`Save the ${p.mode} keys for ${p.display_name} first.`)
                       return
                     }
                     if (v && p.provider === 'monnify' && !p.contract_code) {
@@ -222,10 +256,21 @@ function ProvidersTab() {
                 />
               </div>
             </div>
+
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label className="text-xs">Mode</Label>
-                <Select value={p.mode} onValueChange={(v) => save.mutate({ provider: p.provider, mode: v as 'test' | 'live' })}>
+                <Select
+                  value={p.mode}
+                  onValueChange={(v) => {
+                    const mode = v as 'test' | 'live'
+                    if (p.is_enabled && !ready(mode)) {
+                      toast.error(`Save the ${mode} keys first, or switch ${p.display_name} off.`)
+                      return
+                    }
+                    save.mutate({ provider: p.provider, mode })
+                  }}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="test">Test (sandbox)</SelectItem>
@@ -237,40 +282,148 @@ function ProvidersTab() {
                 <ContractCode value={p.contract_code ?? ''} onSave={(v) => save.mutate({ provider: p.provider, contract_code: v || null })} />
               )}
             </div>
-            {st && (
-              <div className="space-y-2 text-xs">
-                {(['test', 'live'] as const).map((m) => (
-                  <p key={m} className="flex flex-wrap items-center gap-1.5">
-                    {st.configured[m] ? (
-                      <CheckCircle2 className="size-3.5 text-emerald-600" />
+
+            <div className="grid gap-3 lg:grid-cols-2">
+              {(['test', 'live'] as const).map((m) => (
+                <fieldset key={m} className="space-y-3 rounded-lg border p-3">
+                  <legend className="flex items-center gap-1.5 px-1 text-sm font-medium">
+                    {ready(m) ? (
+                      <CheckCircle2 className="size-4 text-emerald-600" aria-hidden />
                     ) : (
-                      <XCircle className="size-3.5 text-muted-foreground" />
+                      <XCircle className="size-4 text-muted-foreground" aria-hidden />
                     )}
-                    <span className="font-medium capitalize">{m} secrets:</span>
-                    {st.secretNames[m].map((n) => (
-                      <code key={n} className="rounded bg-muted px-1">{n}</code>
-                    ))}
-                  </p>
-                ))}
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Webhook URL:</span>
-                  <code className="truncate rounded bg-muted px-1">{st.webhookUrl}</code>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="size-6"
-                    aria-label="Copy webhook URL"
-                    onClick={() => navigator.clipboard.writeText(st.webhookUrl).then(() => toast.success('Copied'))}
-                  >
-                    <Copy className="size-3.5" />
-                  </Button>
-                </div>
+                    {m === 'test' ? 'Test keys' : 'Live keys'}
+                  </legend>
+                  {names[m].map((n) => (
+                    <SecretField key={n} name={n} saved={previews.data?.get(n)} onChanged={refreshSecrets} />
+                  ))}
+                </fieldset>
+              ))}
+            </div>
+
+            {st && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-medium">Webhook URL:</span>
+                <code className="truncate rounded bg-muted px-1">{st.webhookUrl}</code>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-6"
+                  aria-label="Copy webhook URL"
+                  onClick={() => navigator.clipboard.writeText(st.webhookUrl).then(() => toast.success('Copied'))}
+                >
+                  <Copy className="size-3.5" />
+                </Button>
               </div>
             )}
           </div>
         )
       })}
     </div>
+  )
+}
+
+function defaultSecretNames(provider: ProviderRow['provider']) {
+  const P = provider.toUpperCase()
+  return provider === 'monnify'
+    ? { test: [`${P}_TEST_API_KEY`, `${P}_TEST_SECRET_KEY`], live: [`${P}_LIVE_API_KEY`, `${P}_LIVE_SECRET_KEY`] }
+    : { test: [`${P}_TEST_SECRET_KEY`], live: [`${P}_LIVE_SECRET_KEY`] }
+}
+
+/**
+ * One API key. Once saved, only the masked preview is ever shown; the value
+ * itself never comes back from the server.
+ */
+export function SecretField({ name, saved, onChanged }: { name: string; saved?: SecretPreview; onChanged: () => void }) {
+  const info = SECRET_INFO[name] ?? { label: name, hint: '' }
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState('')
+  const id = `secret-${name}`
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await db.rpc('admin_set_payment_secret', { _name: name, _value: value.trim() })
+      if (error) throw error
+      return data as string
+    },
+    onSuccess: (preview) => {
+      setValue('')
+      setEditing(false)
+      toast.success(`Saved as ${preview}`)
+      onChanged()
+    },
+    onError: (e) => toast.error(errMsg(e)),
+  })
+  const remove = useMutation({
+    mutationFn: async () => {
+      const { error } = await db.rpc('admin_clear_payment_secret', { _name: name })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      toast.success('Key removed')
+      onChanged()
+    },
+    onError: (e) => toast.error(errMsg(e)),
+  })
+
+  const prefixWarning = value.trim() && info.prefix && !info.prefix.test(value.trim())
+
+  if (saved && !editing) {
+    return (
+      <div className="space-y-1">
+        <Label className="text-xs">{info.label}</Label>
+        <div className="flex flex-wrap items-center gap-2">
+          <code className="flex-1 truncate rounded-md border bg-muted px-2 py-1.5 text-sm" aria-label={`${info.label} (hidden)`}>
+            {saved.preview}
+          </code>
+          <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Replace</Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-rose-600"
+            disabled={remove.isPending}
+            onClick={() => window.confirm(`Remove the saved ${info.label.toLowerCase()}? The provider will be switched off in this mode.`) && remove.mutate()}
+          >
+            Remove
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">Saved {format(new Date(saved.updated_at), 'dd MMM yyyy HH:mm')}</p>
+      </div>
+    )
+  }
+
+  return (
+    <form
+      className="space-y-1"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (value.trim()) save.mutate()
+      }}
+    >
+      <Label htmlFor={id} className="text-xs">{info.label}</Label>
+      <div className="flex gap-2">
+        <Input
+          id={id}
+          type="password"
+          autoComplete="new-password"
+          spellCheck={false}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={info.hint}
+        />
+        <Button type="submit" disabled={!value.trim() || save.isPending}>Save</Button>
+        {editing && (
+          <Button type="button" variant="ghost" onClick={() => { setEditing(false); setValue('') }}>
+            Cancel
+          </Button>
+        )}
+      </div>
+      {prefixWarning ? (
+        <p className="text-[11px] text-amber-600">This doesn't look like the usual format ({info.hint}). Double-check before saving.</p>
+      ) : (
+        <p className="text-[11px] text-muted-foreground">{info.hint}</p>
+      )}
+    </form>
   )
 }
 

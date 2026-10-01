@@ -35,7 +35,29 @@ export interface InitResult {
   providerReference: string | null
 }
 
-const env = (name: string) => Deno.env.get(name) || undefined
+// Keys saved from the admin dashboard live encrypted in Supabase Vault and
+// are read through get_payment_secrets() (service role only). Function
+// secrets set in the hosting dashboard still work as a fallback.
+const dbSecrets = new Map<string, string>()
+let secretsLoadedAt = 0
+const SECRETS_TTL_MS = 15_000
+
+/** Load admin-managed keys; call once at the start of every payment function. */
+export async function loadPaymentSecrets(admin: SupabaseClient, opts: { force?: boolean } = {}): Promise<void> {
+  if (!opts.force && Date.now() - secretsLoadedAt < SECRETS_TTL_MS) return
+  const { data, error } = await admin.rpc('get_payment_secrets')
+  if (error) {
+    console.error('could not load payment secrets', error.message)
+    return // keep previous values; env fallback still applies
+  }
+  dbSecrets.clear()
+  for (const row of (data ?? []) as Array<{ name: string; value: string }>) {
+    if (row.value) dbSecrets.set(row.name, row.value)
+  }
+  secretsLoadedAt = Date.now()
+}
+
+const env = (name: string) => dbSecrets.get(name) || Deno.env.get(name) || undefined
 
 /** Secret names per provider and mode (set them as Supabase function secrets). */
 export const SECRET_NAMES: Record<Provider, Record<Mode, string[]>> = {
