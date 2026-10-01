@@ -64,7 +64,7 @@ export function Navbar() {
 
         {/* Center: primary navigation */}
         <nav aria-label="Main" className="hidden flex-1 items-center justify-center lg:flex">
-          <ul className="flex items-center gap-1">
+          <ul className="flex items-center gap-0.5">
             {navItems.map((item) => (
               <li key={item.label}>
                 <HeaderLink item={item} active={isNavItemActive(item, pathname)} />
@@ -76,7 +76,7 @@ export function Navbar() {
         {/* Right: search, actions, account */}
         <div className="ml-auto flex shrink-0 items-center gap-1.5 lg:ml-0">
           {/* Full search on tablets (no nav row) and wide screens */}
-          <div className="hidden w-56 md:block lg:hidden xl:block xl:w-64">{searchField()}</div>
+          <div className="hidden w-56 md:block lg:hidden xl:block xl:w-52 2xl:w-64">{searchField()}</div>
           {/* Compact search where the nav row takes the space */}
           <Popover open={searchOpen} onOpenChange={setSearchOpen}>
             <PopoverTrigger asChild>
@@ -130,9 +130,9 @@ function HeaderLink({ item, active }: { item: NavItem; active: boolean }) {
   // Website style: text links with an underline for the current section
   // (the app uses tabs and pills instead).
   const className = cn(
-    'relative inline-flex h-16 items-center gap-1 px-3 text-[15px] font-medium transition-colors',
+    'relative inline-flex h-16 items-center gap-1 whitespace-nowrap px-2.5 text-[15px] font-medium transition-colors xl:px-3',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-    'after:absolute after:inset-x-3 after:bottom-0 after:h-[3px] after:rounded-t-full after:transition-colors',
+    'after:absolute after:inset-x-2.5 after:bottom-0 after:h-[3px] after:rounded-t-full after:transition-colors',
     active
       ? 'text-primary after:bg-primary'
       : 'text-foreground/70 hover:text-foreground after:bg-transparent hover:after:bg-border',
