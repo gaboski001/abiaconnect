@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Gift,
   HandHeart,
   Info,
   LayoutDashboard,
@@ -8,6 +9,8 @@ import {
   ShoppingBag,
   UserRound,
   Users,
+  Trophy,
+  Vote,
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
@@ -46,6 +49,7 @@ export function useNavSections() {
     { label: 'Forums', to: '/', icon: MessagesSquare, end: true },
     ...(subgroupsEnabled ? [{ label: 'Subgroups', to: '/subgroups', icon: Users }] : []),
     { label: 'Polls', to: '/polls', icon: BarChart3 },
+    { label: 'Contests', to: '/contests', icon: Vote },
   ]
 
   const community: NavItem[] = [
@@ -58,6 +62,8 @@ export function useNavSections() {
     ? [
         ...(role !== 'guest' ? [{ label: 'My Dashboard', to: '/dashboard', icon: LayoutDashboard }] : []),
         { label: 'My Profile', to: '/profile', icon: UserRound },
+        { label: 'My Rewards', to: '/rewards', icon: Gift },
+        { label: 'Leaderboard', to: '/leaderboard', icon: Trophy },
       ]
     : []
 

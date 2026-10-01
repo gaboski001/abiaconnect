@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { MainLayout } from './MainLayout'
 
 vi.mock('./Navbar', () => ({ Navbar: () => <nav data-testid="navbar">desktop nav</nav> }))
+vi.mock('@/components/engagement/LiveCommunity', () => ({ CommunityPresence: () => null, PointsToaster: () => null }))
 vi.mock('./Footer', () => ({ Footer: () => <footer data-testid="footer" /> }))
 vi.mock('@/components/mobile/MobileBottomNav', () => ({
   MobileBottomNav: () => <div data-testid="mobile-bottom-nav" />,

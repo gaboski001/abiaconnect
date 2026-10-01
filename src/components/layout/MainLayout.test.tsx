@@ -5,6 +5,7 @@ import { MainLayout } from './MainLayout'
 
 // Minimal mocks for layout children that depend on app context.
 vi.mock('./Navbar', () => ({ Navbar: () => <nav data-testid="navbar" /> }))
+vi.mock('@/components/engagement/LiveCommunity', () => ({ CommunityPresence: () => null, PointsToaster: () => null }))
 vi.mock('./Footer', () => ({ Footer: () => <footer data-testid="footer" /> }))
 vi.mock('@/components/mobile/MobileBottomNav', () => ({
   MobileBottomNav: () => <div data-testid="mobile-nav" />,

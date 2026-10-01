@@ -22,6 +22,11 @@ const CreateThread = lazy(() => import('@/pages/CreateThread'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const Profile = lazy(() => import('@/pages/Profile'))
 const Polls = lazy(() => import('@/pages/Polls'))
+const Rewards = lazy(() => import('@/pages/Rewards'))
+const Leaderboard = lazy(() => import('@/pages/Leaderboard'))
+const Contests = lazy(() => import('@/pages/Contests'))
+const ContestNew = lazy(() => import('@/pages/ContestNew'))
+const ContestDetail = lazy(() => import('@/pages/ContestDetail'))
 const Subgroups = lazy(() => import('@/pages/Subgroups'))
 const SubgroupDetail = lazy(() => import('@/pages/SubgroupDetail'))
 const SubgroupInvite = lazy(() => import('@/pages/SubgroupInvite'))
@@ -150,6 +155,11 @@ export default function App() {
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="profile" element={<Profile />} />
                   <Route path="polls" element={<Polls />} />
+                  <Route path="rewards" element={<Rewards />} />
+                  <Route path="leaderboard" element={<Leaderboard />} />
+                  <Route path="contests" element={<Contests />} />
+                  <Route path="contests/new" element={<ContestNew />} />
+                  <Route path="contests/:contestId" element={<ContestDetail />} />
                   <Route path="subgroups" element={<Subgroups />} />
                   <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
                   <Route path="subgroups/invite/:token" element={<SubgroupInvite />} />

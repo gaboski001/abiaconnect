@@ -12,6 +12,7 @@ import { IOSInstallPrompt } from '@/components/pwa/IOSInstallPrompt'
 import { UpdateAvailablePrompt } from '@/components/pwa/UpdateAvailablePrompt'
 import { ModerationBlockedDialog } from '@/components/moderation/ModerationBlockedDialog'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { CommunityPresence, PointsToaster } from '@/components/engagement/LiveCommunity'
 
 
 export function MainLayout() {
@@ -84,6 +85,9 @@ export function MainLayout() {
 
       {/* PWA notices removed by user request */}
       <ModerationBlockedDialog />
+      {/* Live community: members-online count and "+points" toasts. */}
+      <CommunityPresence />
+      <PointsToaster />
     </div>
   )
 }

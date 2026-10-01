@@ -4,6 +4,8 @@ import { formatDistanceToNow } from 'date-fns'
 import { BookOpen, CalendarDays, MessageSquarePlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
+import { OnlineMembersPill } from '@/components/engagement/LiveCommunity'
 
 interface Thread {
   id: string
@@ -73,6 +75,8 @@ export function SidebarWidgets() {
 
   return (
     <aside className="space-y-6">
+      <DailyRewardCard />
+      <OnlineMembersPill />
       <Card title="Recent Activity">
         {recent.isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>

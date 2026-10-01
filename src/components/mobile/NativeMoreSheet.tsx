@@ -5,7 +5,9 @@ import {
   BookOpen,
   Briefcase,
   CalendarDays,
+  Award,
   ChevronRight,
+  Gift,
   CircleHelp,
   Download,
   Flag,
@@ -25,6 +27,7 @@ import {
   Target,
   Trophy,
   UsersRound,
+  Vote,
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
@@ -84,16 +87,25 @@ export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenC
   const member = !!user && role !== 'guest'
   const displayName = profile?.display_name || profile?.username || user?.email || 'Member'
 
-  const quick: Row[] = [
-    ...(member ? [{ label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard }] : []),
-    ...(user ? [{ label: 'New post', to: '/create-thread', icon: PenSquare }] : []),
-    { label: 'Polls', to: '/polls', icon: BarChart3 },
-    { label: 'Events', to: '/events', icon: CalendarDays },
-  ]
+  // Big shortcuts: the engagement features members use most.
+  const quick: Row[] = user
+    ? [
+        { label: 'Rewards', to: '/rewards', icon: Gift },
+        { label: 'Leaderboard', to: '/leaderboard', icon: Trophy },
+        { label: 'Contests', to: '/contests', icon: Vote },
+        { label: 'Polls', to: '/polls', icon: BarChart3 },
+      ]
+    : [
+        { label: 'Events', to: '/events', icon: CalendarDays },
+        { label: 'Success stories', to: '/success-stories', icon: Award },
+      ]
 
   const community: Row[] = [
+    ...(member ? [{ label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard }] : []),
+    ...(user ? [{ label: 'Start a discussion', to: '/create-thread', icon: PenSquare }] : []),
+    ...(user ? [{ label: 'Events', to: '/events', icon: CalendarDays }] : []),
     { label: 'Member spotlight', to: '/member-spotlight', icon: Star },
-    { label: 'Success stories', to: '/success-stories', icon: Trophy },
+    ...(user ? [{ label: 'Success stories', to: '/success-stories', icon: Award }] : []),
   ]
 
   const about: Row[] = [

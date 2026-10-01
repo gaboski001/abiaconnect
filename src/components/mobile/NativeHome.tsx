@@ -8,6 +8,10 @@ import { useProfile } from '@/hooks/useProfile'
 import { HeroSlider } from '@/components/forum/HeroSlider'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
+import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
+import { NewDiscussionsBanner, OnlineMembersPill } from '@/components/engagement/LiveCommunity'
+import { ContestCard } from '@/pages/Contests'
+import { contestPhase, listContests } from '@/lib/engagement'
 
 interface Category {
   id: string
@@ -48,6 +52,11 @@ export function NativeHome() {
   const { user } = useAuth()
   const { data: profile } = useProfile()
   const firstName = (profile?.display_name || profile?.username || '').split(' ')[0]
+
+  const contestsQ = useQuery({ queryKey: ['contests'], queryFn: listContests, enabled: !!user, staleTime: 60_000 })
+  const openContests = (contestsQ.data ?? [])
+    .map((c) => ({ ...c, phase: contestPhase(c) }))
+    .filter((c) => c.phase === 'open')
 
   const categoriesQ = useQuery({
     queryKey: ['categories'],
@@ -120,6 +129,7 @@ export function NativeHome() {
             <p className="mt-1.5 text-[15px] leading-6 text-muted-foreground">
               Catch up on what Abians are talking about today.
             </p>
+            <OnlineMembersPill className="mt-3" />
             <Link
               to="/create-thread"
               className="mt-5 flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-bold text-[#0B1F0B] active:scale-[0.98]"
@@ -159,6 +169,30 @@ export function NativeHome() {
         )}
       </section>
 
+      {user ? (
+        <section className="px-4">
+          <DailyRewardCard />
+        </section>
+      ) : null}
+
+      {openContests.length ? (
+        <section className="px-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-[18px] font-bold tracking-tight text-foreground">Vote now</h2>
+            <Link to="/contests" className="text-[14px] font-semibold text-amber-600 dark:text-amber-300">
+              See all
+            </Link>
+          </div>
+          <ul className="space-y-2.5">
+            {openContests.slice(0, 3).map((c) => (
+              <li key={c.id}>
+                <ContestCard c={c} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {/* Admin announcements / featured */}
       <section className="px-4">
         <HeroSlider />
@@ -166,6 +200,7 @@ export function NativeHome() {
 
       {/* Latest discussions */}
       <section className="px-4">
+        <NewDiscussionsBanner queryKeys={[['native-home-feed']]} />
         <SectionHeader title="Latest discussions" />
         {feedQ.isLoading ? (
           <div className="space-y-2.5">
