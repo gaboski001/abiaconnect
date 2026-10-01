@@ -306,6 +306,24 @@ export type Database = {
         }
         Relationships: []
       }
+      dating_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       device_push_tokens: {
         Row: {
           created_at: string
@@ -2295,6 +2313,7 @@ export type Database = {
         Args: { _name: string }
         Returns: undefined
       }
+      admin_dating_setup_status: { Args: never; Returns: Json }
       admin_delete_user: { Args: { _user_id: string }; Returns: undefined }
       admin_get_user_emails: {
         Args: { _ids: string[] }
@@ -2384,6 +2403,10 @@ export type Database = {
         Args: { _purpose?: string; _target_url: string; _ttl_seconds?: number }
         Returns: string
       }
+      dating_conversation_between: {
+        Args: { _a: string; _b: string }
+        Returns: string
+      }
       dating_current_plan: {
         Args: { _uid: string }
         Returns: {
@@ -2418,6 +2441,7 @@ export type Database = {
         Returns: boolean
       }
       dating_is_blocked: { Args: { _a: string; _b: string }; Returns: boolean }
+      dating_is_match: { Args: { _a: string; _b: string }; Returns: boolean }
       dating_likes_received: {
         Args: { _limit?: number; _offset?: number; _unseen_only?: boolean }
         Returns: Json
@@ -2429,6 +2453,7 @@ export type Database = {
         Returns: Json
       }
       dating_react: { Args: { _kind: string; _target: string }; Returns: Json }
+      dating_start_conversation: { Args: { _target: string }; Returns: Json }
       dating_today: { Args: never; Returns: string }
       dating_user_in_good_standing: { Args: { _uid: string }; Returns: boolean }
       decide_join_request: {
