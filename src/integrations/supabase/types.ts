@@ -1352,6 +1352,7 @@ export type Database = {
           is_deleted: boolean
           lga: string | null
           marital_status: string | null
+          message_privacy: string
           native_app_installed_at: string | null
           native_app_platform: string | null
           native_app_version: string | null
@@ -1378,6 +1379,7 @@ export type Database = {
           is_deleted?: boolean
           lga?: string | null
           marital_status?: string | null
+          message_privacy?: string
           native_app_installed_at?: string | null
           native_app_platform?: string | null
           native_app_version?: string | null
@@ -1404,6 +1406,7 @@ export type Database = {
           is_deleted?: boolean
           lga?: string | null
           marital_status?: string | null
+          message_privacy?: string
           native_app_installed_at?: string | null
           native_app_platform?: string | null
           native_app_version?: string | null
@@ -1474,6 +1477,7 @@ export type Database = {
           headline: string | null
           height_cm: number | null
           id: string
+          incognito: boolean
           interests: string[]
           is_active: boolean
           lga: string | null
@@ -1493,6 +1497,7 @@ export type Database = {
           headline?: string | null
           height_cm?: number | null
           id?: string
+          incognito?: boolean
           interests?: string[]
           is_active?: boolean
           lga?: string | null
@@ -1512,6 +1517,7 @@ export type Database = {
           headline?: string | null
           height_cm?: number | null
           id?: string
+          incognito?: boolean
           interests?: string[]
           is_active?: boolean
           lga?: string | null
@@ -2396,9 +2402,18 @@ export type Database = {
         Args: { _conversation_id: string }
         Returns: number
       }
+      connections_blocked_with: { Args: { _owner: string }; Returns: boolean }
+      connections_profile_visible: {
+        Args: { _owner: string }
+        Returns: boolean
+      }
       consume_email_short_link:
         | { Args: { _token: string }; Returns: string }
         | { Args: { _token: string; _user_agent?: string }; Returns: string }
+      conversation_send_status: {
+        Args: { _conversation_id: string }
+        Returns: Json
+      }
       create_email_short_link: {
         Args: { _purpose?: string; _target_url: string; _ttl_seconds?: number }
         Returns: string
@@ -2438,6 +2453,10 @@ export type Database = {
       }
       dating_has_entitlement: {
         Args: { _key: string; _uid: string }
+        Returns: boolean
+      }
+      dating_has_reached_out: {
+        Args: { _from: string; _to: string }
         Returns: boolean
       }
       dating_is_blocked: { Args: { _a: string; _b: string }; Returns: boolean }
@@ -2502,6 +2521,7 @@ export type Database = {
         Returns: string
       }
       get_my_dating_entitlements: { Args: never; Returns: Json }
+      get_my_privacy: { Args: never; Returns: Json }
       get_my_profile: {
         Args: never
         Returns: {
@@ -2519,6 +2539,7 @@ export type Database = {
           is_deleted: boolean
           lga: string | null
           marital_status: string | null
+          message_privacy: string
           native_app_installed_at: string | null
           native_app_platform: string | null
           native_app_version: string | null
@@ -2634,6 +2655,7 @@ export type Database = {
       }
       mark_message_read: { Args: { _message_id: string }; Returns: undefined }
       mask_payment_secret: { Args: { _value: string }; Returns: string }
+      member_message_privacy: { Args: { _uid: string }; Returns: string }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -2735,6 +2757,10 @@ export type Database = {
       set_conversation_pinned: {
         Args: { _conversation_id: string; _pinned: boolean }
         Returns: undefined
+      }
+      set_my_privacy: {
+        Args: { _incognito?: boolean; _message_privacy?: string }
+        Returns: Json
       }
       submit_moderation_appeal: {
         Args: {
