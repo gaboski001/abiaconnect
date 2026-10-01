@@ -2841,10 +2841,6 @@ export type Database = {
         Args: { _conversation_id: string }
         Returns: undefined
       }
-      delete_email: {
-        Args: { message_id: number; queue_name: string }
-        Returns: boolean
-      }
       delete_message_for_everyone: {
         Args: { _message_id: string }
         Returns: undefined
@@ -2854,7 +2850,6 @@ export type Database = {
         Returns: undefined
       }
       email_is_registered: { Args: { _email: string }; Returns: boolean }
-      email_queue_dispatch: { Args: never; Returns: undefined }
       email_registration_status: {
         Args: { _email: string }
         Returns: {
@@ -2869,10 +2864,6 @@ export type Database = {
       enforce_rate_limit: {
         Args: { _max: number; _scope: string; _window_seconds?: number }
         Returns: undefined
-      }
-      enqueue_email: {
-        Args: { payload: Json; queue_name: string }
-        Returns: number
       }
       forward_message: {
         Args: { _message_id: string; _to_conversation_id: string }
@@ -3033,15 +3024,6 @@ export type Database = {
       mark_message_read: { Args: { _message_id: string }; Returns: undefined }
       mask_payment_secret: { Args: { _value: string }; Returns: string }
       member_message_privacy: { Args: { _uid: string }; Returns: string }
-      move_to_dlq: {
-        Args: {
-          dlq_name: string
-          message_id: number
-          payload: Json
-          source_queue: string
-        }
-        Returns: number
-      }
       my_thread_ids: {
         Args: never
         Returns: {
@@ -3107,14 +3089,6 @@ export type Database = {
       prune_email_short_links: { Args: never; Returns: undefined }
       prune_issue_report_contact_emails: { Args: never; Returns: undefined }
       prune_search_rate_limits: { Args: never; Returns: undefined }
-      read_email_batch: {
-        Args: { batch_size: number; queue_name: string; vt: number }
-        Returns: {
-          message: Json
-          msg_id: number
-          read_ct: number
-        }[]
-      }
       redeem_subgroup_invite: { Args: { _token: string }; Returns: string }
       resolve_username_to_email: {
         Args: { _username: string }
