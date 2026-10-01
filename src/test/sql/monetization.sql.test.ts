@@ -339,3 +339,34 @@ describe('payment API keys in Vault', () => {
     expect(is_enabled).toBe(false)
   })
 })
+
+describe('push internal secret rotation', () => {
+  const LEAKED = '5420eafda19fe97e5fc2ed8f58dfab39e887beff183b478a800a891c874ace40'
+
+  it('stores a fresh random token in Vault that only the service role can read', async () => {
+    await db.as(null)
+    const { value } = await db.one<{ value: string }>(`SELECT public.get_push_internal_secret() AS value`)
+    expect(value).toMatch(/^[0-9a-f]{64}$/)
+    expect(value).not.toBe(LEAKED)
+
+    const user = await db.addUser()
+    await db.as(user)
+    await db.asRole('authenticated', () =>
+      expect(db.query(`SELECT public.get_push_internal_secret()`)).rejects.toThrow(/permission denied/),
+    )
+  })
+
+  it('replaces an existing (leaked) token when re-run', async () => {
+    await db.as(null)
+    await db.query(`UPDATE vault.secrets SET secret = $1 WHERE name = 'push_internal_secret'`, [LEAKED])
+    const sql = (await import('node:fs')).readFileSync(
+      (await import('node:path')).resolve(__dirname, '../../../supabase/migrations/20261001160000_rotate_push_internal_secret.sql'),
+      'utf8',
+    )
+    await db.exec(sql)
+    const { value } = await db.one<{ value: string }>(`SELECT public.get_push_internal_secret() AS value`)
+    expect(value).not.toBe(LEAKED)
+    const { n } = await db.one<{ n: number }>(`SELECT count(*)::int n FROM vault.secrets WHERE name = 'push_internal_secret'`)
+    expect(n).toBe(1)
+  })
+})

@@ -1,10 +1,11 @@
+-- The original token was committed here in plain text; it has been removed
+-- and rotated (see 20261001160000_rotate_push_internal_secret.sql). On a fresh
+-- database this just creates a random token.
 DO $$
 BEGIN
-  BEGIN
-    PERFORM vault.create_secret('5420eafda19fe97e5fc2ed8f58dfab39e887beff183b478a800a891c874ace40', 'push_internal_secret');
-  EXCEPTION WHEN unique_violation THEN
-    UPDATE vault.secrets SET secret = '5420eafda19fe97e5fc2ed8f58dfab39e887beff183b478a800a891c874ace40' WHERE name = 'push_internal_secret';
-  END;
+  IF NOT EXISTS (SELECT 1 FROM vault.secrets WHERE name = 'push_internal_secret') THEN
+    PERFORM vault.create_secret(encode(gen_random_bytes(32), 'hex'), 'push_internal_secret');
+  END IF;
 END $$;
 
 CREATE OR REPLACE FUNCTION public.push_on_new_notification()

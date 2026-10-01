@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { PGlite } from '@electric-sql/pglite'
+import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 
 /**
  * Minimal stand-ins for the Supabase objects the monetization migration
@@ -18,6 +19,8 @@ const PRELUDE = `
   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role;
+  CREATE SCHEMA extensions;
+  CREATE EXTENSION pgcrypto SCHEMA extensions;
   CREATE SCHEMA auth;
   CREATE TABLE auth.users (id uuid PRIMARY KEY);
   CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS
@@ -66,6 +69,7 @@ const PRELUDE = `
 const MIGRATIONS = [
   '20261001120000_dating_monetization_phase1.sql',
   '20261001140000_payment_secrets_in_vault.sql',
+  '20261001160000_rotate_push_internal_secret.sql',
 ]
 
 export type Db = PGlite & {
@@ -77,7 +81,7 @@ export type Db = PGlite & {
 }
 
 export async function createMonetizationDb(): Promise<Db> {
-  const db = (await PGlite.create()) as unknown as Db
+  const db = (await PGlite.create({ extensions: { pgcrypto } })) as unknown as Db
   await db.exec(PRELUDE)
   for (const file of MIGRATIONS) {
     await db.exec(readFileSync(resolve(__dirname, '../../../supabase/migrations', file), 'utf8'))

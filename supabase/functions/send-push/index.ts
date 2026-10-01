@@ -11,8 +11,43 @@ const cors = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const PUSH_INTERNAL_SECRET = Deno.env.get('PUSH_INTERNAL_SECRET') || ''
 const FCM_SA = Deno.env.get('FCM_SERVICE_ACCOUNT')!
+
+// Internal token used by the database push triggers. It lives in Vault
+// (read via the service-role-only get_push_internal_secret()), so rotating it
+// in the database takes effect here without redeploying or env changes.
+let cachedInternalSecret: { value: string; at: number } | null = null
+const INTERNAL_SECRET_TTL_MS = 60_000
+
+// deno-lint-ignore no-explicit-any
+async function loadInternalSecret(supa: any, force = false): Promise<string> {
+  if (!force && cachedInternalSecret && Date.now() - cachedInternalSecret.at < INTERNAL_SECRET_TTL_MS) {
+    return cachedInternalSecret.value
+  }
+  const { data, error } = await supa.rpc('get_push_internal_secret')
+  if (error) {
+    console.error('could not load push internal secret', error.message)
+    return cachedInternalSecret?.value ?? ''
+  }
+  cachedInternalSecret = { value: typeof data === 'string' ? data : '', at: Date.now() }
+  return cachedInternalSecret.value
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (!a || a.length !== b.length) return false
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return diff === 0
+}
+
+// deno-lint-ignore no-explicit-any
+async function isInternalToken(supa: any, token: string): Promise<boolean> {
+  if (timingSafeEqual(token, await loadInternalSecret(supa))) return true
+  // A JWT (user/service token) is never the internal token; don't refetch for it.
+  if (token.split('.').length === 3) return false
+  // Cache may predate a rotation: re-read once before refusing.
+  return timingSafeEqual(token, await loadInternalSecret(supa, true))
+}
 
 interface ServiceAccount {
   client_email: string
@@ -96,9 +131,7 @@ Deno.serve(async (req) => {
 
     const supa = createClient(SUPABASE_URL, SERVICE_ROLE)
 
-    const isInternalCaller =
-      token === SERVICE_ROLE ||
-      (PUSH_INTERNAL_SECRET.length > 0 && token === PUSH_INTERNAL_SECRET)
+    const isInternalCaller = token === SERVICE_ROLE || (await isInternalToken(supa, token))
     if (!isInternalCaller) {
       const { data: claimsData, error: claimsErr } = await supa.auth.getClaims(token)
       const callerId = claimsData?.claims?.sub as string | undefined
