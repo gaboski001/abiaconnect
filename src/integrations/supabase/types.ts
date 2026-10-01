@@ -1090,9 +1090,11 @@ export type Database = {
       }
       moderation_log: {
         Row: {
+          actor: string
           allowed: boolean
           categories: string[]
           content_excerpt: string | null
+          content_hash: string | null
           created_at: string
           degraded: boolean
           id: string
@@ -1104,11 +1106,14 @@ export type Database = {
           surface: string
           title: string | null
           user_id: string | null
+          verdict: string | null
         }
         Insert: {
+          actor?: string
           allowed: boolean
           categories?: string[]
           content_excerpt?: string | null
+          content_hash?: string | null
           created_at?: string
           degraded?: boolean
           id?: string
@@ -1120,11 +1125,14 @@ export type Database = {
           surface?: string
           title?: string | null
           user_id?: string | null
+          verdict?: string | null
         }
         Update: {
+          actor?: string
           allowed?: boolean
           categories?: string[]
           content_excerpt?: string | null
+          content_hash?: string | null
           created_at?: string
           degraded?: boolean
           id?: string
@@ -1136,6 +1144,43 @@ export type Database = {
           surface?: string
           title?: string | null
           user_id?: string | null
+          verdict?: string | null
+        }
+        Relationships: []
+      }
+      moderation_queue: {
+        Row: {
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          id: string
+          kind: string
+          outcome: string | null
+          processed_at: string | null
+          ref_id: string
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          outcome?: string | null
+          processed_at?: string | null
+          ref_id: string
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          outcome?: string | null
+          processed_at?: string | null
+          ref_id?: string
+          status?: string
         }
         Relationships: []
       }
@@ -1796,6 +1841,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          is_hidden: boolean
           parent_reply_id: string | null
           thread_id: string
           updated_at: string
@@ -1805,6 +1851,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          is_hidden?: boolean
           parent_reply_id?: string | null
           thread_id: string
           updated_at?: string
@@ -1814,6 +1861,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          is_hidden?: boolean
           parent_reply_id?: string | null
           thread_id?: string
           updated_at?: string
@@ -1870,6 +1918,8 @@ export type Database = {
       }
       reports: {
         Row: {
+          ai_note: string | null
+          ai_reviewed_at: string | null
           created_at: string
           id: string
           reason: string | null
@@ -1880,6 +1930,8 @@ export type Database = {
           thread_id: string | null
         }
         Insert: {
+          ai_note?: string | null
+          ai_reviewed_at?: string | null
           created_at?: string
           id?: string
           reason?: string | null
@@ -1890,6 +1942,8 @@ export type Database = {
           thread_id?: string | null
         }
         Update: {
+          ai_note?: string | null
+          ai_reviewed_at?: string | null
           created_at?: string
           id?: string
           reason?: string | null
@@ -2673,6 +2727,15 @@ export type Database = {
       }
       check_badges: { Args: { _user: string }; Returns: undefined }
       claim_daily_reward: { Args: never; Returns: Json }
+      claim_moderation_queue: {
+        Args: { _limit?: number }
+        Returns: {
+          attempts: number
+          id: string
+          kind: string
+          ref_id: string
+        }[]
+      }
       clear_conversation: {
         Args: { _conversation_id: string }
         Returns: number
@@ -3098,6 +3161,7 @@ export type Database = {
         Args: { _event: string; _metadata?: Json }
         Returns: undefined
       }
+      verify_cron_token: { Args: { _token: string }; Returns: boolean }
       wallet_apply: {
         Args: {
           _amount: number
