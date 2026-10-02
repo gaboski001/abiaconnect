@@ -3043,6 +3043,21 @@ export type Database = {
           upvotes: number
         }[]
       }
+      get_active_donation_accounts: {
+        Args: never
+        Returns: {
+          account_name: string
+          account_number: string | null
+          account_type: string
+          bank_name: string | null
+          crypto_currency: string | null
+          crypto_network: string | null
+          description: string | null
+          id: string
+          order_index: number
+          wallet_address: string | null
+        }[]
+      }
       get_thread_reply_counts: {
         Args: { _thread_ids: string[] }
         Returns: {

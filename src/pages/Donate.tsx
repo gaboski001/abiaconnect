@@ -141,11 +141,9 @@ export default function Donate() {
   const { data, isLoading } = useQuery({
     queryKey: ['donation_accounts', 'active'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('donation_accounts')
-        .select('id,account_type,account_name,account_number,bank_name,crypto_currency,crypto_network,wallet_address,description,order_index')
-        .eq('is_active', true)
-        .order('order_index', { ascending: true })
+      // Public read-only function: works for signed-out visitors, returns only
+      // active accounts and the details shown here.
+      const { data, error } = await supabase.rpc('get_active_donation_accounts')
       if (error) throw error
       return data as DonationAccount[]
     },

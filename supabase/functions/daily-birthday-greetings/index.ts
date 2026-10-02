@@ -10,6 +10,15 @@ Deno.serve(async (req) => {
   const denied = await requireScheduler(req);
   if (denied) return denied;
 
+  // Test mode: {"dry_run": true} proves the scheduler's request got in
+  // (gateway + scheduler token) without sending any greeting.
+  const body = await req.json().catch(() => ({}));
+  if (body?.dry_run === true) {
+    return new Response(JSON.stringify({ ok: true, dry_run: true, sent: 0 }), {
+      headers: { "content-type": "application/json" },
+    });
+  }
+
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
