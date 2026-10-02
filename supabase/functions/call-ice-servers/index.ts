@@ -14,6 +14,7 @@
 // Signed-in users only, so relay credentials can't be harvested anonymously.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { withinRateLimit } from '../_shared/rate-limit.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -83,6 +84,11 @@ Deno.serve(async (req) => {
   // signing keys); getUser round-trips to the auth API and was rejected here.
   const { data: claims, error: claimErr } = await supa.auth.getClaims(token)
   if (claimErr || !claims?.claims?.sub) return json({ error: 'unauthorized' }, 401)
+  // Each call mints paid TURN relay credentials; cap per member.
+  const limiter = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
+  if (!(await withinRateLimit(limiter, `uid:${claims.claims.sub}`, 'ice-servers', 60, 3600))) {
+    return json({ error: 'too many calls, try again later' }, 429)
+  }
 
   let turn: RTCIceServerLike[] = []
   let source = 'stun-only'

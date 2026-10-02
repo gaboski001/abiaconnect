@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
     const { data: claims, error: claimErr } = await userClient.auth.getClaims(
       authHeader.replace('Bearer ', ''),
     )
-    if (claimErr || !claims?.claims) return json({ error: 'Unauthorized' }, 401)
+    if (claimErr || !claims?.claims?.sub) return json({ error: 'Unauthorized' }, 401)
 
     if (!VT_KEY) {
       console.error('VIRUSTOTAL_API_KEY missing — entering fallback mode')

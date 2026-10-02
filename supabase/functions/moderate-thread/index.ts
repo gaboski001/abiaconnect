@@ -5,6 +5,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { UGO_NAME, contentHash, stripHtml, ugoReview, type Surface } from '../_shared/ugo.ts'
+import { withinRateLimit } from '../_shared/rate-limit.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -24,27 +25,27 @@ Deno.serve(async (req) => {
     const title = String(body?.title ?? '').slice(0, 300)
     const content = String(body?.content ?? '').slice(0, 20000)
 
-    // Who is posting (for the audit log and to recognise checked content later).
-    let userId: string | null = null
+    // Only signed-in members can run a check. Each check is written to the
+    // moderation history under the member's own id, so anonymous callers
+    // (public app key only) must not be able to add records or spend AI credits.
     const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
-    if (token) {
-      try {
-        const userClient = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
-          global: { headers: { Authorization: `Bearer ${token}` } },
-          auth: { persistSession: false },
-        })
-        const { data } = await userClient.auth.getClaims(token)
-        userId = (data?.claims?.sub as string | undefined) ?? null
-      } catch {
-        /* anonymous */
-      }
+    if (!token) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: cors })
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } })
+    const { data: claims } = await admin.auth.getClaims(token)
+    const userId = (claims?.claims?.sub as string | undefined) ?? null
+    if (!userId || claims?.claims?.role !== 'authenticated') {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: cors })
+    }
+    if (!(await withinRateLimit(admin, `uid:${userId}`, 'moderate-thread', 20, 60))) {
+      // The app treats this like an outage and lets the post through; Ugo's
+      // background review still checks it after posting.
+      return Response.json({ error: 'Too many checks, slow down' }, { status: 429, headers: cors })
     }
 
     const decision = await ugoReview({ surface, title, content })
     const allowed = decision.verdict !== 'block'
 
     try {
-      const admin = createClient(SUPABASE_URL, SERVICE_ROLE)
       await admin.from('moderation_log').insert({
         user_id: userId,
         surface,
@@ -56,7 +57,7 @@ Deno.serve(async (req) => {
         degraded: decision.degraded,
         verdict: decision.verdict,
         actor: 'pre_check',
-        content_hash: userId && allowed ? await contentHash(userId, content) : null,
+        content_hash: allowed && !decision.degraded ? await contentHash(userId, content) : null,
       })
     } catch {
       /* logging never blocks the member */
@@ -76,6 +77,7 @@ Deno.serve(async (req) => {
       { headers: cors },
     )
   } catch (err) {
-    return Response.json({ allowed: true, verdict: 'allow', degraded: true, error: String(err) }, { headers: cors })
+    console.error('moderate-thread failed', err instanceof Error ? err.message : String(err))
+    return Response.json({ allowed: true, verdict: 'allow', degraded: true }, { headers: cors })
   }
 })

@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { sendAndLog } from '../_shared/transactional-email-templates/log-send.ts'
+import { withinRateLimit } from '../_shared/rate-limit.ts'
 
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
@@ -18,6 +19,10 @@ Deno.serve(async (req) => {
   const { data: userData, error: userErr } = await supabase.auth.getUser(token)
   const user = userData?.user
   if (userErr || !user?.email) return json({ error: 'Unauthorized' }, 401)
+  // Each call sends an email; a few per hour covers real new sign-ins.
+  if (!(await withinRateLimit(supabase, `uid:${user.id}`, 'new-device-email', 5, 3600))) {
+    return json({ success: false, outcome: 'rate_limited' }, 429)
+  }
 
   let body: any
   try {

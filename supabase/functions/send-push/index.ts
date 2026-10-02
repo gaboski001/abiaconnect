@@ -1,8 +1,18 @@
 // Sends a data-only FCM v1 push notification to a user's registered devices.
 // Body: { userId: string, title: string, message: string, data?: Record<string,string> }
+// Members may not choose the text of an alert sent to someone else; see the
+// authorization notes in the handler.
 // Requires FCM_SERVICE_ACCOUNT secret (the Firebase service-account JSON).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  UUID_RE,
+  buildCallPush,
+  parseCallRequest,
+  sanitizeFreePush,
+  type PushContent,
+} from '../_shared/push-policy.ts'
+import { withinRateLimit } from '../_shared/rate-limit.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -104,50 +114,77 @@ async function getAccessToken(sa: ServiceAccount): Promise<string> {
   return json.access_token as string
 }
 
+const jsonRes = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors })
   try {
-    const { userId, title, message, data } = await req.json()
-    if (!userId || !title || !message) {
-      return new Response(JSON.stringify({ error: 'userId, title, message required' }), {
-        status: 400, headers: { ...cors, 'Content-Type': 'application/json' },
-      })
-    }
+    const body = await req.json().catch(() => null)
+    const userId = typeof body?.userId === 'string' ? body.userId : ''
+    if (!UUID_RE.test(userId)) return jsonRes({ error: 'valid userId required' }, 400)
 
     // --- Authentication & authorization ---------------------------------
     // Callers must present a bearer token. We accept:
-    //   1. The service role key — used by DB triggers (push_on_new_message,
-    //      push_on_new_notification) and other trusted server code.
-    //   2. A signed-in user JWT, provided the caller is authorized to push
-    //      to `userId`: admins, self-tests, or an existing conversation
-    //      participant with the target user.
+    //   1. The service role key or the internal Vault token: database push
+    //      triggers (new message, new notification) and other trusted server
+    //      code. Those events are already authorized where they happen.
+    //   2. A signed-in member, who may only:
+    //      - test on their own devices,
+    //      - (admins) send a custom alert,
+    //      - alert the person they are calling right now. The call must exist
+    //        in call_sessions (caller -> recipient, under 2 minutes old), the
+    //        two must share a conversation and neither may have blocked the
+    //        other. The server writes the alert text; anything the member
+    //        sent as title/message is ignored.
+    //   Every member path is rate limited.
     const authHeader = req.headers.get('Authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
-    if (!token) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...cors, 'Content-Type': 'application/json' },
-      })
-    }
+    if (!token) return jsonRes({ error: 'Unauthorized' }, 401)
 
     const supa = createClient(SUPABASE_URL, SERVICE_ROLE)
 
+    let content: PushContent | null = null
     const isInternalCaller = token === SERVICE_ROLE || (await isInternalToken(supa, token))
-    if (!isInternalCaller) {
+    if (isInternalCaller) {
+      const { title, message, data } = body ?? {}
+      if (!title || !message) return jsonRes({ error: 'userId, title, message required' }, 400)
+      content = {
+        title: String(title),
+        message: String(message),
+        data: data ? Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])) : {},
+      }
+    } else {
       const { data: claimsData, error: claimsErr } = await supa.auth.getClaims(token)
       const callerId = claimsData?.claims?.sub as string | undefined
-      if (claimsErr || !callerId) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401, headers: { ...cors, 'Content-Type': 'application/json' },
-        })
+      if (claimsErr || !callerId || claimsData?.claims?.role !== 'authenticated') {
+        return jsonRes({ error: 'Unauthorized' }, 401)
       }
 
-      let authorized = callerId === userId // self-test
-      if (!authorized) {
-        const { data: isAdmin } = await supa.rpc('is_admin', { _user_id: callerId })
-        if (isAdmin === true) authorized = true
-      }
-      if (!authorized) {
-        // Conversation participant with the target user?
+      const { data: isAdmin } = await supa.rpc('is_admin', { _user_id: callerId })
+      if (callerId === userId || isAdmin === true) {
+        const max = isAdmin === true ? 30 : 10
+        if (!(await withinRateLimit(supa, `uid:${callerId}`, 'push-free', max, 60))) {
+          return jsonRes({ error: 'Too many alerts, try again shortly' }, 429)
+        }
+        content = sanitizeFreePush(body)
+        if (!content) return jsonRes({ error: 'title and message required' }, 400)
+      } else {
+        const call = parseCallRequest(body)
+        if (!call) return jsonRes({ error: 'Forbidden' }, 403)
+
+        const since = new Date(Date.now() - 2 * 60_000).toISOString()
+        const { data: session } = await supa
+          .from('call_sessions')
+          .select('id')
+          .eq('call_id', call.callId)
+          .eq('caller_id', callerId)
+          .eq('callee_id', userId)
+          .gte('created_at', since)
+          .limit(1)
+          .maybeSingle()
+        if (!session) return jsonRes({ error: 'Forbidden' }, 403)
+
         const { data: convo } = await supa
           .from('conversations')
           .select('id')
@@ -157,11 +194,30 @@ Deno.serve(async (req) => {
           )
           .limit(1)
           .maybeSingle()
-        if (convo) authorized = true
-      }
-      if (!authorized) {
-        return new Response(JSON.stringify({ error: 'Forbidden' }), {
-          status: 403, headers: { ...cors, 'Content-Type': 'application/json' },
+        if (!convo) return jsonRes({ error: 'Forbidden' }, 403)
+
+        const { data: blocks } = await supa
+          .from('relationship_blocks')
+          .select('id')
+          .or(
+            `and(user_id.eq.${callerId},blocked_id.eq.${userId}),` +
+            `and(user_id.eq.${userId},blocked_id.eq.${callerId})`,
+          )
+          .limit(1)
+        if (blocks?.length) return jsonRes({ error: 'Forbidden' }, 403)
+
+        // One alert per call (plus one retry), and a cap per caller.
+        const perCall = await withinRateLimit(supa, `call:${call.callId}`, 'push-call-once', 2, 3600)
+        const perCaller = await withinRateLimit(supa, `uid:${callerId}`, 'push-call', 10, 600)
+        if (!perCall || !perCaller) return jsonRes({ error: 'Too many call alerts, try again shortly' }, 429)
+
+        const { data: profile } = await supa.from('profiles').select('display_name, username').eq('id', callerId).maybeSingle()
+        content = buildCallPush({
+          callerId,
+          callerName: profile?.display_name || profile?.username,
+          callId: call.callId,
+          callType: call.callType,
+          conversationId: convo.id,
         })
       }
     }
@@ -172,11 +228,7 @@ Deno.serve(async (req) => {
       .select('token, platform')
       .eq('user_id', userId)
     if (error) throw error
-    if (!rows || rows.length === 0) {
-      return new Response(JSON.stringify({ sent: 0, reason: 'no tokens' }), {
-        headers: { ...cors, 'Content-Type': 'application/json' },
-      })
-    }
+    if (!rows || rows.length === 0) return jsonRes({ sent: 0, reason: 'no tokens' })
 
     const sa = JSON.parse(FCM_SA) as ServiceAccount
     const accessToken = await getAccessToken(sa)
@@ -186,11 +238,9 @@ Deno.serve(async (req) => {
     // let the native app render the notification itself (mirrors the
     // "bulletproof" pattern: no `notification` object).
     const payloadData: Record<string, string> = {
-      title: String(title),
-      message: String(message),
-      ...(data ? Object.fromEntries(
-        Object.entries(data).map(([k, v]) => [k, String(v)]),
-      ) : {}),
+      ...content.data,
+      title: content.title,
+      message: content.message,
     }
 
     const results = await Promise.all(rows.map(async (r) => {
@@ -231,13 +281,11 @@ Deno.serve(async (req) => {
       return { token: r.token, ok: true }
     }))
 
-    return new Response(
-      JSON.stringify({ sent: results.filter((r) => r.ok).length, results }),
-      { headers: { ...cors, 'Content-Type': 'application/json' } },
-    )
+    // Device tokens stay on the server; callers only learn how many got it.
+    const sent = results.filter((r) => r.ok).length
+    return jsonRes({ sent, failed: results.length - sent })
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), {
-      status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
-    })
+    console.error('send-push failed', e instanceof Error ? e.message : String(e))
+    return jsonRes({ error: 'Push failed' }, 500)
   }
 })

@@ -1,6 +1,7 @@
 // Public endpoint that records password-reset link events.
 // Always responds 204 so clients cannot enumerate emails or infer state.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { clientIp, withinRateLimit } from "../_shared/rate-limit.ts";
 
 const ALLOWED = new Set(["verified", "invalid", "updated", "resent", "resend_failed"]);
 
@@ -29,8 +30,12 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const fwd = req.headers.get("x-forwarded-for") ?? "";
-    const ip = fwd.split(",")[0]?.trim() || null;
+    const ip = clientIp(req);
+    // Public by design (used before sign-in), so cap rows per address to keep
+    // the audit log from being flooded. Still answers 204 either way.
+    if (!(await withinRateLimit(supabase, `ip:${ip}`, "reset-audit", 20, 3600))) {
+      return new Response(null, { status: 204, headers: cors });
+    }
     const ua = (req.headers.get("user-agent") || "").slice(0, 300);
     const emailHash = email && typeof email === "string"
       ? await sha256(email.trim().toLowerCase())

@@ -22,6 +22,20 @@ type Release = {
   created_at: string
 }
 
+/** The server's reason for refusing an upload (e.g. "rejected: not an Android app (APK) package"). */
+async function functionErrorMessage(err: unknown): Promise<string> {
+  const ctx = (err as { context?: Response })?.context
+  if (ctx && typeof ctx.json === 'function') {
+    try {
+      const body = await ctx.json()
+      if (body?.error) return String(body.error)
+    } catch {
+      /* not JSON */
+    }
+  }
+  return err instanceof Error ? err.message : 'Upload failed'
+}
+
 export default function AppReleasesSection() {
   const qc = useQueryClient()
   const [platform, setPlatform] = useState<'android' | 'ios'>('android')
@@ -48,19 +62,21 @@ export default function AppReleasesSection() {
     if (!/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(version)) {
       return toast.error('Version must be semver (e.g. 1.2.3)')
     }
+    const ext = platform === 'android' ? 'apk' : 'ipa'
+    if (!file.name.toLowerCase().endsWith(`.${ext}`)) return toast.error(`Pick a .${ext} file for ${platform}`)
+    if (file.size > 100 * 1024 * 1024) return toast.error('File is larger than 100 MB')
     setUploading(true)
     try {
-      const ext = file.name.split('.').pop() || (platform === 'android' ? 'apk' : 'ipa')
-      const path = `${platform}/abiaconnect-${version}-${Date.now()}.${ext}`
-      const up = await supabase.storage.from('app-releases').upload(path, file, {
-        contentType: platform === 'android' ? 'application/vnd.android.package-archive' : 'application/octet-stream',
-        upsert: false,
-      })
-      if (up.error) throw up.error
-      const ins = await supabase.from('app_releases').insert({
-        platform, version, notes: notes || null, changelog: changelog || null, file_path: path, file_size: file.size,
-      })
-      if (ins.error) throw ins.error
+      // The server checks the file (size, type, real package contents) and
+      // stores it; the bucket no longer accepts direct browser uploads.
+      const form = new FormData()
+      form.append('platform', platform)
+      form.append('version', version)
+      if (changelog) form.append('changelog', changelog)
+      if (notes) form.append('notes', notes)
+      form.append('file', file, file.name)
+      const { error: upErr } = await supabase.functions.invoke('upload-release', { body: form })
+      if (upErr) throw new Error(await functionErrorMessage(upErr))
       toast.success('Release uploaded')
 
       // Fire-and-forget: notify users with a push + in-app notification.
