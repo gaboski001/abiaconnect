@@ -1,6 +1,7 @@
 // Posts a newly created thread to the configured Facebook Page.
-// Triggered by a Postgres AFTER INSERT trigger on public.threads via pg_net.
-import { requireServiceRole } from "../_shared/service-auth.ts";
+// Triggered by a Postgres AFTER INSERT trigger on public.threads via pg_net,
+// authenticated with the scheduler token (see _shared/cron-auth.ts).
+import { requireScheduler } from "../_shared/cron-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,7 +14,7 @@ const FB_GRAPH = 'https://graph.facebook.com/v21.0'
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
-  const denied = await requireServiceRole(req)
+  const denied = await requireScheduler(req)
   if (denied) return denied
 
   try {

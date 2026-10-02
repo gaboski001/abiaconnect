@@ -2,10 +2,10 @@
 // For each subgroup with members, inserts a single in-app notification per member
 // summarising new threads, the most-reacted thread, and new members joined in the last 7 days.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { requireServiceRole } from "../_shared/service-auth.ts";
+import { requireScheduler } from "../_shared/cron-auth.ts";
 
 Deno.serve(async (req) => {
-  const denied = await requireServiceRole(req);
+  const denied = await requireScheduler(req);
   if (denied) return denied;
 
   try {
