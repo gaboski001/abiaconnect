@@ -76,7 +76,14 @@ Deno.serve(async (req) => {
       return json({ skipped: 'thread not found' }, 200)
     }
 
-    const targetPageId = await resolvePageId(pageId, pageToken)
+    // Make sure the saved token really is the AbiaConnect Page's own token,
+    // so threads can never go out as a person or to a different Page.
+    const tokenCheck = await checkPageToken(pageId, pageToken)
+    if (!tokenCheck.ok) {
+      await setShare(db, thread_id, { status: 'failed', note: tokenCheck.reason, attempts: (claimed.attempts ?? 0) + 1 })
+      return json({ error: tokenCheck.reason }, 409)
+    }
+    const targetPageId = pageId
     const link = `${SITE_URL}/thread/${thread.id}`
     const message = `${thread.title}\n\nJoin the conversation on AbiaConnect:\n${link}`
 
@@ -149,22 +156,27 @@ function json(payload: unknown, status = 200) {
   })
 }
 
-async function resolvePageId(configuredPageId: string, pageToken: string) {
-  const res = await fetch(
-    `${FB_GRAPH}/me?fields=id,name&access_token=${encodeURIComponent(pageToken)}`,
-  )
-  const data = await res.json().catch(() => ({})) as { id?: string; name?: string; error?: unknown }
-
+/** The saved token must be a Page token for exactly the configured Page. */
+async function checkPageToken(pageId: string, pageToken: string): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const res = await fetch(`${FB_GRAPH}/me?fields=id,name&metadata=1&access_token=${encodeURIComponent(pageToken)}`)
+  const data = (await res.json().catch(() => ({}))) as { id?: string; name?: string; metadata?: { type?: string }; error?: unknown }
   if (!res.ok || !data.id) {
-    console.error('Unable to resolve Facebook Page from token', safeFacebookError(data))
-    return configuredPageId
+    return { ok: false, reason: `Facebook token rejected: ${errorText(safeFacebookError(data))}` }
   }
-
-  if (data.id !== configuredPageId) {
-    console.log('Using Facebook Page ID resolved from page token')
+  const type = data.metadata?.type
+  if (type && type !== 'page') {
+    return {
+      ok: false,
+      reason: `The saved Facebook token is a personal (${type}) token for "${data.name ?? data.id}". Save the AbiaConnect Page's own token (Type: Page) as FACEBOOK_PAGE_ACCESS_TOKEN.`,
+    }
   }
-
-  return data.id
+  if (data.id !== pageId) {
+    return {
+      ok: false,
+      reason: `The saved Facebook token belongs to the Page "${data.name ?? ''}" (${data.id}), not the AbiaConnect Page (${pageId}). Nothing was posted.`,
+    }
+  }
+  return { ok: true }
 }
 
 function safeFacebookError(data: unknown) {
