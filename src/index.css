@@ -77,9 +77,11 @@
   --popover:            oklch(0.155 0.022 150);
   --popover-foreground: oklch(0.985 0.005 145);
 
-  /* Gold primary — darkened text on it so the "Popular"/CTA pills read. */
-  --primary:            oklch(0.82 0.15 85);
-  --primary-foreground: oklch(0.16 0.05 145);     /* deep green-black on gold */
+  /* Emerald primary: a mature green for buttons, active tabs and links on the
+     near-black background (gold is kept for small accents only). Deep
+     green-black text on it stays highly readable. */
+  --primary:            oklch(0.68 0.12 162);     /* ~#3fae84 */
+  --primary-foreground: oklch(0.16 0.05 145);     /* deep green-black on emerald */
 
   /* Secondary/accent surfaces now clearly separate from bg + readable text. */
   /* Secondary = brand gold accent (mirrors light mode intent — it's used as
@@ -98,7 +100,7 @@
   /* Borders/inputs visible on dark surfaces (was ~18% — too faint). */
   --border:             oklch(0.95 0.01 145 / 26%);
   --input:              oklch(0.95 0.01 145 / 20%);
-  --ring:               oklch(0.82 0.15 85);
+  --ring:               oklch(0.68 0.12 162);
 
   --chart-1:            oklch(0.82 0.14 85);
   --chart-2:            oklch(0.70 0.15 165);
@@ -409,6 +411,25 @@ html:not(.native-app) footer .web-serif {
 .bg-yellow-400,
 .bg-yellow-500 {
   background-image: var(--gold-gradient);
+}
+/* Dark theme: solid gold/yellow fills become a mature emerald gradient that
+   sits well on the near-black green background. Gold stays for small accents
+   (highlights, logo colours). Faint tints such as bg-amber-400/10 are kept. */
+.dark {
+  --fill-gradient: linear-gradient(135deg, #5cc29a 0%, #36a07a 50%, #26805f 100%);
+}
+.dark .bg-primary,
+.dark .bg-gold,
+.dark .bg-secondary,
+.dark .bg-amber-400,
+.dark .bg-amber-500,
+.dark .bg-yellow-400,
+.dark .bg-yellow-500 {
+  background-color: #36a07a;
+  background-image: var(--fill-gradient);
+}
+.dark .bg-primary:hover {
+  filter: brightness(1.07);
 }
 .text-gold-gradient {
   background-image: var(--gold-gradient);
