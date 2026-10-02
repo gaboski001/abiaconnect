@@ -135,5 +135,8 @@
     "vite": "^8.0.16",
     "vite-plugin-beasties": "^0.4.2",
     "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "esbuild": "^0.28.2"
   }
 }
