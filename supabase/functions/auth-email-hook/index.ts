@@ -17,7 +17,7 @@ const corsHeaders = {
 
 // Configuration
 const SITE_NAME = "Abiaconnect"
-const SENDER_DOMAIN = "motify.noreply.abiaconnect.com"
+const SENDER_DOMAIN = "notify.abiaconnect.com"
 const ROOT_DOMAIN = "abiaconnect.com"
 const FROM_DOMAIN = "abiaconnect.com"
 const SITE_URL = `https://${ROOT_DOMAIN}`
