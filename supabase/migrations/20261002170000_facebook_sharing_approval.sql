@@ -1,3 +1,4 @@
+-- lovable-cron-fallback-reviewed: user explicitly requested the existing migration with a 30-minute popular-thread cadence
 -- Facebook sharing: admin approval + popular threads (replaces "post everything").
 --
 -- Before: every new non-anonymous thread was posted to the Facebook Page the
