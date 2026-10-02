@@ -47,11 +47,14 @@ export type Database = {
           created_at: string
           created_by: string | null
           file_path: string
+          file_sha256: string | null
           file_size: number | null
           id: string
           is_active: boolean
           notes: string | null
           platform: string
+          uploaded_by: string | null
+          uploaded_via: string | null
           version: string
         }
         Insert: {
@@ -59,11 +62,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           file_path: string
+          file_sha256?: string | null
           file_size?: number | null
           id?: string
           is_active?: boolean
           notes?: string | null
           platform: string
+          uploaded_by?: string | null
+          uploaded_via?: string | null
           version: string
         }
         Update: {
@@ -71,11 +77,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           file_path?: string
+          file_sha256?: string | null
           file_size?: number | null
           id?: string
           is_active?: boolean
           notes?: string | null
           platform?: string
+          uploaded_by?: string | null
+          uploaded_via?: string | null
           version?: string
         }
         Relationships: []
@@ -2749,6 +2758,15 @@ export type Database = {
       consume_email_short_link:
         | { Args: { _token: string }; Returns: string }
         | { Args: { _token: string; _user_agent?: string }; Returns: string }
+      consume_rate_limit: {
+        Args: {
+          _key: string
+          _max: number
+          _scope: string
+          _window_seconds?: number
+        }
+        Returns: boolean
+      }
       contest_code_hash: {
         Args: { _code: string; _contest: string }
         Returns: string
