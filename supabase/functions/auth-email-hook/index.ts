@@ -19,7 +19,9 @@ const corsHeaders = {
 const SITE_NAME = "Abiaconnect"
 const SENDER_DOMAIN = "notify.mail.abiaconnect.com"
 const ROOT_DOMAIN = "abiaconnect.com"
-const FROM_DOMAIN = "abiaconnect.com"
+// Must sit under the verified email domain (mail.abiaconnect.com), or the email
+// service refuses the send with "sender_domain_mismatch".
+const FROM_DOMAIN = "mail.abiaconnect.com"
 const SITE_URL = `https://${ROOT_DOMAIN}`
 
 // Template mapping for preview mode

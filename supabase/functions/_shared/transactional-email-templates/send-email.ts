@@ -13,7 +13,9 @@ const SITE_NAME = "Abiaconnect"
 const SENDER_DOMAIN = "notify.mail.abiaconnect.com"
 // FROM_DOMAIN is the domain shown in the From: header (e.g., "example.com").
 // Can be the root domain when display_from_root is enabled — this is cosmetic only.
-const FROM_DOMAIN = "abiaconnect.com"
+// Must sit under the verified email domain (mail.abiaconnect.com), or the email
+// service refuses the send with "sender_domain_mismatch".
+const FROM_DOMAIN = "mail.abiaconnect.com"
 
 export type SendTemplateEmailResult =
   | { sent: true }
