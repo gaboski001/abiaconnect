@@ -752,6 +752,45 @@ export type Database = {
         }
         Relationships: []
       }
+      facebook_shares: {
+        Row: {
+          attempts: number
+          created_at: string
+          fb_post_id: string | null
+          note: string | null
+          posted_at: string | null
+          requested_by: string | null
+          source: string
+          status: string
+          thread_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          fb_post_id?: string | null
+          note?: string | null
+          posted_at?: string | null
+          requested_by?: string | null
+          source: string
+          status?: string
+          thread_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          fb_post_id?: string | null
+          note?: string | null
+          posted_at?: string | null
+          requested_by?: string | null
+          source?: string
+          status?: string
+          thread_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       feature_usage: {
         Row: {
           count: number
@@ -2990,6 +3029,10 @@ export type Database = {
           reply_id: string
           upvotes: number
         }[]
+      }
+      share_thread_to_facebook: {
+        Args: { _thread_id: string }
+        Returns: string
       }
       get_thread_reply_counts: {
         Args: { _thread_ids: string[] }

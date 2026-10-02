@@ -35,6 +35,7 @@ import { confirmModerationWarning, showModerationBlocked } from '@/components/mo
 /** Reply not sent so the member can edit it (Ugo's dialog explains why). */
 const EDIT_REPLY = 'ugo:edit-reply'
 import { useAuth } from '@/contexts/AuthContext'
+import { FacebookShareButton } from '@/components/thread/FacebookShareButton'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
 import { UserAvatar } from '@/components/ui/UserAvatar'
@@ -889,6 +890,7 @@ function Thread() {
           <Button size="sm" variant="ghost" onClick={share}>
             <Share2 /> Share
           </Button>
+          {isAdmin && <FacebookShareButton threadId={thread.id} />}
         </div>
       </article>
 
