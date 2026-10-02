@@ -416,7 +416,8 @@ html:not(.native-app) footer .web-serif {
    sits well on the near-black green background. Gold stays for small accents
    (highlights, logo colours). Faint tints such as bg-amber-400/10 are kept. */
 .dark {
-  --fill-gradient: linear-gradient(135deg, #5cc29a 0%, #36a07a 50%, #26805f 100%);
+  /* Soft jade -> deep forest green -> warm gold finish (the logo's colours). */
+  --fill-gradient: linear-gradient(135deg, #5cc29a 0%, #36a07a 34%, #26805f 62%, #a8892c 84%, #e2b84b 100%);
 }
 .dark .bg-primary,
 .dark .bg-gold,
