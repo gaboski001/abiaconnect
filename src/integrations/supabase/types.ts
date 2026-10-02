@@ -2943,6 +2943,21 @@ export type Database = {
         Args: { _contest: string; _count: number }
         Returns: string[]
       }
+      get_active_donation_accounts: {
+        Args: never
+        Returns: {
+          account_name: string
+          account_number: string
+          account_type: string
+          bank_name: string
+          crypto_currency: string
+          crypto_network: string
+          description: string
+          id: string
+          order_index: number
+          wallet_address: string
+        }[]
+      }
       get_contest: { Args: { _contest: string }; Returns: Json }
       get_leaderboard: {
         Args: { _limit?: number; _period?: string }
@@ -3041,21 +3056,6 @@ export type Database = {
           downvotes: number
           reply_id: string
           upvotes: number
-        }[]
-      }
-      get_active_donation_accounts: {
-        Args: never
-        Returns: {
-          account_name: string
-          account_number: string | null
-          account_type: string
-          bank_name: string | null
-          crypto_currency: string | null
-          crypto_network: string | null
-          description: string | null
-          id: string
-          order_index: number
-          wallet_address: string | null
         }[]
       }
       get_thread_reply_counts: {
