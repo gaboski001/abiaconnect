@@ -789,7 +789,15 @@ export type Database = {
           thread_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "facebook_shares_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: true
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       feature_usage: {
         Row: {
@@ -2902,6 +2910,10 @@ export type Database = {
         Args: { _message_id: string }
         Returns: undefined
       }
+      dispatch_facebook_share: {
+        Args: { _action?: string; _fb_post_id?: string; _thread_id: string }
+        Returns: undefined
+      }
       edit_message: {
         Args: { _message_id: string; _new_content: string }
         Returns: undefined
@@ -2922,6 +2934,7 @@ export type Database = {
         Args: { _max: number; _scope: string; _window_seconds?: number }
         Returns: undefined
       }
+      facebook_share_blocker: { Args: { _thread_id: string }; Returns: string }
       forward_message: {
         Args: { _message_id: string; _to_conversation_id: string }
         Returns: string
@@ -3029,10 +3042,6 @@ export type Database = {
           reply_id: string
           upvotes: number
         }[]
-      }
-      share_thread_to_facebook: {
-        Args: { _thread_id: string }
-        Returns: string
       }
       get_thread_reply_counts: {
         Args: { _thread_ids: string[] }
@@ -3150,6 +3159,14 @@ export type Database = {
       prune_email_short_links: { Args: never; Returns: undefined }
       prune_issue_report_contact_emails: { Args: never; Returns: undefined }
       prune_search_rate_limits: { Args: never; Returns: undefined }
+      queue_popular_threads_for_facebook: {
+        Args: {
+          _daily_cap?: number
+          _min_replies?: number
+          _min_upvotes?: number
+        }
+        Returns: number
+      }
       redeem_subgroup_invite: { Args: { _token: string }; Returns: string }
       resolve_username_to_email: {
         Args: { _username: string }
@@ -3179,6 +3196,10 @@ export type Database = {
       set_my_privacy: {
         Args: { _incognito?: boolean; _message_privacy?: string }
         Returns: Json
+      }
+      share_thread_to_facebook: {
+        Args: { _thread_id: string }
+        Returns: string
       }
       submit_moderation_appeal: {
         Args: {
