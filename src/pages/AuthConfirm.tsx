@@ -32,7 +32,14 @@ export default function AuthConfirm() {
       | 'invite'
       | 'email_change'
       | 'email'
-    const next = params.get('next') || '/'
+    // Only continue to a page on this site, never to another website.
+    const rawNext = params.get('next') || '/'
+    const next =
+      type === 'recovery'
+        ? '/reset-password'
+        : rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.startsWith('/\\')
+          ? rawNext
+          : '/'
 
     if (!tokenHash) {
       setStatus('error')
