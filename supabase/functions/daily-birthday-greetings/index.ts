@@ -1,4 +1,5 @@
-// Daily birthday greetings — runs every day at 07:00 Africa/Lagos via pg_cron.
+// Daily birthday greetings — runs at 07:00, 08:00 and 09:00 Africa/Lagos via pg_cron
+// (later runs are retries: nobody is greeted or emailed twice in a day).
 // For every profile whose `dob` matches today's month/day:
 //   • Inserts a warm in-app notification (deduped per user per day).
 //   • Enqueues a transactional birthday email (skipped if no email on file).
@@ -85,8 +86,22 @@ Deno.serve(async (req) => {
         if (!nErr) notified++;
       }
 
-      // 2. Birthday email — skip if no email on file.
+      // 2. Birthday email — skip if no email on file, or if an earlier run
+      //    today already sent it (the job runs several times as a retry).
+      let emailedToday = false;
       if (p.email) {
+        const { data: prior } = await supabase
+          .from("email_send_log")
+          .select("id")
+          .eq("template_name", "birthday-greeting")
+          .eq("recipient_email", p.email)
+          .eq("status", "sent")
+          .gte("created_at", startIso)
+          .limit(1)
+          .maybeSingle();
+        emailedToday = !!prior;
+      }
+      if (p.email && !emailedToday) {
         try {
           const outcome = await sendAndLog(supabase as any, "birthday-greeting", p.email, {
             idempotencyKey: `birthday-${p.id}-${year}${mm}${dd}`,

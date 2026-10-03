@@ -27,7 +27,24 @@ export const profileEditSchema = z.object({
   occupation: z.string().trim().max(120, 'Occupation is too long').optional(),
   sex: z.enum(['', ...SEX_OPTIONS] as [string, ...string[]]).optional(),
   marital_status: z.enum(['', ...MARITAL_STATUS_OPTIONS] as [string, ...string[]]).optional(),
+  // Used for the platform's birthday wishes (email, notification, home banner).
+  dob: z
+    .string()
+    .trim()
+    .refine((v) => v === '' || isValidDob(v), 'Enter a real date of birth (you must be at least 13)')
+    .optional(),
 })
+
+/** YYYY-MM-DD, a real calendar date, not in the future, age 13 to 120. */
+export function isValidDob(v: string, now = new Date()): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v)
+  if (!m) return false
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])]
+  const date = new Date(Date.UTC(y, mo - 1, d))
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== mo - 1 || date.getUTCDate() !== d) return false
+  const age = now.getUTCFullYear() - y - (now.getUTCMonth() < mo - 1 || (now.getUTCMonth() === mo - 1 && now.getUTCDate() < d) ? 1 : 0)
+  return age >= 13 && age <= 120
+}
 
 export type ProfileEditInput = z.infer<typeof profileEditSchema>
 
@@ -40,6 +57,7 @@ const editableProfileFields = [
   'occupation',
   'sex',
   'marital_status',
+  'dob',
 ] as const
 
 type EditableProfileField = (typeof editableProfileFields)[number]

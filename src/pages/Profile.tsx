@@ -44,6 +44,7 @@ interface Profile {
   occupation?: string | null
   sex?: string | null
   marital_status?: string | null
+  dob?: string | null
   avatar_url?: string | null
   reputation?: number | null
   created_at?: string | null
@@ -148,6 +149,7 @@ export default function Profile() {
       occupation: profile.occupation ?? '',
       sex: profile.sex ?? '',
       marital_status: profile.marital_status ?? '',
+      dob: profile.dob ?? '',
     })
     setEditing(true)
   }
@@ -163,6 +165,7 @@ export default function Profile() {
       occupation: form.occupation ?? undefined,
       sex: (form.sex as string) ?? undefined,
       marital_status: (form.marital_status as string) ?? undefined,
+      dob: form.dob ?? undefined,
     })
     if (error) return toast.error(error.message)
     toast.success('Profile updated')
@@ -371,6 +374,16 @@ export default function Profile() {
                       value={form.occupation ?? ''}
                       onChange={(e) => setForm({ ...form, occupation: e.target.value })}
                     />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Date of birth</Label>
+                    <Input
+                      type="date"
+                      value={form.dob ?? ''}
+                      max={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setForm({ ...form, dob: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">So AbiaConnect can wish you a happy birthday.</p>
                   </div>
                   <div className="space-y-1.5">
                     <Label>Sex</Label>
