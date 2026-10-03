@@ -1,14 +1,66 @@
-// Daily birthday greetings — runs at 07:00, 08:00 and 09:00 Africa/Lagos via pg_cron
+// Daily birthday greetings — runs at 07:00, 08:00 and 09:00 Africa/Lagos via pg_cron,
+// when a member saves a birthday that is today, and from Admin -> Birthdays today
 // (later runs are retries: nobody is greeted or emailed twice in a day).
 // For every profile whose `dob` matches today's month/day:
 //   • Inserts a warm in-app notification (deduped per user per day).
 //   • Enqueues a transactional birthday email (skipped if no email on file).
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { requireScheduler } from "../_shared/cron-auth.ts";
+import { withinRateLimit } from "../_shared/rate-limit.ts";
 import { sendAndLog } from "../_shared/transactional-email-templates/log-send.ts";
 
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-token",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+/**
+ * Who may run the greetings: the scheduler (Vault token), or a signed-in
+ * admin pressing "Send greetings now" in Admin -> Birthdays today
+ * (limited to 10 runs an hour).
+ */
+async function authorize(req: Request): Promise<Response | null> {
+  const schedulerDenied = await requireScheduler(req);
+  if (!schedulerDenied) return null;
+
+  const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+  if (token.split(".").length === 3) {
+    const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+      auth: { persistSession: false },
+    });
+    const { data: claims } = await db.auth.getClaims(token);
+    const uid = claims?.claims?.sub as string | undefined;
+    if (uid && claims?.claims?.role === "authenticated") {
+      const { data: isAdmin } = await db.rpc("is_admin", { _user_id: uid });
+      if (isAdmin === true) {
+        if (!(await withinRateLimit(db, `uid:${uid}`, "birthday-admin-run", 10, 3600, true))) {
+          return new Response(JSON.stringify({ error: "Too many runs, try again later" }), {
+            status: 429,
+            headers: { "content-type": "application/json" },
+          });
+        }
+        return null;
+      }
+      return new Response(JSON.stringify({ error: "Admins only" }), {
+        status: 403,
+        headers: { "content-type": "application/json" },
+      });
+    }
+  }
+  return schedulerDenied;
+}
+
 Deno.serve(async (req) => {
-  const denied = await requireScheduler(req);
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  const res = await handle(req);
+  const headers = new Headers(res.headers);
+  for (const [k, v] of Object.entries(cors)) headers.set(k, v);
+  return new Response(res.body, { status: res.status, headers });
+});
+
+async function handle(req: Request): Promise<Response> {
+  const denied = await authorize(req);
   if (denied) return denied;
 
   // Test mode: {"dry_run": true} proves the scheduler's request got in
@@ -128,4 +180,4 @@ Deno.serve(async (req) => {
       { status: 500, headers: { "content-type": "application/json" } },
     );
   }
-});
+}

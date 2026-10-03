@@ -3058,6 +3058,33 @@ export type Database = {
           upvotes: number
         }[]
       }
+      admin_birthdays_today: {
+        Args: never
+        Returns: {
+          avatar_url: string | null
+          display_name: string | null
+          emailed: boolean
+          greeted: boolean
+          has_email: boolean
+          turning: number
+          user_id: string
+          username: string | null
+        }[]
+      }
+      admin_birthday_coverage: { Args: never; Returns: Json }
+      admin_find_members: {
+        Args: { _q: string }
+        Returns: {
+          display_name: string | null
+          dob: string | null
+          user_id: string
+          username: string | null
+        }[]
+      }
+      admin_set_member_dob: {
+        Args: { _dob: string; _user_id: string }
+        Returns: undefined
+      }
       get_thread_reply_counts: {
         Args: { _thread_ids: string[] }
         Returns: {

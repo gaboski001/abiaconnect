@@ -63,9 +63,10 @@ import HeroSlidesSection, {
 import { Image as ImageIcon } from 'lucide-react'
 import AppReleasesSection from '@/components/admin/AppReleasesSection'
 import TestPushSection from '@/components/admin/TestPushSection'
+import BirthdaysTodaySection from '@/components/admin/BirthdaysTodaySection'
 import DatingMonetizationSection from '@/components/admin/DatingMonetizationSection'
 import { HeartHandshake } from 'lucide-react'
-import { Download as DownloadIcon, BellRing } from 'lucide-react'
+import { Download as DownloadIcon, BellRing, Cake } from 'lucide-react'
 import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
 type SectionId =
@@ -80,6 +81,7 @@ type SectionId =
   | 'email'
   | 'native-apps'
   | 'test-push'
+  | 'birthdays'
   | 'monetization'
 
 const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
@@ -94,6 +96,7 @@ const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'email', label: 'Email Settings', Icon: Mail },
   { id: 'native-apps', label: 'Native Apps', Icon: DownloadIcon },
   { id: 'test-push', label: 'Test Push', Icon: BellRing },
+  { id: 'birthdays', label: 'Birthdays Today', Icon: Cake },
   { id: 'monetization', label: 'Relationship & Premium', Icon: HeartHandshake },
 ]
 
@@ -148,6 +151,7 @@ export default function AdminDashboard() {
           {section === 'email' && <EmailSettingsSection />}
           {section === 'native-apps' && <AppReleasesSection />}
           {section === 'test-push' && <TestPushSection />}
+          {section === 'birthdays' && <BirthdaysTodaySection />}
           {section === 'monetization' && <DatingMonetizationSection />}
         </main>
       </div>
