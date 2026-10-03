@@ -58,6 +58,7 @@ const PrivacyPolicy = lazy(() => import('@/pages/static/PrivacyPolicy'))
 const TermsOfService = lazy(() => import('@/pages/static/TermsOfService'))
 const CookiePolicy = lazy(() => import('@/pages/static/CookiePolicy'))
 const DeleteAccount = lazy(() => import('@/pages/static/DeleteAccount'))
+const ChildSafetyStandards = lazy(() => import('@/pages/static/ChildSafetyStandards'))
 const CommunityStandards = lazy(() => import('@/pages/static/CommunityStandards'))
 const Unsubscribe = lazy(() => import('@/pages/Unsubscribe'))
 const Version = lazy(() => import('@/pages/Version'))
@@ -149,6 +150,7 @@ export default function App() {
                 <Route path="terms-of-service" element={<TermsOfService />} />
                 <Route path="cookie-policy" element={<CookiePolicy />} />
                 <Route path="delete-account" element={<DeleteAccount />} />
+                <Route path="child-safety-standards" element={<ChildSafetyStandards />} />
                 <Route path="community-standards" element={<CommunityStandards />} />
                 <Route path="donate" element={<Donate />} />
                 <Route path="unsubscribe" element={<Unsubscribe />} />

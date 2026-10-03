@@ -64,6 +64,7 @@ import { Image as ImageIcon } from 'lucide-react'
 import AppReleasesSection from '@/components/admin/AppReleasesSection'
 import TestPushSection from '@/components/admin/TestPushSection'
 import BirthdaysTodaySection from '@/components/admin/BirthdaysTodaySection'
+import IssueReportsSection from '@/components/admin/IssueReportsSection'
 import DatingMonetizationSection from '@/components/admin/DatingMonetizationSection'
 import { HeartHandshake } from 'lucide-react'
 import { Download as DownloadIcon, BellRing, Cake } from 'lucide-react'
@@ -82,6 +83,7 @@ type SectionId =
   | 'native-apps'
   | 'test-push'
   | 'birthdays'
+  | 'problem-reports'
   | 'monetization'
 
 const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
@@ -97,6 +99,7 @@ const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'native-apps', label: 'Native Apps', Icon: DownloadIcon },
   { id: 'test-push', label: 'Test Push', Icon: BellRing },
   { id: 'birthdays', label: 'Birthdays Today', Icon: Cake },
+  { id: 'problem-reports', label: 'Problem Reports', Icon: Flag },
   { id: 'monetization', label: 'Relationship & Premium', Icon: HeartHandshake },
 ]
 
@@ -152,6 +155,7 @@ export default function AdminDashboard() {
           {section === 'native-apps' && <AppReleasesSection />}
           {section === 'test-push' && <TestPushSection />}
           {section === 'birthdays' && <BirthdaysTodaySection />}
+          {section === 'problem-reports' && <IssueReportsSection />}
           {section === 'monetization' && <DatingMonetizationSection />}
         </main>
       </div>
