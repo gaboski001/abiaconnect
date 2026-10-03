@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Star, FileText, MessageCircle, Bookmark, TrendingUp, ChevronRight, Plus } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
+import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
 import { Button } from '@/components/ui/button'
 import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { formatDistanceToNow } from 'date-fns'
@@ -35,6 +36,7 @@ export function NativeDashboard({ profile, stats, chartData, recentThreads }: Na
 
 
       <BirthdayGreeting />
+      <AddBirthdayPrompt />
 
       {/* Header Section */}
       <section className="relative overflow-hidden rounded-[2.5rem] bg-[#0B1220] p-6 text-white shadow-2xl">

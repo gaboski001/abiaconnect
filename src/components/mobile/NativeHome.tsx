@@ -10,6 +10,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar'
 import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
 import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
+import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
 import { NewDiscussionsBanner, OnlineMembersPill } from '@/components/engagement/LiveCommunity'
 import { ContestCard } from '@/pages/Contests'
 import { contestPhase, listContests } from '@/lib/engagement'
@@ -132,6 +133,7 @@ export function NativeHome() {
             </p>
             <OnlineMembersPill className="mt-3" />
             <BirthdayGreeting className="mt-4" />
+            <AddBirthdayPrompt className="mt-4" />
             <Link
               to="/create-thread"
               className="mt-5 flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-bold text-[#0B1F0B] active:scale-[0.98]"

@@ -8,6 +8,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar'
 import { HeroSlider } from '@/components/forum/HeroSlider'
 import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
 import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
+import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
 import { NewDiscussionsBanner, OnlineMembersPill } from '@/components/engagement/LiveCommunity'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProfile } from '@/hooks/useProfile'
@@ -122,6 +123,7 @@ export function WebHome() {
         </section>
       ) : null}
       {user ? <BirthdayGreeting /> : null}
+      {user ? <AddBirthdayPrompt /> : null}
       {user ? null : (
         <section className="grid items-center gap-8 rounded-3xl border border-border bg-gradient-to-br from-primary/[0.06] via-background to-secondary/[0.08] p-8 md:grid-cols-[1.4fr_1fr] md:p-12">
           <div>
