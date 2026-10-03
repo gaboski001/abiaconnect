@@ -8,6 +8,13 @@
       "when": 1790948380698,
       "tag": "0000_public_donation_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791027544927,
+      "tag": "0001_20261003110000_admin_birthdays_today",
+      "breakpoints": true
     }
   ]
 }
