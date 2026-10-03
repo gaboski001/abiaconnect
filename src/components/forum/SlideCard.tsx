@@ -16,6 +16,10 @@ export type HeroSlideLike = Partial<HeroSlideRow> & {
   bg_color_from?: string | null
   bg_color_to?: string | null
   image_url?: string | null
+  /** Show image_url as the whole banner (a designed graphic) instead of faded behind text. */
+  full_image?: boolean | null
+  /** Portrait version of the banner for phones (falls back to image_url). */
+  mobile_image_url?: string | null
   isDefault?: boolean
 }
 
@@ -44,13 +48,14 @@ function SlideLink({
 }
 
 export function SlideCard({ slide }: { slide: HeroSlideLike }) {
+  if (slide.full_image && slide.image_url) return <BannerSlide slide={slide} />
   const from = slide.bg_color_from || '#013220'
   const to = slide.bg_color_to || '#000000'
   const bgStyle = { background: `linear-gradient(135deg, ${from} 0%, ${to} 100%)` }
 
   return (
     <div
-      className="relative w-full rounded-[32px] overflow-hidden border-2 border-secondary/20 min-h-[380px] md:min-h-[460px] flex flex-col items-center justify-center px-6 py-10 md:py-16 text-center"
+      className="relative w-full h-full rounded-[32px] overflow-hidden border-2 border-secondary/20 min-h-[380px] md:min-h-[460px] flex flex-col items-center justify-center px-6 py-10 md:py-16 text-center"
       style={bgStyle}
     >
       {slide.image_url && (
@@ -140,6 +145,25 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
         )}
       </div>
     </div>
+  )
+}
+
+/** A designed banner image, shown in full; wide image on computers, portrait on phones. */
+function BannerSlide({ slide }: { slide: HeroSlideLike }) {
+  const picture = (
+    <picture>
+      {slide.mobile_image_url && <source media="(max-width: 767px)" srcSet={slide.mobile_image_url} />}
+      <img src={slide.image_url ?? ''} alt={slide.title} className="block h-full w-full object-cover" />
+    </picture>
+  )
+  const cls =
+    'relative block w-full h-full rounded-[32px] overflow-hidden border-2 border-secondary/20 bg-[#0f3326] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary'
+  return slide.cta_url ? (
+    <SlideLink href={slide.cta_url} className={cls}>
+      {picture}
+    </SlideLink>
+  ) : (
+    <div className={cls}>{picture}</div>
   )
 }
 

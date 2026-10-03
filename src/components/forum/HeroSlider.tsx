@@ -67,7 +67,10 @@ export function HeroSlider() {
     return new Date(s.expires_at) > now
   })
 
-  const allSlides: HeroSlideLike[] = [defaultSlide, ...activeFetched]
+  // Slides with order 0 or less (e.g. a launch banner) come before the welcome slide.
+  const pinned = activeFetched.filter((s) => (s.order ?? 1) <= 0)
+  const rest = activeFetched.filter((s) => (s.order ?? 1) > 0)
+  const allSlides: HeroSlideLike[] = [...pinned, defaultSlide, ...rest]
 
   if (allSlides.length === 1) {
     return (

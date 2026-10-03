@@ -44,7 +44,7 @@ import type { Database } from '@/integrations/supabase/types'
 
 type HeroSlide = Database['public']['Tables']['hero_slides']['Row']
 
-type ExpiryMode = 'default' | 'custom' | 'none'
+type ExpiryMode = 'default' | 'custom' | 'none' | '24h' | 'keep'
 
 type FormState = {
   title: string
@@ -58,6 +58,8 @@ type FormState = {
   bg_color_from: string
   bg_color_to: string
   image_url: string
+  mobile_image_url: string
+  full_image: boolean
   order: number
   is_active: boolean
   expiryMode: ExpiryMode
@@ -76,6 +78,8 @@ const emptyForm = (defaultDays: number, nextOrder: number): FormState => ({
   bg_color_from: '#013220',
   bg_color_to: '#000000',
   image_url: '',
+  mobile_image_url: '',
+  full_image: false,
   order: nextOrder,
   is_active: true,
   expiryMode: 'default',
@@ -171,9 +175,11 @@ export default function HeroSlidesSection() {
       bg_color_from: s.bg_color_from ?? '#013220',
       bg_color_to: s.bg_color_to ?? '#000000',
       image_url: s.image_url ?? '',
+      mobile_image_url: s.mobile_image_url ?? '',
+      full_image: s.full_image ?? false,
       order: s.order ?? nextOrder,
       is_active: s.is_active,
-      expiryMode: s.expires_at ? 'custom' : 'none',
+      expiryMode: s.expires_at ? 'keep' : 'none',
       customExpiry: s.expires_at ? s.expires_at.slice(0, 10) : '',
     })
     setDialogOpen(true)
@@ -181,6 +187,8 @@ export default function HeroSlidesSection() {
 
   const computeExpiry = (): string | null => {
     if (form.expiryMode === 'none') return null
+    if (form.expiryMode === 'keep') return editing?.expires_at ?? null
+    if (form.expiryMode === '24h') return new Date(Date.now() + 24 * 3600 * 1000).toISOString()
     if (form.expiryMode === 'custom') {
       if (!form.customExpiry) return null
       return new Date(form.customExpiry + 'T23:59:59').toISOString()
@@ -206,7 +214,9 @@ export default function HeroSlidesSection() {
       bg_color_from: form.bg_color_from || '#013220',
       bg_color_to: form.bg_color_to || '#000000',
       image_url: form.image_url.trim() || null,
-      order: form.order || nextOrder,
+      mobile_image_url: form.mobile_image_url.trim() || null,
+      full_image: form.full_image,
+      order: Number.isFinite(form.order) ? form.order : nextOrder,
       is_active: form.is_active,
       expires_at: computeExpiry(),
     }
@@ -299,6 +309,8 @@ export default function HeroSlidesSection() {
     bg_color_from: form.bg_color_from,
     bg_color_to: form.bg_color_to,
     image_url: form.image_url || null,
+    mobile_image_url: form.mobile_image_url || null,
+    full_image: form.full_image,
     isDefault: false,
   }
 
@@ -587,7 +599,10 @@ export default function HeroSlidesSection() {
               />
             </div>
 
-            <Field label="Background Image URL" hint="Shown at 20% opacity behind text">
+            <Field
+              label={form.full_image ? 'Banner image URL (wide, for computers)' : 'Background Image URL'}
+              hint={form.full_image ? 'Shown in full. Best size 2400 x 1000.' : 'Shown at 20% opacity behind text'}
+            >
               <Input
                 value={form.image_url}
                 onChange={(e) => setForm({ ...form, image_url: e.target.value })}
@@ -602,11 +617,24 @@ export default function HeroSlidesSection() {
               )}
             </Field>
 
+            <Field label="Show image as the full banner" hint="For designed graphics: the image is the whole slide and links to the first button's URL">
+              <div className="flex items-center gap-2 h-9">
+                <Switch checked={form.full_image} onCheckedChange={(v) => setForm({ ...form, full_image: v })} />
+                <span className="text-sm text-muted-foreground">{form.full_image ? 'Full banner' : 'Text slide'}</span>
+              </div>
+            </Field>
+
+            {form.full_image && (
+              <Field label="Mobile banner image URL (portrait, for phones)" hint="Optional. Best size 1080 x 1350. Phones use the wide image if empty.">
+                <Input value={form.mobile_image_url} onChange={(e) => setForm({ ...form, mobile_image_url: e.target.value })} />
+              </Field>
+            )}
+
             <div className="grid sm:grid-cols-2 gap-3">
-              <Field label="Display Order" hint="1 = first after the default slide">
+              <Field label="Display Order" hint="0 = before the welcome slide, 1 = first after it">
                 <Input
                   type="number"
-                  min={1}
+                  min={0}
                   value={form.order}
                   onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
                 />
@@ -633,8 +661,12 @@ export default function HeroSlidesSection() {
                       v: 'default' as const,
                       label: `Use default duration (${durationDays} days)`,
                     },
+                    { v: '24h' as const, label: '24 hours from now' },
                     { v: 'custom' as const, label: 'Custom date' },
                     { v: 'none' as const, label: 'No expiry' },
+                    ...(editing?.expires_at
+                      ? [{ v: 'keep' as const, label: `Keep current expiry (${format(new Date(editing.expires_at), 'PPp')})` }]
+                      : []),
                   ]
                 ).map((opt) => (
                   <label key={opt.v} className="flex items-center gap-2 cursor-pointer">
@@ -653,6 +685,11 @@ export default function HeroSlidesSection() {
                       new Date(Date.now() + durationDays * 86400000),
                       'PP',
                     )}
+                  </p>
+                )}
+                {form.expiryMode === '24h' && (
+                  <p className="text-xs text-muted-foreground">
+                    Will expire on {format(new Date(Date.now() + 24 * 3600 * 1000), 'PPp')}
                   </p>
                 )}
                 {form.expiryMode === 'custom' && (
