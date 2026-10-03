@@ -4,6 +4,7 @@ import { AlertTriangle, Banknote, Bitcoin, Check, Copy, Heart, Smartphone } from
 import { toast } from '@/lib/toast'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { canDonateHere } from '@/lib/storePolicy'
 import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -137,6 +138,24 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 )
 
 export default function Donate() {
+  // Google Play doesn't allow in-app donations outside Play Billing.
+  if (!canDonateHere()) return <DonateUnavailableInApp />
+  return <DonateContent />
+}
+
+function DonateUnavailableInApp() {
+  return (
+    <div className="mx-auto flex min-h-[50vh] max-w-md flex-col items-center justify-center gap-3 px-4 text-center">
+      <Heart className="size-10 text-rose-500" aria-hidden />
+      <h1 className="text-xl font-bold">Thank you for wanting to support AbiaConnect</h1>
+      <p className="text-sm text-muted-foreground">
+        Donations aren't available in the Android app. Thank you for being part of the community.
+      </p>
+    </div>
+  )
+}
+
+function DonateContent() {
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({

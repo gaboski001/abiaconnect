@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { canDonateHere } from '@/lib/storePolicy'
 import { Link } from 'react-router-dom'
 import { motion, useScroll, useSpring } from 'framer-motion'
 import { ArrowRight, ChevronUp, Download, MessagesSquare, ShieldCheck, Users, Vote } from 'lucide-react'
@@ -157,9 +158,11 @@ export function Footer() {
               <ShieldCheck className="size-4" aria-hidden /> © {new Date().getFullYear()} AbiaConnect. A registered community platform.
             </p>
             <div className="flex items-center gap-4">
-              <Link to="/donate" className="font-medium text-rose-600 hover:underline dark:text-rose-400">
-                Support AbiaConnect
-              </Link>
+              {canDonateHere() && (
+                <Link to="/donate" className="font-medium text-rose-600 hover:underline dark:text-rose-400">
+                  Support AbiaConnect
+                </Link>
+              )}
               <a
                 href="https://wa.me/2348103428888"
                 target="_blank"

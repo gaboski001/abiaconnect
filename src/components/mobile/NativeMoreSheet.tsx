@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { canDonateHere } from '@/lib/storePolicy'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
@@ -114,7 +115,7 @@ export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenC
     { label: 'Our team', to: '/team', icon: UsersRound },
     { label: 'Careers', to: '/careers', icon: Briefcase },
     ...(settings.store_link ? [{ label: 'Store', to: settings.store_link, icon: ShoppingBag, external: true }] : []),
-    { label: 'Donate', to: '/donate', icon: HandHeart, highlight: true },
+    ...(canDonateHere() ? [{ label: 'Donate', to: '/donate', icon: HandHeart, highlight: true }] : []),
   ]
 
   const help: Row[] = [

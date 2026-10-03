@@ -154,8 +154,9 @@ export default function SettingsPanel({
 
   const deleteAccount = async () => {
     if (confirm !== 'DELETE' || !user) return
-    const { error } = await supabase.from('profiles').delete().eq('id', user.id)
-    if (error) return toast.error(error.message)
+    // Deletes the sign-in account and all linked data on the server.
+    const { error } = await supabase.functions.invoke('delete-account', { body: { confirm: 'DELETE' } })
+    if (error) return toast.error('Could not delete your account. Please try again or contact support@abiaconnect.com.')
     await signOut()
     toast.success('Account deleted')
     navigate('/')

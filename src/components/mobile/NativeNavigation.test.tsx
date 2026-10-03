@@ -83,9 +83,11 @@ describe('app navigation', () => {
     expect(dupes).toEqual([])
     for (const h of internal) expect(isKnownRoute(h), `${h} is not a route`).toBe(true)
     // Key features are reachable.
-    for (const h of ['/subgroups', '/messages', '/relationship', '/notifications', '/profile', '/dashboard', '/polls', '/admin/dashboard', '/donate']) {
+    for (const h of ['/subgroups', '/messages', '/relationship', '/notifications', '/profile', '/dashboard', '/polls', '/admin/dashboard']) {
       expect(internal).toContain(h)
     }
+    // Google Play: no in-app donations in the Android app (offered on the website).
+    expect(internal).not.toContain('/donate')
   })
 
   it('offers sign-in to visitors instead of account items', () => {

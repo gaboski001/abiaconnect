@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { canDonateHere } from '@/lib/storePolicy'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowUpRight, ChevronDown, HandHeart, LogOut, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -89,7 +90,7 @@ export function Navbar() {
             </PopoverContent>
           </Popover>
 
-          <Button
+          {canDonateHere() && <Button
             asChild
             variant="outline"
             size="sm"
@@ -98,7 +99,7 @@ export function Navbar() {
             <Link to="/donate">
               <HandHeart className="size-4" /> Donate
             </Link>
-          </Button>
+          </Button>}
 
           <Separator orientation="vertical" className="mx-1 hidden h-6 lg:block" />
 
