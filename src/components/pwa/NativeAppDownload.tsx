@@ -14,8 +14,8 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useReleaseDownload } from '@/hooks/useReleaseDownload'
-import { useAuth } from '@/hooks/useAuth'
-import { useProfile } from '@/hooks/useProfile'
+import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { AppStoreBadge, GooglePlayBadge, safeStoreUrl } from './StoreBadges'
 import { Capacitor } from '@capacitor/core'
 
 type Release = {
@@ -150,12 +150,15 @@ function DownloadRow({ r }: { r: Release }) {
 }
 
 export function NativeAppDownload() {
-  const { user } = useAuth()
-  const { data: profile, isLoading: profileLoading } = useProfile()
   const isNative = Capacitor.isNativePlatform()
+  const { settings } = useSiteSettings()
+  const playUrl = safeStoreUrl(settings.play_store_url, 'play')
+  const appleUrl = safeStoreUrl(settings.app_store_url, 'apple')
 
+  // Latest admin-uploaded release per platform (Admin -> Native Apps).
   const q = useQuery({
     queryKey: ['app-releases-public'],
+    enabled: !isNative,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('app_releases')
@@ -171,29 +174,37 @@ export function NativeAppDownload() {
     },
   })
 
-  // Hide the download prompt if running inside the native app itself
+  // Inside the app itself, updates are offered by UpdateAvailablePrompt.
   if (isNative) return null
 
-  // Signed-in users who have already opened the native app get their profile
-  // stamped with `native_app_installed_at`. Hide the download prompt for them.
-  if (user && profileLoading) return null
-  if (user && (profile as { native_app_installed_at?: string | null } | null)?.native_app_installed_at) {
-    return null
-  }
-
-  if (q.isLoading || !q.data?.length) return null
+  // Direct downloads are offered only where the store isn't available yet.
+  const direct = (q.data ?? []).filter((r) => (r.platform === 'android' ? !playUrl : !appleUrl))
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm font-medium">Native app download</p>
-      <div className="space-y-2">
-        {q.data.map((r) => (
-          <DownloadRow key={r.id} r={r} />
-        ))}
+    <div className="space-y-4">
+      <div>
+        <p className="font-semibold">Get the AbiaConnect app</p>
+        <p className="text-sm text-muted-foreground">
+          Calls, instant notifications and a faster experience on your phone.
+        </p>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Android: open the APK and tap Install. iOS: install via TestFlight or a signed IPA.
-      </p>
+      <div className="flex flex-wrap gap-3">
+        <GooglePlayBadge href={playUrl} />
+        <AppStoreBadge href={appleUrl} />
+      </div>
+
+      {direct.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Or download directly</p>
+          {direct.map((r) => (
+            <DownloadRow key={r.id} r={r} />
+          ))}
+          <p className="text-xs text-muted-foreground">
+            Android: open the downloaded APK and tap Install (you may need to allow installs from your browser). iOS:
+            install via TestFlight or a signed IPA.
+          </p>
+        </div>
+      )}
     </div>
   )
 }

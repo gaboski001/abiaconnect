@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button'
 import { Download, RefreshCw, Sparkles, X } from 'lucide-react'
 import { toast } from '@/lib/toast'
+import { safeStoreUrl } from './StoreBadges'
 
 const DISMISS_KEY = 'abia:update-prompt-dismissed-version'
 const CHECK_INTERVAL_MS = 60 * 60 * 1000 // 1 hour
@@ -46,6 +47,8 @@ async function getCurrentNativeVersion(): Promise<string | null> {
 
 export function UpdateAvailablePrompt() {
   const [release, setRelease] = useState<Release | null>(null)
+  // Official store page for this platform, when the app is live there.
+  const [storeUrl, setStoreUrl] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [expanded, setExpanded] = useState(false)
 
@@ -94,9 +97,7 @@ export function UpdateAvailablePrompt() {
         return
       }
 
-      // Android updates are delivered by Google Play only (Play policy
-      // forbids apps from updating themselves with downloaded APKs).
-      if (platform !== 'ios') return
+      if (platform !== 'ios' && platform !== 'android') return
       const current = await getCurrentNativeVersion()
       if (!current) return
 
@@ -115,6 +116,14 @@ export function UpdateAvailablePrompt() {
       const dismissed = localStorage.getItem(DISMISS_KEY)
       if (dismissed === data.version) return
 
+      // Prefer the store when the app is live there. Google Play's rules also
+      // forbid Play-installed apps from updating themselves with an APK, so
+      // the uploaded APK is only offered while the app isn't on Play yet.
+      const key = platform === 'android' ? 'play_store_url' : 'app_store_url'
+      const { data: link } = await supabase.from('site_settings').select('value').eq('key', key).maybeSingle()
+      const url = safeStoreUrl((link as { value?: string } | null)?.value, platform === 'android' ? 'play' : 'apple')
+      if (cancelled) return
+      setStoreUrl(url)
       setRelease(data as Release)
       setOpen(true)
     }
@@ -137,6 +146,12 @@ export function UpdateAvailablePrompt() {
 
   const download = async () => {
     if (!release) return
+    if (storeUrl) {
+      // Opens the store app (external links leave the app's web view).
+      window.location.href = storeUrl
+      dismiss()
+      return
+    }
     const { data, error } = await supabase.functions.invoke<{ signedUrl?: string }>(
       'release-download-url',
       { body: { filePath: release.file_path } },
@@ -198,7 +213,11 @@ export function UpdateAvailablePrompt() {
         <div className="space-y-2">
           <Button onClick={download} className="w-full gap-2">
             <Download className="h-4 w-4" />
-            Download update
+            {storeUrl
+              ? Capacitor.getPlatform() === 'android'
+                ? 'Update on Google Play'
+                : 'Update on the App Store'
+              : 'Download update'}
           </Button>
           <Button variant="ghost" onClick={() => location.reload()} className="w-full gap-2">
             <RefreshCw className="h-4 w-4" />

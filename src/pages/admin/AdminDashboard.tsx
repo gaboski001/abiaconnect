@@ -1041,6 +1041,27 @@ function SiteSettingsSection() {
               placeholder="https://..."
             />
           </div>
+          <div className="space-y-1 sm:col-span-2">
+            <Label>Google Play link (Android app)</Label>
+            <Input
+              value={draft.play_store_url || ''}
+              onChange={(e) => setKey('play_store_url', e.target.value)}
+              placeholder="https://play.google.com/store/apps/details?id=com.abiaconnect.app"
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave empty until the app is live on Google Play: members see "Coming soon" and can download the uploaded APK
+              instead. Once set, members and the app's update prompt use Google Play.
+            </p>
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <Label>App Store link (iPhone app)</Label>
+            <Input
+              value={draft.app_store_url || ''}
+              onChange={(e) => setKey('app_store_url', e.target.value)}
+              placeholder="https://apps.apple.com/app/..."
+            />
+            <p className="text-xs text-muted-foreground">Leave empty until the app is live on the App Store ("Coming soon").</p>
+          </div>
           <div className="space-y-1">
             <Label>Site Theme</Label>
             <Select
