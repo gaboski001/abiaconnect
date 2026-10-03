@@ -833,11 +833,9 @@ export type Database = {
           cta_url: string | null
           cta_url_2: string | null
           expires_at: string | null
-          full_image: boolean
           id: string
           image_url: string | null
           is_active: boolean
-          mobile_image_url: string | null
           order: number
           subtitle: string | null
           title: string
@@ -855,11 +853,9 @@ export type Database = {
           cta_url?: string | null
           cta_url_2?: string | null
           expires_at?: string | null
-          full_image?: boolean
           id?: string
           image_url?: string | null
           is_active?: boolean
-          mobile_image_url?: string | null
           order?: number
           subtitle?: string | null
           title: string
@@ -877,11 +873,9 @@ export type Database = {
           cta_url?: string | null
           cta_url_2?: string | null
           expires_at?: string | null
-          full_image?: boolean
           id?: string
           image_url?: string | null
           is_active?: boolean
-          mobile_image_url?: string | null
           order?: number
           subtitle?: string | null
           title?: string
