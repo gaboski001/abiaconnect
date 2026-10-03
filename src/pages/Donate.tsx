@@ -4,6 +4,7 @@ import { AlertTriangle, Banknote, Bitcoin, Check, Copy, Heart, Smartphone } from
 import { toast } from '@/lib/toast'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -149,7 +150,11 @@ export default function Donate() {
     },
   })
 
+  // Live updates need read access to the table, which only signed-in members
+  // have; for visitors the subscription would just fail in the background.
+  const { user } = useAuth()
   useEffect(() => {
+    if (!user) return
     const channel = supabase
       .channel('donation_accounts_public')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'donation_accounts' }, () => {
@@ -159,7 +164,7 @@ export default function Donate() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [queryClient])
+  }, [queryClient, user])
 
   const grouped = useMemo(() => {
     const out: Record<DonationAccount['account_type'], DonationAccount[]> = { bank: [], mobile_money: [], crypto: [] }
