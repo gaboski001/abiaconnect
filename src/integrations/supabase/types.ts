@@ -2685,12 +2685,35 @@ export type Database = {
       }
     }
     Functions: {
+      admin_birthday_coverage: { Args: never; Returns: Json }
+      admin_birthdays_today: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          display_name: string
+          emailed: boolean
+          greeted: boolean
+          has_email: boolean
+          turning: number
+          user_id: string
+          username: string
+        }[]
+      }
       admin_clear_payment_secret: {
         Args: { _name: string }
         Returns: undefined
       }
       admin_dating_setup_status: { Args: never; Returns: Json }
       admin_delete_user: { Args: { _user_id: string }; Returns: undefined }
+      admin_find_members: {
+        Args: { _q: string }
+        Returns: {
+          display_name: string
+          dob: string
+          user_id: string
+          username: string
+        }[]
+      }
       admin_get_user_emails: {
         Args: { _ids: string[] }
         Returns: {
@@ -2742,6 +2765,10 @@ export type Database = {
           id: string
         }[]
       }
+      admin_set_member_dob: {
+        Args: { _dob: string; _user_id: string }
+        Returns: undefined
+      }
       admin_set_payment_secret: {
         Args: { _name: string; _value: string }
         Returns: string
@@ -2772,6 +2799,7 @@ export type Database = {
         Args: { _amount: number; _reason: string; _ref: string; _user: string }
         Returns: number
       }
+      birthday_is_today: { Args: { _dob: string }; Returns: boolean }
       can_view_contest: {
         Args: { _contest: string; _uid: string }
         Returns: boolean
@@ -3057,33 +3085,6 @@ export type Database = {
           reply_id: string
           upvotes: number
         }[]
-      }
-      admin_birthdays_today: {
-        Args: never
-        Returns: {
-          avatar_url: string | null
-          display_name: string | null
-          emailed: boolean
-          greeted: boolean
-          has_email: boolean
-          turning: number
-          user_id: string
-          username: string | null
-        }[]
-      }
-      admin_birthday_coverage: { Args: never; Returns: Json }
-      admin_find_members: {
-        Args: { _q: string }
-        Returns: {
-          display_name: string | null
-          dob: string | null
-          user_id: string
-          username: string | null
-        }[]
-      }
-      admin_set_member_dob: {
-        Args: { _dob: string; _user_id: string }
-        Returns: undefined
       }
       get_thread_reply_counts: {
         Args: { _thread_ids: string[] }
