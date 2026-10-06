@@ -605,6 +605,63 @@ export type Database = {
         }
         Relationships: []
       }
+      donations: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          donor_email: string | null
+          donor_name: string
+          id: string
+          is_anonymous: boolean
+          message: string | null
+          payment_method: string
+          reference: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          donor_email?: string | null
+          donor_name: string
+          id?: string
+          is_anonymous?: boolean
+          message?: string | null
+          payment_method?: string
+          reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          donor_email?: string | null
+          donor_name?: string
+          id?: string
+          is_anonymous?: boolean
+          message?: string | null
+          payment_method?: string
+          reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
