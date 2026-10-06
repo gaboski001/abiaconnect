@@ -1522,6 +1522,7 @@ export type Database = {
           checkout_url: string | null
           created_at: string
           currency: string
+          donation_id: string | null
           failure_reason: string | null
           id: string
           mode: string
@@ -1532,7 +1533,7 @@ export type Database = {
           reference: string
           refunded_at: string | null
           status: string
-          user_id: string
+          user_id: string | null
           verified_at: string | null
         }
         Insert: {
@@ -1540,6 +1541,7 @@ export type Database = {
           checkout_url?: string | null
           created_at?: string
           currency: string
+          donation_id?: string | null
           failure_reason?: string | null
           id?: string
           mode?: string
@@ -1550,7 +1552,7 @@ export type Database = {
           reference: string
           refunded_at?: string | null
           status?: string
-          user_id: string
+          user_id?: string | null
           verified_at?: string | null
         }
         Update: {
@@ -1558,6 +1560,7 @@ export type Database = {
           checkout_url?: string | null
           created_at?: string
           currency?: string
+          donation_id?: string | null
           failure_reason?: string | null
           id?: string
           mode?: string
@@ -1568,10 +1571,17 @@ export type Database = {
           reference?: string
           refunded_at?: string | null
           status?: string
-          user_id?: string
+          user_id?: string | null
           verified_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "payment_transactions_donation_id_fkey"
+            columns: ["donation_id"]
+            isOneToOne: false
+            referencedRelation: "donations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payment_transactions_plan_id_fkey"
             columns: ["plan_id"]
@@ -3005,6 +3015,43 @@ export type Database = {
         Args: { _action?: string; _fb_post_id?: string; _thread_id: string }
         Returns: undefined
       }
+      donation_create_transaction: {
+        Args: {
+          _amount_minor: number
+          _currency: string
+          _donor_email: string
+          _donor_name: string
+          _is_anonymous: boolean
+          _message: string
+          _provider: string
+          _user?: string
+        }
+        Returns: {
+          amount_minor: number
+          checkout_url: string | null
+          created_at: string
+          currency: string
+          donation_id: string | null
+          failure_reason: string | null
+          id: string
+          mode: string
+          plan_id: string | null
+          provider: string
+          provider_reference: string | null
+          purpose: string
+          reference: string
+          refunded_at: string | null
+          status: string
+          user_id: string | null
+          verified_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payment_transactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       edit_message: {
         Args: { _message_id: string; _new_content: string }
         Returns: undefined
@@ -3236,6 +3283,7 @@ export type Database = {
           checkout_url: string | null
           created_at: string
           currency: string
+          donation_id: string | null
           failure_reason: string | null
           id: string
           mode: string
@@ -3246,7 +3294,7 @@ export type Database = {
           reference: string
           refunded_at: string | null
           status: string
-          user_id: string
+          user_id: string | null
           verified_at: string | null
         }
         SetofOptions: {
