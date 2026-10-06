@@ -5,6 +5,7 @@ import { toast } from '@/lib/toast'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { canDonateHere } from '@/lib/storePolicy'
+import { DonateOnlineCard } from '@/components/donate/DonateOnlineCard'
 import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -216,6 +217,9 @@ function DonateContent() {
       </section>
 
       <div className="mx-auto max-w-[1100px] px-6 py-12 space-y-12">
+        {/* Online donation through the payment gateway */}
+        <DonateOnlineCard />
+
         {/* Why */}
         <section className="grid md:grid-cols-2 gap-8 items-start">
           <div className="space-y-4">

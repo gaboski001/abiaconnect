@@ -21,13 +21,6 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
-  const auth = req.headers.get('Authorization')
-  if (!auth?.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401)
-  const userClient = createClient(SUPABASE_URL, ANON, { global: { headers: { Authorization: auth } } })
-  const { data: claims, error: claimErr } = await userClient.auth.getClaims(auth.replace('Bearer ', ''))
-  const userId = claims?.claims?.sub
-  if (claimErr || !userId) return json({ error: 'Unauthorized' }, 401)
-
   const parsed = Body.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) return json({ error: 'Invalid request' }, 400)
 
@@ -36,13 +29,24 @@ Deno.serve(async (req) => {
   const load = () =>
     admin
       .from('payment_transactions')
-      .select('reference, provider, mode, status, plan:subscription_plans(name)')
+      .select('reference, provider, mode, status, purpose, user_id, amount_minor, plan:subscription_plans(name)')
       .eq('reference', parsed.data.reference)
-      .eq('user_id', userId) // users can only check their own payments
       .maybeSingle()
 
   let { data: tx } = await load()
   if (!tx) return json({ error: 'Payment not found' }, 404)
+
+  // Premium payments: members can only check their own. Donations can be
+  // checked by whoever holds the (unguessable) reference, including visitors.
+  if (tx.purpose !== 'donation') {
+    const auth = req.headers.get('Authorization')
+    if (!auth?.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401)
+    const userClient = createClient(SUPABASE_URL, ANON, { global: { headers: { Authorization: auth } } })
+    const { data: claims, error: claimErr } = await userClient.auth.getClaims(auth.replace('Bearer ', ''))
+    const userId = claims?.claims?.sub
+    if (claimErr || !userId) return json({ error: 'Unauthorized' }, 401)
+    if (tx.user_id !== userId) return json({ error: 'Payment not found' }, 404)
+  }
 
   if (tx.status === 'pending') {
     try {
@@ -65,5 +69,10 @@ Deno.serve(async (req) => {
   }
 
   const plan = (tx as { plan?: { name?: string } | null }).plan
-  return json({ status: tx!.status, planName: plan?.name ?? null })
+  return json({
+    status: tx!.status,
+    purpose: tx!.purpose,
+    planName: plan?.name ?? null,
+    amountMinor: tx!.purpose === 'donation' ? tx!.amount_minor : undefined,
+  })
 })

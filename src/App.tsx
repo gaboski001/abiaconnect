@@ -40,6 +40,7 @@ const AdminDonations = lazy(() => import('@/pages/admin/Donations'))
 const BirthdayPreview = lazy(() => import('@/pages/admin/BirthdayPreview'))
 const ModerationLog = lazy(() => import('@/pages/admin/ModerationLog'))
 const Donate = lazy(() => import('@/pages/Donate'))
+const DonationCallback = lazy(() => import('@/pages/DonationCallback'))
 const LgasGuide = lazy(() => import('@/pages/LgasGuide'))
 const KnownFor = lazy(() => import('@/pages/KnownFor'))
 const AbsuGuide = lazy(() => import('@/pages/AbsuGuide'))
@@ -153,6 +154,7 @@ export default function App() {
                 <Route path="child-safety-standards" element={<ChildSafetyStandards />} />
                 <Route path="community-standards" element={<CommunityStandards />} />
                 <Route path="donate" element={<Donate />} />
+                <Route path="donate/callback" element={<DonationCallback />} />
                 <Route path="unsubscribe" element={<Unsubscribe />} />
                 <Route path="version" element={<Version />} />
                 <Route path="download" element={<Download />} />
