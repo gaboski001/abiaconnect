@@ -36,6 +36,13 @@
       "when": 1791316200467,
       "tag": "0004_recreate_donations_table",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791316395001,
+      "tag": "0005_donations_via_payment_gateway",
+      "breakpoints": true
     }
   ]
 }
