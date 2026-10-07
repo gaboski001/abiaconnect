@@ -147,7 +147,7 @@ export function DonateOnlineCard() {
         </div>
         <label className="flex items-center gap-2 text-sm sm:col-span-2">
           <Switch checked={anonymous} onCheckedChange={setAnonymous} />
-          Give anonymously (your name won't appear on the supporters list)
+          Give anonymously (we'll keep your name private)
         </label>
       </div>
 
