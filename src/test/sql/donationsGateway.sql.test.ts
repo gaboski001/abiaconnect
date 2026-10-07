@@ -56,7 +56,9 @@ describe('Donations through the payment gateway', () => {
     db = await PGlite.create()
     await db.exec(PRELUDE)
     await db.query(`INSERT INTO auth.users VALUES ($1)`, [MEMBER])
-    await db.exec(readFileSync(resolve(__dirname, '../../../supabase/migrations/20261006100000_donations_via_payment_gateway.sql'), 'utf8'))
+    for (const f of ['20261006100000_donations_via_payment_gateway.sql', '20261008090000_allow_deleting_donations.sql']) {
+      await db.exec(readFileSync(resolve(__dirname, '../../../supabase/migrations', f), 'utf8'))
+    }
   })
 
   it('starts a donation for a visitor: pending donation + payment, unguessable reference', async () => {
@@ -125,5 +127,12 @@ describe('Donations through the payment gateway', () => {
     await db.query(`DELETE FROM auth.users WHERE id = $1`, [MEMBER])
     const tx = (await db.query(`SELECT user_id, status FROM payment_transactions WHERE reference = $1`, [reference])).rows[0]
     expect(tx).toEqual({ user_id: null, status: 'success' }) // record kept, unlinked
+  })
+
+  it('lets admins delete donation entries; the payment record is kept, unlinked', async () => {
+    const { reference } = (await start(500000)).rows[0]
+    await db.query(`DELETE FROM donations WHERE reference = $1`, [reference])
+    const tx = (await db.query(`SELECT donation_id, status FROM payment_transactions WHERE reference = $1`, [reference])).rows[0]
+    expect(tx).toEqual({ donation_id: null, status: 'pending' })
   })
 })
