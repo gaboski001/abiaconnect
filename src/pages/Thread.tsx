@@ -4,6 +4,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteD
 
 import { formatDistanceToNow } from 'date-fns'
 import { sanitizeThreadHtml } from '@/lib/sanitizeThreadHtml'
+import { threadShareLink } from '@/lib/shareLinks'
 import {
   Bookmark,
   ChevronLeft,
@@ -520,9 +521,22 @@ function Thread() {
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Bookmark failed'),
   })
 
+  // Posts with a share page share its link, so previews show the post's
+  // thumbnail. Looked up in advance: some browsers only allow copying straight
+  // after the tap.
+  const [shareLink, setShareLink] = useState<string | null>(null)
+  useEffect(() => {
+    let live = true
+    setShareLink(null)
+    if (threadId) threadShareLink(threadId).then((link) => live && setShareLink(link))
+    return () => {
+      live = false
+    }
+  }, [threadId])
+
   const share = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href)
+      await navigator.clipboard.writeText(shareLink ?? window.location.href)
       toast.success('Link copied to clipboard')
     } catch {
       toast.error('Could not copy link')
