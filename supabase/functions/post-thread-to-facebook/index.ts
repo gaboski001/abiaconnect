@@ -21,7 +21,10 @@ const corsHeaders = {
 const SITE_URL = 'https://abiaconnect.com'
 // FACEBOOK_GRAPH_URL is only set by local tests (a fake Facebook); production uses the real one.
 const FB_GRAPH = Deno.env.get('FACEBOOK_GRAPH_URL') || 'https://graph.facebook.com/v21.0'
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// SHARE_INDEX_URL is only set by local tests; production reads the website's list.
+const SHARE_INDEX_URL = Deno.env.get('SHARE_INDEX_URL') || `${SITE_URL}/share/index.json`
+const SHARE_PATH_RE = /^\/share\/[a-z0-9-]+\.html$/
+const UUID_RE =/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
@@ -84,7 +87,7 @@ Deno.serve(async (req) => {
       return json({ error: tokenCheck.reason }, 409)
     }
     const targetPageId = pageId
-    const link = `${SITE_URL}/thread/${thread.id}`
+    const link = await shareLink(thread.id)
     const message = `${thread.title}\n\nJoin the conversation on AbiaConnect:\n${link}`
 
     const res = await fetch(`${FB_GRAPH}/${targetPageId}/feed`, {
@@ -117,6 +120,25 @@ Deno.serve(async (req) => {
     return json({ error: 'internal error' }, 500)
   }
 })
+
+/**
+ * The link to post. Threads with a share page (public/share/index.json on the
+ * website) use it, so Facebook shows that page's thumbnail; the page sends
+ * readers on to the thread. Otherwise, or if the list can't be read, the
+ * normal thread link.
+ */
+async function shareLink(threadId: string): Promise<string> {
+  const fallback = `${SITE_URL}/thread/${threadId}`
+  try {
+    const res = await fetch(SHARE_INDEX_URL, { signal: AbortSignal.timeout(5000) })
+    if (!res.ok) return fallback
+    const index = (await res.json()) as Record<string, unknown>
+    const path = index?.[threadId]
+    return typeof path === 'string' && SHARE_PATH_RE.test(path) ? `${SITE_URL}${path}` : fallback
+  } catch {
+    return fallback
+  }
+}
 
 // deno-lint-ignore no-explicit-any
 async function removePost(db: any, threadId: string, postIdFromDb: string | undefined, pageToken: string) {

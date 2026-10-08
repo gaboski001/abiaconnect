@@ -68,6 +68,17 @@ PAGE = """<!doctype html>
 
 out = os.path.join(ROOT, 'public', 'share')
 os.makedirs(out, exist_ok=True)
+
+# Thread id -> share page, read by post-thread-to-facebook so the admin
+# "Share to Facebook" button posts the share page (with its thumbnail).
+# Pages added by hand later can be listed here too; existing entries are kept.
+index_path = os.path.join(out, 'index.json')
+index = json.load(open(index_path)) if os.path.exists(index_path) else {}
+index.update({ids[p['slug']]: f"/share/{p['slug']}.html" for p in POSTS})
+with open(index_path, 'w', encoding='utf-8', newline='\n') as f:
+    json.dump(index, f, indent=2)
+    f.write('\n')
+
 for p in POSTS:
     thread = f"{SITE}/thread/{ids[p['slug']]}"
     page = PAGE.format(
