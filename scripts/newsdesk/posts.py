@@ -4,6 +4,7 @@
 POSTS = [
     {
         "slug": "abia-this-week-oct-2026",
+        "photo": "ABA_MAIN_PARK_jpg.jpg", "photo_box": (0.0, 0.34, 1.0, 1.0), "photo_caption": "Aba Main Park",
         "forum": "general-discussion",
         "label": "General Discussion",
         "title": "Abia this week: teachers' fund, campaign season begins, flood action in Umuahia. What matters most to you?",
@@ -31,6 +32,7 @@ POSTS = [
     },
     {
         "slug": "marriage-costs-abia-2026",
+        "photo": "Red_Cap_Chiefs_at_an_Igbo_Traditional_Ceremony_jpg.jpg", "photo_box": None, "photo_caption": "Igbo traditional ceremony",
         "forum": "relationship",
         "label": "Relationship",
         "title": "Is the cost of marriage delaying weddings in Abia? Should our communities simplify the 'list'?",
@@ -53,6 +55,7 @@ POSTS = [
     },
     {
         "slug": "aba-markets-business-2026",
+        "photo": "Ariaria_International_Market_webp.jpg", "photo_box": None, "photo_caption": "Ariaria International Market, Aba",
         "forum": "business-commerce",
         "label": "Business & Commerce",
         "title": "Remodelled Aba markets and new grants: is 2026 a good year to grow a business in Abia?",
@@ -78,6 +81,7 @@ POSTS = [
     },
     {
         "slug": "campaign-season-2027-abia",
+        "photo": "Renovated_Abia_State_House_of_Assembly_jpg.jpg", "photo_box": None, "photo_caption": "Abia State House of Assembly",
         "forum": "politics-governance",
         "label": "Politics & Governance",
         "title": "Campaign season has started in Abia: what should an issue-based 2027 campaign look like?",
@@ -100,6 +104,7 @@ POSTS = [
     },
     {
         "slug": "igbo-day-2026-umuahia",
+        "photo": "The_Agaba_Masquerade_at_an_igbo_Festival_jpg.jpg", "photo_box": None, "photo_caption": "Agaba masquerade",
         "forum": "culture-heritage",
         "label": "Culture & Heritage",
         "title": "Igbo Day 2026 in Umuahia, 'Njiko Ka': how do we keep our culture alive in the next generation?",
@@ -121,6 +126,7 @@ POSTS = [
     },
     {
         "slug": "teachers-day-n1bn-fund-2026",
+        "photo": "A_corp_member_and_his_students_final_picture_jpg.jpg", "photo_box": None, "photo_caption": "A teacher with his students",
         "forum": "education-career",
         "label": "Education & Career",
         "title": "₦1bn Teachers' Appreciation Fund and back pay ordered: will it change classrooms in Abia?",
@@ -147,6 +153,7 @@ POSTS = [
     },
     {
         "slug": "first-brain-surgery-abia-specialist-hospital",
+        "photo": "Federal_Medical_Centre_Umuahia_jpg.jpg", "photo_box": None, "photo_caption": "Pictured: Federal Medical Centre, Umuahia",
         "forum": "health-wellness",
         "label": "Health & Wellness",
         "title": "Abia State Specialist Hospital performs its first brain surgery: can Abians now get specialist care at home?",
@@ -169,6 +176,7 @@ POSTS = [
     },
     {
         "slug": "farmers-end-of-rainy-season-2026",
+        "photo": "Cassava_farm_April_2025_jpg.jpg", "photo_box": None, "photo_caption": "Cassava farm",
         "forum": "agriculture-farming",
         "label": "Agriculture & Farming",
         "title": "Rains end soon and ward farm coordinators are being trained: how is your 2026 harvest?",
@@ -190,6 +198,7 @@ POSTS = [
     },
     {
         "slug": "abia-digital-push-tech-jobs-2026",
+        "photo": "African_software_developer_at_work_Nigeria_jpg.jpg", "photo_box": None, "photo_caption": "Software developer at work",
         "forum": "technology-innovation",
         "label": "Technology & Innovation",
         "title": "2,200+ youths trained and a ₦2bn startup fund: is Abia becoming a real tech hub?",
@@ -216,6 +225,7 @@ POSTS = [
     },
     {
         "slug": "umuahia-flooding-trademore-estate",
+        "photo": "Flood_disasters_jpg.jpg", "photo_box": None, "photo_caption": "Flooded land",
         "forum": "real-estate-housing",
         "label": "Real Estate & Housing",
         "title": "Trademore Estate permit revoked and flood committee set up: how do you check land before you buy in Abia?",
@@ -237,6 +247,7 @@ POSTS = [
     },
     {
         "slug": "enyimba-first-win-2026-27",
+        "photo": "Enyimba_Stadium_jpg.jpg", "photo_box": None, "photo_caption": "Enyimba International Stadium, Aba",
         "forum": "entertainment-lifestyle",
         "label": "Entertainment & Lifestyle",
         "title": "Enyimba thrash Shooting Stars 4–2 for their first win of the season: can the People's Elephant fight back?",
@@ -258,6 +269,7 @@ POSTS = [
     },
     {
         "slug": "africando-2026-umuahia-diaspora",
+        "photo": "Abia_state_tower_jpg.jpg", "photo_box": None, "photo_caption": "Abia State Tower",
         "forum": "diaspora-connect",
         "label": "Diaspora Connect",
         "title": "AfrICANDO 2026 comes to Umuahia, 17–19 November: will you invest at home?",
@@ -279,6 +291,7 @@ POSTS = [
     },
     {
         "slug": "abia-students-win-doha-debate",
+        "photo": "Pupils_doing_online_tests_jpg.jpg", "photo_box": None, "photo_caption": "Public-school pupils",
         "forum": "success-stories",
         "label": "Success Stories",
         "title": "Abia public-school students crowned Best International School Debate Team in Doha. Let's celebrate them!",
@@ -299,6 +312,7 @@ POSTS = [
     },
     {
         "slug": "umunneochi-security-operation-2026",
+        "photo": "Nigerian_Police_Patrol_Van_Elebu_Unit_jpg.jpg", "photo_box": None, "photo_caption": "Police patrol van",
         "forum": "security-safety",
         "label": "Security & Safety",
         "title": "Kidnappers' camps raided in Umunneochi: how can communities and security agencies work better together?",
@@ -321,6 +335,7 @@ POSTS = [
     },
     {
         "slug": "faith-and-campaign-season",
+        "photo": "Wesley_Cathedral_Aba_Methodist_Church_jpg.jpg", "photo_box": None, "photo_caption": "Wesley Cathedral, Aba",
         "forum": "faith-spirituality",
         "label": "Faith & Spirituality",
         "title": "As campaign season begins, what role should churches and faith leaders play in Abia?",

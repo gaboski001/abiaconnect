@@ -16,6 +16,8 @@ from posts import POSTS  # noqa: E402
 HERE = os.path.dirname(__file__)
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 SITE = 'https://abiaconnect.com'
+# Bump when thumbnails are redrawn: Facebook caches pictures by address.
+IMG_VERSION = 2
 IDS = os.path.join(HERE, 'ids.json')
 
 ids = json.load(open(IDS)) if os.path.exists(IDS) else {}
@@ -85,7 +87,7 @@ for p in POSTS:
         title=html.escape(p['title']),
         desc=html.escape(summary(p['body'])),
         share=f"{SITE}/share/{p['slug']}.html",
-        image=f"{SITE}/og/{p['slug']}.jpg",
+        image=f"{SITE}/og/{p['slug']}.jpg?v={IMG_VERSION}",
         alt=html.escape(p['thumb_title']),
         thread=thread,
         thread_js=json.dumps(thread),
