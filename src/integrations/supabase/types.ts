@@ -1495,6 +1495,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "newsdesk_settings_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       notifications: {
@@ -3393,6 +3400,7 @@ export type Database = {
           id: string
         }[]
       }
+      newsdesk_notify_admins: { Args: { _waiting: number }; Returns: number }
       payment_apply_refund: {
         Args: { _provider: string; _ref: string }
         Returns: string
