@@ -1468,6 +1468,27 @@ export type Database = {
         }
         Relationships: []
       }
+      newsdesk_seen_links: {
+        Row: {
+          baseline: boolean
+          first_seen: string
+          source: string
+          url: string
+        }
+        Insert: {
+          baseline?: boolean
+          first_seen?: string
+          source: string
+          url: string
+        }
+        Update: {
+          baseline?: boolean
+          first_seen?: string
+          source?: string
+          url?: string
+        }
+        Relationships: []
+      }
       newsdesk_settings: {
         Row: {
           author_id: string | null
