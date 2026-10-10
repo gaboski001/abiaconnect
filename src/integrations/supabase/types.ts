@@ -1496,6 +1496,8 @@ export type Database = {
           enabled: boolean
           forum_limits: Json
           id: boolean
+          log_cleared_at: string | null
+          log_keep_days: number
           max_posts_per_day: number
           review_slugs: string[]
           updated_at: string
@@ -1506,6 +1508,8 @@ export type Database = {
           enabled?: boolean
           forum_limits?: Json
           id?: boolean
+          log_cleared_at?: string | null
+          log_keep_days?: number
           max_posts_per_day?: number
           review_slugs?: string[]
           updated_at?: string
@@ -1516,6 +1520,8 @@ export type Database = {
           enabled?: boolean
           forum_limits?: Json
           id?: boolean
+          log_cleared_at?: string | null
+          log_keep_days?: number
           max_posts_per_day?: number
           review_slugs?: string[]
           updated_at?: string

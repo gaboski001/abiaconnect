@@ -38,6 +38,8 @@ async function callBot<T>(body: Record<string, unknown>): Promise<T> {
 }
 
 const FORUM_LIMITS = [0, 1, 2, 3, 4, 5]
+// After how many days a finished post leaves the "Recent posts" list.
+const LOG_KEEP_DAYS = [1, 3, 7, 14, 30]
 
 /**
  * Admin -> Newsdesk Bot: switch the daily news posts on or off, try a test
@@ -114,7 +116,13 @@ export default function NewsdeskSection() {
   })
 
   const save = useMutation({
-    mutationFn: async (fields: { enabled?: boolean; forum_limits?: Record<string, number>; review_slugs?: string[] }) => {
+    mutationFn: async (fields: {
+      enabled?: boolean
+      forum_limits?: Record<string, number>
+      review_slugs?: string[]
+      log_keep_days?: number
+      log_cleared_at?: string
+    }) => {
       const { error } = await supabase
         .from('newsdesk_settings')
         .update({ ...fields, updated_at: new Date().toISOString() })
@@ -126,6 +134,7 @@ export default function NewsdeskSection() {
       qc.invalidateQueries({ queryKey: ['admin-newsdesk-settings'] })
       if (fields.enabled === true) toast.success('The bot is on', { description: 'It will post at 07:30, 12:30 and 17:30 every day.' })
       else if (fields.enabled === false) toast.success('The bot is off', { description: 'Nothing will be posted until you switch it on.' })
+      else if (fields.log_cleared_at) toast.success('The list is cleared', { description: 'The posts themselves stay in their forums.' })
       else toast.success('Saved')
     },
     onError: (e: Error) => toast.error('Could not save', { description: e.message }),
@@ -162,7 +171,11 @@ export default function NewsdeskSection() {
 
   const s = settings.data
   const waiting = (posts.data ?? []).filter((p) => p.status === 'pending')
-  const history = (posts.data ?? []).filter((p) => p.status !== 'pending').slice(0, 20)
+  // Finished posts leave the list after the chosen number of days, or at once
+  // when the list is cleared. (The records are erased for good after 45 days.)
+  const keepDays = s?.log_keep_days ?? 7
+  const shownSince = Math.max(Date.now() - keepDays * 86400_000, s?.log_cleared_at ? new Date(s.log_cleared_at).getTime() : 0)
+  const history = (posts.data ?? []).filter((p) => p.status !== 'pending' && new Date(p.created_at).getTime() > shownSince)
   const busy = run.isPending
   const lastRun = runs.data?.[0]
 
@@ -375,8 +388,37 @@ export default function NewsdeskSection() {
       </section>
       <section className="rounded-2xl border bg-card p-5 space-y-3">
         <h2 className="font-bold">Recent posts</h2>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <label className="flex items-center gap-2 text-muted-foreground">
+            Remove posts from this list after
+            <select
+              className="rounded-md border bg-background px-2 py-1 text-foreground"
+              value={keepDays}
+              disabled={save.isPending}
+              onChange={(e) => save.mutate({ log_keep_days: Number(e.target.value) })}
+            >
+              {LOG_KEEP_DAYS.map((n) => (
+                <option key={n} value={n}>
+                  {n === 1 ? '1 day' : `${n} days`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={save.isPending || history.length === 0}
+            onClick={() => save.mutate({ log_cleared_at: new Date().toISOString() })}
+          >
+            Clear the list now
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          This only tidies this list. The posts stay in their forums, and posts waiting for your approval are never
+          removed.
+        </p>
         {history.length === 0 ? (
-          <p className="text-sm text-muted-foreground">The bot has not posted anything yet.</p>
+          <p className="text-sm text-muted-foreground">Nothing to show for this period.</p>
         ) : (
           <ul className="divide-y rounded-xl border">
             {history.map((p) => (

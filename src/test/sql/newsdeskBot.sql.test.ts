@@ -42,7 +42,7 @@ const PRELUDE = `
   CREATE FUNCTION cron.unschedule(id bigint) RETURNS boolean LANGUAGE sql AS $$ DELETE FROM cron.job WHERE jobid = id RETURNING true $$;
 `
 
-const MIGRATION = ['20261010090000_newsdesk_bot.sql', '20261010120000_newsdesk_banners.sql', '20261010140000_newsdesk_share_feed.sql', '20261010160000_newsdesk_more_posts_and_gossip.sql', '20261010220000_newsdesk_institutions_forum.sql']
+const MIGRATION = ['20261010090000_newsdesk_bot.sql', '20261010120000_newsdesk_banners.sql', '20261010140000_newsdesk_share_feed.sql', '20261010160000_newsdesk_more_posts_and_gossip.sql', '20261010220000_newsdesk_institutions_forum.sql', '20261011090000_newsdesk_log_cleanup.sql']
   .map((f) => readFileSync(resolve(__dirname, '../../../supabase/migrations', f), 'utf8'))
   .join('\n')
 
@@ -96,7 +96,10 @@ describe('Newsdesk bot database', () => {
     await db.query(`UPDATE newsdesk_settings SET enabled = true, max_posts_per_day = 5`)
     await db.exec(MIGRATION)
     expect((await db.query(`SELECT enabled, max_posts_per_day FROM newsdesk_settings`)).rows).toEqual([{ enabled: true, max_posts_per_day: 5 }])
-    expect((await db.query(`SELECT jobname, schedule FROM cron.job`)).rows).toEqual([{ jobname: 'daily-newsdesk', schedule: '30 6,11,16 * * *' }])
+    expect((await db.query(`SELECT jobname, schedule FROM cron.job ORDER BY jobname`)).rows).toEqual([
+      { jobname: 'daily-newsdesk', schedule: '30 6,11,16 * * *' },
+      { jobname: 'newsdesk-cleanup', schedule: '20 2 * * *' },
+    ])
   })
 
   it('leaves the posting account empty when the Newsdesk account does not exist', async () => {
@@ -256,6 +259,37 @@ describe('Newsdesk bot database', () => {
     for (const role of ['anon', 'authenticated'] as const) {
       await expect(as(ADMIN, role, () => db.query(`SELECT public.newsdesk_notify_admins(1)`))).rejects.toThrow(/permission denied/)
     }
+  })
+
+  it('lets an admin choose how long finished posts stay in the list, and erases old records nightly', async () => {
+    const settings = () => db.query<{ log_keep_days: number; log_cleared_at: string | null }>(`SELECT log_keep_days, log_cleared_at FROM newsdesk_settings`)
+    expect((await settings()).rows[0]).toEqual({ log_keep_days: 7, log_cleared_at: null })
+    await as(ADMIN, 'authenticated', () => db.query(`UPDATE newsdesk_settings SET log_keep_days = 3, log_cleared_at = now()`))
+    expect((await settings()).rows[0].log_keep_days).toBe(3)
+    await expect(as(ADMIN, 'authenticated', () => db.query(`UPDATE newsdesk_settings SET log_keep_days = 0`))).rejects.toThrow(/check/)
+    await as(MEMBER, 'authenticated', () => db.query(`UPDATE newsdesk_settings SET log_keep_days = 30`))
+    expect((await settings()).rows[0].log_keep_days).toBe(3) // members cannot change it
+
+    // Old finished records go; recent ones and anything still waiting stay.
+    await db.query(
+      `INSERT INTO newsdesk_posts (run_date, category_id, category_slug, scope, title, content, status, created_at) VALUES
+      (current_date, $1, 'general-discussion', 'abia', 'old published', 'x', 'published', now() - interval '46 days'),
+      (current_date, $1, 'general-discussion', 'abia', 'old rejected', 'x', 'rejected', now() - interval '60 days'),
+      (current_date, $1, 'general-discussion', 'abia', 'old waiting', 'x', 'pending', now() - interval '60 days'),
+      (current_date, $1, 'general-discussion', 'abia', 'recent published', 'x', 'published', now() - interval '44 days')`,
+      [forum],
+    )
+    await db.query(`INSERT INTO newsdesk_runs (trigger, started_at) VALUES ('schedule', now() - interval '50 days'), ('schedule', now())`)
+    const erased = await as(null, 'service_role', async () => (await db.query<{ n: number }>(`SELECT public.newsdesk_cleanup() AS n`)).rows[0].n)
+    expect(erased).toBe(2)
+    expect((await db.query<{ title: string }>(`SELECT title FROM newsdesk_posts ORDER BY title`)).rows.map((r) => r.title)).toEqual(['old waiting', 'recent published'])
+    expect((await db.query(`SELECT 1 FROM newsdesk_runs`)).rows).toHaveLength(1)
+
+    for (const role of ['anon', 'authenticated'] as const) {
+      await expect(as(ADMIN, role, () => db.query(`SELECT public.newsdesk_cleanup()`))).rejects.toThrow(/permission denied/)
+    }
+    const job = (await db.query<{ schedule: string; command: string }>(`SELECT schedule, command FROM cron.job WHERE jobname = 'newsdesk-cleanup'`)).rows[0]
+    expect(job).toEqual({ schedule: '20 2 * * *', command: 'SELECT public.newsdesk_cleanup()' })
   })
 
   it('schedules three runs a day (07:30, 12:30, 17:30 Lagos) with the scheduler sign-in', async () => {
