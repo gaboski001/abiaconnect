@@ -105,7 +105,9 @@ def credit_text(post):
 
 def make(post, logo):
     img = panel_background()
-    img = Image.alpha_composite(img, photo_layer(post))
+    # A card without a photo is a blank the Newsdesk bot puts a news report's own picture on.
+    if post.get('photo'):
+        img = Image.alpha_composite(img, photo_layer(post))
     d = ImageDraw.Draw(img)
 
     # Gold frame accents and footer
@@ -171,8 +173,9 @@ def make(post, logo):
             d.text((cx, by0 + sf_size + 26 + i * 26), line, font=slf, fill=(20, 60, 45), anchor='mm')
 
     # Photo credit (required by the photo licences)
-    cf = font('segoeui.ttf', 15)
-    d.text((W - 40, H - FOOT - 22), credit_text(post), font=cf, fill=(235, 245, 240), anchor='rm')
+    if post.get('photo'):
+        cf = font('segoeui.ttf', 15)
+        d.text((W - 40, H - FOOT - 22), credit_text(post), font=cf, fill=(235, 245, 240), anchor='rm')
 
     # Footer: logo + site
     lg = logo.copy()

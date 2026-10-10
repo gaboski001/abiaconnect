@@ -29,6 +29,7 @@ import {
   holdReason,
   lagosDate,
   INSTITUTIONS_FORUM,
+  isTrustedSite,
   openForums,
   parseDraft,
   parseRss,
@@ -46,6 +47,7 @@ import {
   type RawItem,
   type SourceLink,
 } from '../_shared/newsdesk-core.ts'
+import { articlePhoto, googleLookupBody, googleLookupResult, googleNewsId, googleSignature, photoCredit } from '../_shared/newsdesk-photo.ts'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -260,7 +262,7 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
     let failed = 0
     let unsaved = 0
     // deno-lint-ignore no-explicit-any
-    const saved: Array<{ post: any; hold: string | null }> = []
+    const saved: Array<{ post: any; hold: string | null; photos: Photo[] }> = []
     for (const w of written) {
       if (!w) {
         failed++
@@ -298,13 +300,14 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
         }
         continue
       }
-      saved.push({ post, hold })
+      saved.push({ post, hold, photos: w.photos })
     }
 
-    // Each post's own banner, drawn side by side. Without one a post still
-    // goes out, with its forum's picture.
+    // Each post's own banner, drawn side by side: the headline beside the
+    // report's own picture, or the forum's picture when the report has none.
+    // Without a banner a post still goes out.
     await pooled(saved, 6, async (s) => {
-      s.post.banner_url = await makeBanner(s.post.id)
+      s.post.banner_url = await makeBanner(s.post.id, s.photos)
     })
 
     for (const { post, hold } of saved) {
@@ -393,43 +396,96 @@ async function pooled<T, R>(items: T[], size: number, fn: (item: T) => Promise<R
   return out
 }
 
+/** A picture from one of a pick's reports, for the post's banner. */
+interface Photo {
+  url: string
+  credit: string
+}
+
+/**
+ * The newspaper's own address for a feed link. Google News links are Google
+ * pages: Google is asked which article they stand for. Null when the address
+ * cannot be found or is not a trusted publisher's.
+ */
+async function articleAddress(url: string): Promise<string | null> {
+  if (!isPublicArticleUrl(url)) return null
+  let address = url
+  const id = googleNewsId(url)
+  if (id) {
+    const page = await fetchText(`https://news.google.com/rss/articles/${id}`, 6_000, 1_500_000)
+    const sig = page ? googleSignature(page) : null
+    if (!sig) return null
+    try {
+      const res = await fetch('https://news.google.com/_/DotsSplashUi/data/batchexecute', {
+        method: 'POST',
+        signal: AbortSignal.timeout(6_000),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'User-Agent': USER_AGENT },
+        body: googleLookupBody(id, sig.signature, sig.timestamp),
+      })
+      const found = res.ok ? googleLookupResult((await res.text()).slice(0, 20_000)) : null
+      if (!found) return null
+      address = found
+    } catch {
+      return null
+    }
+  } else if (/(^|\.)google\.com$/i.test(new URL(url).hostname)) {
+    return null
+  }
+  return isPublicArticleUrl(address) && isTrustedSite(new URL(address).hostname) ? address : null
+}
+
 /** Reads the reports for one pick and has the AI write the discussion. */
 async function write(pick: Pick, forum: Forum) {
   const articleText: Record<number, string> = {}
-  await Promise.all(
-    pick.items.map(async (item) => {
-      // Google's links are redirect pages with no article text in them.
-      if (!isPublicArticleUrl(item.url) || /(^|\.)google\.com$/i.test(new URL(item.url).hostname)) return
-      const html = await fetchText(item.url, 8_000, 400_000)
-      if (html) articleText[item.id] = extractArticleText(html)
+  const photos = await Promise.all(
+    pick.items.map(async (item): Promise<Photo | null> => {
+      const address = await articleAddress(item.url)
+      if (!address) return null
+      const html = await fetchText(address, 8_000, 400_000)
+      if (!html) return null
+      articleText[item.id] = extractArticleText(html)
+      const url = articlePhoto(html, address)
+      return url && isPublicArticleUrl(url) ? { url, credit: photoCredit(item.publisher) } : null
     }),
   )
   const answer = await askAi(writerSystemPrompt(), writerUserMessage({ forum, pick, articleText }), 0.4)
   const draft = answer === null ? null : parseDraft(answer)
-  return draft ? { pick, draft, sources: sourcesOf(pick) } : null
+  return draft ? { pick, draft, sources: sourcesOf(pick), photos: photos.filter((p): p is Photo => p !== null) } : null
 }
 
 // ---------------------------------------------------------------------------
 // Publishing, approving, rejecting
 // ---------------------------------------------------------------------------
 
-/** Has the newsdesk-banner function draw and save the post's banner; null when it could not. */
-async function makeBanner(postId: string): Promise<string | null> {
-  try {
-    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/newsdesk-banner`, {
-      method: 'POST',
-      signal: AbortSignal.timeout(30_000),
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}`, apikey: key },
-      body: JSON.stringify({ post_id: postId }),
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) console.error('newsdesk banner failed', res.status)
-    return res.ok && typeof data?.url === 'string' ? data.url : null
-  } catch (e) {
-    console.error('newsdesk banner unreachable', e instanceof Error ? e.message : String(e))
-    return null
+/**
+ * Has the newsdesk-banner function draw and save the post's banner; null when
+ * it could not. With photos the banner shows a report's own picture; if
+ * none can be used (too large, too small or in an unusual format) the forum's
+ * picture is used instead.
+ */
+async function makeBanner(postId: string, photos: Photo[] = []): Promise<string | null> {
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const draw = async (body: Record<string, unknown>): Promise<string | null> => {
+    try {
+      const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/newsdesk-banner`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(30_000),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}`, apikey: key },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) console.error('newsdesk banner failed', res.status)
+      return res.ok && typeof data?.url === 'string' ? data.url : null
+    } catch (e) {
+      console.error('newsdesk banner unreachable', e instanceof Error ? e.message : String(e))
+      return null
+    }
   }
+  if (photos.length) {
+    const withPhoto = await draw({ post_id: postId, photos })
+    if (withPhoto) return withPhoto
+  }
+  return await draw({ post_id: postId })
 }
 
 // deno-lint-ignore no-explicit-any

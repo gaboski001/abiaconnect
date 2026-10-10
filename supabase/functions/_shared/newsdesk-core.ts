@@ -39,17 +39,26 @@ export const FEEDS: Feed[] = [
   { name: 'Premium Times', url: 'https://www.premiumtimesng.com/category/entertainment/feed', scope: 'wider', showbiz: true },
   { name: 'Nigerian Tribune', url: 'https://tribuneonlineng.com/category/entertainment/feed/', scope: 'wider', showbiz: true },
   { name: 'BellaNaija', url: 'https://www.bellanaija.com/feed/', scope: 'wider', showbiz: true },
-  // What trusted newspapers report about Abia's institutions (two searches keep each one short).
+  // What trusted newspapers report about Abia's institutions (several short
+  // searches: a long one returns fewer results). Only reports that name one
+  // of the schools are kept (ABIA_SCHOOL_RE).
+  { name: 'Google News', url: GOOGLE('"Abia State University" OR ABSU when:14d'), scope: 'abia', campus: true },
   {
     name: 'Google News',
-    url: GOOGLE('"Abia State University" OR ABSU OR MOUAU OR "Michael Okpara University" OR "Abia State Polytechnic" when:7d'),
+    url: GOOGLE('MOUAU OR "Michael Okpara University" OR Umudike OR "Abia State Polytechnic" OR Abiapoly when:14d'),
+    scope: 'abia',
+    campus: true,
+  },
+  {
+    name: 'Google News',
+    url: GOOGLE('"Gregory University" OR "Rhema University" OR "Clifford University" OR "Spiritan University" OR "Nigerian British University" when:14d'),
     scope: 'abia',
     campus: true,
   },
   {
     name: 'Google News',
     url: GOOGLE(
-      '"Gregory University" OR "Rhema University" OR "Clifford University" OR "Spiritan University" OR "Nigerian British University" OR "College of Education (Technical) Arochukwu" when:7d',
+      '"Lux Mundi University" OR "Amadeus University" OR "Ogbonnaya Onu Polytechnic" OR "Temple Gate Polytechnic" OR "Federal Polytechnic Ngodo" OR NINLAN OR "College of Education Technical Arochukwu" when:14d',
     ),
     scope: 'abia',
     campus: true,
@@ -91,12 +100,21 @@ export const TRUSTED_SITES = [
   // Sport, technology, entertainment
   'completesports.com', 'goal.com', 'espn.com', 'cafonline.com', 'techcabal.com', 'techpoint.africa', 'bellanaija.com',
   'pulse.ng', 'legit.ng',
+  // Education news (admissions, lectures and notices from the schools)
+  'myschoolgist.com',
   // Government
   'abiastate.gov.ng',
   // Abia's institutions
   'abiastateuniversity.edu.ng', 'mouau.edu.ng', 'abiastatepolytechnic.edu.ng', 'gregoryuniversityuturu.edu.ng',
   'rhemauniversity.edu.ng', 'clifforduni.edu.ng', 'spiritanuniversity.edu.ng', 'nbu.edu.ng', 'asceta.edu.ng',
 ]
+
+/** School news is slower than daily news: a report stays on offer for two weeks. */
+export const CAMPUS_HOURS = 336
+
+/** Abia's universities, polytechnics and colleges, as newspapers name them. */
+export const ABIA_SCHOOL_RE =
+  /\b(abia (state )?university|absu|mouau|michael okpara university|umudike|abia state poly(technic)?|abia ?poly(technic)?|gregory university|rhema (university|varsity)|clifford university|spiritan university|nigerian british university|lux mundi university|amadeus university|ogbonnaya onu polytechnic|temple gate polytechnic|federal polytechnic,? ngodo|ninlan|national institute for nigerian languages|college of education \(?technical\)?,? arochukwu)\b/i
 
 /** Is this website (or a section of it, like www. or sport.) a trusted publisher? */
 export function isTrustedSite(host: string): boolean {
@@ -255,6 +273,9 @@ export function parseRss(xml: string, feed: Feed): RawItem[] {
 
     if (/\/promoted\/|\/sponsored\//i.test(url) || /\b(sponsored|advertorial)\b/i.test(title)) continue
 
+    // A school search also returns reports that only mention the word in passing.
+    if (feed.campus && !ABIA_SCHOOL_RE.test(`${title} ${snippet}`)) continue
+
     const scope: Scope = feed.scope === 'abia' || ABIA_RE.test(`${title} ${snippet}`) ? 'abia' : 'wider'
     out.push({ title: title.slice(0, 300), url, publisher, published: when.toISOString(), snippet, scope, showbiz: feed.showbiz === true, campus: feed.campus === true })
   }
@@ -388,8 +409,8 @@ export function buildCandidates(raw: RawItem[], opts: CandidateOptions): NewsIte
     .sort((a, b) => b.published.localeCompare(a.published))
   for (const item of sorted) {
     const age = now - new Date(item.published).getTime()
-    // Schools post less often than newspapers: their news stays usable for a week.
-    const limit = (item.campus ? 168 : item.scope === 'abia' ? 48 : 30) * 3600_000
+    // Schools post less often than newspapers: their news stays usable for two weeks.
+    const limit = (item.campus ? CAMPUS_HOURS : item.scope === 'abia' ? 48 : 30) * 3600_000
     if (age > limit || age < -3600_000) continue
     const key = titleKey(item.title)
     if (key.length < 12 || seen.has(key) || usedUrls.has(item.url)) continue

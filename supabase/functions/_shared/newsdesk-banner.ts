@@ -1,8 +1,11 @@
-// Draws a Newsdesk post's own banner: the post's headline written onto its
-// forum's blank card (public/og/base-<forum>.jpg, made by
-// scripts/newsdesk/make_forum_cards.py with the photo, forum label, photo
-// credit and footer already on it). 1200x630, the size Facebook and WhatsApp
-// use for link previews. Same layout as the hand-made October 2026 thumbnails.
+// Draws a Newsdesk post's own banner: the post's headline written onto a
+// blank card of its forum. 1200x630, the size Facebook and WhatsApp use for
+// link previews. Same layout as the hand-made October 2026 thumbnails.
+//
+// Two blank cards per forum, made by scripts/newsdesk/make_forum_cards.py with
+// the forum label and footer already on them:
+//   public/og/base-<forum>.jpg   with the forum's stock photo and its credit
+//   public/og/plain-<forum>.jpg  with no photo, for the report's own picture
 import { Image, TextLayout } from 'https://deno.land/x/imagescript@1.3.0/mod.ts'
 import { bannerHeadline } from './newsdesk-core.ts'
 
@@ -16,14 +19,34 @@ const SHADOW = 0x000000ff
 const GOLD = 0xd4af37ff
 const MINT = 0xa7f3d0ff
 
+// Where the photo sits on a plain card (the same place as on the stock cards).
+const PHOTO_X = 470
+const PHOTO_Y = 8 // under the gold line along the top
+const PHOTO_W = 730
+const PHOTO_H = 530 // down to the footer
+const FADE = 330 // the photo fades in from the left over this width
+const CREDIT_SHADE = 84
+
 export interface BannerFonts {
   bold: Uint8Array
   regular: Uint8Array
 }
 
-/** Returns the finished banner as JPEG bytes. */
-export async function renderBanner(base: Uint8Array, fonts: BannerFonts, headline: string): Promise<Uint8Array> {
+/** A report's own picture and the credit printed on it. */
+export interface BannerPhoto {
+  bytes: Uint8Array
+  credit: string
+}
+
+/**
+ * Returns the finished banner as JPEG bytes. With a photo, `base` must be the
+ * forum's plain card; a picture that is too small to look good is refused
+ * (the caller then draws the stock card instead).
+ */
+export async function renderBanner(base: Uint8Array, fonts: BannerFonts, headline: string, photo?: BannerPhoto): Promise<Uint8Array> {
   const img = await Image.decode(base)
+  if (photo) await drawPhoto(img, fonts, photo)
+
   const layout = new TextLayout({ maxWidth: COLUMN, wrapStyle: 'word' })
   const text = bannerHeadline(headline)
 
@@ -49,4 +72,37 @@ export async function renderBanner(base: Uint8Array, fonts: BannerFonts, headlin
   img.composite(invite, LEFT, below + 18)
 
   return await img.encodeJPEG(86)
+}
+
+/** The report's picture on the right of the card, faded in from the left, with its credit. */
+async function drawPhoto(img: Image, fonts: BannerFonts, photo: BannerPhoto): Promise<void> {
+  const decoded = await Image.decode(photo.bytes)
+  // A small picture stretched to this size looks blurred.
+  if (decoded.width < 600 || decoded.height < 330) throw new Error('picture too small')
+  const pic = decoded.cover(PHOTO_W, PHOTO_H)
+
+  const px = pic.bitmap
+  for (let y = 0; y < PHOTO_H; y++) {
+    const row = y * PHOTO_W * 4
+    // Fades in from the left, like the stock cards.
+    for (let x = 0; x < FADE; x++) {
+      const i = row + x * 4
+      px[i + 3] = Math.round(px[i + 3] * Math.pow(x / FADE, 1.6))
+    }
+    // Darkens towards the bottom so the credit can be read on any picture.
+    const depth = y - (PHOTO_H - CREDIT_SHADE)
+    if (depth > 0) {
+      const keep = 1 - 0.8 * (depth / CREDIT_SHADE)
+      for (let x = 0; x < PHOTO_W; x++) {
+        const i = row + x * 4
+        px[i] = px[i] * keep
+        px[i + 1] = px[i + 1] * keep
+        px[i + 2] = px[i + 2] * keep
+      }
+    }
+  }
+  img.composite(pic, PHOTO_X, PHOTO_Y)
+
+  const credit = await Image.renderText(fonts.regular, 17, photo.credit, 0xebf5f0ff)
+  img.composite(credit, PHOTO_X + PHOTO_W - 40 - credit.width, PHOTO_Y + PHOTO_H - 14 - credit.height)
 }

@@ -93,6 +93,9 @@ if __name__ == '__main__':
         # The blank the bot writes each post's own headline onto.
         blank = make({**card, 'slug': card['slug'].replace('forum-', 'base-', 1), 'thumb_title': ''}, logo)
         print(os.path.basename(blank), os.path.getsize(blank) // 1024, 'KB')
+        # The same blank with no photo: the bot puts a news report's own picture there.
+        plain = make({**card, 'slug': card['slug'].replace('forum-', 'plain-', 1), 'thumb_title': '', 'photo': None}, logo)
+        print(os.path.basename(plain), os.path.getsize(plain) // 1024, 'KB')
         path = make(card, logo)
         page = PAGE.format(
             title=html.escape(f"{card['label']}: today's talking point on AbiaConnect"),
