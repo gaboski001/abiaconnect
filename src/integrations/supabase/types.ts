@@ -3407,6 +3407,16 @@ export type Database = {
         }[]
       }
       newsdesk_notify_admins: { Args: { _waiting: number }; Returns: number }
+      newsdesk_share_feed: {
+        Args: never
+        Returns: {
+          banner_title: string
+          banner_url: string
+          content: string
+          thread_id: string
+          title: string
+        }[]
+      }
       payment_apply_refund: {
         Args: { _provider: string; _ref: string }
         Returns: string
