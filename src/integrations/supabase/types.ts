@@ -1471,9 +1471,7 @@ export type Database = {
       newsdesk_settings: {
         Row: {
           author_id: string | null
-          default_forum_limit: number
           enabled: boolean
-          forum_limits: Json
           id: boolean
           max_posts_per_day: number
           review_slugs: string[]
@@ -1481,9 +1479,7 @@ export type Database = {
         }
         Insert: {
           author_id?: string | null
-          default_forum_limit?: number
           enabled?: boolean
-          forum_limits?: Json
           id?: boolean
           max_posts_per_day?: number
           review_slugs?: string[]
@@ -1491,9 +1487,7 @@ export type Database = {
         }
         Update: {
           author_id?: string | null
-          default_forum_limit?: number
           enabled?: boolean
-          forum_limits?: Json
           id?: boolean
           max_posts_per_day?: number
           review_slugs?: string[]
