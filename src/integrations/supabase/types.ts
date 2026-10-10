@@ -3439,6 +3439,7 @@ export type Database = {
           id: string
         }[]
       }
+      newsdesk_cleanup: { Args: never; Returns: number }
       newsdesk_notify_admins: { Args: { _waiting: number }; Returns: number }
       newsdesk_share_feed: {
         Args: never
