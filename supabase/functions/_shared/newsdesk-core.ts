@@ -15,6 +15,8 @@ export interface Feed {
   scope: Scope
   /** Entertainment and celebrity news, for the Gossip forum. */
   showbiz?: boolean
+  /** News about Abia's universities, polytechnics and colleges, for the Institutions forum. */
+  campus?: boolean
 }
 
 const GOOGLE = (q: string) =>
@@ -37,6 +39,38 @@ export const FEEDS: Feed[] = [
   { name: 'Premium Times', url: 'https://www.premiumtimesng.com/category/entertainment/feed', scope: 'wider', showbiz: true },
   { name: 'Nigerian Tribune', url: 'https://tribuneonlineng.com/category/entertainment/feed/', scope: 'wider', showbiz: true },
   { name: 'BellaNaija', url: 'https://www.bellanaija.com/feed/', scope: 'wider', showbiz: true },
+  // What trusted newspapers report about Abia's institutions (two searches keep each one short).
+  {
+    name: 'Google News',
+    url: GOOGLE('"Abia State University" OR ABSU OR MOUAU OR "Michael Okpara University" OR "Abia State Polytechnic" when:7d'),
+    scope: 'abia',
+    campus: true,
+  },
+  {
+    name: 'Google News',
+    url: GOOGLE(
+      '"Gregory University" OR "Rhema University" OR "Clifford University" OR "Spiritan University" OR "Nigerian British University" OR "College of Education (Technical) Arochukwu" when:7d',
+    ),
+    scope: 'abia',
+    campus: true,
+  },
+]
+
+/**
+ * Institutions' own websites. Most have no news feed, so the bot reads the
+ * page and notices headline links that were not there before (see
+ * extractHeadlineLinks and newPageItems). Abia State University, MOUAU and the
+ * College of Education (Technical) Arochukwu cannot be read this way (their
+ * sites need a browser, or refuse automated visits); their news comes from the
+ * newspaper searches above.
+ */
+export const SCHOOL_PAGES: Array<{ name: string; url: string }> = [
+  { name: 'Gregory University, Uturu', url: 'https://gregoryuniversityuturu.edu.ng/' },
+  { name: 'Rhema University, Aba', url: 'https://rhemauniversity.edu.ng/' },
+  { name: 'Clifford University, Owerrinta', url: 'https://clifforduni.edu.ng/' },
+  { name: 'Spiritan University, Nneochi', url: 'https://spiritanuniversity.edu.ng/' },
+  { name: 'Abia State Polytechnic, Aba', url: 'https://abiastatepolytechnic.edu.ng/news' },
+  { name: 'Nigerian British University, Asa', url: 'https://nbu.edu.ng/news' },
 ]
 
 /**
@@ -59,6 +93,9 @@ export const TRUSTED_SITES = [
   'pulse.ng', 'legit.ng',
   // Government
   'abiastate.gov.ng',
+  // Abia's institutions
+  'abiastateuniversity.edu.ng', 'mouau.edu.ng', 'abiastatepolytechnic.edu.ng', 'gregoryuniversityuturu.edu.ng',
+  'rhemauniversity.edu.ng', 'clifforduni.edu.ng', 'spiritanuniversity.edu.ng', 'nbu.edu.ng', 'asceta.edu.ng',
 ]
 
 /** Is this website (or a section of it, like www. or sport.) a trusted publisher? */
@@ -86,10 +123,14 @@ export const FORUM_CARDS = [
   'security-safety',
   'faith-spirituality',
   'gossip',
+  'institutions',
 ]
 
 /** The forum for entertainment and celebrity news. */
 export const GOSSIP_FORUM = 'gossip'
+
+/** The forum for news from Abia's universities, polytechnics and colleges. */
+export const INSTITUTIONS_FORUM = 'institutions'
 
 export interface NewsItem {
   id: number
@@ -102,6 +143,8 @@ export interface NewsItem {
   scope: Scope
   /** Entertainment or celebrity news. */
   showbiz: boolean
+  /** News about one of Abia's institutions. */
+  campus: boolean
 }
 
 export interface Forum {
@@ -213,9 +256,104 @@ export function parseRss(xml: string, feed: Feed): RawItem[] {
     if (/\/promoted\/|\/sponsored\//i.test(url) || /\b(sponsored|advertorial)\b/i.test(title)) continue
 
     const scope: Scope = feed.scope === 'abia' || ABIA_RE.test(`${title} ${snippet}`) ? 'abia' : 'wider'
-    out.push({ title: title.slice(0, 300), url, publisher, published: when.toISOString(), snippet, scope, showbiz: feed.showbiz === true })
+    out.push({ title: title.slice(0, 300), url, publisher, published: when.toISOString(), snippet, scope, showbiz: feed.showbiz === true, campus: feed.campus === true })
   }
   return out
+}
+
+export interface PageLink {
+  title: string
+  url: string
+}
+
+const NAV_WORDS =
+  /^(home|about( us)?|contact( us)?|read more|learn more|click here|view (all|more)|more|login|log in|sign in|register|apply( now)?|portal|staff|students?|admissions?|academics?|faculties|departments|library|gallery|news|events?|menu|search|privacy policy|terms.*|next|previous|older posts|newer posts)$/i
+
+/**
+ * Headline links on a web page that has no news feed (most schools' sites):
+ * links to the same website whose text reads like a headline. Menus, buttons
+ * and files are left out. Used to notice items a school has newly added.
+ */
+export function extractHeadlineLinks(html: string, pageUrl: string, max = 60): PageLink[] {
+  let base: URL
+  try {
+    base = new URL(pageUrl)
+  } catch {
+    return []
+  }
+  const site = base.hostname.replace(/^www\./, '')
+  const body = html.replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi, ' ')
+  const seen = new Set<string>()
+  const out: PageLink[] = []
+  for (const m of body.matchAll(/<a\s[^>]*?href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
+    const title = plainText(m[2])
+    const words = title.split(' ').length
+    if (title.length < 28 || title.length > 180 || words < 5 || NAV_WORDS.test(title)) continue
+    let url: URL
+    try {
+      url = new URL(decodeEntities(m[1]).trim(), base)
+    } catch {
+      continue
+    }
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') continue
+    if (url.hostname.replace(/^www\./, '') !== site) continue
+    if (url.pathname.length < 8 || /\.(pdf|docx?|xlsx?|pptx?|zip|jpe?g|png|gif|mp4)$/i.test(url.pathname)) continue
+    url.hash = ''
+    const clean = cleanUrl(url.toString())
+    const key = titleKey(title)
+    if (!clean || seen.has(clean) || seen.has(key)) continue
+    seen.add(clean)
+    seen.add(key)
+    out.push({ title: title.slice(0, 300), url: clean })
+    if (out.length >= max) break
+  }
+  return out
+}
+
+export interface SeenLink {
+  url: string
+  /** ISO time the bot first saw the link. */
+  first_seen: string
+  /** True for links that were already on the page the first time the bot read it. */
+  baseline: boolean
+}
+
+/**
+ * What a school's page shows that the bot has not seen before, and which of
+ * its recent additions are news to offer.
+ *   - The first time a page is read, everything on it is remembered as the
+ *     starting point and nothing is offered (old notices are not news).
+ *   - After that, a link that appears is offered as news for three days.
+ */
+export function newPageItems(
+  school: string,
+  links: PageLink[],
+  seen: SeenLink[],
+  firstVisit: boolean,
+  now: Date,
+): { remember: Array<{ url: string; baseline: boolean }>; items: RawItem[] } {
+  const known = new Map(seen.map((s) => [s.url, s]))
+  const nowIso = now.toISOString()
+  const remember: Array<{ url: string; baseline: boolean }> = []
+  const items: RawItem[] = []
+  for (const link of links) {
+    const before = known.get(link.url)
+    if (!before) remember.push({ url: link.url, baseline: firstVisit })
+    if (firstVisit || before?.baseline) continue
+    const firstSeen = before?.first_seen ?? nowIso
+    if (now.getTime() - new Date(firstSeen).getTime() > 3 * 86400_000) continue
+    items.push({
+      title: link.title.replace(/^read more\s+/i, '').trim(),
+      url: link.url,
+      publisher: school,
+      published: firstSeen,
+      snippet: '',
+      scope: 'abia',
+      showbiz: false,
+      campus: true,
+    })
+  }
+  return { remember, items }
 }
 
 export interface CandidateOptions {
@@ -226,6 +364,7 @@ export interface CandidateOptions {
   maxAbia?: number
   maxWider?: number
   maxShowbiz?: number
+  maxCampus?: number
 }
 
 /**
@@ -238,16 +377,17 @@ export function buildCandidates(raw: RawItem[], opts: CandidateOptions): NewsIte
   const seen = new Set([...(opts.usedTitles ?? [])].map(titleKey))
   const now = opts.now.getTime()
   const picked: RawItem[] = []
-  const left = { abia: opts.maxAbia ?? 60, wider: opts.maxWider ?? 50, showbiz: opts.maxShowbiz ?? 25 }
+  const left = { abia: opts.maxAbia ?? 60, wider: opts.maxWider ?? 50, showbiz: opts.maxShowbiz ?? 25, campus: opts.maxCampus ?? 30 }
 
   const sorted = [...raw].sort((a, b) => b.published.localeCompare(a.published))
   for (const item of sorted) {
     const age = now - new Date(item.published).getTime()
-    const limit = (item.scope === 'abia' ? 48 : 30) * 3600_000
+    // Schools post less often than newspapers: their news stays usable for a week.
+    const limit = (item.campus ? 168 : item.scope === 'abia' ? 48 : 30) * 3600_000
     if (age > limit || age < -3600_000) continue
     const key = titleKey(item.title)
     if (key.length < 12 || seen.has(key) || usedUrls.has(item.url)) continue
-    const kind = item.showbiz ? 'showbiz' : item.scope
+    const kind = item.campus ? 'campus' : item.showbiz ? 'showbiz' : item.scope
     if (left[kind] <= 0) continue
     seen.add(key)
     usedUrls.add(item.url)
@@ -271,6 +411,7 @@ export function selectionSystemPrompt(): string {
     '- Only choose a story that clearly fits the forum and that members would really want to discuss. If a forum has no good story today, leave it out. Fewer, better picks are preferred; never pad.',
     '- Abia State stories (marked [ABIA]) come first. Use a wider Nigerian story (marked [NIGERIA]) only when the forum has no Abia story and the story clearly affects Abians (prices, jobs, schools, health, farming, travel, diaspora).',
     `- Entertainment and celebrity stories (marked [SHOWBIZ]) go ONLY in the "${GOSSIP_FORUM}" forum, and that forum takes ONLY [SHOWBIZ] stories: music, film, television, fashion and what public figures have said or done in public. It does not need an Abia link. If "${GOSSIP_FORUM}" is not in the list of forums, leave [SHOWBIZ] stories out.`,
+    `- Stories marked [CAMPUS] are news from or about universities, polytechnics and colleges in Abia State. They go ONLY in the "${INSTITUTIONS_FORUM}" forum, and that forum takes ONLY [CAMPUS] stories that students, staff, parents or alumni would want to know: admissions, fees, resumption and exam dates, accreditation, results, appointments, events and achievements. Skip [CAMPUS] items that are only a menu or department page, or that are not about a school in Abia State. If "${INSTITUTIONS_FORUM}" is not in the list of forums, leave [CAMPUS] stories out.`,
     '- Leave out: stories already discussed (listed below), adverts and press releases, betting, graphic crime, unverified rumours, anything about a person\'s health, body or sex life, and stories about private individuals.',
     '- You may list up to 3 headline numbers for one pick when they are reports of the SAME story.',
     '- Set "sensitive" to true when the story involves deaths, violence, crime or arrests, court cases, accusations against a named person or organisation, elections, parties or candidates, ethnic or religious tension, or health scares.',
@@ -292,7 +433,7 @@ export function selectionUserMessage(args: {
   const items = args.items
     .map((i) => {
       const day = i.published.slice(0, 10)
-      const mark = i.showbiz ? '[SHOWBIZ]' : i.scope === 'abia' ? '[ABIA]' : '[NIGERIA]'
+      const mark = i.campus ? '[CAMPUS]' : i.showbiz ? '[SHOWBIZ]' : i.scope === 'abia' ? '[ABIA]' : '[NIGERIA]'
       return `${i.id}. ${mark} ${i.title} (${i.publisher}, ${day})${i.snippet ? `\n   ${i.snippet.slice(0, 220)}` : ''}`
     })
     .join('\n')
@@ -349,6 +490,9 @@ export function parseSelection(text: string, forums: Forum[], items: NewsItem[])
     // Entertainment news belongs in the Gossip forum, and nothing else does.
     const showbiz = ids.map((n) => byId.get(n)!.showbiz)
     if (forum === GOSSIP_FORUM ? showbiz.includes(false) : showbiz.includes(true)) continue
+    // News from Abia's institutions belongs in the Institutions forum, and nothing else does.
+    const campus = ids.map((n) => byId.get(n)!.campus)
+    if (forum === INSTITUTIONS_FORUM ? campus.includes(false) : campus.includes(true)) continue
     usedForums.add(forum)
     ids.forEach((n) => usedItems.add(n))
     const chosen = ids.map((n) => byId.get(n)!)
@@ -453,7 +597,9 @@ export function writerUserMessage(args: { forum: Forum; pick: Pick; articleText:
         .join('\n')
     })
     .join('\n\n---\n\n')
-  const note = args.pick.items.some((i) => i.showbiz)
+  const note = args.pick.items.some((i) => i.campus)
+    ? 'This is news from a school in Abia State: name the institution, give any dates, fees and deadlines exactly as stated, and ask students, staff, parents and alumni what they think.'
+    : args.pick.items.some((i) => i.showbiz)
     ? 'This is entertainment news: keep it light and fair, say only what the publisher reports the person said or did in public, and ask members what they think.'
     : args.pick.scope === 'wider'
       ? 'This is a national story: ask how it affects Abians.'

@@ -25,10 +25,12 @@ PHOTO_OVERRIDES = {
     'real-estate-housing': ('Abia_state_tower_jpg.jpg', None, 'Abia State Tower'),
 }
 # Forums added after the October 2026 posts (posts.py has one post per older forum).
-# No people in these photos: a face on the card would sit beside every headline.
 EXTRA_FORUMS = [
+    # No people in this photo: a face on the card would sit beside every gossip headline.
     {'forum': 'gossip', 'label': 'Gossip', 'photo': 'A_dynamic_XLR_microphone_WEISRE_DM_701_jpg.jpg',
      'photo_box': None, 'photo_caption': 'Microphone'},
+    {'forum': 'institutions', 'label': 'Institutions', 'photo': 'Pupils_doing_online_tests_jpg.jpg',
+     'photo_box': None, 'photo_caption': 'Students at computers'},
 ]
 
 PAGE = """<!doctype html>

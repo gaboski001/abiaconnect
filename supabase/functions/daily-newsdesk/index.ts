@@ -19,9 +19,12 @@ import { requireScheduler } from '../_shared/cron-auth.ts'
 import { withinRateLimit } from '../_shared/rate-limit.ts'
 import {
   FEEDS,
+  SCHOOL_PAGES,
   bannerHtml,
   buildCandidates,
   extractArticleText,
+  extractHeadlineLinks,
+  newPageItems,
   holdReason,
   lagosDate,
   openForums,
@@ -215,6 +218,7 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
     )
     const feedsRead = feeds.filter((f) => f && f.length).length
     const raw = feeds.flatMap((f) => f ?? []) as RawItem[]
+    raw.push(...(await readSchoolPages(db)))
     const items = buildCandidates(raw, { now: new Date(), usedUrls, usedTitles })
     if (!items.length) {
       return await finish(
@@ -318,6 +322,45 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
     console.error('newsdesk run failed', e instanceof Error ? e.message : String(e))
     return await finish('The run stopped because of an error. The bot will try again at its next run.', {}, false)
   }
+}
+
+/**
+ * News from institutions' own websites, which have no feeds: reads each page,
+ * remembers the links on it, and returns the ones added since the bot first
+ * read that page. A page that cannot be read is skipped until the next run.
+ */
+async function readSchoolPages(db: Db): Promise<RawItem[]> {
+  const found = await Promise.all(
+    SCHOOL_PAGES.map(async (school) => {
+      try {
+        const html = await fetchText(school.url, 12_000, 600_000)
+        if (!html) return []
+        const links = extractHeadlineLinks(html, school.url)
+        if (!links.length) return []
+        const { count, error: countError } = await db
+          .from('newsdesk_seen_links')
+          .select('url', { count: 'exact', head: true })
+          .eq('source', school.name)
+        if (countError) return [] // the table is not there yet
+        const { data: seen, error: seenError } = await db
+          .from('newsdesk_seen_links')
+          .select('url, first_seen, baseline')
+          .in('url', links.map((l) => l.url))
+        if (seenError) return []
+        const { remember, items } = newPageItems(school.name, links, seen ?? [], (count ?? 0) === 0, new Date())
+        if (remember.length) {
+          await db
+            .from('newsdesk_seen_links')
+            .upsert(remember.map((r) => ({ ...r, source: school.name })), { onConflict: 'url', ignoreDuplicates: true })
+        }
+        return items
+      } catch (e) {
+        console.error('school page skipped', school.name, e instanceof Error ? e.message : String(e))
+        return []
+      }
+    }),
+  )
+  return found.flat()
 }
 
 /** Runs fn over the items, at most `size` at a time, keeping their order. */

@@ -42,7 +42,7 @@ const PRELUDE = `
   CREATE FUNCTION cron.unschedule(id bigint) RETURNS boolean LANGUAGE sql AS $$ DELETE FROM cron.job WHERE jobid = id RETURNING true $$;
 `
 
-const MIGRATION = ['20261010090000_newsdesk_bot.sql', '20261010120000_newsdesk_banners.sql', '20261010140000_newsdesk_share_feed.sql', '20261010160000_newsdesk_more_posts_and_gossip.sql']
+const MIGRATION = ['20261010090000_newsdesk_bot.sql', '20261010120000_newsdesk_banners.sql', '20261010140000_newsdesk_share_feed.sql', '20261010160000_newsdesk_more_posts_and_gossip.sql', '20261010220000_newsdesk_institutions_forum.sql']
   .map((f) => readFileSync(resolve(__dirname, '../../../supabase/migrations', f), 'utf8'))
   .join('\n')
 
@@ -148,7 +148,7 @@ describe('Newsdesk bot database', () => {
     )).rows[0]
     expect(s).toEqual({
       default_forum_limit: 2,
-      forum_limits: { 'general-discussion': 3, 'politics-governance': 3, 'culture-heritage': 3, gossip: 3 },
+      forum_limits: { 'general-discussion': 3, 'politics-governance': 3, 'culture-heritage': 3, gossip: 3, institutions: 3 },
     })
     await as(ADMIN, 'authenticated', () => db.query(`UPDATE newsdesk_settings SET forum_limits = '{"gossip": 5, "relationship": 0}'`))
     expect((await db.query(`SELECT forum_limits FROM newsdesk_settings`)).rows[0]).toEqual({ forum_limits: { gossip: 5, relationship: 0 } })
@@ -162,6 +162,26 @@ describe('Newsdesk bot database', () => {
     await db.exec(MIGRATION)
     expect((await db.query(`SELECT name FROM categories WHERE slug = 'gossip'`)).rows).toEqual([{ name: 'Gist & Gossip' }])
     expect((await db.query<{ review_slugs: string[] }>(`SELECT review_slugs FROM newsdesk_settings`)).rows[0].review_slugs.filter((x) => x === 'gossip')).toHaveLength(1)
+  })
+  it('creates the Institutions forum once, with 3 posts a day unless an admin already chose', async () => {
+    const rows = (await db.query(`SELECT name, slug, icon, display_order, is_active FROM categories WHERE slug = 'institutions'`)).rows
+    expect(rows).toEqual([{ name: 'Institutions', slug: 'institutions', icon: '🎓', display_order: 5, is_active: true }])
+    await db.query(`UPDATE newsdesk_settings SET forum_limits = forum_limits || '{"institutions": 1}'::jsonb`)
+    await db.exec(MIGRATION)
+    expect((await db.query(`SELECT count(*)::int AS n FROM categories WHERE slug = 'institutions'`)).rows).toEqual([{ n: 1 }])
+    expect((await db.query<{ n: number }>(`SELECT (forum_limits->>'institutions')::int AS n FROM newsdesk_settings`)).rows).toEqual([{ n: 1 }])
+  })
+
+  it('keeps the links seen on institutions’ pages on the server only', async () => {
+    await as(null, 'service_role', () =>
+      db.query(`INSERT INTO newsdesk_seen_links (url, source, baseline) VALUES ('https://x.edu.ng/news/a', 'X University', true)`))
+    // The same link again is ignored, not an error (the bot uses upsert).
+    await as(null, 'service_role', () =>
+      db.query(`INSERT INTO newsdesk_seen_links (url, source) VALUES ('https://x.edu.ng/news/a', 'X University') ON CONFLICT (url) DO NOTHING`))
+    expect((await db.query(`SELECT source, baseline FROM newsdesk_seen_links`)).rows).toEqual([{ source: 'X University', baseline: true }])
+    for (const [uid, role] of [[ADMIN, 'authenticated'], [MEMBER, 'authenticated'], [null, 'anon']] as const) {
+      await expect(as(uid, role, () => db.query(`SELECT 1 FROM newsdesk_seen_links`))).rejects.toThrow(/permission denied/)
+    }
   })
   it('gives a published bot thread its forum share page, to anyone', async () => {
     const thread = (await db.query<{ id: string }>(`INSERT INTO threads (title) VALUES ('Bot thread') RETURNING id`)).rows[0].id

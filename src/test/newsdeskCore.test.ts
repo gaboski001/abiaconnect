@@ -10,6 +10,8 @@ import {
   buildCandidates,
   cleanUrl,
   extractArticleText,
+  extractHeadlineLinks,
+  newPageItems,
   holdReason,
   lagosDate,
   parseDraft,
@@ -324,7 +326,7 @@ describe('dates and share pages', () => {
     const id = '11111111-2222-3333-4444-555555555555'
     expect(sharePathFor('business-commerce', id)).toBe(`/share/forum-business-commerce.html?t=${id}`)
     expect(sharePathFor('brand-new-forum', id)).toBeNull()
-    expect(FORUM_CARDS).toHaveLength(16)
+    expect(FORUM_CARDS).toHaveLength(17)
     expect(sharePathFor('gossip', id)).toBe(`/share/forum-gossip.html?t=${id}`)
   })
 })
@@ -407,5 +409,88 @@ describe('posts a day in each forum', () => {
     expect(open({})).toEqual(['general-discussion', 'gossip', 'faith-spirituality']) // relationship is set to 0
     expect(open({ 'general-discussion': 2, gossip: 4, 'faith-spirituality': 1 })).toEqual(['general-discussion', 'faith-spirituality'])
     expect(open({ 'general-discussion': 3, gossip: 5, 'faith-spirituality': 2 })).toEqual([])
+  })
+})
+
+describe('news from institutions’ own websites', () => {
+  const PAGE = `<html><body>
+    <nav><a href="/">Home</a><a href="/about">About Us</a><a href="/admissions">Admissions</a></nav>
+    <script>var x = '<a href="/news/in-a-script-tag">This headline is inside a script and must be ignored</a>'</script>
+    <a href="/website/news/guu-secures-nuc-accreditation/">GUU Secures NUC Accreditation For Doctor Of Pharmacy</a>
+    <a href="https://www.gregoryuniversityuturu.edu.ng/website/news/resumption-date-2026/#top"><h3>Resumption date for the 2026/2027 session announced</h3></a>
+    <a href="/website/news/guu-secures-nuc-accreditation/">GUU Secures NUC Accreditation For Doctor Of Pharmacy</a>
+    <a href="/files/2026-admission-list-first-batch.pdf">Download the 2026 admission list (first batch) here</a>
+    <a href="https://facebook.com/gregoryuni/posts/123456789">Follow Gregory University on Facebook for more updates</a>
+    <a href="/news/1">Short link text</a>
+    <a href="javascript:void(0)">Click this button to open the main navigation menu</a>
+  </body></html>`
+  const links = extractHeadlineLinks(PAGE, 'https://gregoryuniversityuturu.edu.ng/')
+
+  it('finds headline links on the school’s own site, and leaves out menus, files and other sites', () => {
+    expect(links).toEqual([
+      { title: 'GUU Secures NUC Accreditation For Doctor Of Pharmacy', url: 'https://gregoryuniversityuturu.edu.ng/website/news/guu-secures-nuc-accreditation/' },
+      { title: 'Resumption date for the 2026/2027 session announced', url: 'https://www.gregoryuniversityuturu.edu.ng/website/news/resumption-date-2026/' },
+    ])
+    expect(extractHeadlineLinks(PAGE, 'not a web address')).toEqual([])
+  })
+
+  it('treats the first reading of a page as the starting point: nothing is offered as news', () => {
+    const first = newPageItems('Gregory University, Uturu', links, [], true, NOW)
+    expect(first.items).toEqual([])
+    expect(first.remember).toEqual(links.map((l) => ({ url: l.url, baseline: true })))
+  })
+
+  it('offers a link that appears later as that school’s news, for three days', () => {
+    const seen = [{ url: links[0].url, first_seen: '2026-10-01T06:30:00.000Z', baseline: true }]
+    const later = newPageItems('Gregory University, Uturu', links, seen, false, NOW)
+    expect(later.remember).toEqual([{ url: links[1].url, baseline: false }])
+    expect(later.items).toEqual([
+      {
+        title: 'Resumption date for the 2026/2027 session announced',
+        url: links[1].url,
+        publisher: 'Gregory University, Uturu',
+        published: NOW.toISOString(),
+        snippet: '',
+        scope: 'abia',
+        showbiz: false,
+        campus: true,
+      },
+    ])
+
+    const yesterday = [...seen, { url: links[1].url, first_seen: '2026-10-09T06:30:00.000Z', baseline: false }]
+    const again = newPageItems('Gregory University, Uturu', links, yesterday, false, NOW)
+    expect(again.remember).toEqual([]) // already remembered
+    expect(again.items.map((i) => i.published)).toEqual(['2026-10-09T06:30:00.000Z']) // still on offer
+    const stale = [...seen, { url: links[1].url, first_seen: '2026-10-05T06:30:00.000Z', baseline: false }]
+    expect(newPageItems('Gregory University, Uturu', links, stale, false, NOW).items).toEqual([])
+  })
+
+  it('tidies "Read More" link text into the headline', () => {
+    const { items } = newPageItems('Spiritan University, Nneochi', [{ title: 'Read More Spiritan University announces 8th matriculation ceremony', url: 'https://x/a' }], [], false, NOW)
+    expect(items[0].title).toBe('Spiritan University announces 8th matriculation ceremony')
+  })
+
+  it('marks school news, gives it its own share of the list, and puts it only in the Institutions forum', () => {
+    const { items: raw } = newPageItems('Gregory University, Uturu', links, [{ url: links[0].url, first_seen: '2026-10-08T08:00:00.000Z', baseline: false }], false, NOW)
+    const items = buildCandidates([...raw, ...parseRss(VANGUARD_XML, VANGUARD)], { now: NOW })
+    const campus = items.filter((i) => i.campus)
+    expect(campus.map((i) => i.title)).toEqual(['Resumption date for the 2026/2027 session announced', 'GUU Secures NUC Accreditation For Doctor Of Pharmacy'])
+    const forums: Forum[] = [...FORUMS, { slug: 'institutions', name: 'Institutions', description: null }]
+    const farm = items.find((i) => /Ohafia/.test(i.title))!
+    expect(selectionUserMessage({ forums, items, recentTitles: [], maxPicks: 4 })).toContain(`${campus[0].id}. [CAMPUS] `)
+    const picks = parseSelection(
+      JSON.stringify({
+        picks: [
+          { forum: 'education-career', ids: [campus[0].id] }, // school news outside Institutions
+          { forum: 'institutions', ids: [farm.id] }, // ordinary news in Institutions
+          { forum: 'institutions', ids: [campus[0].id] },
+        ],
+      }),
+      forums,
+      items,
+    )
+    expect(picks.map((p) => p.forum)).toEqual(['institutions'])
+    const msg = writerUserMessage({ forum: forums[3], pick: picks[0], articleText: {} })
+    expect(msg).toContain('This is news from a school in Abia State')
   })
 })
