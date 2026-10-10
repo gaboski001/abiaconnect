@@ -45,6 +45,7 @@ const LINK_GROUPS: Array<{ title: string; links: Array<{ label: string; href: st
       { label: 'Privacy policy', href: '/privacy-policy' },
       { label: 'Terms of service', href: '/terms-of-service' },
       { label: 'Cookie policy', href: '/cookie-policy' },
+      { label: 'Photo credits', href: '/photo-credits' },
     ],
   },
 ]

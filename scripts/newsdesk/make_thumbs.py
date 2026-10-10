@@ -2,7 +2,8 @@
 # into public/og/<slug>.jpg: headline on the emerald panel, a photo of the
 # topic on the right, a gold key-figure badge and the photographer's credit.
 # Photos are free-licence images from Wikimedia Commons (photos/credits.json);
-# the credit printed on the image is required by their licences.
+# their licences require a credit, which is given on the website's Photo
+# credits page (/photo-credits) instead of on each picture.
 # Run: python scripts/newsdesk/make_thumbs.py [slug ...]
 import json
 import os
@@ -20,6 +21,8 @@ PHOTOS = os.path.join(HERE, 'photos')
 CREDITS = json.load(open(os.path.join(PHOTOS, 'credits.json'), encoding='utf-8'))
 FONTS = 'C:/Windows/Fonts/'
 W, H = 1200, 630
+# Credits are listed on the website's Photo credits page, not printed on the pictures.
+SHOW_CREDIT = False
 FOOT = 92  # footer bar height
 PHOTO_X = 470  # photo starts here and fades in under the text panel
 FADE_END = 800
@@ -173,7 +176,7 @@ def make(post, logo):
             d.text((cx, by0 + sf_size + 26 + i * 26), line, font=slf, fill=(20, 60, 45), anchor='mm')
 
     # Photo credit (required by the photo licences)
-    if post.get('photo'):
+    if SHOW_CREDIT and post.get('photo'):
         cf = font('segoeui.ttf', 15)
         d.text((W - 40, H - FOOT - 22), credit_text(post), font=cf, fill=(235, 245, 240), anchor='rm')
 

@@ -25,14 +25,13 @@ const PHOTO_Y = 8 // under the gold line along the top
 const PHOTO_W = 730
 const PHOTO_H = 530 // down to the footer
 const FADE = 330 // the photo fades in from the left over this width
-const CREDIT_SHADE = 84
 
 export interface BannerFonts {
   bold: Uint8Array
   regular: Uint8Array
 }
 
-/** A report's own picture and the credit printed on it. */
+/** A report's own picture, and who published it. */
 export interface BannerPhoto {
   bytes: Uint8Array
   credit: string
@@ -45,7 +44,7 @@ export interface BannerPhoto {
  */
 export async function renderBanner(base: Uint8Array, fonts: BannerFonts, headline: string, photo?: BannerPhoto): Promise<Uint8Array> {
   const img = await Image.decode(base)
-  if (photo) await drawPhoto(img, fonts, photo)
+  if (photo) await drawPhoto(img, photo)
 
   const layout = new TextLayout({ maxWidth: COLUMN, wrapStyle: 'word' })
   const text = bannerHeadline(headline)
@@ -74,8 +73,11 @@ export async function renderBanner(base: Uint8Array, fonts: BannerFonts, headlin
   return await img.encodeJPEG(86)
 }
 
-/** The report's picture on the right of the card, faded in from the left, with its credit. */
-async function drawPhoto(img: Image, fonts: BannerFonts, photo: BannerPhoto): Promise<void> {
+/**
+ * The report's picture on the right of the card, faded in from the left. No
+ * credit is printed on it: the post names and links the newspaper under "Sources".
+ */
+async function drawPhoto(img: Image, photo: BannerPhoto): Promise<void> {
   const decoded = await Image.decode(photo.bytes)
   // A small picture stretched to this size looks blurred.
   if (decoded.width < 600 || decoded.height < 330) throw new Error('picture too small')
@@ -89,20 +91,6 @@ async function drawPhoto(img: Image, fonts: BannerFonts, photo: BannerPhoto): Pr
       const i = row + x * 4
       px[i + 3] = Math.round(px[i + 3] * Math.pow(x / FADE, 1.6))
     }
-    // Darkens towards the bottom so the credit can be read on any picture.
-    const depth = y - (PHOTO_H - CREDIT_SHADE)
-    if (depth > 0) {
-      const keep = 1 - 0.8 * (depth / CREDIT_SHADE)
-      for (let x = 0; x < PHOTO_W; x++) {
-        const i = row + x * 4
-        px[i] = px[i] * keep
-        px[i + 1] = px[i + 1] * keep
-        px[i + 2] = px[i + 2] * keep
-      }
-    }
   }
   img.composite(pic, PHOTO_X, PHOTO_Y)
-
-  const credit = await Image.renderText(fonts.regular, 17, photo.credit, 0xebf5f0ff)
-  img.composite(credit, PHOTO_X + PHOTO_W - 40 - credit.width, PHOTO_Y + PHOTO_H - 14 - credit.height)
 }
