@@ -13,6 +13,8 @@ export interface Feed {
   url: string
   /** 'abia': every item counts as Abia news. 'wider': Nigerian news; items naming Abia places still count as Abia. */
   scope: Scope
+  /** Entertainment and celebrity news, for the Gossip forum. */
+  showbiz?: boolean
 }
 
 const GOOGLE = (q: string) =>
@@ -26,7 +28,45 @@ export const FEEDS: Feed[] = [
   { name: 'Punch', url: 'https://rss.punchng.com/v1/category/latest_news', scope: 'wider' },
   { name: 'Premium Times', url: 'https://www.premiumtimesng.com/feed', scope: 'wider' },
   { name: 'Daily Post', url: 'https://dailypost.ng/feed/', scope: 'wider' },
+  { name: 'BusinessDay', url: 'https://businessday.ng/feed/', scope: 'wider' },
+  { name: 'Leadership', url: 'https://leadership.ng/feed/', scope: 'wider' },
+  { name: 'Daily Trust', url: 'https://dailytrust.com/feed/', scope: 'wider' },
+  { name: 'Channels TV', url: 'https://www.channelstv.com/feed/', scope: 'wider' },
+  { name: 'Vanguard', url: 'https://www.vanguardngr.com/category/entertainment/feed/', scope: 'wider', showbiz: true },
+  { name: 'Daily Post', url: 'https://dailypost.ng/entertainment/feed/', scope: 'wider', showbiz: true },
+  { name: 'Premium Times', url: 'https://www.premiumtimesng.com/category/entertainment/feed', scope: 'wider', showbiz: true },
+  { name: 'Nigerian Tribune', url: 'https://tribuneonlineng.com/category/entertainment/feed/', scope: 'wider', showbiz: true },
+  { name: 'BellaNaija', url: 'https://www.bellanaija.com/feed/', scope: 'wider', showbiz: true },
 ]
+
+/**
+ * The only publishers the bot uses. Google News and Bing News gather stories
+ * from every kind of site, blogs and rumour pages included; a story is kept
+ * only when its publisher's website is on this list (established newspapers,
+ * broadcasters, news agencies and specialist desks).
+ */
+export const TRUSTED_SITES = [
+  // Nigerian newspapers
+  'vanguardngr.com', 'punchng.com', 'premiumtimesng.com', 'dailypost.ng', 'guardian.ng', 'thisdaylive.com',
+  'thenationonlineng.net', 'thesun.ng', 'sunnewsonline.com', 'tribuneonlineng.com', 'leadership.ng', 'dailytrust.com',
+  'businessday.ng', 'independent.ng', 'newtelegraphng.com', 'thewhistler.ng', 'thecable.ng', 'saharareporters.com',
+  'blueprint.ng', 'icirnigeria.org', 'nairametrics.com',
+  // Broadcasters and agencies
+  'channelstv.com', 'arise.tv', 'tvcnews.tv', 'nta.ng', 'nannews.ng', 'radionigeria.gov.ng',
+  'bbc.com', 'bbc.co.uk', 'reuters.com', 'apnews.com', 'aljazeera.com', 'dw.com', 'voanews.com', 'cnn.com',
+  // Sport, technology, entertainment
+  'completesports.com', 'goal.com', 'espn.com', 'cafonline.com', 'techcabal.com', 'techpoint.africa', 'bellanaija.com',
+  'pulse.ng', 'legit.ng',
+  // Government
+  'abiastate.gov.ng',
+]
+
+/** Is this website (or a section of it, like www. or sport.) a trusted publisher? */
+export function isTrustedSite(host: string): boolean {
+  const h = host.toLowerCase().replace(/^www\./, '')
+  if (/^(hausa|yoruba|igbo|fr|ar)\./.test(h)) return false // other-language editions
+  return TRUSTED_SITES.some((site) => h === site || h.endsWith(`.${site}`))
+}
 
 /** Forums that have a share picture on the website (public/og/forum-<slug>.jpg). */
 export const FORUM_CARDS = [
@@ -45,7 +85,11 @@ export const FORUM_CARDS = [
   'success-stories',
   'security-safety',
   'faith-spirituality',
+  'gossip',
 ]
+
+/** The forum for entertainment and celebrity news. */
+export const GOSSIP_FORUM = 'gossip'
 
 export interface NewsItem {
   id: number
@@ -56,6 +100,8 @@ export interface NewsItem {
   published: string
   snippet: string
   scope: Scope
+  /** Entertainment or celebrity news. */
+  showbiz: boolean
 }
 
 export interface Forum {
@@ -142,6 +188,11 @@ export function parseRss(xml: string, feed: Feed): RawItem[] {
     const when = new Date(plainText(tag(item, 'pubDate')))
     if (!title || !url || Number.isNaN(when.getTime())) continue
 
+    // Trusted publishers only. Google names the publisher's website on each
+    // item (its own link is a redirect); for the others it is the link itself.
+    const sourceSite = item.match(/<source\s[^>]*url="https?:\/\/([^"\/]+)/i)?.[1] ?? new URL(url).hostname
+    if (!isTrustedSite(sourceSite)) continue
+
     // Publisher: Google and Bing name it per item; a newspaper's own feed is that newspaper.
     const named = plainText(tag(item, 'source')) || plainText(tag(item, 'News:Source'))
     const publisher = (named || feed.name).slice(0, 80)
@@ -162,7 +213,7 @@ export function parseRss(xml: string, feed: Feed): RawItem[] {
     if (/\/promoted\/|\/sponsored\//i.test(url) || /\b(sponsored|advertorial)\b/i.test(title)) continue
 
     const scope: Scope = feed.scope === 'abia' || ABIA_RE.test(`${title} ${snippet}`) ? 'abia' : 'wider'
-    out.push({ title: title.slice(0, 300), url, publisher, published: when.toISOString(), snippet, scope })
+    out.push({ title: title.slice(0, 300), url, publisher, published: when.toISOString(), snippet, scope, showbiz: feed.showbiz === true })
   }
   return out
 }
@@ -174,15 +225,20 @@ export interface CandidateOptions {
   usedTitles?: Iterable<string>
   maxAbia?: number
   maxWider?: number
+  maxShowbiz?: number
 }
 
-/** Fresh, unused stories, newest first, numbered for the AI. Abia: last 48 hours; wider: last 30. */
+/**
+ * Fresh, unused stories, newest first, numbered for the AI. Abia: last 48
+ * hours; national and entertainment: last 30. Each kind has its own share of
+ * the list, so a busy day of one kind does not crowd out the others.
+ */
 export function buildCandidates(raw: RawItem[], opts: CandidateOptions): NewsItem[] {
   const usedUrls = new Set(opts.usedUrls ?? [])
   const seen = new Set([...(opts.usedTitles ?? [])].map(titleKey))
   const now = opts.now.getTime()
   const picked: RawItem[] = []
-  const left: Record<Scope, number> = { abia: opts.maxAbia ?? 60, wider: opts.maxWider ?? 50 }
+  const left = { abia: opts.maxAbia ?? 60, wider: opts.maxWider ?? 50, showbiz: opts.maxShowbiz ?? 25 }
 
   const sorted = [...raw].sort((a, b) => b.published.localeCompare(a.published))
   for (const item of sorted) {
@@ -191,10 +247,11 @@ export function buildCandidates(raw: RawItem[], opts: CandidateOptions): NewsIte
     if (age > limit || age < -3600_000) continue
     const key = titleKey(item.title)
     if (key.length < 12 || seen.has(key) || usedUrls.has(item.url)) continue
-    if (left[item.scope] <= 0) continue
+    const kind = item.showbiz ? 'showbiz' : item.scope
+    if (left[kind] <= 0) continue
     seen.add(key)
     usedUrls.add(item.url)
-    left[item.scope]--
+    left[kind]--
     picked.push(item)
   }
   return picked.map((item, i) => ({ ...item, id: i + 1 }))
@@ -213,8 +270,9 @@ export function selectionSystemPrompt(): string {
     '- At most ONE story per forum, and never the same story in two forums.',
     '- Only choose a story that clearly fits the forum and that members would really want to discuss. If a forum has no good story today, leave it out. Fewer, better picks are preferred; never pad.',
     '- Abia State stories (marked [ABIA]) come first. Use a wider Nigerian story (marked [NIGERIA]) only when the forum has no Abia story and the story clearly affects Abians (prices, jobs, schools, health, farming, travel, diaspora).',
-    '- Leave out: stories already discussed (listed below), adverts and press releases, betting, celebrity gossip, graphic crime, unverified rumours, and stories about private individuals.',
-    '- You may list up to 3 headline numbers for one pick when they are reports of the SAME story. Prefer reports from established newspapers and broadcasters over blogs.',
+    `- Entertainment and celebrity stories (marked [SHOWBIZ]) go ONLY in the "${GOSSIP_FORUM}" forum, and that forum takes ONLY [SHOWBIZ] stories: music, film, television, fashion and what public figures have said or done in public. It does not need an Abia link. If "${GOSSIP_FORUM}" is not in the list of forums, leave [SHOWBIZ] stories out.`,
+    '- Leave out: stories already discussed (listed below), adverts and press releases, betting, graphic crime, unverified rumours, anything about a person\'s health, body or sex life, and stories about private individuals.',
+    '- You may list up to 3 headline numbers for one pick when they are reports of the SAME story.',
     '- Set "sensitive" to true when the story involves deaths, violence, crime or arrests, court cases, accusations against a named person or organisation, elections, parties or candidates, ethnic or religious tension, or health scares.',
     '',
     'Reply with JSON only, in this shape:',
@@ -234,12 +292,12 @@ export function selectionUserMessage(args: {
   const items = args.items
     .map((i) => {
       const day = i.published.slice(0, 10)
-      const mark = i.scope === 'abia' ? '[ABIA]' : '[NIGERIA]'
+      const mark = i.showbiz ? '[SHOWBIZ]' : i.scope === 'abia' ? '[ABIA]' : '[NIGERIA]'
       return `${i.id}. ${mark} ${i.title} (${i.publisher}, ${day})${i.snippet ? `\n   ${i.snippet.slice(0, 220)}` : ''}`
     })
     .join('\n')
   const recent = args.recentTitles.length
-    ? args.recentTitles.slice(0, 40).map((t) => `- ${t}`).join('\n')
+    ? args.recentTitles.slice(0, 80).map((t) => `- ${t}`).join('\n')
     : '(none)'
   return [
     `Choose at most ${args.maxPicks} picks.`,
@@ -288,6 +346,9 @@ export function parseSelection(text: string, forums: Forum[], items: NewsItem[])
       .filter((n) => byId.has(n) && !usedItems.has(n))
       .slice(0, 3)
     if (!ids.length) continue
+    // Entertainment news belongs in the Gossip forum, and nothing else does.
+    const showbiz = ids.map((n) => byId.get(n)!.showbiz)
+    if (forum === GOSSIP_FORUM ? showbiz.includes(false) : showbiz.includes(true)) continue
     usedForums.add(forum)
     ids.forEach((n) => usedItems.add(n))
     const chosen = ids.map((n) => byId.get(n)!)
@@ -312,6 +373,25 @@ export function prioritise(picks: Pick[], room: number, lastPosted: Record<strin
       return (lastPosted[a.forum] ?? '').localeCompare(lastPosted[b.forum] ?? '')
     })
     .slice(0, Math.max(0, room))
+}
+
+/**
+ * Forums the bot may still post in today. Each forum has its own daily number
+ * of posts (busy forums get more); 0 means the bot stays out of that forum.
+ */
+export function openForums<T extends { slug: string }>(
+  forums: T[],
+  postedToday: Record<string, number>,
+  limits: Record<string, unknown> | null | undefined,
+  defaultLimit: number,
+): T[] {
+  return forums.filter((f) => (postedToday[f.slug] ?? 0) < forumLimit(f.slug, limits, defaultLimit))
+}
+
+export function forumLimit(slug: string, limits: Record<string, unknown> | null | undefined, defaultLimit: number): number {
+  const own = Number(limits?.[slug])
+  const n = Number.isFinite(own) && limits?.[slug] !== null && limits?.[slug] !== undefined ? own : defaultLimit
+  return Math.min(10, Math.max(0, Math.floor(n)))
 }
 
 // ---------------------------------------------------------------------------
@@ -373,7 +453,12 @@ export function writerUserMessage(args: { forum: Forum; pick: Pick; articleText:
         .join('\n')
     })
     .join('\n\n---\n\n')
-  return [`Forum: ${args.forum.name}`, args.pick.scope === 'wider' ? 'This is a national story: ask how it affects Abians.' : '', '', reports]
+  const note = args.pick.items.some((i) => i.showbiz)
+    ? 'This is entertainment news: keep it light and fair, say only what the publisher reports the person said or did in public, and ask members what they think.'
+    : args.pick.scope === 'wider'
+      ? 'This is a national story: ask how it affects Abians.'
+      : ''
+  return [`Forum: ${args.forum.name}`, note, '', reports]
     .filter((line, i) => line !== '' || i === 2)
     .join('\n')
 }

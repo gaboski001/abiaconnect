@@ -24,6 +24,12 @@ IMG_VERSION = 1
 PHOTO_OVERRIDES = {
     'real-estate-housing': ('Abia_state_tower_jpg.jpg', None, 'Abia State Tower'),
 }
+# Forums added after the October 2026 posts (posts.py has one post per older forum).
+# No people in these photos: a face on the card would sit beside every headline.
+EXTRA_FORUMS = [
+    {'forum': 'gossip', 'label': 'Gossip', 'photo': 'A_dynamic_XLR_microphone_WEISRE_DM_701_jpg.jpg',
+     'photo_box': None, 'photo_caption': 'Microphone'},
+]
 
 PAGE = """<!doctype html>
 <html lang="en">
@@ -65,7 +71,7 @@ location.replace(ok ? {site_js} + '/thread/' + t : {site_js} + '/');
 
 
 def forum_cards():
-    for p in POSTS:
+    for p in [*POSTS, *EXTRA_FORUMS]:
         photo, box, caption = PHOTO_OVERRIDES.get(p['forum'], (p['photo'], p['photo_box'], p['photo_caption']))
         yield {
             'slug': f"forum-{p['forum']}",

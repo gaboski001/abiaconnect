@@ -37,7 +37,7 @@ async function callBot<T>(body: Record<string, unknown>): Promise<T> {
   return data as T
 }
 
-const DAILY_LIMITS = [3, 5, 8, 10, 15]
+const FORUM_LIMITS = [0, 1, 2, 3, 4, 5]
 
 /**
  * Admin -> Newsdesk Bot: switch the daily news posts on or off, try a test
@@ -114,7 +114,7 @@ export default function NewsdeskSection() {
   })
 
   const save = useMutation({
-    mutationFn: async (fields: { enabled?: boolean; max_posts_per_day?: number; review_slugs?: string[] }) => {
+    mutationFn: async (fields: { enabled?: boolean; forum_limits?: Record<string, number>; review_slugs?: string[] }) => {
       const { error } = await supabase
         .from('newsdesk_settings')
         .update({ ...fields, updated_at: new Date().toISOString() })
@@ -124,7 +124,7 @@ export default function NewsdeskSection() {
     },
     onSuccess: (fields) => {
       qc.invalidateQueries({ queryKey: ['admin-newsdesk-settings'] })
-      if (fields.enabled === true) toast.success('The bot is on', { description: 'It will post every morning at 07:30.' })
+      if (fields.enabled === true) toast.success('The bot is on', { description: 'It will post at 07:30, 12:30 and 17:30 every day.' })
       else if (fields.enabled === false) toast.success('The bot is off', { description: 'Nothing will be posted until you switch it on.' })
       else toast.success('Saved')
     },
@@ -166,6 +166,12 @@ export default function NewsdeskSection() {
   const busy = run.isPending
   const lastRun = runs.data?.[0]
 
+  const limits = (s?.forum_limits ?? {}) as Record<string, number>
+  const limitFor = (slug: string) => {
+    const n = Number(limits[slug] ?? s?.default_forum_limit ?? 2)
+    return FORUM_LIMITS.includes(n) ? n : 2
+  }
+
   const toggleReview = (slug: string) => {
     if (!s) return
     const next = s.review_slugs.includes(slug) ? s.review_slugs.filter((x) => x !== slug) : [...s.review_slugs, slug]
@@ -190,7 +196,7 @@ export default function NewsdeskSection() {
               <Newspaper className="size-4" /> Newsdesk Bot
             </h2>
             <p className="text-sm text-muted-foreground">
-              Every morning it reads the news, picks the freshest story for each forum (Abia stories first) and starts a
+              Three times a day it reads trusted news sources, picks the freshest story for each forum (Abia stories first) and starts a
               discussion. It only posts in forums that have real news that day.
             </p>
           </div>
@@ -202,7 +208,7 @@ export default function NewsdeskSection() {
               onCheckedChange={(on) => save.mutate({ enabled: on })}
             />
             <Label htmlFor="newsdesk-enabled" className="text-sm">
-              {s.enabled ? 'On: posts every morning at 07:30' : 'Off'}
+              {s.enabled ? 'On: posts at 07:30, 12:30 and 17:30' : 'Off'}
             </Label>
           </div>
         </div>
@@ -221,7 +227,7 @@ export default function NewsdeskSection() {
 
         <p className="text-sm text-muted-foreground">
           <strong>Test run</strong> writes today's posts and puts all of them below for you to read; nothing is published
-          unless you approve it. <strong>Run now</strong> does what the bot does every morning: everyday topics are
+          unless you approve it. <strong>Run now</strong> does what the bot does at each of its daily runs: everyday topics are
           published straight away, sensitive ones wait for you.
         </p>
 
@@ -327,31 +333,33 @@ export default function NewsdeskSection() {
 
       <section className="rounded-2xl border bg-card p-5 space-y-4">
         <h2 className="font-bold">Settings</h2>
-        <div className="space-y-2">
-          <Label>Most posts in one day</Label>
-          <div className="flex flex-wrap gap-2">
-            {DAILY_LIMITS.map((n) => (
-              <Button
-                key={n}
-                size="sm"
-                variant={s.max_posts_per_day === n ? 'default' : 'outline'}
-                disabled={save.isPending}
-                onClick={() => save.mutate({ max_posts_per_day: n })}
-              >
-                {n}
-              </Button>
-            ))}
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Forums where every post waits for your approval</Label>
-          <p className="text-xs text-muted-foreground">
-            In the other forums, posts are published by themselves unless the story looks sensitive (for example deaths,
-            crime, court cases or elections).
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {(categories.data ?? []).map((c) => (
-              <label key={c.id} className="flex items-center gap-2 text-sm">
+        <p className="text-sm text-muted-foreground">
+          Choose how many posts the bot may make in each forum per day (0 keeps the bot out of that forum), and tick the
+          forums where every post must wait for your approval. The bot adds at most one post to a forum each time it
+          runs, so a forum set to 3 gets a fresh story in the morning, at midday and in the evening. In forums that are
+          not ticked, posts are published by themselves unless the story looks sensitive (for example deaths, crime,
+          court cases or elections).
+        </p>
+        <ul className="divide-y rounded-xl border">
+          {(categories.data ?? []).map((c) => (
+            <li key={c.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
+              <span className="min-w-0 flex-1 font-medium">{c.name}</span>
+              <label className="flex items-center gap-2 text-muted-foreground">
+                Posts a day
+                <select
+                  className="rounded-md border bg-background px-2 py-1 text-foreground"
+                  value={limitFor(c.slug)}
+                  disabled={save.isPending}
+                  onChange={(e) => save.mutate({ forum_limits: { ...limits, [c.slug]: Number(e.target.value) } })}
+                >
+                  {FORUM_LIMITS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-2 text-muted-foreground">
                 <input
                   type="checkbox"
                   className="size-4 accent-current"
@@ -359,13 +367,12 @@ export default function NewsdeskSection() {
                   disabled={save.isPending}
                   onChange={() => toggleReview(c.slug)}
                 />
-                {c.name}
+                Ask me first
               </label>
-            ))}
-          </div>
-        </div>
+            </li>
+          ))}
+        </ul>
       </section>
-
       <section className="rounded-2xl border bg-card p-5 space-y-3">
         <h2 className="font-bold">Recent posts</h2>
         {history.length === 0 ? (

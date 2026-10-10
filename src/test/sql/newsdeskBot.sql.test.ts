@@ -27,7 +27,8 @@ const PRELUDE = `
   GRANT EXECUTE ON FUNCTION public.is_admin(uuid) TO anon, authenticated, service_role;
 
   CREATE TABLE public.profiles (id uuid PRIMARY KEY, display_name text);
-  CREATE TABLE public.categories (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL, slug text UNIQUE);
+  CREATE TABLE public.categories (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL, slug text UNIQUE,
+    description text, icon text, color text, display_order integer NOT NULL DEFAULT 0, is_active boolean NOT NULL DEFAULT true);
   CREATE TABLE public.threads (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), title text NOT NULL,
     is_deleted boolean NOT NULL DEFAULT false);
   CREATE TABLE public.notifications (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL,
@@ -41,7 +42,7 @@ const PRELUDE = `
   CREATE FUNCTION cron.unschedule(id bigint) RETURNS boolean LANGUAGE sql AS $$ DELETE FROM cron.job WHERE jobid = id RETURNING true $$;
 `
 
-const MIGRATION = ['20261010090000_newsdesk_bot.sql', '20261010120000_newsdesk_banners.sql', '20261010140000_newsdesk_share_feed.sql']
+const MIGRATION = ['20261010090000_newsdesk_bot.sql', '20261010120000_newsdesk_banners.sql', '20261010140000_newsdesk_share_feed.sql', '20261010160000_newsdesk_more_posts_and_gossip.sql']
   .map((f) => readFileSync(resolve(__dirname, '../../../supabase/migrations', f), 'utf8'))
   .join('\n')
 
@@ -75,18 +76,18 @@ describe('Newsdesk bot database', () => {
     await db.query(`INSERT INTO auth.users VALUES ($1), ($2), ($3), ($4)`, [AUTHOR, ADMIN, ADMIN2, MEMBER])
     await db.query(`INSERT INTO profiles VALUES ($1, 'Newsdesk'), ($2, 'Admin'), ($3, 'Admin Two'), ($4, 'Member')`, [AUTHOR, ADMIN, ADMIN2, MEMBER])
     await db.query(`INSERT INTO admins VALUES ($1), ($2)`, [ADMIN, ADMIN2])
-    forum = (await db.query<{ id: string }>(`INSERT INTO categories (name, slug) VALUES ('Business & Commerce', 'business-commerce') RETURNING id`)).rows[0].id
+    forum = (await db.query<{ id: string }>(`INSERT INTO categories (name, slug, display_order) VALUES ('Business & Commerce', 'business-commerce', 3) RETURNING id`)).rows[0].id
     await db.exec(MIGRATION)
   })
 
-  it('starts switched off, posting as the Newsdesk account, with the four sensitive forums held', async () => {
+  it('starts switched off, posting as the Newsdesk account, with the sensitive forums and Gossip held', async () => {
     const s = (await db.query(`SELECT enabled, author_id, max_posts_per_day, review_slugs FROM newsdesk_settings`)).rows
     expect(s).toEqual([
       {
         enabled: false,
         author_id: AUTHOR,
         max_posts_per_day: 8,
-        review_slugs: ['politics-governance', 'security-safety', 'health-wellness', 'faith-spirituality'],
+        review_slugs: ['politics-governance', 'security-safety', 'health-wellness', 'faith-spirituality', 'gossip'],
       },
     ])
   })
@@ -95,7 +96,7 @@ describe('Newsdesk bot database', () => {
     await db.query(`UPDATE newsdesk_settings SET enabled = true, max_posts_per_day = 5`)
     await db.exec(MIGRATION)
     expect((await db.query(`SELECT enabled, max_posts_per_day FROM newsdesk_settings`)).rows).toEqual([{ enabled: true, max_posts_per_day: 5 }])
-    expect((await db.query(`SELECT jobname, schedule FROM cron.job`)).rows).toEqual([{ jobname: 'daily-newsdesk', schedule: '30 6 * * *' }])
+    expect((await db.query(`SELECT jobname, schedule FROM cron.job`)).rows).toEqual([{ jobname: 'daily-newsdesk', schedule: '30 6,11,16 * * *' }])
   })
 
   it('leaves the posting account empty when the Newsdesk account does not exist', async () => {
@@ -133,15 +134,35 @@ describe('Newsdesk bot database', () => {
     expect((await db.query(`SELECT status FROM newsdesk_posts`)).rows).toEqual([{ status: 'rejected' }])
   })
 
-  it('allows one live post per forum per day; a rejected one frees the slot', async () => {
-    const first = (await post()).rows[0].id
-    await expect(post()).rejects.toThrow(/newsdesk_posts_one_per_forum_per_day/)
-    await post({ run_date: '2026-10-11' }) // tomorrow is fine
-    await db.query(`UPDATE newsdesk_posts SET status = 'rejected' WHERE id = $1`, [first])
+  it('allows several posts in a forum on the same day', async () => {
     await post()
+    await post({ title: 'Second story' })
+    await post({ title: 'Third story' })
+    expect((await db.query(`SELECT 1 FROM newsdesk_posts WHERE run_date = '2026-10-10'`)).rows).toHaveLength(3)
     await expect(post({ status: 'draft' })).rejects.toThrow(/check/)
   })
 
+  it('gives each forum its own number of posts a day, more for the busy forums', async () => {
+    const s = (await db.query<{ default_forum_limit: number; forum_limits: Record<string, number> }>(
+      `SELECT default_forum_limit, forum_limits FROM newsdesk_settings`,
+    )).rows[0]
+    expect(s).toEqual({
+      default_forum_limit: 2,
+      forum_limits: { 'general-discussion': 3, 'politics-governance': 3, 'culture-heritage': 3, gossip: 3 },
+    })
+    await as(ADMIN, 'authenticated', () => db.query(`UPDATE newsdesk_settings SET forum_limits = '{"gossip": 5, "relationship": 0}'`))
+    expect((await db.query(`SELECT forum_limits FROM newsdesk_settings`)).rows[0]).toEqual({ forum_limits: { gossip: 5, relationship: 0 } })
+    await expect(as(ADMIN, 'authenticated', () => db.query(`UPDATE newsdesk_settings SET default_forum_limit = 50`))).rejects.toThrow(/check/)
+  })
+
+  it('creates the Gossip forum once, last in the list, held for approval', async () => {
+    const rows = (await db.query(`SELECT name, slug, icon, display_order, is_active FROM categories WHERE slug = 'gossip'`)).rows
+    expect(rows).toEqual([{ name: 'Gossip', slug: 'gossip', icon: '🎤', display_order: 4, is_active: true }])
+    await db.query(`UPDATE categories SET name = 'Gist & Gossip' WHERE slug = 'gossip'`)
+    await db.exec(MIGRATION)
+    expect((await db.query(`SELECT name FROM categories WHERE slug = 'gossip'`)).rows).toEqual([{ name: 'Gist & Gossip' }])
+    expect((await db.query<{ review_slugs: string[] }>(`SELECT review_slugs FROM newsdesk_settings`)).rows[0].review_slugs.filter((x) => x === 'gossip')).toHaveLength(1)
+  })
   it('gives a published bot thread its forum share page, to anyone', async () => {
     const thread = (await db.query<{ id: string }>(`INSERT INTO threads (title) VALUES ('Bot thread') RETURNING id`)).rows[0].id
     const other = (await db.query<{ id: string }>(`INSERT INTO threads (title) VALUES ('Member thread') RETURNING id`)).rows[0].id
@@ -217,9 +238,9 @@ describe('Newsdesk bot database', () => {
     }
   })
 
-  it('schedules the daily run at 07:30 Lagos with the scheduler sign-in', async () => {
+  it('schedules three runs a day (07:30, 12:30, 17:30 Lagos) with the scheduler sign-in', async () => {
     const job = (await db.query<{ schedule: string; command: string }>(`SELECT schedule, command FROM cron.job WHERE jobname = 'daily-newsdesk'`)).rows[0]
-    expect(job.schedule).toBe('30 6 * * *')
+    expect(job.schedule).toBe('30 6,11,16 * * *')
     expect(job.command).toContain('/functions/v1/daily-newsdesk')
     expect(job.command).toContain("'x-cron-token'")
     expect(job.command).toContain('abia_cron_token')

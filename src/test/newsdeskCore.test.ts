@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest'
 import {
   FEEDS,
   FORUM_CARDS,
+  forumLimit,
+  isTrustedSite,
+  openForums,
   bannerHeadline,
   bannerHtml,
   buildCandidates,
@@ -321,6 +324,88 @@ describe('dates and share pages', () => {
     const id = '11111111-2222-3333-4444-555555555555'
     expect(sharePathFor('business-commerce', id)).toBe(`/share/forum-business-commerce.html?t=${id}`)
     expect(sharePathFor('brand-new-forum', id)).toBeNull()
-    expect(FORUM_CARDS).toHaveLength(15)
+    expect(FORUM_CARDS).toHaveLength(16)
+    expect(sharePathFor('gossip', id)).toBe(`/share/forum-gossip.html?t=${id}`)
+  })
+})
+
+describe('trusted publishers only', () => {
+  it('knows established outlets and their sections, and refuses blogs', () => {
+    for (const site of ['www.vanguardngr.com', 'punchng.com', 'thewhistler.ng', 'sport.bbc.co.uk', 'www.channelstv.com', 'abiastate.gov.ng']) {
+      expect(isTrustedSite(site), site).toBe(true)
+    }
+    for (const site of ['gistlover.com', 'gistmania.com', 'tori.ng', 'footballinnigeria.com.ng', 'notpunchng.com', 'hausa.legit.ng', 'punchng.com.evil.example']) {
+      expect(isTrustedSite(site), site).toBe(false)
+    }
+  })
+
+  it('drops Google and Bing stories from publishers that are not on the list', () => {
+    const google = `<item><title>Singer in fresh scandal - Gistlover</title><link>https://news.google.com/rss/articles/A?oc=5</link><pubDate>Fri, 09 Oct 2026 19:54:40 GMT</pubDate><source url="https://www.gistlover.com">Gistlover</source></item>
+<item><title>Abia innovator wins N100m award - The Sun Nigeria</title><link>https://news.google.com/rss/articles/B?oc=5</link><pubDate>Fri, 09 Oct 2026 19:54:40 GMT</pubDate><source url="https://thesun.ng">The Sun Nigeria</source></item>`
+    expect(parseRss(google, GOOGLE).map((i) => i.publisher)).toEqual(['The Sun Nigeria'])
+    const bing = `<item><title>Rumour blog story about Abia</title><link>http://www.bing.com/news/apiclick.aspx?url=https%3a%2f%2ftori.ng%2fnews%2f1%2f</link><pubDate>Fri, 09 Oct 2026 11:50:00 GMT</pubDate><News:Source>Tori</News:Source></item>`
+    expect(parseRss(bing, BING)).toEqual([])
+  })
+})
+
+describe('entertainment news and the Gossip forum', () => {
+  const SHOWBIZ = FEEDS.find((f) => f.showbiz)!
+  const xml = `<item><title>Singer announces new album and world tour dates</title><link>https://www.vanguardngr.com/2026/10/album/</link><pubDate>Fri, 09 Oct 2026 21:00:00 +0000</pubDate><description><![CDATA[<p>The singer made the announcement on stage.</p>]]></description></item>`
+  const items = buildCandidates([...parseRss(xml, SHOWBIZ), ...parseRss(VANGUARD_XML, VANGUARD)], { now: NOW })
+  const star = items.find((i) => i.showbiz)!
+  const farm = items.find((i) => /Ohafia/.test(i.title))!
+  const forums: Forum[] = [...FORUMS, { slug: 'gossip', name: 'Gossip', description: null }]
+
+  it('marks entertainment stories and gives them their own share of the list', () => {
+    expect(star.showbiz).toBe(true)
+    expect(farm.showbiz).toBe(false)
+    expect(selectionUserMessage({ forums, items, recentTitles: [], maxPicks: 4 })).toContain(`${star.id}. [SHOWBIZ] Singer announces`)
+    const many = Array.from({ length: 40 }, (_, n) => ({ ...star, title: `Showbiz story number ${n} with a long headline`, url: `https://x/${n}` }))
+    expect(buildCandidates(many, { now: NOW })).toHaveLength(25)
+  })
+
+  it('puts entertainment stories only in Gossip, and nothing else there', () => {
+    const picks = parseSelection(
+      JSON.stringify({
+        picks: [
+          { forum: 'education-career', ids: [star.id] }, // showbiz outside Gossip
+          { forum: 'gossip', ids: [farm.id] }, // ordinary news in Gossip
+          { forum: 'agriculture-farming', ids: [farm.id] },
+          { forum: 'gossip', ids: [star.id] },
+        ],
+      }),
+      forums,
+      items,
+    )
+    expect(picks.map((p) => p.forum)).toEqual(['agriculture-farming', 'gossip'])
+  })
+
+  it('tells the writer to keep entertainment news light and fair', () => {
+    const pick: Pick = { forum: 'gossip', items: [star], scope: 'wider', sensitive: false }
+    const msg = writerUserMessage({ forum: forums[3], pick, articleText: {} })
+    expect(msg).toContain('This is entertainment news')
+    expect(msg).not.toContain('ask how it affects Abians')
+  })
+})
+
+describe('posts a day in each forum', () => {
+  const forums = [{ slug: 'general-discussion' }, { slug: 'relationship' }, { slug: 'gossip' }, { slug: 'faith-spirituality' }]
+  const limits = { 'general-discussion': 3, relationship: 0, gossip: '4' }
+
+  it('uses a forum’s own number, or the default', () => {
+    expect(forumLimit('general-discussion', limits, 2)).toBe(3)
+    expect(forumLimit('gossip', limits, 2)).toBe(4)
+    expect(forumLimit('faith-spirituality', limits, 2)).toBe(2)
+    expect(forumLimit('relationship', limits, 2)).toBe(0)
+    expect(forumLimit('x', { x: 999 }, 2)).toBe(10)
+    expect(forumLimit('x', { x: 'many' }, 2)).toBe(2)
+    expect(forumLimit('x', null, 2)).toBe(2)
+  })
+
+  it('keeps a forum open until it has had all its posts for the day', () => {
+    const open = (posted: Record<string, number>) => openForums(forums, posted, limits, 2).map((f) => f.slug)
+    expect(open({})).toEqual(['general-discussion', 'gossip', 'faith-spirituality']) // relationship is set to 0
+    expect(open({ 'general-discussion': 2, gossip: 4, 'faith-spirituality': 1 })).toEqual(['general-discussion', 'faith-spirituality'])
+    expect(open({ 'general-discussion': 3, gossip: 5, 'faith-spirituality': 2 })).toEqual([])
   })
 })

@@ -1,4 +1,4 @@
-// Newsdesk bot: runs at 07:30 Africa/Lagos via pg_cron, and from
+// Newsdesk bot: runs at 07:30, 12:30 and 17:30 Africa/Lagos via pg_cron, and from
 // Admin -> Newsdesk Bot ("Test run", "Run now", Approve, Reject).
 //
 // A run:
@@ -24,6 +24,7 @@ import {
   extractArticleText,
   holdReason,
   lagosDate,
+  openForums,
   parseDraft,
   parseRss,
   parseSelection,
@@ -131,6 +132,15 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
   if (!settings) return json({ error: 'Newsdesk settings are missing' }, 500)
   if (trigger === 'schedule' && !settings.enabled) return json({ ok: true, skipped: 'The bot is switched off' })
 
+  // One run at a time: two at once could write the same story twice.
+  const { data: busy } = await db
+    .from('newsdesk_runs')
+    .select('id')
+    .is('finished_at', null)
+    .gte('started_at', new Date(Date.now() - 4 * 60_000).toISOString())
+    .limit(1)
+  if (busy?.length) return json({ error: 'The bot is already working. Please wait a few minutes and try again.' }, 409)
+
   const { data: runRow } = await db.from('newsdesk_runs').insert({ trigger }).select('id').single()
   const finish = async (note: string, counts: { found?: number; published?: number; held?: number } = {}, ok = true) => {
     const fields = {
@@ -167,7 +177,7 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
       .limit(400)
     if (recentError) throw recentError
 
-    const taken = new Set<string>()
+    const postedToday: Record<string, number> = {}
     const lastPosted: Record<string, string> = {}
     const usedUrls: string[] = []
     const usedTitles: string[] = []
@@ -179,14 +189,21 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
       }
       if (r.status === 'rejected') continue
       recentTitles.push(r.title)
-      if (r.run_date === today) taken.add(r.category_slug)
+      if (r.run_date === today) postedToday[r.category_slug] = (postedToday[r.category_slug] ?? 0) + 1
       if (!lastPosted[r.category_slug] || r.run_date > lastPosted[r.category_slug]) lastPosted[r.category_slug] = r.run_date
     }
 
-    const room = settings.max_posts_per_day - taken.size
-    if (room <= 0) return await finish("Today's limit of posts is already reached.")
-    const forums: Forum[] = ((categories ?? []) as Array<Forum & { id: string }>).filter((c) => !taken.has(c.slug))
-    if (!forums.length) return await finish('Every forum already has a Newsdesk post today.')
+    // Each forum has its own number of posts a day (set in Admin -> Newsdesk
+    // Bot). A run adds at most one post to a forum, so a busy forum's posts
+    // are spread over the day's runs with the latest news each time.
+    const forums: Forum[] = openForums(
+      (categories ?? []) as Array<Forum & { id: string }>,
+      postedToday,
+      settings.forum_limits,
+      settings.default_forum_limit ?? 2,
+    )
+    if (!forums.length) return await finish('Every forum already has all its Newsdesk posts for today.')
+    const room = forums.length
     const categoryId = new Map(((categories ?? []) as Array<{ id: string; slug: string }>).map((c) => [c.slug, c.id]))
 
     // 1. Read the news.
@@ -201,7 +218,7 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
     const items = buildCandidates(raw, { now: new Date(), usedUrls, usedTitles })
     if (!items.length) {
       return await finish(
-        feedsRead ? 'No fresh stories today that the bot has not already used.' : 'The news feeds could not be reached. The bot will try again tomorrow.',
+        feedsRead ? 'No fresh stories today that the bot has not already used.' : 'The news feeds could not be reached. The bot will try again at its next run.',
         {},
         feedsRead > 0,
       )
@@ -209,14 +226,14 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
 
     // 2. Choose at most one story per forum.
     const chosen = await askAi(selectionSystemPrompt(), selectionUserMessage({ forums, items, recentTitles, maxPicks: room }), 0)
-    if (chosen === null) return await finish('The AI service did not answer. The bot will try again tomorrow.', { found: items.length }, false)
+    if (chosen === null) return await finish('The AI service did not answer. The bot will try again at its next run.', { found: items.length }, false)
     const picks = prioritise(parseSelection(chosen, forums, items), room, lastPosted)
     if (!picks.length) {
       return await finish(`Read ${items.length} fresh stories; none was a good fit for a forum today.`, { found: items.length })
     }
 
-    // 3. Write each discussion.
-    const written = await Promise.all(picks.map((pick) => write(pick, forums.find((f) => f.slug === pick.forum)!)))
+    // 3. Write each discussion (a few at a time, so the AI service is not flooded).
+    const written = await pooled(picks, 5, (pick) => write(pick, forums.find((f) => f.slug === pick.forum)!))
 
     // 4. Save, and publish what may go out by itself.
     let published = 0
@@ -267,11 +284,9 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
 
     // Each post's own banner, drawn side by side. Without one a post still
     // goes out, with its forum's picture.
-    await Promise.all(
-      saved.map(async (s) => {
-        s.post.banner_url = await makeBanner(s.post.id)
-      }),
-    )
+    await pooled(saved, 6, async (s) => {
+      s.post.banner_url = await makeBanner(s.post.id)
+    })
 
     for (const { post, hold } of saved) {
       if (hold) {
@@ -301,8 +316,23 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
     return await finish(parts.join(' '), { found: items.length, published, held })
   } catch (e) {
     console.error('newsdesk run failed', e instanceof Error ? e.message : String(e))
-    return await finish('The run stopped because of an error. The bot will try again tomorrow.', {}, false)
+    return await finish('The run stopped because of an error. The bot will try again at its next run.', {}, false)
   }
+}
+
+/** Runs fn over the items, at most `size` at a time, keeping their order. */
+async function pooled<T, R>(items: T[], size: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length)
+  let next = 0
+  await Promise.all(
+    Array.from({ length: Math.min(size, items.length) }, async () => {
+      while (next < items.length) {
+        const i = next++
+        out[i] = await fn(items[i])
+      }
+    }),
+  )
+  return out
 }
 
 /** Reads the reports for one pick and has the AI write the discussion. */
