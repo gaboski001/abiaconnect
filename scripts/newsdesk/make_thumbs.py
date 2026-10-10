@@ -120,27 +120,30 @@ def make(post, logo):
     d.rounded_rectangle((56, 50, 56 + lw + 40, 92), radius=21, fill=GOLD)
     d.text((76, 71), label, font=lf, fill=EMERALD_DARK, anchor='lm')
 
-    # Headline in the left column; soft shadow keeps it readable over the fade
-    col_w = 560
-    for size in (54, 50, 46, 42, 38):
-        hf = font('segoeuib.ttf', size)
-        lines = wrap(d, post['thumb_title'], hf, col_w)
-        if len(lines) <= 4:
-            break
-    shadow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    sdraw = ImageDraw.Draw(shadow)
-    y = 122
-    for line in lines:
-        sdraw.text((58, y + 3), line, font=hf, fill=(0, 0, 0, 170))
-        y += int(size * 1.2)
-    img = Image.alpha_composite(img, shadow.filter(ImageFilter.GaussianBlur(4)))
-    d = ImageDraw.Draw(img)
-    y = 122
-    for line in lines:
-        d.text((56, y), line, font=hf, fill=(255, 255, 255))
-        y += int(size * 1.2)
-    d.rectangle((56, y + 16, 150, y + 21), fill=GOLD)
-    d.text((56, y + 36), 'Join the discussion on AbiaConnect', font=font('segoeui.ttf', 25), fill=MINT)
+    # Headline in the left column; soft shadow keeps it readable over the fade.
+    # A card without a headline is a blank the Newsdesk bot writes each post's
+    # own headline onto (supabase/functions/newsdesk-banner).
+    if post.get('thumb_title'):
+        col_w = 560
+        for size in (54, 50, 46, 42, 38):
+            hf = font('segoeuib.ttf', size)
+            lines = wrap(d, post['thumb_title'], hf, col_w)
+            if len(lines) <= 4:
+                break
+        shadow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        sdraw = ImageDraw.Draw(shadow)
+        y = 122
+        for line in lines:
+            sdraw.text((58, y + 3), line, font=hf, fill=(0, 0, 0, 170))
+            y += int(size * 1.2)
+        img = Image.alpha_composite(img, shadow.filter(ImageFilter.GaussianBlur(4)))
+        d = ImageDraw.Draw(img)
+        y = 122
+        for line in lines:
+            d.text((56, y), line, font=hf, fill=(255, 255, 255))
+            y += int(size * 1.2)
+        d.rectangle((56, y + 16, 150, y + 21), fill=GOLD)
+        d.text((56, y + 36), 'Join the discussion on AbiaConnect', font=font('segoeui.ttf', 25), fill=MINT)
 
     # Gold key-figure badge on the photo (forum cards have no figure)
     if post.get('stat'):

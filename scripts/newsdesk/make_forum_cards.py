@@ -82,6 +82,9 @@ if __name__ == '__main__':
     out = os.path.join(ROOT, 'public', 'share')
     os.makedirs(out, exist_ok=True)
     for card in forum_cards():
+        # The blank the bot writes each post's own headline onto.
+        blank = make({**card, 'slug': card['slug'].replace('forum-', 'base-', 1), 'thumb_title': ''}, logo)
+        print(os.path.basename(blank), os.path.getsize(blank) // 1024, 'KB')
         path = make(card, logo)
         page = PAGE.format(
             title=html.escape(f"{card['label']}: today's talking point on AbiaConnect"),

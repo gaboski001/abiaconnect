@@ -91,12 +91,36 @@ Deno.serve(async (req) => {
     const link = await shareLink(db, thread.id)
     const message = `${thread.title}\n\nJoin the conversation on AbiaConnect:\n${link}`
 
-    const res = await fetch(`${FB_GRAPH}/${targetPageId}/feed`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, link, access_token: pageToken }),
-    })
-    const data = await res.json().catch(() => ({}))
+    // A Newsdesk bot thread with its own banner goes out as a picture post, so
+    // Facebook shows that post's banner. If Facebook refuses the picture, it is
+    // posted as a link like every other thread.
+    let res: Response | null = null
+    // deno-lint-ignore no-explicit-any
+    let data: any = {}
+    const banner = await bannerUrl(db, thread.id)
+    if (banner) {
+      const caption = `${thread.title}\n\nJoin the conversation on AbiaConnect:\n${SITE_URL}/thread/${thread.id}`
+      res = await fetch(`${FB_GRAPH}/${targetPageId}/photos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: banner, caption, access_token: pageToken }),
+      })
+      data = await res.json().catch(() => ({}))
+      // A picture post answers with the picture's id and the post's id; the post's id is the one to keep.
+      if (res.ok && data?.post_id) data.id = data.post_id
+      if (!res.ok || !data?.id) {
+        console.error('Facebook picture post refused, posting the link instead', safeFacebookError(data))
+        res = null
+      }
+    }
+    if (!res) {
+      res = await fetch(`${FB_GRAPH}/${targetPageId}/feed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, link, access_token: pageToken }),
+      })
+      data = await res.json().catch(() => ({}))
+    }
     if (!res.ok || !data?.id) {
       const err = safeFacebookError(data)
       console.error('Facebook API error', err)
@@ -151,6 +175,24 @@ async function shareLink(db: any, threadId: string): Promise<string> {
     // fall through to the thread link
   }
   return fallback
+}
+
+/** The banner of a published Newsdesk bot thread (kept in this project's own storage), or null. */
+// deno-lint-ignore no-explicit-any
+async function bannerUrl(db: any, threadId: string): Promise<string | null> {
+  try {
+    const { data } = await db
+      .from('newsdesk_posts')
+      .select('banner_url')
+      .eq('thread_id', threadId)
+      .eq('status', 'published')
+      .maybeSingle()
+    const url = data?.banner_url
+    const ours = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/newsdesk/banners/`
+    return typeof url === 'string' && url.startsWith(ours) && url.endsWith('.jpg') ? url : null
+  } catch {
+    return null
+  }
 }
 
 // deno-lint-ignore no-explicit-any

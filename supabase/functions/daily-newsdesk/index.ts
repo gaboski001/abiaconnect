@@ -19,6 +19,7 @@ import { requireScheduler } from '../_shared/cron-auth.ts'
 import { withinRateLimit } from '../_shared/rate-limit.ts'
 import {
   FEEDS,
+  bannerHtml,
   buildCandidates,
   extractArticleText,
   holdReason,
@@ -221,6 +222,9 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
     let published = 0
     let held = 0
     let failed = 0
+    let unsaved = 0
+    // deno-lint-ignore no-explicit-any
+    const saved: Array<{ post: any; hold: string | null }> = []
     for (const w of written) {
       if (!w) {
         failed++
@@ -242,6 +246,7 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
           category_slug: w.pick.forum,
           scope: w.pick.scope,
           title: w.draft.title,
+          banner_title: w.draft.banner,
           content: renderPostHtml(w.draft, w.sources),
           tags: w.draft.tags,
           sources: w.sources,
@@ -249,9 +254,26 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
         })
         .select('*')
         .maybeSingle()
-      // Another run posted in this forum a moment ago: leave it.
-      if (insertError || !post) continue
+      if (insertError || !post) {
+        // 23505: another run posted in this forum a moment ago. Anything else is a real problem.
+        if (insertError && insertError.code !== '23505') {
+          console.error('newsdesk post not saved', insertError.message)
+          unsaved++
+        }
+        continue
+      }
+      saved.push({ post, hold })
+    }
 
+    // Each post's own banner, drawn side by side. Without one a post still
+    // goes out, with its forum's picture.
+    await Promise.all(
+      saved.map(async (s) => {
+        s.post.banner_url = await makeBanner(s.post.id)
+      }),
+    )
+
+    for (const { post, hold } of saved) {
       if (hold) {
         held++
         continue
@@ -273,6 +295,9 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
     const parts = [`Read ${items.length} fresh stories from ${feedsRead} of ${FEEDS.length} news feeds.`]
     parts.push(`Published ${published}; ${held} waiting for approval.`)
     if (failed) parts.push(`${failed} could not be written and ${failed === 1 ? 'was' : 'were'} left out.`)
+    if (unsaved) parts.push(`${unsaved} could not be saved because of a database error.`)
+    const withoutBanner = saved.filter((s) => !s.post.banner_url).length
+    if (withoutBanner) parts.push(`${withoutBanner} without a banner (the forum picture is used instead).`)
     return await finish(parts.join(' '), { found: items.length, published, held })
   } catch (e) {
     console.error('newsdesk run failed', e instanceof Error ? e.message : String(e))
@@ -300,14 +325,34 @@ async function write(pick: Pick, forum: Forum) {
 // Publishing, approving, rejecting
 // ---------------------------------------------------------------------------
 
+/** Has the newsdesk-banner function draw and save the post's banner; null when it could not. */
+async function makeBanner(postId: string): Promise<string | null> {
+  try {
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/newsdesk-banner`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(30_000),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}`, apikey: key },
+      body: JSON.stringify({ post_id: postId }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) console.error('newsdesk banner failed', res.status)
+    return res.ok && typeof data?.url === 'string' ? data.url : null
+  } catch (e) {
+    console.error('newsdesk banner unreachable', e instanceof Error ? e.message : String(e))
+    return null
+  }
+}
+
 // deno-lint-ignore no-explicit-any
 async function publish(db: Db, post: any, authorId: string): Promise<{ threadId: string } | { error: string }> {
+  const banner = post.banner_url ? bannerHtml(post.banner_url, post.banner_title || post.title) : ''
   const { data: thread, error } = await db
     .from('threads')
     .insert({
       category_id: post.category_id,
       title: post.title,
-      content: post.content,
+      content: banner + post.content,
       tags: post.tags ?? [],
       user_id: authorId,
       author_id: authorId,
@@ -337,6 +382,8 @@ async function approve(db: Db, id: string, adminId: string): Promise<Response> {
     .maybeSingle()
   if (!post) return json({ error: 'This post was already approved or rejected.' }, 409)
 
+  // Posts written before banners existed (or whose banner failed) get one now.
+  if (!post.banner_url) post.banner_url = await makeBanner(post.id)
   const result = await publish(db, post, settings.author_id)
   if ('error' in result) {
     await db.from('newsdesk_posts').update({ status: 'pending', reviewed_by: null, reviewed_at: null }).eq('id', id)

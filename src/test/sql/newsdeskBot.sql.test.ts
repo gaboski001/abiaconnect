@@ -41,7 +41,9 @@ const PRELUDE = `
   CREATE FUNCTION cron.unschedule(id bigint) RETURNS boolean LANGUAGE sql AS $$ DELETE FROM cron.job WHERE jobid = id RETURNING true $$;
 `
 
-const MIGRATION = readFileSync(resolve(__dirname, '../../../supabase/migrations/20261010090000_newsdesk_bot.sql'), 'utf8')
+const MIGRATION = ['20261010090000_newsdesk_bot.sql', '20261010120000_newsdesk_banners.sql']
+  .map((f) => readFileSync(resolve(__dirname, '../../../supabase/migrations', f), 'utf8'))
+  .join('\n')
 
 describe('Newsdesk bot database', () => {
   let db: PGlite
@@ -159,6 +161,13 @@ describe('Newsdesk bot database', () => {
     await db.query(`UPDATE newsdesk_posts SET share_path = $2 WHERE id = $1`, [id, path])
     await db.query(`UPDATE threads SET is_deleted = true WHERE id = $1`, [thread])
     expect(await lookup(thread)).toBeNull() // removed thread
+  })
+
+  it('keeps each post’s banner headline and picture address', async () => {
+    const id = (await post({ banner_title: 'Short headline', banner_url: 'https://x/storage/v1/object/public/newsdesk/banners/a.jpg' })).rows[0].id
+    const row = (await as(ADMIN, 'authenticated', () => db.query(`SELECT banner_title, banner_url FROM newsdesk_posts WHERE id = $1`, [id]))).rows[0]
+    expect(row).toEqual({ banner_title: 'Short headline', banner_url: 'https://x/storage/v1/object/public/newsdesk/banners/a.jpg' })
+    await post({ run_date: '2026-10-12' }) // a post without a banner is fine
   })
 
   it('keeps the record but forgets the thread when the thread is deleted', async () => {

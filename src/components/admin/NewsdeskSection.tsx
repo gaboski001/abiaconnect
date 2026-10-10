@@ -270,6 +270,20 @@ export default function NewsdeskSection() {
                   </span>
                 </div>
                 <h3 className="font-semibold">{p.title}</h3>
+                {p.banner_url ? (
+                  <img
+                    src={p.banner_url}
+                    alt={p.banner_title || p.title}
+                    width={1200}
+                    height={630}
+                    loading="lazy"
+                    className="h-auto w-full max-w-xl rounded-xl border"
+                  />
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    No banner yet. One is made when you approve the post; if that fails, the forum's picture is used.
+                  </p>
+                )}
                 <div
                   className="thread-prose max-w-none text-sm"
                   dangerouslySetInnerHTML={{ __html: sanitizeThreadHtml(p.content) }}

@@ -1359,6 +1359,8 @@ export type Database = {
       }
       newsdesk_posts: {
         Row: {
+          banner_title: string | null
+          banner_url: string | null
           category_id: string
           category_slug: string
           content: string
@@ -1377,6 +1379,8 @@ export type Database = {
           title: string
         }
         Insert: {
+          banner_title?: string | null
+          banner_url?: string | null
           category_id: string
           category_slug: string
           content: string
@@ -1395,6 +1399,8 @@ export type Database = {
           title: string
         }
         Update: {
+          banner_title?: string | null
+          banner_url?: string | null
           category_id?: string
           category_slug?: string
           content?: string

@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   FEEDS,
   FORUM_CARDS,
+  bannerHeadline,
+  bannerHtml,
   buildCandidates,
   cleanUrl,
   extractArticleText,
@@ -210,6 +212,14 @@ describe('what the AI wrote', () => {
     expect(draft.questions).toHaveLength(3)
   })
 
+  it('takes the short banner headline, or the title when the AI gives none', () => {
+    expect(parseDraft(JSON.stringify(GOOD))!.banner).toBe(GOOD.title)
+    expect(parseDraft(JSON.stringify({ ...GOOD, banner: 'Ohafia farmers count losses after late rains' }))!.banner).toBe(
+      'Ohafia farmers count losses after late rains',
+    )
+    expect(parseDraft(JSON.stringify({ ...GOOD, banner: 'Rains' }))!.banner).toBe(GOOD.title)
+  })
+
   it('strips any HTML or markdown the AI adds', () => {
     const draft = parseDraft(
       JSON.stringify({ ...GOOD, title: '**Ohafia farmers** count losses <script>alert(1)</script> after late rains?' }),
@@ -259,7 +269,7 @@ describe('which posts wait for an admin', () => {
 
 describe('the post', () => {
   it('builds safe HTML with the feed’s own source links', () => {
-    const draft: Draft = { ...GOOD, paragraphs: ['Prices rose <b>fast</b> & "wide".'], tags: [] }
+    const draft: Draft = { ...GOOD, banner: GOOD.title, paragraphs: ['Prices rose <b>fast</b> & "wide".'], tags: [] }
     const html = renderPostHtml(draft, [{ title: 'T', url: 'https://example.com/a?x=1&y="2"', publisher: 'Vanguard & Co' }])
     expect(html).toContain('<p>Prices rose &lt;b&gt;fast&lt;/b&gt; &amp; &quot;wide&quot;.</p>')
     expect(html).toContain('<h3>Over to you</h3>')
@@ -267,6 +277,20 @@ describe('the post', () => {
     expect(html).toContain('<a href="https://example.com/a?x=1&amp;y=%222%22" target="_blank" rel="noopener noreferrer">Vanguard &amp; Co</a>'.replace('%22', '&quot;').replace('%22', '&quot;'))
     expect(html).toContain('Source: ')
     expect(html).toContain('Put together by the AbiaConnect Newsdesk assistant from the linked report.')
+  })
+
+  it('puts the post’s banner at the top of the thread, safely', () => {
+    expect(bannerHtml('https://x.supabase.co/storage/v1/object/public/newsdesk/banners/a.jpg', 'Aba "markets" & more')).toBe(
+      '<figure><img src="https://x.supabase.co/storage/v1/object/public/newsdesk/banners/a.jpg" alt="Aba &quot;markets&quot; &amp; more"></figure>\n',
+    )
+  })
+
+  it('shortens a long headline for the banner at a word, and leaves a short one alone', () => {
+    expect(bannerHeadline('  FG awards ₦100m to   Abia innovator ')).toBe('FG awards ₦100m to Abia innovator')
+    const long = 'Abia voters lament as INEC officials abandon PVC collection centres: has it happened where you live, and what should be done?'
+    const short = bannerHeadline(long)
+    expect(short.length).toBeLessThanOrEqual(90)
+    expect(short).toBe('Abia voters lament as INEC officials abandon PVC collection centres: has it happened…')
   })
 
   it('names each publisher once', () => {

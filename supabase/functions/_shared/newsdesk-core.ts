@@ -347,13 +347,14 @@ export function writerSystemPrompt(): string {
     '- Neutral and respectful. Do not take a side in politics or religion, do not insult or blame any group, and do not speculate.',
     '- Plain, warm Nigerian English that any reader understands. No hashtags, no emoji, no markdown, no HTML.',
     '- "title": a headline that states the news and invites discussion, 40 to 140 characters, ending with a question where natural.',
+    '- "banner": the same news as a short headline for the post\'s picture, at most 70 characters, no question.',
     '- "paragraphs": 1 to 3 short paragraphs (each under 600 characters) summarising the story in your own words. Do not copy sentences from the reports.',
     '- "questions": 3 or 4 open questions that invite members to share experience or opinion, relevant to Abians.',
     '- "tags": 2 or 3 lower-case topic words (letters, digits and hyphens only).',
     '- "sensitive": true when the story involves deaths, violence, crime or arrests, court cases, accusations against a named person or organisation, elections, parties or candidates, ethnic or religious tension, or health scares.',
     '',
     'Reply with JSON only:',
-    '{"title":"...","paragraphs":["..."],"questions":["..."],"tags":["..."],"sensitive":true|false}',
+    '{"title":"...","banner":"...","paragraphs":["..."],"questions":["..."],"tags":["..."],"sensitive":true|false}',
   ].join('\n')
 }
 
@@ -379,6 +380,8 @@ export function writerUserMessage(args: { forum: Forum; pick: Pick; articleText:
 
 export interface Draft {
   title: string
+  /** The short headline written on the post's banner. */
+  banner: string
   paragraphs: string[]
   questions: string[]
   tags: string[]
@@ -414,7 +417,8 @@ export function parseDraft(text: string): Draft | null {
     ),
   ].slice(0, 3)
   if (title.length < 25 || !paragraphs.length || questions.length < 2) return null
-  return { title, paragraphs, questions, tags, sensitive: data.sensitive === true }
+  const banner = clean(data.banner, 90)
+  return { title, banner: banner.length >= 15 ? banner : title, paragraphs, questions, tags, sensitive: data.sensitive === true }
 }
 
 // ---------------------------------------------------------------------------
@@ -481,6 +485,20 @@ export function renderPostHtml(draft: Draft, sources: SourceLink[]): string {
     `<ol>${draft.questions.map((q) => `<li>${escapeHtml(q)}</li>`).join('')}</ol>`,
     `<p><em>${sources.length === 1 ? 'Source' : 'Sources'}: ${links}. Put together by the AbiaConnect Newsdesk assistant from the linked ${sources.length === 1 ? 'report' : 'reports'}.</em></p>`,
   ].join('\n')
+}
+
+/** A headline short enough for the picture: cut at a word, with "…". */
+export function bannerHeadline(text: string, max = 90): string {
+  const clean = text.replace(/\s+/g, ' ').trim()
+  if (clean.length <= max) return clean
+  const cut = clean.slice(0, max - 1)
+  const atWord = cut.lastIndexOf(' ') > max * 0.6 ? cut.slice(0, cut.lastIndexOf(' ')) : cut
+  return `${atWord.replace(/[\s,;:.!?–—-]+$/, '')}…`
+}
+
+/** The post's banner, shown at the top of the thread. */
+export function bannerHtml(url: string, headline: string): string {
+  return `<figure><img src="${escapeHtml(url)}" alt="${escapeHtml(headline)}"></figure>\n`
 }
 
 /** Today's date in Abia (Africa/Lagos), as YYYY-MM-DD. */
