@@ -142,29 +142,30 @@ def make(post, logo):
     d.rectangle((56, y + 16, 150, y + 21), fill=GOLD)
     d.text((56, y + 36), 'Join the discussion on AbiaConnect', font=font('segoeui.ttf', 25), fill=MINT)
 
-    # Gold key-figure badge on the photo
-    sf_size = 64
-    for sf_size in (64, 56, 48, 42, 36):
-        sf = font('segoeuib.ttf', sf_size)
-        if d.textlength(post['stat'], font=sf) <= 250:
-            break
-    slf = font('seguisb.ttf', 19)
-    sl = wrap(d, post['stat_label'], slf, 250)[:2]
-    bw = int(max(d.textlength(post['stat'], font=sf), *(d.textlength(t, font=slf) for t in sl))) + 48
-    bh = sf_size + 28 + 26 * len(sl)
-    bx1, by1 = W - 40, H - FOOT - 62
-    bx0, by0 = bx1 - bw, by1 - bh
-    badge = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    bd = ImageDraw.Draw(badge)
-    bd.rounded_rectangle((bx0 + 4, by0 + 6, bx1 + 4, by1 + 6), radius=22, fill=(0, 0, 0, 110))
-    badge = badge.filter(ImageFilter.GaussianBlur(6))
-    img = Image.alpha_composite(img, badge)
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle((bx0, by0, bx1, by1), radius=22, fill=GOLD)
-    cx = (bx0 + bx1) / 2
-    d.text((cx, by0 + 12 + sf_size / 2), post['stat'], font=sf, fill=EMERALD_DARK, anchor='mm')
-    for i, line in enumerate(sl):
-        d.text((cx, by0 + sf_size + 26 + i * 26), line, font=slf, fill=(20, 60, 45), anchor='mm')
+    # Gold key-figure badge on the photo (forum cards have no figure)
+    if post.get('stat'):
+        sf_size = 64
+        for sf_size in (64, 56, 48, 42, 36):
+            sf = font('segoeuib.ttf', sf_size)
+            if d.textlength(post['stat'], font=sf) <= 250:
+                break
+        slf = font('seguisb.ttf', 19)
+        sl = wrap(d, post['stat_label'], slf, 250)[:2]
+        bw = int(max(d.textlength(post['stat'], font=sf), *(d.textlength(t, font=slf) for t in sl))) + 48
+        bh = sf_size + 28 + 26 * len(sl)
+        bx1, by1 = W - 40, H - FOOT - 62
+        bx0, by0 = bx1 - bw, by1 - bh
+        badge = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        bd = ImageDraw.Draw(badge)
+        bd.rounded_rectangle((bx0 + 4, by0 + 6, bx1 + 4, by1 + 6), radius=22, fill=(0, 0, 0, 110))
+        badge = badge.filter(ImageFilter.GaussianBlur(6))
+        img = Image.alpha_composite(img, badge)
+        d = ImageDraw.Draw(img)
+        d.rounded_rectangle((bx0, by0, bx1, by1), radius=22, fill=GOLD)
+        cx = (bx0 + bx1) / 2
+        d.text((cx, by0 + 12 + sf_size / 2), post['stat'], font=sf, fill=EMERALD_DARK, anchor='mm')
+        for i, line in enumerate(sl):
+            d.text((cx, by0 + sf_size + 26 + i * 26), line, font=slf, fill=(20, 60, 45), anchor='mm')
 
     # Photo credit (required by the photo licences)
     cf = font('segoeui.ttf', 15)

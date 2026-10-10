@@ -1,0 +1,302 @@
+import { describe, it, expect } from 'vitest'
+import {
+  FEEDS,
+  FORUM_CARDS,
+  buildCandidates,
+  cleanUrl,
+  extractArticleText,
+  holdReason,
+  lagosDate,
+  parseDraft,
+  parseRss,
+  parseSelection,
+  prioritise,
+  renderPostHtml,
+  selectionUserMessage,
+  sharePathFor,
+  sourcesOf,
+  writerUserMessage,
+  type Draft,
+  type Forum,
+  type NewsItem,
+  type Pick,
+} from '../../supabase/functions/_shared/newsdesk-core'
+
+const GOOGLE = FEEDS[0]
+const BING = FEEDS.find((f) => f.name === 'Bing News')!
+const VANGUARD = FEEDS.find((f) => f.name === 'Vanguard')!
+const PREMIUM = FEEDS.find((f) => f.name === 'Premium Times')!
+
+// Shapes copied from the real feeds.
+const GOOGLE_XML = `<rss><channel>
+<item><title>Police Bust Counterfeit Currency Hideout In Abia - The Whistler Newspaper</title><link>https://news.google.com/rss/articles/CBMiiwFB?oc=5</link><guid isPermaLink="false">CBMiiwFB</guid><pubDate>Fri, 09 Oct 2026 19:54:40 GMT</pubDate><description>&lt;a href="https://news.google.com/rss/articles/CBMiiwFB?oc=5" target="_blank"&gt;Police Bust Counterfeit Currency Hideout In Abia&lt;/a&gt;&amp;nbsp;&amp;nbsp;&lt;font color="#6f6f6f"&gt;The Whistler Newspaper&lt;/font&gt;</description><source url="https://thewhistler.ng">The Whistler Newspaper</source></item>
+<item><title>No date here - Someone</title><link>https://news.google.com/rss/articles/X?oc=5</link><source url="https://x.ng">Someone</source></item>
+</channel></rss>`
+
+const BING_XML = `<rss><channel>
+<item><title>2027: Abia tricycle operators endorse Otti for second term</title><link>http://www.bing.com/news/apiclick.aspx?ref=FexRss&amp;aid=&amp;tid=6ac9&amp;url=https%3a%2f%2fpunchng.com%2f2027-abia-tricycle-operators-endorse-otti%2f&amp;c=180&amp;mkt=en-ww</link><description>Members of the Abia State Tricycle Operators Union, Umuahia Zone, have endorsed Governor Alex Otti ...</description><pubDate>Fri, 09 Oct 2026 11:50:00 GMT</pubDate><News:Source>The Punch</News:Source></item>
+</channel></rss>`
+
+const VANGUARD_XML = `<rss><channel>
+<item>
+  <title>Soludo approves full implementation of 2025 ASUU agreement</title>
+  <link>https://www.vanguardngr.com/2026/10/soludo-approves/?utm_source=rss&amp;utm_medium=web</link>
+  <pubDate>Fri, 09 Oct 2026 21:28:46 +0000</pubDate>
+  <description><![CDATA[<p>By Vincent Ujumadu Governor Chukwuma Soludo of Anambra State has approved the agreement [&#8230;]</p>
+<p>The post <a href="https://www.vanguardngr.com/x/">Soludo approves</a> appeared first on <a href="https://www.vanguardngr.com">Vanguard News</a>.</p>]]></description>
+</item>
+<item>
+  <title>Farmers in Ohafia count losses after late rains</title>
+  <link>https://www.vanguardngr.com/2026/10/ohafia-farmers/</link>
+  <pubDate>Fri, 09 Oct 2026 20:00:00 +0000</pubDate>
+  <description><![CDATA[<p>Cassava farmers say the harvest is down this year.</p>]]></description>
+</item>
+</channel></rss>`
+
+const NOW = new Date('2026-10-10T06:30:00Z')
+
+describe('reading news feeds', () => {
+  it('reads Google News: publisher taken off the headline, repeated headline not used as a summary', () => {
+    const items = parseRss(GOOGLE_XML, GOOGLE)
+    expect(items).toHaveLength(1) // the item without a date is left out
+    expect(items[0]).toMatchObject({
+      title: 'Police Bust Counterfeit Currency Hideout In Abia',
+      publisher: 'The Whistler Newspaper',
+      url: 'https://news.google.com/rss/articles/CBMiiwFB?oc=5',
+      snippet: '',
+      scope: 'abia',
+      published: '2026-10-09T19:54:40.000Z',
+    })
+  })
+
+  it('reads Bing News: unwraps the real article address', () => {
+    const [item] = parseRss(BING_XML, BING)
+    expect(item.url).toBe('https://punchng.com/2027-abia-tricycle-operators-endorse-otti/')
+    expect(item.publisher).toBe('The Punch')
+    expect(item.snippet).toMatch(/^Members of the Abia State Tricycle Operators Union/)
+  })
+
+  it('reads a newspaper feed: tidy summary, tracking tags removed, Abia places recognised', () => {
+    const [national, abia] = parseRss(VANGUARD_XML, VANGUARD)
+    expect(national.url).toBe('https://www.vanguardngr.com/2026/10/soludo-approves/')
+    expect(national.snippet).toBe('By Vincent Ujumadu Governor Chukwuma Soludo of Anambra State has approved the agreement…')
+    expect(national.publisher).toBe('Vanguard')
+    expect(national.scope).toBe('wider')
+    expect(abia.scope).toBe('abia') // Ohafia is in Abia
+  })
+
+  it('leaves out promoted stories', () => {
+    const xml = `<item><title>Family awards N100m scholarships to students</title><link>https://www.premiumtimesng.com/promoted/915765-x.html</link><pubDate>Fri, 09 Oct 2026 21:19:44 +0000</pubDate></item>`
+    expect(parseRss(xml, PREMIUM)).toEqual([])
+  })
+
+  it('refuses links that are not web addresses', () => {
+    expect(cleanUrl('javascript:alert(1)')).toBe('')
+    expect(cleanUrl('not a link')).toBe('')
+    expect(cleanUrl('https://punchng.com/a/?utm_source=x&id=2')).toBe('https://punchng.com/a/?id=2')
+  })
+})
+
+describe('choosing fresh stories', () => {
+  const raw = [...parseRss(GOOGLE_XML, GOOGLE), ...parseRss(BING_XML, BING), ...parseRss(VANGUARD_XML, VANGUARD)]
+
+  it('numbers fresh stories newest first', () => {
+    const items = buildCandidates(raw, { now: NOW })
+    expect(items.map((i) => i.id)).toEqual([1, 2, 3, 4])
+    expect(items[0].title).toMatch(/^Soludo/)
+  })
+
+  it('drops old stories: Abia after 48 hours, national after 30', () => {
+    const later = new Date('2026-10-11T06:00:00Z') // 32-42 hours on
+    expect(buildCandidates(raw, { now: later }).map((i) => i.scope)).toEqual(['abia', 'abia', 'abia'])
+    expect(buildCandidates(raw, { now: new Date('2026-10-12T06:30:00Z') })).toEqual([])
+  })
+
+  it('never offers a story the bot already used, or the same headline twice', () => {
+    const items = buildCandidates([...raw, ...raw], {
+      now: NOW,
+      usedUrls: ['https://punchng.com/2027-abia-tricycle-operators-endorse-otti/'],
+      usedTitles: ['POLICE bust counterfeit currency hideout in Abia!'],
+    })
+    expect(items.map((i) => i.title)).toEqual([
+      'Soludo approves full implementation of 2025 ASUU agreement',
+      'Farmers in Ohafia count losses after late rains',
+    ])
+  })
+})
+
+const FORUMS: Forum[] = [
+  { slug: 'agriculture-farming', name: 'Agriculture & Farming', description: 'Farming in Abia' },
+  { slug: 'politics-governance', name: 'Politics & Governance', description: null },
+  { slug: 'education-career', name: 'Education & Career', description: null },
+]
+
+const ITEMS: NewsItem[] = buildCandidates(
+  [...parseRss(GOOGLE_XML, GOOGLE), ...parseRss(BING_XML, BING), ...parseRss(VANGUARD_XML, VANGUARD)],
+  { now: NOW },
+)
+// 1 Soludo (wider), 2 Ohafia farmers (abia), 3 Police (abia), 4 Otti tricycle (abia)
+
+describe('the AI’s choice of stories', () => {
+  it('lists forums, headlines and what was already discussed', () => {
+    const msg = selectionUserMessage({ forums: FORUMS, items: ITEMS, recentTitles: ['Old topic'], maxPicks: 5 })
+    expect(msg).toContain('Choose at most 5 picks.')
+    expect(msg).toContain('- agriculture-farming: Agriculture & Farming (Farming in Abia)')
+    expect(msg).toContain('2. [ABIA] Farmers in Ohafia count losses after late rains (Vanguard, 2026-10-09)')
+    expect(msg).toContain('1. [NIGERIA] Soludo approves')
+    expect(msg).toContain('- Old topic')
+  })
+
+  it('keeps only real forums and real headlines, one story per forum, no story twice', () => {
+    const picks = parseSelection(
+      '```json\n' +
+        JSON.stringify({
+          picks: [
+            { forum: 'agriculture-farming', ids: [2], sensitive: false },
+            { forum: 'made-up-forum', ids: [3] },
+            { forum: 'politics-governance', ids: [4, 99], sensitive: true },
+            { forum: 'politics-governance', ids: [3] }, // second pick for the same forum
+            { forum: 'education-career', ids: [2] }, // story already used above
+          ],
+        }) +
+        '\n```',
+      FORUMS,
+      ITEMS,
+    )
+    expect(picks.map((p) => [p.forum, p.items.map((i) => i.id), p.scope, p.sensitive])).toEqual([
+      ['agriculture-farming', [2], 'abia', false],
+      ['politics-governance', [4], 'abia', true],
+    ])
+  })
+
+  it('returns nothing for an unusable answer', () => {
+    expect(parseSelection('I could not decide', FORUMS, ITEMS)).toEqual([])
+    expect(parseSelection('{"picks":"none"}', FORUMS, ITEMS)).toEqual([])
+  })
+
+  it('when there are too many: Abia stories first, then forums left longest without a post', () => {
+    const pick = (forum: string, scope: 'abia' | 'wider'): Pick => ({ forum, items: [ITEMS[0]], scope, sensitive: false })
+    const picks = [pick('a', 'wider'), pick('b', 'abia'), pick('c', 'abia'), pick('d', 'wider')]
+    const kept = prioritise(picks, 3, { b: '2026-10-09', c: '2026-10-01', a: '2026-10-08' })
+    expect(kept.map((p) => p.forum)).toEqual(['c', 'b', 'd']) // d was never posted in, so it beats a
+  })
+})
+
+const PICK: Pick = { forum: 'agriculture-farming', items: [ITEMS[1]], scope: 'abia', sensitive: false }
+const GOOD = {
+  title: 'Ohafia farmers count losses after late rains: how was your harvest?',
+  paragraphs: ['Vanguard reports that cassava farmers in Ohafia say this year’s harvest is down after the late rains.'],
+  questions: ['How did the late rains affect your farm?', 'What would help farmers recover before the next season?', 'Are food prices changing in your market?'],
+  tags: ['Farming', 'ohafia', 'Cassava Harvest!'],
+  sensitive: false,
+}
+
+describe('what the AI wrote', () => {
+  it('gives the writer the reports, and says when only a headline is available', () => {
+    const withText = writerUserMessage({ forum: FORUMS[0], pick: PICK, articleText: { [ITEMS[1].id]: 'Full article text.' } })
+    expect(withText).toContain('Forum: Agriculture & Farming')
+    expect(withText).toContain('Publisher: Vanguard')
+    expect(withText).toContain('Article text:\nFull article text.')
+    const headlineOnly = writerUserMessage({ forum: FORUMS[0], pick: PICK, articleText: {} })
+    expect(headlineOnly).toContain('(Only the headline is available for this report.)')
+    const national = writerUserMessage({ forum: FORUMS[2], pick: { ...PICK, scope: 'wider' }, articleText: {} })
+    expect(national).toContain('ask how it affects Abians')
+  })
+
+  it('accepts a good draft and tidies the tags', () => {
+    const draft = parseDraft(JSON.stringify(GOOD))!
+    expect(draft.title).toBe(GOOD.title)
+    expect(draft.tags).toEqual(['farming', 'ohafia', 'cassava-harvest'])
+    expect(draft.questions).toHaveLength(3)
+  })
+
+  it('strips any HTML or markdown the AI adds', () => {
+    const draft = parseDraft(
+      JSON.stringify({ ...GOOD, title: '**Ohafia farmers** count losses <script>alert(1)</script> after late rains?' }),
+    )!
+    expect(draft.title).toBe('Ohafia farmers count losses alert(1) after late rains?')
+  })
+
+  it('refuses drafts that are incomplete', () => {
+    expect(parseDraft('not json')).toBeNull()
+    expect(parseDraft(JSON.stringify({ ...GOOD, title: 'Too short' }))).toBeNull()
+    expect(parseDraft(JSON.stringify({ ...GOOD, paragraphs: [] }))).toBeNull()
+    expect(parseDraft(JSON.stringify({ ...GOOD, questions: ['Only one question here?'] }))).toBeNull()
+  })
+})
+
+describe('which posts wait for an admin', () => {
+  const draft = parseDraft(JSON.stringify(GOOD)) as Draft
+  const sources = sourcesOf(PICK)
+  const base = { forum: 'agriculture-farming', reviewSlugs: ['politics-governance'], pickSensitive: false, draft, sources }
+
+  it('publishes an everyday story by itself', () => {
+    expect(holdReason(base)).toBeNull()
+  })
+
+  it('holds every post in a sensitive forum', () => {
+    expect(holdReason({ ...base, forum: 'politics-governance' })).toMatch(/always wait/)
+  })
+
+  it('holds a story the AI marked sensitive, at either step', () => {
+    expect(holdReason({ ...base, pickSensitive: true })).toMatch(/sensitive/)
+    expect(holdReason({ ...base, draft: { ...draft, sensitive: true } })).toMatch(/sensitive/)
+  })
+
+  it('holds a story with sensitive words even if the AI missed it', () => {
+    expect(holdReason({ ...base, draft: { ...draft, title: 'Two farmers killed in land dispute: what can be done?' } })).toBe(
+      'The story mentions "killed"',
+    )
+    const police = { ...sources[0], title: 'Police arrest three over market fire' }
+    expect(holdReason({ ...base, sources: [police] })).toBe('The story mentions "arrest"')
+    expect(holdReason({ ...base, draft: { ...draft, paragraphs: ['INEC has announced the timetable for the election.'] } })).toMatch(/mentions/)
+  })
+
+  it('holds everything in a test run', () => {
+    expect(holdReason({ ...base, test: true })).toMatch(/Test run/)
+  })
+})
+
+describe('the post', () => {
+  it('builds safe HTML with the feed’s own source links', () => {
+    const draft: Draft = { ...GOOD, paragraphs: ['Prices rose <b>fast</b> & "wide".'], tags: [] }
+    const html = renderPostHtml(draft, [{ title: 'T', url: 'https://example.com/a?x=1&y="2"', publisher: 'Vanguard & Co' }])
+    expect(html).toContain('<p>Prices rose &lt;b&gt;fast&lt;/b&gt; &amp; &quot;wide&quot;.</p>')
+    expect(html).toContain('<h3>Over to you</h3>')
+    expect(html).toContain('<ol><li>How did the late rains affect your farm?</li>')
+    expect(html).toContain('<a href="https://example.com/a?x=1&amp;y=%222%22" target="_blank" rel="noopener noreferrer">Vanguard &amp; Co</a>'.replace('%22', '&quot;').replace('%22', '&quot;'))
+    expect(html).toContain('Source: ')
+    expect(html).toContain('Put together by the AbiaConnect Newsdesk assistant from the linked report.')
+  })
+
+  it('names each publisher once', () => {
+    const two: Pick = { ...PICK, items: [ITEMS[0], ITEMS[1], ITEMS[3]] } // Vanguard, Vanguard, The Punch
+    expect(sourcesOf(two).map((s) => s.publisher)).toEqual(['Vanguard', 'The Punch'])
+  })
+
+  it('pulls readable paragraphs out of a news page', () => {
+    const page = `<html><head><style>p{}</style><script>var a="<p>not this, it is inside a script tag and long enough to count</p>"</script></head>
+      <body><nav><p>Menu items that are long enough to look like a paragraph of text here</p></nav>
+      <p>Short.</p>
+      <p>ID) . '?utm_source=news-flash&utm_medium=web"> Download Punch Lite App for the latest news on your phone</p>
+      <p>Cassava farmers in Ohafia say the harvest is down this year after the rains came late, <a href="#">our reporter</a> writes.</p>
+      <p>Copyright 2026 Vanguard. All rights reserved. This material may not be published or broadcast.</p></body></html>`
+    expect(extractArticleText(page)).toBe(
+      'Cassava farmers in Ohafia say the harvest is down this year after the rains came late, our reporter writes.',
+    )
+  })
+})
+
+describe('dates and share pages', () => {
+  it('uses the date in Abia, not UTC', () => {
+    expect(lagosDate(new Date('2026-10-09T23:30:00Z'))).toBe('2026-10-10')
+    expect(lagosDate(new Date('2026-10-10T06:30:00Z'))).toBe('2026-10-10')
+  })
+
+  it('gives a forum share page only for forums that have a picture', () => {
+    const id = '11111111-2222-3333-4444-555555555555'
+    expect(sharePathFor('business-commerce', id)).toBe(`/share/forum-business-commerce.html?t=${id}`)
+    expect(sharePathFor('brand-new-forum', id)).toBeNull()
+    expect(FORUM_CARDS).toHaveLength(15)
+  })
+})

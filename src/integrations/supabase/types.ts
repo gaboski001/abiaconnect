@@ -1357,6 +1357,146 @@ export type Database = {
         }
         Relationships: []
       }
+      newsdesk_posts: {
+        Row: {
+          category_id: string
+          category_slug: string
+          content: string
+          created_at: string
+          hold_reason: string | null
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          run_date: string
+          scope: string
+          share_path: string | null
+          sources: Json
+          status: string
+          tags: string[]
+          thread_id: string | null
+          title: string
+        }
+        Insert: {
+          category_id: string
+          category_slug: string
+          content: string
+          created_at?: string
+          hold_reason?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          run_date: string
+          scope: string
+          share_path?: string | null
+          sources?: Json
+          status?: string
+          tags?: string[]
+          thread_id?: string | null
+          title: string
+        }
+        Update: {
+          category_id?: string
+          category_slug?: string
+          content?: string
+          created_at?: string
+          hold_reason?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          run_date?: string
+          scope?: string
+          share_path?: string | null
+          sources?: Json
+          status?: string
+          tags?: string[]
+          thread_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsdesk_posts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsdesk_posts_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsdesk_runs: {
+        Row: {
+          finished_at: string | null
+          held: number
+          id: string
+          note: string | null
+          published: number
+          started_at: string
+          stories_found: number
+          trigger: string
+        }
+        Insert: {
+          finished_at?: string | null
+          held?: number
+          id?: string
+          note?: string | null
+          published?: number
+          started_at?: string
+          stories_found?: number
+          trigger: string
+        }
+        Update: {
+          finished_at?: string | null
+          held?: number
+          id?: string
+          note?: string | null
+          published?: number
+          started_at?: string
+          stories_found?: number
+          trigger?: string
+        }
+        Relationships: []
+      }
+      newsdesk_settings: {
+        Row: {
+          author_id: string | null
+          enabled: boolean
+          id: boolean
+          max_posts_per_day: number
+          review_slugs: string[]
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          enabled?: boolean
+          id?: boolean
+          max_posts_per_day?: number
+          review_slugs?: string[]
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          enabled?: boolean
+          id?: boolean
+          max_posts_per_day?: number
+          review_slugs?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsdesk_settings_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -3367,6 +3507,7 @@ export type Database = {
         Returns: string
       }
       sync_reputation: { Args: { _user: string }; Returns: undefined }
+      thread_share_path: { Args: { _thread_id: string }; Returns: string }
       track_monetization_event: {
         Args: { _event: string; _metadata?: Json }
         Returns: undefined

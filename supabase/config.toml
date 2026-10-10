@@ -33,3 +33,5 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = false
   [functions.daily-birthday-greetings]
     verify_jwt = false
+  [functions.daily-newsdesk]
+    verify_jwt = false

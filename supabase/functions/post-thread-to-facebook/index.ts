@@ -24,6 +24,7 @@ const FB_GRAPH = Deno.env.get('FACEBOOK_GRAPH_URL') || 'https://graph.facebook.c
 // SHARE_INDEX_URL is only set by local tests; production reads the website's list.
 const SHARE_INDEX_URL = Deno.env.get('SHARE_INDEX_URL') || `${SITE_URL}/share/index.json`
 const SHARE_PATH_RE = /^\/share\/[a-z0-9-]+\.html$/
+const FORUM_SHARE_PATH_RE = /^\/share\/forum-[a-z0-9-]+\.html\?t=[0-9a-f-]{36}$/
 const UUID_RE =/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 Deno.serve(async (req) => {
@@ -87,7 +88,7 @@ Deno.serve(async (req) => {
       return json({ error: tokenCheck.reason }, 409)
     }
     const targetPageId = pageId
-    const link = await shareLink(thread.id)
+    const link = await shareLink(db, thread.id)
     const message = `${thread.title}\n\nJoin the conversation on AbiaConnect:\n${link}`
 
     const res = await fetch(`${FB_GRAPH}/${targetPageId}/feed`, {
@@ -124,20 +125,32 @@ Deno.serve(async (req) => {
 /**
  * The link to post. Threads with a share page (public/share/index.json on the
  * website) use it, so Facebook shows that page's thumbnail; the page sends
- * readers on to the thread. Otherwise, or if the list can't be read, the
- * normal thread link.
+ * readers on to the thread. Newsdesk bot threads use their forum's share page
+ * (thread_share_path in the database). Otherwise, or if neither can be read,
+ * the normal thread link.
  */
-async function shareLink(threadId: string): Promise<string> {
+// deno-lint-ignore no-explicit-any
+async function shareLink(db: any, threadId: string): Promise<string> {
   const fallback = `${SITE_URL}/thread/${threadId}`
   try {
     const res = await fetch(SHARE_INDEX_URL, { signal: AbortSignal.timeout(5000) })
-    if (!res.ok) return fallback
-    const index = (await res.json()) as Record<string, unknown>
-    const path = index?.[threadId]
-    return typeof path === 'string' && SHARE_PATH_RE.test(path) ? `${SITE_URL}${path}` : fallback
+    if (res.ok) {
+      const index = (await res.json()) as Record<string, unknown>
+      const path = index?.[threadId]
+      if (typeof path === 'string' && SHARE_PATH_RE.test(path)) return `${SITE_URL}${path}`
+    }
   } catch {
-    return fallback
+    // fall through to the forum page
   }
+  try {
+    const { data: forumPath } = await db.rpc('thread_share_path', { _thread_id: threadId })
+    if (typeof forumPath === 'string' && FORUM_SHARE_PATH_RE.test(forumPath) && forumPath.endsWith(`?t=${threadId}`)) {
+      return `${SITE_URL}${forumPath}`
+    }
+  } catch {
+    // fall through to the thread link
+  }
+  return fallback
 }
 
 // deno-lint-ignore no-explicit-any
