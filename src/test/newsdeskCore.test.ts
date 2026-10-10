@@ -366,7 +366,7 @@ describe('entertainment news and the Gossip forum', () => {
     expect(buildCandidates(many, { now: NOW })).toHaveLength(25)
   })
 
-  it('puts entertainment stories only in Gossip, and nothing else there', () => {
+  it('moves entertainment stories to Gossip wherever the AI filed them, and lets nothing else in', () => {
     const picks = parseSelection(
       JSON.stringify({
         picks: [
@@ -379,9 +379,20 @@ describe('entertainment news and the Gossip forum', () => {
       forums,
       items,
     )
-    expect(picks.map((p) => p.forum)).toEqual(['agriculture-farming', 'gossip'])
+    // The entertainment story the AI filed under Education is moved to Gossip.
+    expect(picks.map((p) => [p.forum, p.items[0].id])).toEqual([
+      ['gossip', star.id],
+      ['agriculture-farming', farm.id],
+    ])
   })
 
+  it('keeps the school mark when the same report also arrives in the general Abia news', () => {
+    const general = { ...farm, id: undefined, title: 'ABSU creates new training directorate, names pioneer director', url: 'https://news.google.com/rss/articles/GEN', campus: false }
+    const fromSchoolSearch = { ...general, url: 'https://news.google.com/rss/articles/CAMPUS', campus: true }
+    const list = buildCandidates([general, fromSchoolSearch], { now: NOW })
+    expect(list).toHaveLength(1)
+    expect(list[0].campus).toBe(true)
+  })
   it('tells the writer to keep entertainment news light and fair', () => {
     const pick: Pick = { forum: 'gossip', items: [star], scope: 'wider', sensitive: false }
     const msg = writerUserMessage({ forum: forums[3], pick, articleText: {} })

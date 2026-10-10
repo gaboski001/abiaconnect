@@ -379,7 +379,13 @@ export function buildCandidates(raw: RawItem[], opts: CandidateOptions): NewsIte
   const picked: RawItem[] = []
   const left = { abia: opts.maxAbia ?? 60, wider: opts.maxWider ?? 50, showbiz: opts.maxShowbiz ?? 25, campus: opts.maxCampus ?? 30 }
 
-  const sorted = [...raw].sort((a, b) => b.published.localeCompare(a.published))
+  // The same report can arrive twice: once in the general Abia news and once
+  // in the search for school (or entertainment) news. It keeps the special mark.
+  const campusTitles = new Set(raw.filter((i) => i.campus).map((i) => titleKey(i.title)))
+  const showbizTitles = new Set(raw.filter((i) => i.showbiz).map((i) => titleKey(i.title)))
+  const sorted = raw
+    .map((i) => ({ ...i, campus: i.campus || campusTitles.has(titleKey(i.title)), showbiz: i.showbiz || showbizTitles.has(titleKey(i.title)) }))
+    .sort((a, b) => b.published.localeCompare(a.published))
   for (const item of sorted) {
     const age = now - new Date(item.published).getTime()
     // Schools post less often than newspapers: their news stays usable for a week.
@@ -480,19 +486,22 @@ export function parseSelection(text: string, forums: Forum[], items: NewsItem[])
   const usedItems = new Set<number>()
   const picks: Pick[] = []
   for (const raw of data.picks as Array<Record<string, unknown>>) {
-    const forum = typeof raw?.forum === 'string' ? raw.forum : ''
-    if (!slugs.has(forum) || usedForums.has(forum)) continue
-    const ids = (Array.isArray(raw.ids) ? raw.ids : [])
+    const ids = (Array.isArray(raw?.ids) ? (raw.ids as unknown[]) : [])
       .map((n) => Number(n))
       .filter((n) => byId.has(n) && !usedItems.has(n))
       .slice(0, 3)
     if (!ids.length) continue
-    // Entertainment news belongs in the Gossip forum, and nothing else does.
-    const showbiz = ids.map((n) => byId.get(n)!.showbiz)
-    if (forum === GOSSIP_FORUM ? showbiz.includes(false) : showbiz.includes(true)) continue
-    // News from Abia's institutions belongs in the Institutions forum, and nothing else does.
+    // School news belongs in the Institutions forum and entertainment news in
+    // Gossip, and nothing else belongs in either. When the AI files such a
+    // story under another forum it is moved to its own; a mixed pick is dropped.
     const campus = ids.map((n) => byId.get(n)!.campus)
-    if (forum === INSTITUTIONS_FORUM ? campus.includes(false) : campus.includes(true)) continue
+    const showbiz = ids.map((n) => byId.get(n)!.showbiz)
+    let forum = typeof raw.forum === 'string' ? raw.forum : ''
+    if (campus.every(Boolean)) forum = INSTITUTIONS_FORUM
+    else if (showbiz.every(Boolean)) forum = GOSSIP_FORUM
+    else if (campus.includes(true) || showbiz.includes(true)) continue
+    else if (forum === INSTITUTIONS_FORUM || forum === GOSSIP_FORUM) continue
+    if (!slugs.has(forum) || usedForums.has(forum)) continue
     usedForums.add(forum)
     ids.forEach((n) => usedItems.add(n))
     const chosen = ids.map((n) => byId.get(n)!)
