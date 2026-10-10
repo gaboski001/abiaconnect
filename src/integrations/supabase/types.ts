@@ -1359,6 +1359,8 @@ export type Database = {
       }
       newsdesk_posts: {
         Row: {
+          banner_title: string | null
+          banner_url: string | null
           category_id: string
           category_slug: string
           content: string
@@ -1377,6 +1379,8 @@ export type Database = {
           title: string
         }
         Insert: {
+          banner_title?: string | null
+          banner_url?: string | null
           category_id: string
           category_slug: string
           content: string
@@ -1395,6 +1399,8 @@ export type Database = {
           title: string
         }
         Update: {
+          banner_title?: string | null
+          banner_url?: string | null
           category_id?: string
           category_slug?: string
           content?: string
@@ -3401,6 +3407,16 @@ export type Database = {
         }[]
       }
       newsdesk_notify_admins: { Args: { _waiting: number }; Returns: number }
+      newsdesk_share_feed: {
+        Args: never
+        Returns: {
+          banner_title: string
+          banner_url: string
+          content: string
+          thread_id: string
+          title: string
+        }[]
+      }
       payment_apply_refund: {
         Args: { _provider: string; _ref: string }
         Returns: string
