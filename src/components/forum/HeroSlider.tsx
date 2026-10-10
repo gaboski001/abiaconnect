@@ -24,7 +24,8 @@ export function HeroSlider() {
     bg_color_from: '#013220',
     bg_color_to: '#000000',
     badge_text: '✦ Connecting Abia State Worldwide',
-    image_url: null,
+    // Aba Main Park from above (scripts/banners/make_hero_backgrounds.py)
+    image_url: '/banners/hero-welcome.webp',
     isDefault: true,
   }
 

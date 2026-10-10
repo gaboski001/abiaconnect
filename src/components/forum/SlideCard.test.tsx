@@ -29,13 +29,26 @@ describe('SlideCard full banner', () => {
     expect(screen.queryByText('Advertisement')).not.toBeInTheDocument()
   })
 
-  it('keeps ordinary text slides unchanged', () => {
-    render(
+  it('keeps ordinary text slides as live text, with their picture clearly visible behind it', () => {
+    const { container } = render(
       <MemoryRouter>
         <SlideCard slide={{ title: 'Community meetup', image_url: 'https://x.test/bg.jpg' }} />
       </MemoryRouter>,
     )
     expect(screen.getByText('Community meetup')).toBeInTheDocument()
     expect(screen.getByText('Advertisement')).toBeInTheDocument()
+    const img = container.querySelector('img')!
+    expect(img).toHaveAttribute('src', 'https://x.test/bg.jpg')
+    expect(img).toHaveAttribute('alt', '') // decoration: screen readers read the words, not the picture
+    expect(img.className).toMatch(/opacity-80/)
+  })
+
+  it('shows a slide without a picture on its plain colours', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <SlideCard slide={{ title: 'No picture' }} />
+      </MemoryRouter>,
+    )
+    expect(container.querySelector('img')).toBeNull()
   })
 })

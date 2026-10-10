@@ -58,16 +58,23 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
       className="relative w-full h-full rounded-[32px] overflow-hidden border-2 border-secondary/20 min-h-[380px] md:min-h-[460px] flex flex-col items-center justify-center px-6 py-10 md:py-16 text-center"
       style={bgStyle}
     >
+      {/* The slide's picture shows what it is about; the shade over it keeps the words readable. */}
       {slide.image_url && (
         <img
           src={slide.image_url}
           alt=""
           loading="lazy"
-          className="absolute inset-0 w-full h-full object-cover opacity-20"
+          className="absolute inset-0 w-full h-full object-cover opacity-80"
         />
       )}
 
-      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/40 pointer-events-none" />
+      <div
+        className={
+          slide.image_url
+            ? 'absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/60 pointer-events-none'
+            : 'absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/40 pointer-events-none'
+        }
+      />
 
       {slide.isDefault && (
         <>
