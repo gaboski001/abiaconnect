@@ -29,8 +29,8 @@ EXTRA_FORUMS = [
     # No people in this photo: a face on the card would sit beside every gossip headline.
     {'forum': 'gossip', 'label': 'Gossip', 'photo': 'A_dynamic_XLR_microphone_WEISRE_DM_701_jpg.jpg',
      'photo_box': None, 'photo_caption': 'Microphone'},
-    {'forum': 'institutions', 'label': 'Institutions', 'photo': 'Pupils_doing_online_tests_jpg.jpg',
-     'photo_box': None, 'photo_caption': 'Students at computers'},
+    {'forum': 'institutions', 'label': 'Institutions', 'photo': 'Michael_Okpara_University_Library_jpg.jpg',
+     'photo_box': None, 'photo_caption': 'University library, Umudike'},
 ]
 
 PAGE = """<!doctype html>

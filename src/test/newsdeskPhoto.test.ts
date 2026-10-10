@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ABIA_SCHOOL_RE, parseRss, type Feed } from '../../supabase/functions/_shared/newsdesk-core'
+import { ABIA_SCHOOL_RE, buildCandidates, parseRss, type Feed } from '../../supabase/functions/_shared/newsdesk-core'
 import {
   articlePhoto,
   googleLookupBody,
@@ -97,5 +97,19 @@ describe('school searches keep only reports that name an Abia school', () => {
     expect(parseRss(xml, campus).map((i) => i.title)).toEqual(['ABSU Creates New Training Directorate'])
     // The same report from an ordinary Abia search is still general news.
     expect(parseRss(xml, { ...campus, campus: false })).toHaveLength(2)
+  })
+
+  it("keeps every item of a school's own feed, and offers it for 30 days", () => {
+    const xml = `<rss><channel><item><title>Commencement of 2026/2027 Academic Session</title><link>https://clifforduni.edu.ng/commencement-of-2026-2027-academic-session/</link><pubDate>Fri, 18 Sep 2026 12:09:00 +0000</pubDate></item><item><title>Disclaimer on fake admission agents</title><link>https://clifforduni.edu.ng/disclaimer/</link><pubDate>Wed, 08 May 2024 18:40:45 +0000</pubDate></item></channel></rss>`
+    const feed: Feed = { name: 'Clifford University, Owerrinta', url: 'https://clifforduni.edu.ng/feed/', scope: 'abia', campus: true, official: true }
+    const raw = parseRss(xml, feed)
+    expect(raw.map((i) => [i.publisher, i.campus, i.official])).toEqual([
+      ['Clifford University, Owerrinta', true, true],
+      ['Clifford University, Owerrinta', true, true],
+    ])
+    // 22 days old is still on offer; the 2024 notice is not. A newspaper report of that age would be dropped.
+    const now = new Date('2026-10-10T16:00:00Z')
+    expect(buildCandidates(raw, { now }).map((i) => i.title)).toEqual(['Commencement of 2026/2027 Academic Session'])
+    expect(buildCandidates(raw.map((i) => ({ ...i, official: false })), { now })).toEqual([])
   })
 })

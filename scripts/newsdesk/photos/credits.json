@@ -179,6 +179,40 @@
    4496
   ]
  },
- "A_dynamic_XLR_microphone_WEISRE_DM_701_jpg.jpg": {"name":"A dynamic (XLR) microphone - WEISRE DM-701.jpg","file":"A_dynamic_XLR_microphone_WEISRE_DM_701_jpg.jpg","license":"CC BY-SA 4.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0","artist":"BRONSKIARCHIVE","page":"https://commons.wikimedia.org/wiki/File:A_dynamic_(XLR)_microphone_-_WEISRE_DM-701.jpg","size":[1600,1200]},
- "Airplane_wing_sky_and_clouds_jpg.jpg": {"name":"Airplane wing sky and clouds.jpg","file":"Airplane_wing_sky_and_clouds_jpg.jpg","license":"CC BY-SA 3.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/3.0","artist":"Tobias1984","page":"https://commons.wikimedia.org/wiki/File:Airplane_wing_sky_and_clouds.jpg","size":[2000,1500]}
+ "A_dynamic_XLR_microphone_WEISRE_DM_701_jpg.jpg": {
+  "name": "A dynamic (XLR) microphone - WEISRE DM-701.jpg",
+  "file": "A_dynamic_XLR_microphone_WEISRE_DM_701_jpg.jpg",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "artist": "BRONSKIARCHIVE",
+  "page": "https://commons.wikimedia.org/wiki/File:A_dynamic_(XLR)_microphone_-_WEISRE_DM-701.jpg",
+  "size": [
+   1600,
+   1200
+  ]
+ },
+ "Airplane_wing_sky_and_clouds_jpg.jpg": {
+  "name": "Airplane wing sky and clouds.jpg",
+  "file": "Airplane_wing_sky_and_clouds_jpg.jpg",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "artist": "Tobias1984",
+  "page": "https://commons.wikimedia.org/wiki/File:Airplane_wing_sky_and_clouds.jpg",
+  "size": [
+   2000,
+   1500
+  ]
+ },
+ "Michael_Okpara_University_Library_jpg.jpg": {
+  "name": "Michael Okpara University Library, Imo State (with the Library annex in the background.jpg",
+  "file": "Michael_Okpara_University_Library_jpg.jpg",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "artist": "Nellydieli",
+  "page": "https://commons.wikimedia.org/wiki/File:Michael_Okpara_University_Library,_Imo_State_(with_the_Library_annex_in_the_background.jpg",
+  "size": [
+   1008,
+   756
+  ]
+ }
 }

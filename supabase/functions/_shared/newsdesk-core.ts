@@ -17,6 +17,8 @@ export interface Feed {
   showbiz?: boolean
   /** News about Abia's universities, polytechnics and colleges, for the Institutions forum. */
   campus?: boolean
+  /** A school's own news feed: every item is that school's news, and it stays on offer longer. */
+  official?: boolean
 }
 
 const GOOGLE = (q: string) =>
@@ -63,6 +65,10 @@ export const FEEDS: Feed[] = [
     scope: 'abia',
     campus: true,
   },
+  // The schools' own news feeds (their websites; see also SCHOOL_PAGES below).
+  { name: 'Michael Okpara University of Agriculture, Umudike', url: 'https://mouau.edu.ng/feed/', scope: 'abia', campus: true, official: true },
+  { name: 'Clifford University, Owerrinta', url: 'https://clifforduni.edu.ng/feed/', scope: 'abia', campus: true, official: true },
+  { name: 'Abia State Polytechnic, Aba', url: 'https://abiastatepolytechnic.edu.ng/feed/', scope: 'abia', campus: true, official: true },
 ]
 
 /**
@@ -80,6 +86,10 @@ export const SCHOOL_PAGES: Array<{ name: string; url: string }> = [
   { name: 'Spiritan University, Nneochi', url: 'https://spiritanuniversity.edu.ng/' },
   { name: 'Abia State Polytechnic, Aba', url: 'https://abiastatepolytechnic.edu.ng/news' },
   { name: 'Nigerian British University, Asa', url: 'https://nbu.edu.ng/news' },
+  // These two build their pages in the visitor's browser, so there is little
+  // for the bot to read yet; they are watched in case that changes.
+  { name: 'Lux Mundi University, Umuahia', url: 'https://luxmundiuniversity.edu.ng/resources/news' },
+  { name: 'Amadeus University, Amizi', url: 'https://amadeus.edu.ng/news' },
 ]
 
 /**
@@ -107,10 +117,14 @@ export const TRUSTED_SITES = [
   // Abia's institutions
   'abiastateuniversity.edu.ng', 'mouau.edu.ng', 'abiastatepolytechnic.edu.ng', 'gregoryuniversityuturu.edu.ng',
   'rhemauniversity.edu.ng', 'clifforduni.edu.ng', 'spiritanuniversity.edu.ng', 'nbu.edu.ng', 'asceta.edu.ng',
+  'luxmundiuniversity.edu.ng', 'amadeus.edu.ng',
 ]
 
 /** School news is slower than daily news: a report stays on offer for two weeks. */
 export const CAMPUS_HOURS = 336
+
+/** A school's own notice (resumption, exams, fees) matters for longer still: 30 days. */
+export const OFFICIAL_HOURS = 720
 
 /** Abia's universities, polytechnics and colleges, as newspapers name them. */
 export const ABIA_SCHOOL_RE =
@@ -163,6 +177,8 @@ export interface NewsItem {
   showbiz: boolean
   /** News about one of Abia's institutions. */
   campus: boolean
+  /** From the institution's own news feed. */
+  official?: boolean
 }
 
 export interface Forum {
@@ -274,10 +290,10 @@ export function parseRss(xml: string, feed: Feed): RawItem[] {
     if (/\/promoted\/|\/sponsored\//i.test(url) || /\b(sponsored|advertorial)\b/i.test(title)) continue
 
     // A school search also returns reports that only mention the word in passing.
-    if (feed.campus && !ABIA_SCHOOL_RE.test(`${title} ${snippet}`)) continue
+    if (feed.campus && !feed.official && !ABIA_SCHOOL_RE.test(`${title} ${snippet}`)) continue
 
     const scope: Scope = feed.scope === 'abia' || ABIA_RE.test(`${title} ${snippet}`) ? 'abia' : 'wider'
-    out.push({ title: title.slice(0, 300), url, publisher, published: when.toISOString(), snippet, scope, showbiz: feed.showbiz === true, campus: feed.campus === true })
+    out.push({ title: title.slice(0, 300), url, publisher, published: when.toISOString(), snippet, scope, showbiz: feed.showbiz === true, campus: feed.campus === true, official: feed.official === true })
   }
   return out
 }
@@ -410,7 +426,7 @@ export function buildCandidates(raw: RawItem[], opts: CandidateOptions): NewsIte
   for (const item of sorted) {
     const age = now - new Date(item.published).getTime()
     // Schools post less often than newspapers: their news stays usable for two weeks.
-    const limit = (item.campus ? CAMPUS_HOURS : item.scope === 'abia' ? 48 : 30) * 3600_000
+    const limit = (item.official ? OFFICIAL_HOURS : item.campus ? CAMPUS_HOURS : item.scope === 'abia' ? 48 : 30) * 3600_000
     if (age > limit || age < -3600_000) continue
     const key = titleKey(item.title)
     if (key.length < 12 || seen.has(key) || usedUrls.has(item.url)) continue
