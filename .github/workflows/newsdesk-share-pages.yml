@@ -1,0 +1,53 @@
+name: Newsdesk share pages
+
+# Gives each Newsdesk bot post its own link preview (its banner) on Facebook
+# and WhatsApp: writes public/share/post-<thread>.html for new posts and
+# commits it, which republishes the website. Until then a post's link
+# previews its forum's picture.
+#
+# The bot posts at 06:30 UTC (07:30 Lagos); admins approve posts through the
+# day. Times are UTC.
+on:
+  schedule:
+    - cron: '45 6 * * *'
+    - cron: '15 7 * * *'
+    - cron: '0 9-21/2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: newsdesk-share-pages
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Write share pages for new posts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Write share pages
+        run: node scripts/newsdesk/sync_share_pages.mjs
+
+      - name: Commit new pages
+        run: |
+          if [ -z "$(git status --porcelain public/share)" ]; then
+            echo "No new share pages."
+            exit 0
+          fi
+          git config user.name "AbiaConnect Newsdesk"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/share
+          git commit -m "Newsdesk: share pages for new posts"
+          git pull --rebase
+          git push

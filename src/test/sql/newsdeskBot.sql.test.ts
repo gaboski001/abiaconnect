@@ -41,7 +41,7 @@ const PRELUDE = `
   CREATE FUNCTION cron.unschedule(id bigint) RETURNS boolean LANGUAGE sql AS $$ DELETE FROM cron.job WHERE jobid = id RETURNING true $$;
 `
 
-const MIGRATION = ['20261010090000_newsdesk_bot.sql', '20261010120000_newsdesk_banners.sql']
+const MIGRATION = ['20261010090000_newsdesk_bot.sql', '20261010120000_newsdesk_banners.sql', '20261010140000_newsdesk_share_feed.sql']
   .map((f) => readFileSync(resolve(__dirname, '../../../supabase/migrations', f), 'utf8'))
   .join('\n')
 
@@ -168,6 +168,26 @@ describe('Newsdesk bot database', () => {
     const row = (await as(ADMIN, 'authenticated', () => db.query(`SELECT banner_title, banner_url FROM newsdesk_posts WHERE id = $1`, [id]))).rows[0]
     expect(row).toEqual({ banner_title: 'Short headline', banner_url: 'https://x/storage/v1/object/public/newsdesk/banners/a.jpg' })
     await post({ run_date: '2026-10-12' }) // a post without a banner is fine
+  })
+
+  it('lists published bot posts that have a banner, for the share-page job', async () => {
+    const thread = async (title: string) => (await db.query<{ id: string }>(`INSERT INTO threads (title) VALUES ($1) RETURNING id`, [title])).rows[0].id
+    const live = await thread('Live')
+    const noBanner = await thread('No banner')
+    const waiting = await thread('Waiting')
+    const removed = await thread('Removed')
+    await post({ run_date: '2026-10-01', thread_id: live, status: 'published', banner_url: 'https://x/a.jpg', banner_title: 'Short', title: 'Draft title' })
+    await post({ run_date: '2026-10-02', thread_id: noBanner, status: 'published' })
+    await post({ run_date: '2026-10-03', thread_id: waiting, banner_url: 'https://x/b.jpg' })
+    await post({ run_date: '2026-10-04', thread_id: removed, status: 'published', banner_url: 'https://x/c.jpg' })
+    await db.query(`UPDATE threads SET is_deleted = true WHERE id = $1`, [removed])
+
+    const feed = (await as(null, 'anon', () => db.query(`SELECT * FROM public.newsdesk_share_feed()`))).rows
+    // The thread's own title is used (an admin may have edited it since).
+    expect(feed).toEqual([{ thread_id: live, title: 'Live', banner_title: 'Short', banner_url: 'https://x/a.jpg', content: '<p>c</p>' }])
+
+    await db.query(`UPDATE newsdesk_posts SET created_at = now() - interval '60 days'`)
+    expect((await as(null, 'anon', () => db.query(`SELECT * FROM public.newsdesk_share_feed()`))).rows).toEqual([])
   })
 
   it('keeps the record but forgets the thread when the thread is deleted', async () => {
