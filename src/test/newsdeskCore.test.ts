@@ -8,6 +8,7 @@ import {
   bannerHeadline,
   bannerHtml,
   buildCandidates,
+  campusSelectionSystemPrompt,
   cleanUrl,
   extractArticleText,
   extractHeadlineLinks,
@@ -503,5 +504,20 @@ describe('news from institutions’ own websites', () => {
     expect(picks.map((p) => p.forum)).toEqual(['institutions'])
     const msg = writerUserMessage({ forum: forums[3], pick: picks[0], articleText: {} })
     expect(msg).toContain('This is news from a school in Abia State')
+  })
+
+  it('asks about school news alone when the Institutions forum was left empty', () => {
+    const { items: raw } = newPageItems('Gregory University, Uturu', links, [{ url: links[0].url, first_seen: '2026-10-08T08:00:00.000Z', baseline: false }], false, NOW)
+    const items = buildCandidates([...raw, ...parseRss(VANGUARD_XML, VANGUARD)], { now: NOW })
+    const campus = items.filter((i) => i.campus)
+    const institutions: Forum = { slug: 'institutions', name: 'Institutions', description: null }
+    expect(campusSelectionSystemPrompt()).toContain('"forum":"institutions"')
+    const msg = selectionUserMessage({ forums: [institutions], items: campus, recentTitles: [], maxPicks: 1 })
+    expect(msg).toContain(`${campus[0].id}. [CAMPUS] `)
+    expect(msg).not.toContain('Ohafia')
+    // The second answer is checked against the school stories only, with their own numbers.
+    const farm = items.find((i) => /Ohafia/.test(i.title))!
+    const picks = parseSelection(JSON.stringify({ picks: [{ forum: 'institutions', ids: [farm.id, campus[1].id] }] }), [institutions], campus)
+    expect(picks.map((p) => [p.forum, p.items.map((i) => i.title)])).toEqual([['institutions', [campus[1].title]]])
   })
 })

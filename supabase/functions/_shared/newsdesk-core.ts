@@ -427,6 +427,29 @@ export function selectionSystemPrompt(): string {
   ].join('\n')
 }
 
+/**
+ * A second look for the Institutions forum only. Among a hundred general
+ * headlines the editor tends to pass over school news, so when the first
+ * choice leaves that forum empty it is asked again with the school stories alone.
+ */
+export function campusSelectionSystemPrompt(): string {
+  return [
+    'You are the news editor of AbiaConnect, a community forum for people of Abia State, Nigeria, at home and abroad.',
+    `You are filling the "${INSTITUTIONS_FORUM}" forum, where students, staff, parents and alumni follow the universities, polytechnics and colleges in Abia State.`,
+    'From the numbered headlines choose the ONE story they would most want to know about today: admissions, fees, resumption and exam dates, accreditation, results, appointments, new departments, inductions and graduations, events and achievements.',
+    '',
+    'Rules:',
+    '- The story must be about a school in Abia State (for example Abia State University, Michael Okpara University of Agriculture Umudike, Abia State Polytechnic, Gregory, Rhema, Clifford, Spiritan or Nigerian British University). A headline that only mentions Abia, or is about a school elsewhere, does not count.',
+    '- Prefer the newest story. Skip stories already discussed (listed below), adverts, and items that are only a menu or department page.',
+    '- You may list up to 3 headline numbers when they are reports of the SAME story.',
+    '- If no headline is about a school in Abia State, choose nothing. Otherwise do choose one: ordinary school news is welcome here.',
+    '- Set "sensitive" to true when the story involves deaths, violence, crime or arrests, court cases, strikes or protests, accusations against a named person or organisation, or ethnic or religious tension.',
+    '',
+    'Reply with JSON only, in this shape:',
+    `{"picks":[{"forum":"${INSTITUTIONS_FORUM}","ids":[<headline numbers>],"sensitive":true|false}]}`,
+  ].join('\n')
+}
+
 export function selectionUserMessage(args: {
   forums: Forum[]
   items: NewsItem[]

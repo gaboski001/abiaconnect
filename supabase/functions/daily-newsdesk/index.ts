@@ -22,11 +22,13 @@ import {
   SCHOOL_PAGES,
   bannerHtml,
   buildCandidates,
+  campusSelectionSystemPrompt,
   extractArticleText,
   extractHeadlineLinks,
   newPageItems,
   holdReason,
   lagosDate,
+  INSTITUTIONS_FORUM,
   openForums,
   parseDraft,
   parseRss,
@@ -231,7 +233,20 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
     // 2. Choose at most one story per forum.
     const chosen = await askAi(selectionSystemPrompt(), selectionUserMessage({ forums, items, recentTitles, maxPicks: room }), 0)
     if (chosen === null) return await finish('The AI service did not answer. The bot will try again at its next run.', { found: items.length }, false)
-    const picks = prioritise(parseSelection(chosen, forums, items), room, lastPosted)
+    const selected = parseSelection(chosen, forums, items)
+    // School news is easily passed over among the general headlines: when the
+    // Institutions forum got nothing, the editor looks at the school stories alone.
+    const institutions = forums.find((f) => f.slug === INSTITUTIONS_FORUM)
+    const campusItems = items.filter((i) => i.campus)
+    if (institutions && campusItems.length && !selected.some((p) => p.forum === INSTITUTIONS_FORUM)) {
+      const again = await askAi(
+        campusSelectionSystemPrompt(),
+        selectionUserMessage({ forums: [institutions], items: campusItems, recentTitles, maxPicks: 1 }),
+        0,
+      )
+      if (again) selected.push(...parseSelection(again, [institutions], campusItems))
+    }
+    const picks = prioritise(selected, room, lastPosted)
     if (!picks.length) {
       return await finish(`Read ${items.length} fresh stories; none was a good fit for a forum today.`, { found: items.length })
     }
