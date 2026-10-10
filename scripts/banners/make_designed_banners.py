@@ -34,6 +34,10 @@ WHITE = (255, 255, 255)
 GOVERNOR_PHOTO = os.path.join(HERE, 'governor.jpg')
 GOVERNOR_NAME = 'Dr. Alex C. Otti, OFR'
 GOVERNOR_TITLE = 'Governor of Abia State'
+# The Governor's portrait from his official website (alexotti.com), credited on the banner.
+# Part of the photo to use, as fractions of its width and height: head and shoulders.
+GOVERNOR_BOX = (0.20, 0.09, 0.90, 0.64)
+GOVERNOR_CREDIT = 'Portrait: alexotti.com'
 
 BANNERS = {
     'tower': {
@@ -47,6 +51,8 @@ BANNERS = {
         'centre_wide': (0.5, 0.0),
         'centre_tall': (0.5, 0.0),
         'governor': True,
+        # New file name when the picture changes: browsers and Facebook keep old pictures by address.
+        'file': 'tower-v2',
     },
     'diaspora': {
         'badge': 'ABIANS WORLDWIDE',
@@ -153,7 +159,10 @@ def paste_governor(img, centre, diameter, name_size):
     """The Governor's portrait in a gold ring, with name and office beneath."""
     if not os.path.exists(GOVERNOR_PHOTO):
         return img
-    face = ImageOps.fit(Image.open(GOVERNOR_PHOTO).convert('RGB'), (diameter, diameter), Image.LANCZOS, centering=(0.5, 0.25))
+    src = Image.open(GOVERNOR_PHOTO).convert('RGB')
+    x0, y0, x1, y1 = GOVERNOR_BOX
+    src = src.crop((int(x0 * src.width), int(y0 * src.height), int(x1 * src.width), int(y1 * src.height)))
+    face = ImageOps.fit(src, (diameter, diameter), Image.LANCZOS, centering=(0.5, 0.4))
     cx, cy = centre
     r = diameter // 2
     ring = max(6, diameter // 28)
@@ -246,6 +255,14 @@ def footer(img, logo, x, y, size, right=None):
         d.text((right, y), 'Connecting Abians Worldwide', font=font('segoeui.ttf', int(size * 0.92)), fill=GOLD_LIGHT, anchor='rm')
 
 
+def credits(b):
+    """The photo credit, plus the portrait's source when the Governor is on the banner."""
+    line = credit_line(b['photo'], b['caption'])
+    if b.get('governor') and os.path.exists(GOVERNOR_PHOTO):
+        line += f'  ·  {GOVERNOR_CREDIT}'
+    return line
+
+
 def wide(name, b, logo):
     W, H = 2400, 1000
     FOOT = 132
@@ -254,15 +271,15 @@ def wide(name, b, logo):
     if b.get('arms'):
         img = paste_arms(img, (1830, (H - FOOT) // 2 - 6), 700)
     if b.get('governor'):
-        img = paste_governor(img, (2130, 560), 300, 30)
+        img = paste_governor(img, (2120, 520), 330, 30)
     d = ImageDraw.Draw(img)
     d.rectangle((0, 0, W, 14), fill=GOLD)
     d.rectangle((0, H - FOOT, W, H), fill=(1, 30, 23))
     d.rectangle((0, H - FOOT, W, H - FOOT + 5), fill=GOLD)
-    d.text((W - 60, H - FOOT - 30), credit_line(b['photo'], b['caption']), font=font('segoeui.ttf', 22), fill=(235, 245, 240), anchor='rm')
+    d.text((W - 60, H - FOOT - 30), credits(b), font=font('segoeui.ttf', 22), fill=(235, 245, 240), anchor='rm')
     img, _ = text_block(img, b, 130, 96, 1010, (92, 42, 34, 28, 34))
     footer(img, logo, 130, H - FOOT // 2 + 3, 40, right=W - 60)
-    return save(img, f'{name}-desktop')
+    return save(img, f"{b.get('file', name)}-desktop")
 
 
 def tall(name, b, logo):
@@ -282,8 +299,8 @@ def tall(name, b, logo):
     img, _ = text_block(img, b, 70, 560, W - 140, (74, 36, 31, 26, 34), centred=True)
     footer(img, logo, 70, H - FOOT // 2 - 12, 34)
     # Photo credit in the footer: it would not be readable over a bright sky.
-    ImageDraw.Draw(img).text((70, H - 24), credit_line(b['photo'], b['caption']), font=font('segoeui.ttf', 17), fill=(200, 215, 208), anchor='lm')
-    return save(img, f'{name}-mobile')
+    ImageDraw.Draw(img).text((70, H - 24), credits(b), font=font('segoeui.ttf', 17), fill=(200, 215, 208), anchor='lm')
+    return save(img, f"{b.get('file', name)}-mobile")
 
 
 def save(img, name):
