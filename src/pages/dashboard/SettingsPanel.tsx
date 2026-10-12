@@ -23,7 +23,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { NotificationSoundToggle } from '@/components/notifications/NotificationSoundToggle'
 import { CallRingtoneSettings } from '@/components/notifications/CallRingtoneSettings'
-import { WhatsAppUpdatesSetting } from '@/components/notifications/WhatsAppUpdatesSetting'
 import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 import { Switch } from '@/components/ui/switch'
 import { Phone, PhoneOff } from 'lucide-react'
@@ -243,9 +242,6 @@ export default function SettingsPanel({
         </div>
         <div className="mt-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
           <CallRingtoneSettings />
-        </div>
-        <div className="mt-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
-          <WhatsAppUpdatesSetting />
         </div>
         <div className="mt-3 rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 flex items-center justify-between gap-3">
           <div>
