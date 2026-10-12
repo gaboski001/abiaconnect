@@ -2608,6 +2608,27 @@ export type Database = {
         }
         Relationships: []
       }
+      support_appeals: {
+        Row: {
+          last_sent_at: string | null
+          opted_out_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          last_sent_at?: string | null
+          opted_out_at?: string | null
+          token?: string
+          user_id: string
+        }
+        Update: {
+          last_sent_at?: string | null
+          opted_out_at?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -2850,6 +2871,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      volunteer_applications: {
+        Row: {
+          admin_note: string | null
+          answers: Json
+          created_at: string
+          decision_emailed_at: string | null
+          email: string
+          experience: string
+          full_name: string
+          hours_per_week: string
+          id: string
+          lga: string | null
+          links: string | null
+          location: string
+          motivation: string
+          phone: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          role: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_note?: string | null
+          answers?: Json
+          created_at?: string
+          decision_emailed_at?: string | null
+          email: string
+          experience: string
+          full_name: string
+          hours_per_week: string
+          id?: string
+          lga?: string | null
+          links?: string | null
+          location: string
+          motivation: string
+          phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_note?: string | null
+          answers?: Json
+          created_at?: string
+          decision_emailed_at?: string | null
+          email?: string
+          experience?: string
+          full_name?: string
+          hours_per_week?: string
+          id?: string
+          lga?: string | null
+          links?: string | null
+          location?: string
+          motivation?: string
+          phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          role?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       wallet_transactions: {
         Row: {
@@ -3595,6 +3682,16 @@ export type Database = {
         }
         Returns: string
       }
+      support_appeal_claim: {
+        Args: { _limit?: number }
+        Returns: {
+          email: string
+          name: string
+          token: string
+          user_id: string
+        }[]
+      }
+      support_appeal_opt_out: { Args: { _token: string }; Returns: boolean }
       sync_reputation: { Args: { _user: string }; Returns: undefined }
       thread_share_path: { Args: { _thread_id: string }; Returns: string }
       track_monetization_event: {
@@ -3602,6 +3699,53 @@ export type Database = {
         Returns: undefined
       }
       verify_cron_token: { Args: { _token: string }; Returns: boolean }
+      volunteer_decide: {
+        Args: { _admin: string; _decision: string; _id: string; _note?: string }
+        Returns: {
+          admin_note: string | null
+          answers: Json
+          created_at: string
+          decision_emailed_at: string | null
+          email: string
+          experience: string
+          full_name: string
+          hours_per_week: string
+          id: string
+          lga: string | null
+          links: string | null
+          location: string
+          motivation: string
+          phone: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          role: string
+          status: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "volunteer_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      volunteer_submit: {
+        Args: {
+          _answers: Json
+          _email: string
+          _experience: string
+          _full_name: string
+          _hours_per_week: string
+          _lga: string
+          _links: string
+          _location: string
+          _motivation: string
+          _phone: string
+          _role: string
+          _user?: string
+        }
+        Returns: string
+      }
       wallet_apply: {
         Args: {
           _amount: number

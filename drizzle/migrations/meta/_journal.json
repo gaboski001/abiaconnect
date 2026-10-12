@@ -71,6 +71,13 @@
       "when": 1791650872723,
       "tag": "0009_newsdesk_log_cleanup",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791830616388,
+      "tag": "0010_volunteer_applications",
+      "breakpoints": true
     }
   ]
 }
