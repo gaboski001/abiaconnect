@@ -81,7 +81,7 @@ export function Footer() {
 
       <footer className="mt-16 border-t border-border bg-muted/40">
         {/* Call to action band */}
-        <div className="border-b border-border bg-primary text-primary-foreground">
+        <div className="brand-panel border-b border-border">
           <div className="mx-auto flex max-w-[1248px] flex-col items-start justify-between gap-5 px-6 py-8 md:flex-row md:items-center">
             <div>
               <p className="web-serif text-2xl font-semibold">

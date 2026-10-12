@@ -431,6 +431,22 @@ html:not(.native-app) footer .web-serif {
   background-color: #36a07a;
   background-image: var(--fill-gradient);
 }
+/* Large branded areas (the band above the footer, the panel beside the
+   sign-in form). In light mode they are the deep brand green. In dark mode
+   the primary colour is a bright emerald made for buttons, which glares when
+   it fills a whole band, so these areas use a deep forest green instead, with
+   light text. --primary-foreground is redefined inside so the existing
+   text-primary-foreground classes on their content stay readable. */
+.brand-panel {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+.dark .brand-panel {
+  --primary-foreground: oklch(0.97 0.012 150);
+  background-color: oklch(0.23 0.05 158);
+  background-image: linear-gradient(135deg, oklch(0.29 0.065 160) 0%, oklch(0.2 0.045 156) 100%);
+  color: var(--primary-foreground);
+}
 /* Black text on a gold fill stays dark (the rule that turns .text-black
    light is meant for text sitting on the dark page itself). */
 .dark :is(.bg-gold, .bg-secondary, .bg-amber-400, .bg-amber-500, .bg-yellow-400, .bg-yellow-500).text-black {

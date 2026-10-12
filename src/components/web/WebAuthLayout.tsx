@@ -27,7 +27,7 @@ export function WebAuthLayout({
 }) {
   return (
     <div className="mx-auto grid max-w-5xl overflow-hidden rounded-3xl border border-border bg-card shadow-sm lg:grid-cols-[1fr_1.1fr]">
-      <aside className="relative hidden flex-col justify-between bg-primary p-10 text-primary-foreground lg:flex">
+      <aside className="brand-panel relative hidden flex-col justify-between p-10 lg:flex">
         <div
           className="pointer-events-none absolute inset-0 opacity-30"
           style={{ background: 'radial-gradient(60% 50% at 80% 10%, rgba(248,195,1,0.45), transparent 70%)' }}
