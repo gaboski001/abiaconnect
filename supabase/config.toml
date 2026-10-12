@@ -37,3 +37,5 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = false
   [functions.newsdesk-banner]
     verify_jwt = false
+  [functions.daily-premium-invite]
+    verify_jwt = false
