@@ -22,6 +22,10 @@ export default function PrivacyPolicy() {
           <strong>Profile (optional):</strong> profile photo, bio, current city, occupation, sex and marital status.
         </li>
         <li>
+          <strong>WhatsApp number (optional):</strong> only if you add it in your settings and agree to WhatsApp updates.
+          Other members never see it, and you can remove it at any time.
+        </li>
+        <li>
           <strong>Relationship profile (optional, adults only):</strong> photos, description and preferences you add to use
           the relationship features.
         </li>
@@ -67,7 +71,9 @@ export default function PrivacyPolicy() {
         <li>To create and run your account and provide forums, groups, polls, messaging, calls and events.</li>
         <li>
           To send notifications and emails: account and security emails (such as sign-up confirmation, password reset and new
-          sign-in alerts), birthday wishes on your birthday, and activity notifications you can manage in settings.
+          sign-in alerts), birthday wishes on your birthday, and activity notifications you can manage in settings. We
+          may also email you occasionally about Premium membership or supporting AbiaConnect; every such email has an
+          unsubscribe link. If you gave us your WhatsApp number, we may send the same kinds of updates there.
         </li>
         <li>
           To keep the community safe: posts, replies and messages are checked by automated moderation (our AI moderator "Ugo")
