@@ -65,6 +65,7 @@ import AppReleasesSection from '@/components/admin/AppReleasesSection'
 import TestPushSection from '@/components/admin/TestPushSection'
 import BirthdaysTodaySection from '@/components/admin/BirthdaysTodaySection'
 import IssueReportsSection from '@/components/admin/IssueReportsSection'
+import MemberEmailsSection from '@/components/admin/MemberEmailsSection'
 import VolunteerApplicationsSection from '@/components/admin/VolunteerApplicationsSection'
 import { HandHelping } from 'lucide-react'
 import NewsdeskSection from '@/components/admin/NewsdeskSection'
@@ -159,7 +160,12 @@ export default function AdminDashboard() {
           {section === 'subgroups' && <SubgroupsSection />}
           {section === 'settings' && <SiteSettingsSection />}
           {section === 'slides' && <HeroSlidesSection />}
-          {section === 'email' && <EmailSettingsSection />}
+          {section === 'email' && (
+            <>
+              <MemberEmailsSection />
+              <EmailSettingsSection />
+            </>
+          )}
           {section === 'native-apps' && <AppReleasesSection />}
           {section === 'test-push' && <TestPushSection />}
           {section === 'birthdays' && <BirthdaysTodaySection />}
