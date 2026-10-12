@@ -415,22 +415,30 @@ html:not(.native-app) footer .web-serif {
 .bg-yellow-500 {
   background-image: var(--gold-gradient);
 }
-/* Dark theme: solid gold/yellow fills become a mature emerald gradient that
-   sits well on the near-black green background. Gold stays for small accents
-   (highlights, logo colours). Faint tints such as bg-amber-400/10 are kept. */
+/* Dark theme: each brand colour has one job. Emerald is for actions (buttons,
+   active tabs); gold is for highlights (premium, new, counters, warnings).
+   Each fill shades within its own colour, so nothing passes through olive.
+   The two colours meet only where a component asks for it (from-primary
+   to-secondary: the reading bar, icon tiles). Faint tints such as
+   bg-amber-400/10 keep their flat colour. */
 .dark {
-  /* Soft jade -> deep forest green -> warm gold finish (the logo's colours). */
-  --fill-gradient: linear-gradient(135deg, #5cc29a 0%, #36a07a 34%, #26805f 62%, #a8892c 84%, #e2b84b 100%);
+  --fill-gradient: linear-gradient(180deg, #52c198 0%, #2f9a74 100%);
+  /* A softer gold without the orange end, which is harsh on near-black. */
+  --gold-gradient: linear-gradient(180deg, #f4cf5e 0%, #dba928 100%);
 }
 .dark .bg-primary,
-.dark .bg-gold,
-.dark .bg-secondary,
-.dark .bg-amber-400,
-.dark .bg-amber-500,
-.dark .bg-yellow-400,
-.dark .bg-yellow-500 {
+.dark .bubble-mine {
   background-color: #36a07a;
   background-image: var(--fill-gradient);
+}
+/* Black text on a gold fill stays dark (the rule that turns .text-black
+   light is meant for text sitting on the dark page itself). */
+.dark :is(.bg-gold, .bg-secondary, .bg-amber-400, .bg-amber-500, .bg-yellow-400, .bg-yellow-500).text-black {
+  color: var(--secondary-foreground) !important;
+}
+/* Your own chat messages: emerald, so a long conversation is not a wall of gold. */
+.dark .bubble-mine {
+  color: var(--primary-foreground);
 }
 .dark .bg-primary:hover {
   filter: brightness(1.07);

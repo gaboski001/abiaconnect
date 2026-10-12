@@ -2439,7 +2439,7 @@ function MessageBubble({
               ? 'bg-[#005c4b] text-white rounded-br-md ring-transparent'
               : 'bg-[#1f2c33] text-white rounded-bl-md ring-white/5'
             : mine
-              ? 'bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
+              ? 'bubble-mine bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
               : 'bg-card text-foreground rounded-bl-md ring-border/60',
           m._optimistic && 'opacity-70',
           deleted && 'italic opacity-70',
