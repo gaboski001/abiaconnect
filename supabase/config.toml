@@ -39,3 +39,5 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = false
   [functions.daily-premium-invite]
     verify_jwt = false
+  [functions.daily-support-appeal]
+    verify_jwt = false
