@@ -426,35 +426,38 @@ html:not(.native-app) footer .web-serif {
   /* A softer gold without the orange end, which is harsh on near-black. */
   --gold-gradient: linear-gradient(180deg, #f4cf5e 0%, #dba928 100%);
 }
-.dark .bg-primary,
-.dark .bubble-mine {
+.dark .bg-primary {
   background-color: #36a07a;
   background-image: var(--fill-gradient);
 }
-/* Large branded areas (the band above the footer, the panel beside the
-   sign-in form). In light mode they are the deep brand green. In dark mode
-   the primary colour is a bright emerald made for buttons, which glares when
-   it fills a whole band, so these areas use a deep forest green instead, with
-   light text. --primary-foreground is redefined inside so the existing
-   text-primary-foreground classes on their content stay readable. */
+/* Branded surfaces that hold reading text (the band above the footer, the
+   panel beside the sign-in form, tooltips, your own chat messages). In light
+   mode they keep their brand colour. In dark mode the bright emerald and gold
+   are made for buttons and glare when they sit behind text, so these surfaces
+   use a deep forest green instead, with light text. The foreground variables
+   are redefined inside so the text classes on their content stay readable. */
 .brand-panel {
   background-color: var(--primary);
   color: var(--primary-foreground);
 }
-.dark .brand-panel {
+.dark .brand-panel,
+.dark .bubble-mine {
   --primary-foreground: oklch(0.97 0.012 150);
+  --secondary-foreground: oklch(0.97 0.012 150);
   background-color: oklch(0.23 0.05 158);
   background-image: linear-gradient(135deg, oklch(0.29 0.065 160) 0%, oklch(0.2 0.045 156) 100%);
   color: var(--primary-foreground);
+}
+/* A chat bubble is small, so it is a touch lighter to stand off the page. */
+.dark .bubble-mine {
+  background-color: oklch(0.3 0.065 160);
+  background-image: none;
+  --tw-ring-color: oklch(0.68 0.12 162 / 30%);
 }
 /* Black text on a gold fill stays dark (the rule that turns .text-black
    light is meant for text sitting on the dark page itself). */
 .dark :is(.bg-gold, .bg-secondary, .bg-amber-400, .bg-amber-500, .bg-yellow-400, .bg-yellow-500).text-black {
   color: var(--secondary-foreground) !important;
-}
-/* Your own chat messages: emerald, so a long conversation is not a wall of gold. */
-.dark .bubble-mine {
-  color: var(--primary-foreground);
 }
 .dark .bg-primary:hover {
   filter: brightness(1.07);
