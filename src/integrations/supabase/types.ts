@@ -2608,6 +2608,27 @@ export type Database = {
         }
         Relationships: []
       }
+      support_appeals: {
+        Row: {
+          last_sent_at: string | null
+          opted_out_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          last_sent_at?: string | null
+          opted_out_at?: string | null
+          token?: string
+          user_id: string
+        }
+        Update: {
+          last_sent_at?: string | null
+          opted_out_at?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -3595,6 +3616,16 @@ export type Database = {
         }
         Returns: string
       }
+      support_appeal_claim: {
+        Args: { _limit?: number }
+        Returns: {
+          email: string
+          name: string
+          token: string
+          user_id: string
+        }[]
+      }
+      support_appeal_opt_out: { Args: { _token: string }; Returns: boolean }
       sync_reputation: { Args: { _user: string }; Returns: undefined }
       thread_share_path: { Args: { _thread_id: string }; Returns: string }
       track_monetization_event: {
