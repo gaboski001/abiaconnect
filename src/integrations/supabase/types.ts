@@ -1956,6 +1956,27 @@ export type Database = {
           },
         ]
       }
+      premium_invites: {
+        Row: {
+          last_sent_at: string | null
+          opted_out_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          last_sent_at?: string | null
+          opted_out_at?: string | null
+          token?: string
+          user_id: string
+        }
+        Update: {
+          last_sent_at?: string | null
+          opted_out_at?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -3508,6 +3529,16 @@ export type Database = {
       }
       points_daily_cap: { Args: { _reason: string }; Returns: number }
       points_level: { Args: { _points: number }; Returns: number }
+      premium_invite_claim: {
+        Args: { _limit?: number }
+        Returns: {
+          email: string
+          name: string
+          token: string
+          user_id: string
+        }[]
+      }
+      premium_invite_opt_out: { Args: { _token: string }; Returns: boolean }
       prune_email_short_links: { Args: never; Returns: undefined }
       prune_issue_report_contact_emails: { Args: never; Returns: undefined }
       prune_search_rate_limits: { Args: never; Returns: undefined }
