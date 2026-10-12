@@ -344,13 +344,16 @@ body {
 }
 .thread-prose pre code { background: transparent; color: inherit; padding: 0; }
 
-/* Placeholder for the Tiptap composer */
-.thread-prose p.is-editor-empty:first-child::before {
+/* Guide text on empty lines of the Tiptap composer (never saved with the post) */
+/* The guide text sits under the line the cursor is on and is pulled up over
+   it, so the paragraph grows with the text when it wraps onto more lines. */
+.thread-prose p.is-empty { display: flex; flex-direction: column; }
+.thread-prose p.is-empty::before {
   content: attr(data-placeholder);
-  float: left;
+  order: 1;
+  margin-top: -1.75em;          /* one line of .thread-prose */
   color: color-mix(in oklab, var(--foreground) 40%, transparent);
   pointer-events: none;
-  height: 0;
 }
 
 /* Tiptap editor chrome */

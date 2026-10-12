@@ -23,6 +23,7 @@ import { SEO } from '@/components/SEO'
 import { confirmModerationWarning, showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 import { ThreadEditor } from '@/components/thread/ThreadEditor'
 import { clearDraft, loadDraft, saveDraft } from '@/lib/threadDraft'
+import { emptySections } from '@/lib/storyLayouts'
 
 const schema = z.object({
   category_id: z.string().optional(),
@@ -46,12 +47,19 @@ interface Category {
   name: string
 }
 
-const TIPS = [
-  'Choose a clear, specific title that describes your topic.',
-  'Be respectful — we celebrate Abia State together.',
-  'Use tags so others can discover your post.',
-  'Add images or links to support your points.',
-  'Search first to avoid duplicate threads.',
+// The shape of a post that is easy to read, in the order a member writes it.
+const WRITING_STEPS = [
+  { title: 'A clear title', text: 'Say exactly what the post is about, as you would tell a friend.' },
+  { title: 'The main point first', text: 'Open with one or two sentences that give the whole story.' },
+  { title: 'Short sections', text: 'Pick a layout, or add your own headings, and keep each paragraph to a few lines.' },
+  { title: 'A picture or a source', text: 'Add a photo, or a link to where the information came from.' },
+  { title: 'A question to end', text: 'Ask readers what they think so the discussion starts.' },
+]
+
+const HOUSE_RULES = [
+  'Be respectful. We celebrate Abia State together.',
+  'Share only what you know to be true.',
+  'Search first to avoid posting the same thread twice.',
 ]
 
 // Lightweight client-side moderation. Keep tight & fast.
@@ -213,6 +221,13 @@ export default function CreateThread() {
       return
     }
     const plain = values.content.replace(/<[^>]+>/g, ' ')
+    const unfinished = emptySections(values.content)
+    if (unfinished.length) {
+      toast.error(`Nothing is written under "${unfinished[0]}"${unfinished.length > 1 ? ` and ${unfinished.length - 1} more` : ''}`, {
+        description: 'Write something under each heading, or delete the headings you do not need.',
+      })
+      return
+    }
     const banned = findBanned(`${values.title} ${plain}`)
     if (banned) {
       toast.error('Your post was flagged for review and not published. Please revise and try again.')
@@ -358,16 +373,15 @@ export default function CreateThread() {
 
         {/* Rich-text content */}
         <div className="space-y-1.5">
-          <div className="flex items-baseline justify-between">
-            <Label>Your story</Label>
-            <span className="text-xs text-muted-foreground">
-              Select text for formatting · Empty line shows a “+” to add an image or heading
-            </span>
-          </div>
+          <Label>Your story</Label>
+          <p className="text-xs text-muted-foreground">
+            Write it the way you would tell it. Use <span className="font-medium text-foreground">Layout</span> for
+            ready-made headings, and the other buttons for bold text, lists, links and pictures.
+          </p>
           <ThreadEditor
             value={content}
             onChange={(html) => form.setValue('content', html, { shouldValidate: true })}
-            placeholder="Open with a strong first line… Then use the toolbar or the + button on the left to structure your post."
+            placeholder="Start with your main point in one or two sentences…"
             minHeight={360}
           />
           <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
@@ -452,9 +466,23 @@ export default function CreateThread() {
 
       <aside className="lg:col-span-1">
         <div className="rounded-2xl border border-border bg-card p-5 sticky top-24">
-          <h3 className="font-bold mb-3">Posting Tips</h3>
-          <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-4">
-            {TIPS.map((t) => (
+          <h3 className="font-bold mb-3">How to Write a Good Post</h3>
+          <ol className="space-y-3">
+            {WRITING_STEPS.map((s, i) => (
+              <li key={s.title} className="flex gap-3">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                  {i + 1}
+                </span>
+                <span className="text-sm">
+                  <span className="block font-semibold">{s.title}</span>
+                  <span className="block text-muted-foreground">{s.text}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+          <h3 className="font-bold mt-5 mb-2 border-t border-border pt-4">House Rules</h3>
+          <ul className="space-y-1.5 text-sm text-muted-foreground list-disc pl-4">
+            {HOUSE_RULES.map((t) => (
               <li key={t}>{t}</li>
             ))}
           </ul>
