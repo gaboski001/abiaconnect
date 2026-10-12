@@ -1012,6 +1012,27 @@ export type Database = {
         }
         Relationships: []
       }
+      member_email_settings: {
+        Row: {
+          enabled: boolean
+          key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       member_stats: {
         Row: {
           current_streak: number
@@ -3121,6 +3142,7 @@ export type Database = {
           username: string
         }[]
       }
+      admin_member_email_status: { Args: never; Returns: Json }
       admin_monetization_summary: { Args: never; Returns: Json }
       admin_revoke_subscription: {
         Args: { _note?: string; _subscription_id: string }
@@ -3134,6 +3156,10 @@ export type Database = {
       }
       admin_set_member_dob: {
         Args: { _dob: string; _user_id: string }
+        Returns: undefined
+      }
+      admin_set_member_email: {
+        Args: { _enabled: boolean; _key: string }
         Returns: undefined
       }
       admin_set_payment_secret: {
@@ -3540,6 +3566,7 @@ export type Database = {
       }
       mark_message_read: { Args: { _message_id: string }; Returns: undefined }
       mask_payment_secret: { Args: { _value: string }; Returns: string }
+      member_email_enabled: { Args: { _key: string }; Returns: boolean }
       member_message_privacy: { Args: { _uid: string }; Returns: string }
       my_thread_ids: {
         Args: never
