@@ -65,6 +65,8 @@ import AppReleasesSection from '@/components/admin/AppReleasesSection'
 import TestPushSection from '@/components/admin/TestPushSection'
 import BirthdaysTodaySection from '@/components/admin/BirthdaysTodaySection'
 import IssueReportsSection from '@/components/admin/IssueReportsSection'
+import VolunteerApplicationsSection from '@/components/admin/VolunteerApplicationsSection'
+import { HandHelping } from 'lucide-react'
 import NewsdeskSection from '@/components/admin/NewsdeskSection'
 import { Newspaper } from 'lucide-react'
 import DatingMonetizationSection from '@/components/admin/DatingMonetizationSection'
@@ -87,6 +89,7 @@ type SectionId =
   | 'birthdays'
   | 'newsdesk'
   | 'problem-reports'
+  | 'volunteers'
   | 'monetization'
 
 const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
@@ -104,6 +107,7 @@ const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'birthdays', label: 'Birthdays Today', Icon: Cake },
   { id: 'newsdesk', label: 'Newsdesk Bot', Icon: Newspaper },
   { id: 'problem-reports', label: 'Problem Reports', Icon: Flag },
+  { id: 'volunteers', label: 'Volunteer Applications', Icon: HandHelping },
   { id: 'monetization', label: 'Relationship & Premium', Icon: HeartHandshake },
 ]
 
@@ -161,6 +165,7 @@ export default function AdminDashboard() {
           {section === 'birthdays' && <BirthdaysTodaySection />}
           {section === 'newsdesk' && <NewsdeskSection />}
           {section === 'problem-reports' && <IssueReportsSection />}
+          {section === 'volunteers' && <VolunteerApplicationsSection />}
           {section === 'monetization' && <DatingMonetizationSection />}
         </main>
       </div>

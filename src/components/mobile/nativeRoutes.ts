@@ -44,6 +44,7 @@ const TITLES: Array<[string, string]> = [
   ['/mission', 'Our mission'],
   ['/team', 'Our team'],
   ['/careers', 'Careers'],
+  ['/volunteer', 'Volunteer'],
   ['/success-stories', 'Success stories'],
   ['/member-spotlight', 'Member spotlight'],
   ['/help', 'Help centre'],

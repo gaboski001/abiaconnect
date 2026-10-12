@@ -49,6 +49,7 @@ const Search = lazy(() => import('@/pages/Search'))
 const Mission = lazy(() => import('@/pages/static/Mission'))
 const Team = lazy(() => import('@/pages/static/Team'))
 const Careers = lazy(() => import('@/pages/static/Careers'))
+const Volunteer = lazy(() => import('@/pages/static/Volunteer'))
 const ForumGuidelines = lazy(() => import('@/pages/static/ForumGuidelines'))
 const Events = lazy(() => import('@/pages/static/Events'))
 const SuccessStories = lazy(() => import('@/pages/static/SuccessStories'))
@@ -142,6 +143,7 @@ export default function App() {
                 <Route path="mission" element={<Mission />} />
                 <Route path="team" element={<Team />} />
                 <Route path="careers" element={<Careers />} />
+                <Route path="volunteer" element={<Volunteer />} />
                 <Route path="forum-guidelines" element={<ForumGuidelines />} />
                 <Route path="events" element={<Events />} />
                 <Route path="success-stories" element={<SuccessStories />} />

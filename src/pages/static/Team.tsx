@@ -49,11 +49,17 @@ export default function Team() {
         <h2 className="text-xl font-bold text-foreground mb-2">Want to Contribute?</h2>
         <p className="text-muted-foreground mb-4 max-w-xl mx-auto">
           AbiaConnect welcomes volunteers who share our mission. Whether you are a developer,
-          writer, moderator, or connector — there is a role for you here.
+          writer, moderator, or connector — there is a role for you here. Fill in a short
+          application and our team will review it and reply by email.
         </p>
-        <Button asChild>
-          <Link to="/careers">View Open Roles</Link>
-        </Button>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button asChild>
+            <Link to="/volunteer">Apply to Volunteer</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/careers">View Open Roles</Link>
+          </Button>
+        </div>
       </div>
     </StaticPage>
   )

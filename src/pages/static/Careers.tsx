@@ -1,27 +1,32 @@
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import StaticPage from '@/components/layout/StaticPage'
 
 const ROLES = [
   {
     title: 'Community Moderator',
+    role: 'moderator',
     type: 'Volunteer',
     location: 'Remote Nigeria or Diaspora',
     desc: 'Help maintain a respectful, safe forum environment. Review reported content, apply community standards, and support members. Requires 5-8 hours per week and genuine commitment to Abia community values.',
   },
   {
     title: 'Content Writer',
+    role: 'writer',
     type: 'Volunteer',
     location: 'Remote',
     desc: 'Write news summaries, member spotlights, and editorial pieces about Abia State. Strong written English and knowledge of current Abia affairs required.',
   },
   {
     title: 'Social Media Coordinator',
+    role: 'social',
     type: 'Volunteer',
     location: 'Remote',
     desc: "Manage AbiaConnect's presence on Instagram, X (Twitter), and Facebook. Creative, consistent, and community-minded candidates preferred.",
   },
   {
     title: 'Frontend Developer',
+    role: 'developer',
     type: 'Contract',
     location: 'Remote',
     desc: 'Help build and improve the AbiaConnect web platform. React, TypeScript, and Tailwind CSS experience required. Abia State origin preferred but not mandatory.',
@@ -55,7 +60,7 @@ export default function Careers() {
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed mb-4">{r.desc}</p>
             <Button asChild size="sm">
-              <a href={`mailto:careers@abiaconnect.com?subject=Application: ${r.title}`}>Apply Now</a>
+              <Link to={`/volunteer?role=${r.role}`}>Apply Now</Link>
             </Button>
           </div>
         ))}
@@ -64,8 +69,8 @@ export default function Careers() {
       <h2>How to Apply</h2>
       <div className="not-prose grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
         {[
-          { n: '1', t: 'Send Your CV', d: 'Email your CV and a short note about why you want to contribute.' },
-          { n: '2', t: 'Intro Call', d: 'Introductory call with our team (30 minutes).' },
+          { n: '1', t: 'Fill the Form', d: 'Choose a role and answer a few questions. It takes about 10 minutes.' },
+          { n: '2', t: 'Review & Intro Call', d: 'We email our decision, then arrange a short introduction call.' },
           { n: '3', t: 'Trial & Onboarding', d: 'Two-week trial period then full onboarding.' },
         ].map((s) => (
           <div key={s.n} className="bg-card border border-border rounded-2xl p-6 text-center">
