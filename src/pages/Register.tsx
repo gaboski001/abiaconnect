@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { supabase } from '@/lib/supabase'
+import { trackEvent } from '@/lib/metaPixel'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { AuthField, AuthSubmit, NativeAuthLayout, isNativeApp } from '@/components/mobile/NativeAuthLayout'
@@ -234,6 +235,8 @@ export default function Register() {
       goTo(1)
       return
     }
+    // Lets AbiaConnect's ads learn who joins (only for visitors who agreed to the pixel).
+    trackEvent('CompleteRegistration')
     setDone(true)
   }
 

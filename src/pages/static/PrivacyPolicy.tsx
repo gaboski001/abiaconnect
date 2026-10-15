@@ -3,7 +3,7 @@ import StaticPage from '@/components/layout/StaticPage'
 
 export default function PrivacyPolicy() {
   return (
-    <StaticPage badge="Legal" title="Privacy Policy" subtitle="Last updated: 3 October 2026">
+    <StaticPage badge="Legal" title="Privacy Policy" subtitle="Last updated: 16 October 2026">
       <h2>1. Introduction</h2>
       <p>
         AbiaConnect ("we", "us") runs the AbiaConnect website (abiaconnect.com) and the AbiaConnect mobile apps. This policy
@@ -93,6 +93,12 @@ export default function PrivacyPolicy() {
           may use the data only to provide their service to us.
         </li>
         <li>
+          <strong>Meta (Facebook), only if you agree:</strong> if you press Accept on our cookie notice, the Meta pixel tells
+          Meta which AbiaConnect pages you visited and whether you created an account, so we can see if our own Facebook
+          and Instagram ads work. It never sends your messages, posts, password or profile details. Meta&apos;s privacy
+          policy applies to what it receives.
+        </li>
+        <li>
           <strong>Other members and the public:</strong> your public profile and public posts are visible to other members as
           described above. Private messages are visible only to the people in the conversation.
         </li>
@@ -148,8 +154,9 @@ export default function PrivacyPolicy() {
 
       <h2>10. Cookies</h2>
       <p>
-        We use essential cookies and similar storage only, to keep you signed in and remember preferences such as your theme.
-        We do not use advertising cookies. See our <Link to="/cookie-policy">Cookie Policy</Link>.
+        We use essential cookies and similar storage to keep you signed in and remember preferences such as your theme. The
+        only advertising cookie is the optional Meta pixel, which loads only if you accept it. See our{' '}
+        <Link to="/cookie-policy">Cookie Policy</Link>.
       </p>
 
       <h2>11. Changes to this policy</h2>

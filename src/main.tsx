@@ -7,6 +7,7 @@ import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { Toaster } from '@/components/ui/sonner'
+import { AdConsentBanner } from '@/components/AdConsentBanner'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { Capacitor } from '@capacitor/core'
 import '@fontsource/lora/400.css'
@@ -81,6 +82,7 @@ ReactDOM.createRoot(rootEl).render(
               <PushBootstrap />
               <App />
               <Toaster richColors position="top-right" />
+              <AdConsentBanner />
             </BrowserRouter>
           </AuthProvider>
         </ThemeProvider>
