@@ -16,6 +16,7 @@ import { daysSince, useJourney } from '@/lib/journey'
 import { NewDiscussionsBanner, OnlineMembersPill } from '@/components/engagement/LiveCommunity'
 import { ContestCard } from '@/pages/Contests'
 import { contestPhase, listContests } from '@/lib/engagement'
+import { QuickPollCard } from '@/components/engagement/QuickPollCard'
 
 interface Category {
   id: string
@@ -190,6 +191,12 @@ export function NativeHome() {
         </section>
       ) : null}
 
+      {user ? (
+        <section className="px-4 empty:hidden">
+          <QuickPollCard compact />
+        </section>
+      ) : null}
+
       {openContests.length ? (
         <section className="px-4">
           <div className="mb-3 flex items-center justify-between">
@@ -211,6 +218,50 @@ export function NativeHome() {
       {/* Admin announcements / featured */}
       <section className="px-4">
         <HeroSlider />
+      </section>
+
+      {/* Topics */}
+      <section className="px-4">
+        <SectionHeader title="Browse topics" />
+        {categoriesQ.isLoading ? (
+          <div className="grid grid-cols-2 gap-2.5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-[76px] animate-pulse rounded-2xl bg-muted" />
+            ))}
+          </div>
+        ) : categoriesQ.isError ? (
+          <ErrorCard onRetry={() => categoriesQ.refetch()} />
+        ) : !categoriesQ.data?.length ? (
+          <EmptyCard text="Topics will appear here soon." />
+        ) : (
+          <div className="grid grid-cols-2 gap-2.5">
+            {categoriesQ.data.map((c) => {
+              const color = c.color ?? '#1B3D1B'
+              const href = c.slug === 'relationship' ? '/relationship' : `/category/${c.id}`
+              return (
+                <Link
+                  key={c.id}
+                  to={href}
+                  className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 transition-colors active:bg-muted"
+                >
+                  <span
+                    className="flex size-11 shrink-0 items-center justify-center rounded-xl text-xl"
+                    style={{ backgroundColor: `${color}26` }}
+                    aria-hidden
+                  >
+                    {c.icon ?? '💬'}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="line-clamp-2 text-[14px] font-semibold leading-tight text-foreground">{c.name}</span>
+                    <span className="mt-0.5 block text-[12px] text-muted-foreground">
+                      {c.thread_count ?? 0} {c.thread_count === 1 ? 'thread' : 'threads'}
+                    </span>
+                  </span>
+                </Link>
+              )
+            })}
+          </div>
+        )}
       </section>
 
       {/* Latest discussions */}
@@ -274,50 +325,6 @@ export function NativeHome() {
               )
             })}
           </ul>
-        )}
-      </section>
-
-      {/* Topics */}
-      <section className="px-4">
-        <SectionHeader title="Browse topics" />
-        {categoriesQ.isLoading ? (
-          <div className="grid grid-cols-2 gap-2.5">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-[76px] animate-pulse rounded-2xl bg-muted" />
-            ))}
-          </div>
-        ) : categoriesQ.isError ? (
-          <ErrorCard onRetry={() => categoriesQ.refetch()} />
-        ) : !categoriesQ.data?.length ? (
-          <EmptyCard text="Topics will appear here soon." />
-        ) : (
-          <div className="grid grid-cols-2 gap-2.5">
-            {categoriesQ.data.map((c) => {
-              const color = c.color ?? '#1B3D1B'
-              const href = c.slug === 'relationship' ? '/relationship' : `/category/${c.id}`
-              return (
-                <Link
-                  key={c.id}
-                  to={href}
-                  className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 transition-colors active:bg-muted"
-                >
-                  <span
-                    className="flex size-11 shrink-0 items-center justify-center rounded-xl text-xl"
-                    style={{ backgroundColor: `${color}26` }}
-                    aria-hidden
-                  >
-                    {c.icon ?? '💬'}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="line-clamp-2 text-[14px] font-semibold leading-tight text-foreground">{c.name}</span>
-                    <span className="mt-0.5 block text-[12px] text-muted-foreground">
-                      {c.thread_count ?? 0} {c.thread_count === 1 ? 'thread' : 'threads'}
-                    </span>
-                  </span>
-                </Link>
-              )
-            })}
-          </div>
         )}
       </section>
     </div>

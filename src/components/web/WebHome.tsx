@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase'
 import { contestPhase, listContests } from '@/lib/engagement'
 import { daysSince, useJourney } from '@/lib/journey'
 import { cn } from '@/lib/utils'
+import { QuickPollCard } from '@/components/engagement/QuickPollCard'
 
 type FeedTab = 'latest' | 'my-lga' | 'popular' | 'unanswered'
 
@@ -183,6 +184,38 @@ export function WebHome() {
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-10">
+          {/* Topic index */}
+          <section aria-labelledby="topics-heading">
+            <h2 id="topics-heading" className="mb-4 text-2xl font-semibold">
+              Browse by topic
+            </h2>
+            <div className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
+              {(topics.data ?? []).map((c) => (
+                <Link
+                  key={c.id}
+                  to={c.slug === 'relationship' ? '/relationship' : `/category/${c.id}`}
+                  className="flex gap-4 bg-card p-5 transition-colors hover:bg-muted/40"
+                >
+                  <span
+                    className="flex size-11 shrink-0 items-center justify-center rounded-xl text-xl"
+                    style={{ backgroundColor: `${c.color ?? '#1B3D1B'}1F` }}
+                    aria-hidden
+                  >
+                    {c.icon ?? '💬'}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-foreground">{c.name}</span>
+                    {c.description ? <span className="mt-0.5 block line-clamp-2 text-sm text-muted-foreground">{c.description}</span> : null}
+                    <span className="mt-1.5 block text-xs font-medium text-muted-foreground">
+                      {(c.thread_count ?? 0).toLocaleString()} {c.thread_count === 1 ? 'discussion' : 'discussions'}
+                    </span>
+                  </span>
+                </Link>
+              ))}
+              {topics.isLoading ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 animate-pulse bg-card" />) : null}
+            </div>
+          </section>
+
           {/* Discussions */}
           <section aria-labelledby="discussions-heading">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -283,43 +316,12 @@ export function WebHome() {
             </div>
           </section>
 
-          {/* Topic index */}
-          <section aria-labelledby="topics-heading">
-            <h2 id="topics-heading" className="mb-4 text-2xl font-semibold">
-              Browse by topic
-            </h2>
-            <div className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
-              {(topics.data ?? []).map((c) => (
-                <Link
-                  key={c.id}
-                  to={c.slug === 'relationship' ? '/relationship' : `/category/${c.id}`}
-                  className="flex gap-4 bg-card p-5 transition-colors hover:bg-muted/40"
-                >
-                  <span
-                    className="flex size-11 shrink-0 items-center justify-center rounded-xl text-xl"
-                    style={{ backgroundColor: `${c.color ?? '#1B3D1B'}1F` }}
-                    aria-hidden
-                  >
-                    {c.icon ?? '💬'}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block font-semibold text-foreground">{c.name}</span>
-                    {c.description ? <span className="mt-0.5 block line-clamp-2 text-sm text-muted-foreground">{c.description}</span> : null}
-                    <span className="mt-1.5 block text-xs font-medium text-muted-foreground">
-                      {(c.thread_count ?? 0).toLocaleString()} {c.thread_count === 1 ? 'discussion' : 'discussions'}
-                    </span>
-                  </span>
-                </Link>
-              ))}
-              {topics.isLoading ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 animate-pulse bg-card" />) : null}
-            </div>
-          </section>
-
         </div>
 
         {/* Sidebar */}
         <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           {user ? <DailyRewardCard /> : null}
+          {user ? <QuickPollCard /> : null}
 
           {open.length ? (
             <SideCard title="Vote now" icon={Vote} action={{ to: '/contests', label: 'All contests' }}>
