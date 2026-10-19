@@ -50,14 +50,28 @@ export interface AiAsk {
 /** Every answer must be one JSON object; providers without a JSON switch are told so. */
 export const JSON_ONLY = '\n\nReply with one valid JSON object only, with no other text and no code fences.'
 
+/**
+ * Newer Gemini models "think" before answering, which makes short structured
+ * jobs slow and costly. Keep it low: Gemini 3 and later take a thinking level,
+ * Gemini 2.5 a thinking budget (Pro can't switch it off, so it is left alone).
+ */
+export function geminiThinking(model: string): Record<string, unknown> | null {
+  const version = Number(/gemini-(\d+(?:\.\d+)?)/i.exec(model)?.[1] ?? 0)
+  if (version >= 3) return { thinkingLevel: 'low' }
+  if (version >= 2.5 && /flash/i.test(model)) return { thinkingBudget: 0 }
+  return null
+}
+
 /** The HTTP request for the providers called without an SDK. */
 export function buildRequest(
   provider: Exclude<AiProvider, 'claude'>,
   key: string,
   model: string,
   ask: AiAsk,
+  options: { thinking?: boolean } = {},
 ): { url: string; init: RequestInit } {
   if (provider === 'gemini') {
+    const thinking = options.thinking === false ? null : geminiThinking(model)
     return {
       url: `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       init: {
@@ -66,7 +80,11 @@ export function buildRequest(
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: ask.system }] },
           contents: [{ role: 'user', parts: [{ text: ask.user }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: ask.temperature },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: ask.temperature,
+            ...(thinking ? { thinkingConfig: thinking } : {}),
+          },
         }),
       },
     }

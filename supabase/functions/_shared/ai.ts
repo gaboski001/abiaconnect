@@ -95,6 +95,7 @@ async function callOnce(
   ask: AiAsk,
   timeoutMs: number,
   retried = false,
+  thinking = true,
 ): Promise<{ text: string | null; problem: string | null }> {
   const model = modelFor(config, provider)
   if (provider === 'claude') {
@@ -121,7 +122,7 @@ async function callOnce(
 
   const key = provider === 'lovable' ? LOVABLE_API_KEY : config.keys[provider]
   if (!key) return { text: null, problem: provider === 'lovable' ? 'Lovable AI is not set up.' : `No ${provider} API key is saved.` }
-  const { url, init } = buildRequest(provider, key, model, ask)
+  const { url, init } = buildRequest(provider, key, model, ask, { thinking })
   try {
     const res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) })
     if (!res.ok) {
@@ -129,7 +130,11 @@ async function callOnce(
       console.error(`${provider} error`, res.status, detail.slice(0, 300))
       // Google retires model versions: switch to one this key can use, once.
       if (provider === 'gemini' && res.status === 404 && !retried && (await replaceGeminiModel(config, key, model))) {
-        return callOnce(provider, config, ask, timeoutMs, true)
+        return callOnce(provider, config, ask, timeoutMs, true, thinking)
+      }
+      // A model that doesn't take the thinking setting: ask again without it.
+      if (provider === 'gemini' && res.status === 400 && thinking && /thinking/i.test(detail)) {
+        return callOnce(provider, config, ask, timeoutMs, retried, false)
       }
       return { text: null, problem: explainFailure(provider, res.status, detail) }
     }

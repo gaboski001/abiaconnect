@@ -4,6 +4,7 @@ import {
   DEFAULT_MODELS,
   explainFailure,
   extractJson,
+  geminiThinking,
   modelFor,
   readAnswer,
   readConfig,
@@ -98,5 +99,17 @@ describe('Gemini model choice', () => {
       ],
     }
     expect(readGeminiModels(body)).toEqual(['gemini-3.0-flash'])
+  })
+})
+
+describe('Gemini speed', () => {
+  it('keeps thinking low on newer Gemini models, and can leave it out', () => {
+    expect(geminiThinking('gemini-3.8-flash')).toEqual({ thinkingLevel: 'low' })
+    expect(geminiThinking('gemini-2.5-flash')).toEqual({ thinkingBudget: 0 })
+    expect(geminiThinking('gemini-2.5-pro')).toBeNull()
+    const withIt = JSON.parse(buildRequest('gemini', 'k', 'gemini-3.8-flash', ask).init.body as string)
+    expect(withIt.generationConfig.thinkingConfig).toEqual({ thinkingLevel: 'low' })
+    const without = JSON.parse(buildRequest('gemini', 'k', 'gemini-3.8-flash', ask, { thinking: false }).init.body as string)
+    expect(without.generationConfig.thinkingConfig).toBeUndefined()
   })
 })
