@@ -25,7 +25,7 @@ const PRELUDE = `
     created_at timestamptz NOT NULL DEFAULT now()
   );
   CREATE TABLE public.admins (user_id uuid PRIMARY KEY);
-  CREATE FUNCTION public.is_admin(_u uuid) RETURNS boolean LANGUAGE sql STABLE AS
+  CREATE FUNCTION public.is_admin(_u uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER AS
     $$ SELECT EXISTS (SELECT 1 FROM public.admins WHERE user_id = _u) $$;
   CREATE TABLE public.subgroups (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL, description text, category text,
@@ -60,16 +60,20 @@ const PRELUDE = `
     IF NOT FOUND THEN RETURN 0; END IF;
     RETURN _amount;
   END $$;
+  CREATE FUNCTION public.is_subgroup_member(_g uuid, _u uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER AS
+    $$ SELECT EXISTS (SELECT 1 FROM public.subgroup_members WHERE subgroup_id = _g AND user_id = _u) $$;
   INSERT INTO public.subgroups (name, category) VALUES ('Abia Tech Hub', 'Technology'), ('Secret Circle', 'Business');
   UPDATE public.subgroups SET is_private = true WHERE name = 'Secret Circle';
 `
 
 const MIGRATION = readFileSync(resolve(__dirname, '../../../supabase/migrations/20261019120000_newcomer_journey.sql'), 'utf8')
+const PRIVATE_TOPICS = readFileSync(resolve(__dirname, '../../../supabase/migrations/20261019170000_private_group_topics.sql'), 'utf8')
 
 async function makeDb() {
   const pg = new PGlite()
   await pg.exec(PRELUDE)
   await pg.exec(MIGRATION)
+  await pg.exec(PRIVATE_TOPICS)
   const query = async <T>(sql: string, params: unknown[] = []) => (await pg.query<T>(sql, params)).rows
   const one = async <T>(sql: string, params: unknown[] = []) => (await query<T>(sql, params))[0]!
   /** Runs SQL as a signed-in member (row rules apply). */
@@ -166,6 +170,20 @@ describe('newcomer journey', () => {
     await db.as(admin, () => db.query(`INSERT INTO subgroup_topics (subgroup_id, name) VALUES ($1, 'Hiring')`, [group.id]))
     const seen = await db.as(null, () => db.query(`SELECT id FROM subgroup_topics WHERE name = 'Hiring'`))
     expect(seen).toHaveLength(1)
+  })
+
+  it('hides the topics of private groups from outsiders, but not from members', async () => {
+    const outsider = await db.addUser('Bende')
+    const insider = await db.addUser('Bende')
+    const secret = await db.one<{ id: string }>(`SELECT id FROM subgroups WHERE name = 'Secret Circle'`)
+    await db.query(`INSERT INTO subgroup_members (subgroup_id, user_id) VALUES ($1, $2)`, [secret.id, insider])
+    const look = (uid: string | null) =>
+      db.as(uid, () => db.query(`SELECT id FROM subgroup_topics WHERE subgroup_id = $1`, [secret.id]))
+    expect(await look(null)).toHaveLength(0)
+    expect(await look(outsider)).toHaveLength(0)
+    expect((await look(insider)).length).toBeGreaterThan(0)
+    const tech = await db.one<{ id: string }>(`SELECT id FROM subgroups WHERE name = 'Abia Tech Hub'`)
+    expect((await db.as(null, () => db.query(`SELECT id FROM subgroup_topics WHERE subgroup_id = $1`, [tech.id]))).length).toBeGreaterThan(0)
   })
 
   it('sends each week-one reminder once, and none after the bonus', async () => {
