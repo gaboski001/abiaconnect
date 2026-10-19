@@ -149,6 +149,19 @@ export function extractJson(text: string | null): string | null {
   }
 }
 
+/** The provider's own short error message from an error body, if it has one. */
+export function providerMessage(detail: string): string | null {
+  try {
+    // deno-lint-ignore no-explicit-any
+    const body = JSON.parse(detail) as any
+    const message = body?.error?.message ?? body?.message
+    if (typeof message !== 'string' || !message.trim()) return null
+    return message.trim().replace(/\s+/g, ' ').slice(0, 240)
+  } catch {
+    return null
+  }
+}
+
 /** A provider's error, in words the site owner understands. */
 export function explainFailure(provider: AiProvider, status: number | null, detail = ''): string {
   const name = { lovable: 'Lovable AI', claude: 'Claude', gemini: 'Gemini', deepseek: 'DeepSeek' }[provider]
@@ -159,10 +172,12 @@ export function explainFailure(provider: AiProvider, status: number | null, deta
   if (status === 402) return `Your ${name} account has no credit left.`
   if (status === 404) return `${name} does not recognise the model name. Pick another model on the AI provider page.`
   if (status === 429) return `${name} is busy or your account's limit was reached.`
+  const says = providerMessage(detail)
+  const their = says ? ` ${name} says: "${says}"` : ''
   if (status === 500 || status === 502 || status === 503 || status === 504) {
-    return `${name} is overloaded or having a problem right now (error ${status}). It usually passes within minutes; the backup answers meanwhile if it is switched on.`
+    return `${name} is overloaded or having a problem right now (error ${status}). It usually passes within minutes; the backup answers meanwhile if it is switched on.${their}`
   }
-  return `${name} answered with an error (${status}).`
+  return `${name} answered with an error (${status}).${their}`
 }
 
 /** Gemini models that can't write text answers (pictures, speech, live audio, embeddings). */

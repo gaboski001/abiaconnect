@@ -124,4 +124,10 @@ describe('Gemini when Google is overloaded', () => {
   it('explains a 503 as a passing problem at Google', () => {
     expect(explainFailure('gemini', 503)).toMatch(/overloaded/)
   })
+
+  it("adds the provider's own message so the real cause shows", () => {
+    const detail = JSON.stringify({ error: { code: 503, message: 'The model is overloaded.', status: 'UNAVAILABLE' } })
+    expect(explainFailure('gemini', 503, detail)).toMatch(/Gemini says: "The model is overloaded\."/)
+    expect(explainFailure('gemini', 500, 'not json')).not.toMatch(/says/)
+  })
 })
