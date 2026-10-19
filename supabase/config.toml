@@ -21,6 +21,8 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = true
   [functions.payments-admin-status]
     verify_jwt = true
+  [functions.ai-provider-test]
+    verify_jwt = true
   [functions.payments-webhook]
     verify_jwt = false
   [functions.call-ice-servers]

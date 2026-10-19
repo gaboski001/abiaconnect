@@ -10,11 +10,9 @@ import {
   type ReviewInput,
   type UgoDecision,
 } from './ugo-core.ts'
+import { askAiJson } from './ai.ts'
 
 export * from './ugo-core.ts'
-
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
-const MODEL = 'google/gemini-3-flash-preview'
 
 export interface UgoResult extends UgoDecision {
   degraded: boolean
@@ -38,27 +36,14 @@ export async function ugoReview(input: ReviewInput): Promise<UgoResult> {
   // appeal or report is being reviewed, the rule still applies).
   if (rule) return { ...rule, degraded: false }
 
-  if (!LOVABLE_API_KEY) return ALLOW_DEGRADED
   try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 12_000)
-    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', 'Lovable-API-Key': LOVABLE_API_KEY },
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: 0,
-        messages: [
-          { role: 'system', content: buildSystemPrompt(input.surface) },
-          { role: 'user', content: buildUserMessage(input) },
-        ],
-        response_format: { type: 'json_object' },
-      }),
-    }).finally(() => clearTimeout(timer))
-    if (!res.ok) return { ...ALLOW_DEGRADED, status: res.status }
-    const data = await res.json()
-    const decision = parseDecision(data?.choices?.[0]?.message?.content ?? '')
+    // The AI chosen on the Admin portal's AI provider page (Lovable AI as backup).
+    const answer = await askAiJson(
+      'moderation',
+      { system: buildSystemPrompt(input.surface), user: buildUserMessage(input), temperature: 0 },
+      { timeoutMs: 12_000 },
+    )
+    const decision = answer.json ? parseDecision(answer.json) : null
     return decision ? { ...decision, degraded: false } : ALLOW_DEGRADED
   } catch {
     return ALLOW_DEGRADED

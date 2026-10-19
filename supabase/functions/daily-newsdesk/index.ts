@@ -47,6 +47,7 @@ import {
   type RawItem,
   type SourceLink,
 } from '../_shared/newsdesk-core.ts'
+import { aiAvailable, askAiJson } from '../_shared/ai.ts'
 import { articlePhoto, googleLookupBody, googleLookupResult, googleNewsId, googleSignature, photoCredit } from '../_shared/newsdesk-photo.ts'
 
 const cors = {
@@ -55,8 +56,6 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
-const MODEL = 'google/gemini-3-flash-preview'
 const USER_AGENT = 'Mozilla/5.0 (compatible; AbiaConnectNewsdesk/1.0; +https://abiaconnect.com)'
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -163,7 +162,9 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
 
   try {
     if (!settings.author_id) return await finish('No account is set for the bot to post as.', {}, false)
-    if (!LOVABLE_API_KEY) return await finish('The AI service is not set up (LOVABLE_API_KEY is missing).', {}, false)
+    if (!(await aiAvailable())) {
+      return await finish('No AI is set up. Add an API key on the Admin portal’s AI provider page.', {}, false)
+    }
 
     const today = lagosDate()
     const { data: categories, error: catError } = await db
@@ -582,30 +583,8 @@ async function fetchText(url: string, timeoutMs: number, maxChars: number): Prom
 
 /** One question to the AI; the answer is JSON text, or null when it could not answer. */
 async function askAi(system: string, user: string, temperature: number): Promise<string | null> {
-  try {
-    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      signal: AbortSignal.timeout(45_000),
-      headers: { 'Content-Type': 'application/json', 'Lovable-API-Key': LOVABLE_API_KEY! },
-      body: JSON.stringify({
-        model: MODEL,
-        temperature,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-        response_format: { type: 'json_object' },
-      }),
-    })
-    if (!res.ok) {
-      console.error('newsdesk AI error', res.status)
-      return null
-    }
-    const data = await res.json()
-    const content = data?.choices?.[0]?.message?.content
-    return typeof content === 'string' ? content : null
-  } catch (e) {
-    console.error('newsdesk AI unreachable', e instanceof Error ? e.message : String(e))
-    return null
-  }
+  // The AI chosen on the Admin portal's AI provider page (Lovable AI as backup).
+  const answer = await askAiJson('newsdesk', { system, user, temperature }, { timeoutMs: 45_000 })
+  if (!answer.json) console.error('newsdesk AI could not answer', answer.problem)
+  return answer.json
 }

@@ -1,3 +1,4 @@
+import { AiProviderSection } from '@/components/admin/AiProviderSection'
 import { NewcomerFunnelSection } from '@/components/admin/NewcomerFunnelSection'
 import { useEffect, useMemo, useState } from 'react'
 import { toWebP } from '@/lib/image'
@@ -5,28 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
-import {
-  AlertTriangle,
-  BarChart3,
-  Ban,
-  CheckCircle2,
-  Flag,
-  FolderTree,
-  Inbox,
-  Loader2,
-  Mail,
-  MessageSquare,
-  Pencil,
-  Plus,
-  Save,
-  Search,
-  Settings,
-  Shield,
-  Star,
-  Trash2,
-  Users,
-  Vote,
-} from 'lucide-react'
+import { AlertTriangle, BarChart3, Ban, CheckCircle2, Flag, FolderTree, Inbox, Loader2, Mail, MessageSquare, Pencil, Plus, Save, Search, Settings, Shield, Star, Trash2, Users, Vote, Bot } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { supabase } from '@/lib/supabase'
 import { useSiteSettings, SiteSettings } from '@/hooks/useSiteSettings'
@@ -90,6 +70,7 @@ type SectionId =
   | 'test-push'
   | 'birthdays'
   | 'newsdesk'
+  | 'ai'
   | 'problem-reports'
   | 'volunteers'
   | 'monetization'
@@ -108,6 +89,7 @@ const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'test-push', label: 'Test Push', Icon: BellRing },
   { id: 'birthdays', label: 'Birthdays Today', Icon: Cake },
   { id: 'newsdesk', label: 'Newsdesk Bot', Icon: Newspaper },
+  { id: 'ai', label: 'AI Provider', Icon: Bot },
   { id: 'problem-reports', label: 'Problem Reports', Icon: Flag },
   { id: 'volunteers', label: 'Volunteer Applications', Icon: HandHelping },
   { id: 'monetization', label: 'Relationship & Premium', Icon: HeartHandshake },
@@ -172,6 +154,7 @@ export default function AdminDashboard() {
           {section === 'test-push' && <TestPushSection />}
           {section === 'birthdays' && <BirthdaysTodaySection />}
           {section === 'newsdesk' && <NewsdeskSection />}
+          {section === 'ai' && <AiProviderSection />}
           {section === 'problem-reports' && <IssueReportsSection />}
           {section === 'volunteers' && <VolunteerApplicationsSection />}
           {section === 'monetization' && <DatingMonetizationSection />}
