@@ -92,6 +92,13 @@
       "when": 1792411076811,
       "tag": "0012_newcomer_journey",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792416438517,
+      "tag": "0013_private_group_topics",
+      "breakpoints": true
     }
   ]
 }
