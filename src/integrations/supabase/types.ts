@@ -2871,6 +2871,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          reaction: string | null
           thread_id: string
           user_id: string
           value: number
@@ -2878,6 +2879,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          reaction?: string | null
           thread_id: string
           user_id: string
           value?: number
@@ -2885,6 +2887,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          reaction?: string | null
           thread_id?: string
           user_id?: string
           value?: number
@@ -3756,6 +3759,13 @@ export type Database = {
           downvotes: number
           reply_id: string
           upvotes: number
+        }[]
+      }
+      get_thread_reactions: {
+        Args: { _thread_id: string }
+        Returns: {
+          reaction: string
+          total: number
         }[]
       }
       get_thread_reply_counts: {
