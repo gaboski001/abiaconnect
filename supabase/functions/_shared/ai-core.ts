@@ -166,14 +166,14 @@ export function providerMessage(detail: string): string | null {
 export function explainFailure(provider: AiProvider, status: number | null, detail = ''): string {
   const name = { lovable: 'Lovable AI', claude: 'Claude', gemini: 'Gemini', deepseek: 'DeepSeek' }[provider]
   if (status === null) return `${name} could not be reached (no answer in time).`
-  if (status === 401 || status === 403 || (status === 400 && /api key/i.test(detail))) {
-    return `${name} did not accept the API key. Check it on the AI provider page.`
-  }
-  if (status === 402) return `Your ${name} account has no credit left.`
-  if (status === 404) return `${name} does not recognise the model name. Pick another model on the AI provider page.`
-  if (status === 429) return `${name} is busy or your account's limit was reached.`
   const says = providerMessage(detail)
   const their = says ? ` ${name} says: "${says}"` : ''
+  if (status === 401 || status === 403 || (status === 400 && /api key/i.test(detail))) {
+    return `${name} did not accept the API key. Check it on the AI provider page.${their}`
+  }
+  if (status === 402) return `Your ${name} account has no credit left.${their}`
+  if (status === 404) return `${name} does not recognise the model name. Pick another model on the AI provider page.${their}`
+  if (status === 429) return `${name} is busy or your account's limit was reached.${their}`
   if (status === 500 || status === 502 || status === 503 || status === 504) {
     return `${name} is overloaded or having a problem right now (error ${status}). It usually passes within minutes; the backup answers meanwhile if it is switched on.${their}`
   }
