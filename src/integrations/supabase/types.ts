@@ -3751,6 +3751,7 @@ export type Database = {
         Args: { _bucket: string; _name: string }
         Returns: boolean
       }
+      is_public_subgroup: { Args: { _subgroup_id: string }; Returns: boolean }
       is_subgroup_admin: {
         Args: { _subgroup_id: string; _user_id: string }
         Returns: boolean
