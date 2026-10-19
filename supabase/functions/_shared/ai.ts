@@ -11,6 +11,8 @@ import {
   modelFor,
   readAnswer,
   readConfig,
+  readGeminiModels,
+  recommendGeminiModel,
   type AiAsk,
   type AiConfig,
   type AiFeature,
@@ -56,7 +58,44 @@ export interface AiAnswer {
   problem: string | null
 }
 
-async function callOnce(provider: AiProvider, config: AiConfig, ask: AiAsk, timeoutMs: number) {
+/** The Gemini models a key can use to write text. */
+export async function listGeminiModels(key: string): Promise<string[]> {
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', {
+    headers: { 'x-goog-api-key': key },
+    signal: AbortSignal.timeout(15_000),
+  })
+  if (!res.ok) {
+    console.error('gemini model list error', res.status, (await res.text().catch(() => '')).slice(0, 200))
+    return []
+  }
+  return readGeminiModels(await res.json())
+}
+
+/**
+ * When Google no longer offers the saved Gemini model, pick the best one this
+ * key can use and remember it, so it keeps working without anyone noticing.
+ */
+async function replaceGeminiModel(config: AiConfig, key: string, failed: string): Promise<string | null> {
+  const replacement = recommendGeminiModel(await listGeminiModels(key))
+  if (!replacement || replacement === failed) return null
+  console.error(`gemini model "${failed}" is not available; using "${replacement}" instead`)
+  config.models = { ...config.models, gemini: replacement }
+  if (service) {
+    const { data } = await service.from('ai_provider_settings').select('models').eq('id', true).maybeSingle()
+    const models = { ...((data?.models as Record<string, string> | null) ?? {}), gemini: replacement }
+    const { error } = await service.from('ai_provider_settings').update({ models, updated_at: new Date().toISOString() }).eq('id', true)
+    if (error) console.error('could not save the new Gemini model', error.message)
+  }
+  return replacement
+}
+
+async function callOnce(
+  provider: AiProvider,
+  config: AiConfig,
+  ask: AiAsk,
+  timeoutMs: number,
+  retried = false,
+): Promise<{ text: string | null; problem: string | null }> {
   const model = modelFor(config, provider)
   if (provider === 'claude') {
     const key = config.keys.claude
@@ -88,6 +127,10 @@ async function callOnce(provider: AiProvider, config: AiConfig, ask: AiAsk, time
     if (!res.ok) {
       const detail = await res.text().catch(() => '')
       console.error(`${provider} error`, res.status, detail.slice(0, 300))
+      // Google retires model versions: switch to one this key can use, once.
+      if (provider === 'gemini' && res.status === 404 && !retried && (await replaceGeminiModel(config, key, model))) {
+        return callOnce(provider, config, ask, timeoutMs, true)
+      }
       return { text: null, problem: explainFailure(provider, res.status, detail) }
     }
     return { text: readAnswer(provider, await res.json()), problem: null }

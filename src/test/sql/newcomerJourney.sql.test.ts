@@ -51,6 +51,11 @@ const PRELUDE = `
     id bigserial PRIMARY KEY, user_id uuid NOT NULL, amount integer NOT NULL, reason text NOT NULL,
     ref_id text NOT NULL DEFAULT '', created_at timestamptz NOT NULL DEFAULT now(), UNIQUE (user_id, reason, ref_id)
   );
+  -- The live ledger only accepts known reasons (as created by the forum points migration).
+  ALTER TABLE public.points_ledger ADD CONSTRAINT points_ledger_reason_check CHECK (reason IN (
+    'daily_checkin', 'streak_bonus', 'thread', 'reply', 'thread_upvoted', 'reply_upvoted',
+    'poll_vote', 'contest_vote', 'thread_removed', 'admin_adjust'
+  ));
   CREATE TABLE public.member_badges (user_id uuid, badge text, PRIMARY KEY (user_id, badge));
   CREATE FUNCTION public.award_points(_user uuid, _amount integer, _reason text, _ref text) RETURNS integer
     LANGUAGE plpgsql SECURITY DEFINER AS $$
@@ -67,6 +72,7 @@ const PRELUDE = `
 `
 
 const MIGRATION = readFileSync(resolve(__dirname, '../../../supabase/migrations/20261019120000_newcomer_journey.sql'), 'utf8')
+const BONUS_REASON = readFileSync(resolve(__dirname, '../../../supabase/migrations/20261019180000_starter_bonus_reason.sql'), 'utf8')
 const PRIVATE_TOPICS = readFileSync(resolve(__dirname, '../../../supabase/migrations/20261019170000_private_group_topics.sql'), 'utf8')
 
 async function makeDb() {
@@ -74,6 +80,7 @@ async function makeDb() {
   await pg.exec(PRELUDE)
   await pg.exec(MIGRATION)
   await pg.exec(PRIVATE_TOPICS)
+  await pg.exec(BONUS_REASON)
   const query = async <T>(sql: string, params: unknown[] = []) => (await pg.query<T>(sql, params)).rows
   const one = async <T>(sql: string, params: unknown[] = []) => (await query<T>(sql, params))[0]!
   /** Runs SQL as a signed-in member (row rules apply). */

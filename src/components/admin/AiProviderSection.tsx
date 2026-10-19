@@ -32,10 +32,8 @@ const INFO: Record<Provider, { name: string; blurb: string; keyHelp?: { label: s
     name: 'Gemini (Google)',
     blurb: 'Google AI Studio has a free tier with a daily limit, then pay as you go.',
     keyHelp: { label: 'Get a key at aistudio.google.com → Get API key', url: 'https://aistudio.google.com/app/apikey' },
-    models: [
-      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash — fast and inexpensive (recommended)' },
-      { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro — more capable' },
-    ],
+    // Google retires model versions; AbiaConnect switches to the newest stable Flash model the key can use.
+    models: [{ id: 'gemini-2.5-flash', label: 'Newest stable Gemini Flash (picked automatically)' }],
   },
   deepseek: {
     name: 'DeepSeek',
@@ -169,6 +167,12 @@ export function AiProviderSection() {
     }
   }
 
+  // The model in use may have been picked automatically (e.g. a newer Gemini): always offer it.
+  const currentModel = models[provider] ?? saved?.models?.[provider] ?? INFO[provider].models[0]!.id
+  const modelOptions = INFO[provider].models.some((m) => m.id === currentModel)
+    ? INFO[provider].models
+    : [{ id: currentModel, label: `${currentModel} (in use)` }, ...INFO[provider].models]
+
   const usage = usageQ.data ?? []
   const totalCalls = usage.reduce((sum, row) => sum + Number(row.calls), 0)
   const lovableCalls = usage.filter((row) => row.provider === 'lovable').reduce((sum, row) => sum + Number(row.calls), 0)
@@ -223,11 +227,11 @@ export function AiProviderSection() {
           <label className="space-y-1 text-sm">
             <span className="font-medium">Model</span>
             <select
-              value={models[provider] ?? INFO[provider].models[0]!.id}
+              value={currentModel}
               onChange={(e) => setModels((m) => ({ ...m, [provider]: e.target.value }))}
               className="h-10 w-full rounded-lg border bg-background px-3"
             >
-              {INFO[provider].models.map((m) => (
+              {modelOptions.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.label}
                 </option>

@@ -143,3 +143,39 @@ export function explainFailure(provider: AiProvider, status: number | null, deta
   if (status === 429) return `${name} is busy or your account's limit was reached.`
   return `${name} answered with an error (${status}).`
 }
+
+/** Gemini models that can't write text answers (pictures, speech, live audio, embeddings). */
+const NOT_FOR_WRITING = /(embed|image|imagen|tts|audio|live|veo|aqa|vision|robotics|computer-use|learnlm|gemma)/i
+/** Early-access models that Google may change or remove without notice. */
+const NOT_STABLE = /(preview|exp|experimental)/i
+
+/**
+ * The best Gemini model for the Newsdesk and moderation from the ones a key can
+ * use: the newest stable "Flash" model (fast and inexpensive). Google retires
+ * old versions, so this is worked out from the key's own list, not hard-coded.
+ */
+export function recommendGeminiModel(names: string[]): string | null {
+  const writers = names
+    .map((name) => name.replace(/^models\//, ''))
+    .filter((name) => /gemini/i.test(name) && !NOT_FOR_WRITING.test(name))
+  const version = (name: string) => Number(/gemini-(\d+(?:\.\d+)?)/i.exec(name)?.[1] ?? 0)
+  const score = (name: string) =>
+    (NOT_STABLE.test(name) ? 0 : 1000) +
+    (/flash/i.test(name) ? 100 : 0) +
+    (/lite/i.test(name) ? -50 : 0) +
+    (/latest/i.test(name) ? -5 : 0) +
+    version(name)
+  const ranked = [...writers].sort((a, b) => score(b) - score(a) || a.localeCompare(b))
+  return ranked[0] ?? null
+}
+
+/** The model names in a Gemini "list models" answer that can write text. */
+export function readGeminiModels(body: unknown): string[] {
+  // deno-lint-ignore no-explicit-any
+  const models = (body as any)?.models
+  if (!Array.isArray(models)) return []
+  return models
+    .filter((m: { name?: string; supportedGenerationMethods?: string[] }) =>
+      typeof m?.name === 'string' && (m.supportedGenerationMethods ?? []).includes('generateContent'))
+    .map((m: { name: string }) => m.name.replace(/^models\//, ''))
+}

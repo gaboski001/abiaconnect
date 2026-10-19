@@ -7,6 +7,8 @@ import {
   modelFor,
   readAnswer,
   readConfig,
+  readGeminiModels,
+  recommendGeminiModel,
 } from '../../supabase/functions/_shared/ai-core'
 
 const ask = { system: 'You moderate posts.', user: 'Check this post', temperature: 0 }
@@ -69,5 +71,32 @@ describe('AI answers', () => {
     expect(explainFailure('claude', 401)).toMatch(/did not accept the API key/)
     expect(explainFailure('deepseek', 402)).toMatch(/no credit left/)
     expect(explainFailure('gemini', null)).toMatch(/could not be reached/)
+  })
+})
+
+describe('Gemini model choice', () => {
+  it('picks the newest stable Flash model the key can use', () => {
+    expect(
+      recommendGeminiModel([
+        'gemini-2.0-flash',
+        'gemini-3.0-flash',
+        'gemini-3.5-flash-preview-09-2026',
+        'gemini-3.0-pro',
+        'gemini-3.0-flash-lite',
+        'gemini-embedding-001',
+        'gemini-3.0-flash-image',
+      ]),
+    ).toBe('gemini-3.0-flash')
+    expect(recommendGeminiModel(['gemini-embedding-001'])).toBeNull()
+  })
+
+  it("reads only the models that can write text from Google's list", () => {
+    const body = {
+      models: [
+        { name: 'models/gemini-3.0-flash', supportedGenerationMethods: ['generateContent', 'countTokens'] },
+        { name: 'models/text-embedding-004', supportedGenerationMethods: ['embedContent'] },
+      ],
+    }
+    expect(readGeminiModels(body)).toEqual(['gemini-3.0-flash'])
   })
 })
