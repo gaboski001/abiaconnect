@@ -41,12 +41,13 @@ CREATE TABLE IF NOT EXISTS public.subgroup_topics (
 );
 CREATE INDEX IF NOT EXISTS subgroup_topics_group ON public.subgroup_topics (subgroup_id, display_order);
 
-ALTER TABLE public.subgroup_topics ENABLE ROW LEVEL SECURITY;
 -- Everyone may read topics; changes are allowed by the policy below (admins and group creators only).
 REVOKE ALL ON public.subgroup_topics FROM anon, authenticated;
 GRANT SELECT ON public.subgroup_topics TO anon, authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.subgroup_topics TO authenticated;
 GRANT ALL ON public.subgroup_topics TO service_role;
+
+ALTER TABLE public.subgroup_topics ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Topics are visible to everyone" ON public.subgroup_topics;
 CREATE POLICY "Topics are visible to everyone" ON public.subgroup_topics
@@ -313,10 +314,11 @@ CREATE TABLE IF NOT EXISTS public.newcomer_nudges (
   sent_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, stage)
 );
-ALTER TABLE public.newcomer_nudges ENABLE ROW LEVEL SECURITY;
 -- No policies and no member access: only the server's own functions read or write it.
 REVOKE ALL ON public.newcomer_nudges FROM anon, authenticated;
 GRANT ALL ON public.newcomer_nudges TO service_role;
+
+ALTER TABLE public.newcomer_nudges ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION public.send_newcomer_nudges()
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
