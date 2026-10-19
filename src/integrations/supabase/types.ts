@@ -955,6 +955,35 @@ export type Database = {
         }
         Relationships: []
       }
+      group_desk_welcomes: {
+        Row: {
+          created_at: string
+          reply_id: string | null
+          subgroup_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          reply_id?: string | null
+          subgroup_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          reply_id?: string | null
+          subgroup_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_desk_welcomes_subgroup_id_fkey"
+            columns: ["subgroup_id"]
+            isOneToOne: false
+            referencedRelation: "subgroups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hero_slides: {
         Row: {
           badge_text: string | null
@@ -3530,6 +3559,16 @@ export type Database = {
         Args: { _message_id: string }
         Returns: undefined
       }
+      desk_account: { Args: never; Returns: string }
+      desk_welcome: {
+        Args: {
+          _member: string
+          _parent_reply: string
+          _subgroup: string
+          _thread: string
+        }
+        Returns: string
+      }
       dispatch_facebook_share: {
         Args: { _action?: string; _fb_post_id?: string; _thread_id: string }
         Returns: undefined
@@ -3765,6 +3804,7 @@ export type Database = {
         Args: { _event: string; _metadata?: Json; _uid: string }
         Returns: undefined
       }
+      looks_like_intro: { Args: { _text: string }; Returns: boolean }
       mark_conversation_read: {
         Args: { _conversation_id: string }
         Returns: number
