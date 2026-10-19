@@ -37,6 +37,7 @@ import { confirmModerationWarning, showModerationBlocked } from '@/components/mo
 const EDIT_REPLY = 'ugo:edit-reply'
 import { useAuth } from '@/contexts/AuthContext'
 import { FacebookShareButton } from '@/components/thread/FacebookShareButton'
+import { ReactionButton } from '@/components/thread/ReactionButton'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
 import { UserAvatar } from '@/components/ui/UserAvatar'
@@ -487,6 +488,9 @@ function Thread() {
           return { ...t, [key]: Math.max(0, (t[key] ?? 0) - 2) }
         })
       }
+      // The thumbs-down replaces any reaction, so refresh those too.
+      qc.invalidateQueries({ queryKey: ['thread-reactions', threadId] })
+      qc.invalidateQueries({ queryKey: ['my-thread-reaction', threadId] })
       // Lightweight reconciliation: fetch authoritative counts for just this thread.
       void reconcileVotes()
     },
@@ -880,15 +884,12 @@ function Thread() {
         />
 
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => !vote.isPending && vote.mutate(1)}
-            disabled={!user || vote.isPending}
-            aria-busy={vote.isPending}
-          >
-            <ThumbsUp /> {thread.upvotes ?? 0}
-          </Button>
+          <ReactionButton
+            threadId={thread.id}
+            userId={user?.id ?? null}
+            fallbackCount={thread.upvotes ?? 0}
+            onChanged={() => void reconcileVotes()}
+          />
           <Button
             size="sm"
             variant="outline"
