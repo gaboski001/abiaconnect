@@ -99,6 +99,13 @@
       "when": 1792416438517,
       "tag": "0013_private_group_topics",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792417524551,
+      "tag": "0014_starter_bonus_reason",
+      "breakpoints": true
     }
   ]
 }
