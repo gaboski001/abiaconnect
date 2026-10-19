@@ -8,7 +8,7 @@ vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 })
 
 /** Stand-ins for the live tables and helpers the newcomer migration builds on. */
 const PRELUDE = `
-  CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN;
+  CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN;
   GRANT USAGE ON SCHEMA public TO anon, authenticated;
   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated;
   CREATE SCHEMA auth;
@@ -184,5 +184,10 @@ describe('newcomer journey', () => {
     await expect(db.as(member, () => db.query(`SELECT newcomer_funnel(30)`))).rejects.toThrow(/Admins only/)
     const funnel = await db.as(admin, () => db.one<{ f: { joined: number } }>(`SELECT newcomer_funnel(30) AS f`))
     expect(funnel.f.joined).toBe(2)
+  })
+
+  it('keeps the reminder log away from members', async () => {
+    const member = await db.addUser('Ikwuano')
+    await expect(db.as(member, () => db.query(`SELECT * FROM newcomer_nudges`))).rejects.toThrow(/permission denied/)
   })
 })

@@ -42,6 +42,11 @@ CREATE TABLE IF NOT EXISTS public.subgroup_topics (
 CREATE INDEX IF NOT EXISTS subgroup_topics_group ON public.subgroup_topics (subgroup_id, display_order);
 
 ALTER TABLE public.subgroup_topics ENABLE ROW LEVEL SECURITY;
+-- Everyone may read topics; changes are allowed by the policy below (admins and group creators only).
+REVOKE ALL ON public.subgroup_topics FROM anon, authenticated;
+GRANT SELECT ON public.subgroup_topics TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.subgroup_topics TO authenticated;
+GRANT ALL ON public.subgroup_topics TO service_role;
 
 DROP POLICY IF EXISTS "Topics are visible to everyone" ON public.subgroup_topics;
 CREATE POLICY "Topics are visible to everyone" ON public.subgroup_topics
@@ -76,6 +81,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$;
+REVOKE EXECUTE ON FUNCTION public.threads_check_topic() FROM PUBLIC, anon, authenticated;
 DROP TRIGGER IF EXISTS threads_check_topic ON public.threads;
 CREATE TRIGGER threads_check_topic BEFORE INSERT OR UPDATE OF topic_id, subgroup_id ON public.threads
   FOR EACH ROW EXECUTE FUNCTION public.threads_check_topic();
@@ -109,6 +115,7 @@ BEGIN
   END IF;
 END $$;
 REVOKE EXECUTE ON FUNCTION public.add_default_topics(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.add_default_topics(uuid) TO service_role;
 
 CREATE OR REPLACE FUNCTION public.subgroups_add_topics()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
@@ -117,6 +124,7 @@ BEGIN
   PERFORM public.add_default_topics(NEW.id);
   RETURN NEW;
 END $$;
+REVOKE EXECUTE ON FUNCTION public.subgroups_add_topics() FROM PUBLIC, anon, authenticated;
 DROP TRIGGER IF EXISTS subgroups_add_topics ON public.subgroups;
 CREATE TRIGGER subgroups_add_topics AFTER INSERT ON public.subgroups
   FOR EACH ROW EXECUTE FUNCTION public.subgroups_add_topics();
@@ -163,6 +171,8 @@ END $$;
 CREATE OR REPLACE FUNCTION public.lga_group_for(_lga text)
 RETURNS uuid LANGUAGE sql STABLE SET search_path = public
 AS $$ SELECT id FROM public.subgroups WHERE kind = 'lga' AND lga = _lga AND is_active LIMIT 1 $$;
+REVOKE EXECUTE ON FUNCTION public.lga_group_for(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.lga_group_for(text) TO authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.complete_welcome(_interests text[], _groups uuid[])
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
@@ -232,7 +242,7 @@ BEGIN
   RETURN jsonb_build_object('joined', joined, 'greeted', greeted, 'lga_group', lga_group);
 END $$;
 REVOKE EXECUTE ON FUNCTION public.complete_welcome(text[], uuid[]) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.complete_welcome(text[], uuid[]) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.complete_welcome(text[], uuid[]) TO authenticated, service_role;
 
 -- ---- 4. The first 5 steps --------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.get_my_journey()
@@ -269,7 +279,7 @@ BEGIN
   );
 END $$;
 REVOKE EXECUTE ON FUNCTION public.get_my_journey() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.get_my_journey() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_my_journey() TO authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.claim_starter_bonus()
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
@@ -294,7 +304,7 @@ BEGIN
   RETURN applied;
 END $$;
 REVOKE EXECUTE ON FUNCTION public.claim_starter_bonus() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.claim_starter_bonus() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_starter_bonus() TO authenticated, service_role;
 
 -- ---- 5. Gentle week-1 reminders -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.newcomer_nudges (
@@ -304,7 +314,9 @@ CREATE TABLE IF NOT EXISTS public.newcomer_nudges (
   PRIMARY KEY (user_id, stage)
 );
 ALTER TABLE public.newcomer_nudges ENABLE ROW LEVEL SECURITY;
--- No policies: only the server's own functions read or write it.
+-- No policies and no member access: only the server's own functions read or write it.
+REVOKE ALL ON public.newcomer_nudges FROM anon, authenticated;
+GRANT ALL ON public.newcomer_nudges TO service_role;
 
 CREATE OR REPLACE FUNCTION public.send_newcomer_nudges()
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
@@ -355,6 +367,7 @@ BEGIN
   RETURN sent;
 END $$;
 REVOKE EXECUTE ON FUNCTION public.send_newcomer_nudges() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.send_newcomer_nudges() TO service_role;
 
 DO $$ BEGIN
   PERFORM cron.unschedule('newcomer-nudges');
@@ -392,4 +405,4 @@ BEGIN
   );
 END $$;
 REVOKE EXECUTE ON FUNCTION public.newcomer_funnel(integer) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.newcomer_funnel(integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.newcomer_funnel(integer) TO authenticated, service_role;
