@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "check:dark": "bun scripts/check-dark-mode.ts",
+    "install:functions": "npm --prefix supabase/functions install --legacy-peer-deps",
     "cap:reset": "rimraf android ios && npm run build && npx cap add android && npx cap sync android && echo \"\\n✅ Clean Android project ready. Open in Android Studio: npx cap open android\"",
     "android:clean-rebuild": "npm install && npm run cap:reset && npx cap open android"
   },
