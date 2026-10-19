@@ -41,6 +41,84 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_provider_keys: {
+        Row: {
+          preview: string
+          provider: string
+          updated_at: string
+          updated_by: string | null
+          vault_id: string
+        }
+        Insert: {
+          preview: string
+          provider: string
+          updated_at?: string
+          updated_by?: string | null
+          vault_id: string
+        }
+        Update: {
+          preview?: string
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+          vault_id?: string
+        }
+        Relationships: []
+      }
+      ai_provider_settings: {
+        Row: {
+          fallback: boolean
+          id: boolean
+          models: Json
+          provider: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          fallback?: boolean
+          id?: boolean
+          models?: Json
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          fallback?: boolean
+          id?: boolean
+          models?: Json
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      ai_usage_log: {
+        Row: {
+          created_at: string
+          feature: string
+          fell_back: boolean
+          id: number
+          ok: boolean
+          provider: string
+        }
+        Insert: {
+          created_at?: string
+          feature: string
+          fell_back?: boolean
+          id?: number
+          ok: boolean
+          provider: string
+        }
+        Update: {
+          created_at?: string
+          feature?: string
+          fell_back?: boolean
+          id?: number
+          ok?: boolean
+          provider?: string
+        }
+        Relationships: []
+      }
       app_releases: {
         Row: {
           changelog: string | null
@@ -3170,6 +3248,16 @@ export type Database = {
     }
     Functions: {
       add_default_topics: { Args: { _group: string }; Returns: undefined }
+      admin_ai_usage: {
+        Args: { _days?: number }
+        Returns: {
+          calls: number
+          failed: number
+          feature: string
+          fell_back: number
+          provider: string
+        }[]
+      }
       admin_birthday_coverage: { Args: never; Returns: Json }
       admin_birthdays_today: {
         Args: never
@@ -3184,6 +3272,7 @@ export type Database = {
           username: string
         }[]
       }
+      admin_clear_ai_key: { Args: { _provider: string }; Returns: undefined }
       admin_clear_payment_secret: {
         Args: { _name: string }
         Returns: undefined
@@ -3250,6 +3339,14 @@ export type Database = {
         Returns: {
           id: string
         }[]
+      }
+      admin_set_ai_key: {
+        Args: { _provider: string; _value: string }
+        Returns: string
+      }
+      admin_set_ai_settings: {
+        Args: { _fallback: boolean; _models: Json; _provider: string }
+        Returns: undefined
       }
       admin_set_member_dob: {
         Args: { _dob: string; _user_id: string }
@@ -3518,6 +3615,7 @@ export type Database = {
           wallet_address: string
         }[]
       }
+      get_ai_config: { Args: never; Returns: Json }
       get_contest: { Args: { _contest: string }; Returns: Json }
       get_leaderboard: {
         Args: { _limit?: number; _period?: string }
