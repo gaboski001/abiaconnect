@@ -38,6 +38,7 @@ export const BADGES: Record<string, { name: string; description: string; emoji: 
   streak_30: { name: 'Month Streak', description: 'Checked in 30 days in a row', emoji: '🏅' },
   rising_star: { name: 'Rising Star', description: 'Reached 300 points', emoji: '⭐' },
   influencer: { name: 'Influencer', description: 'Reached 1,500 points', emoji: '🌟' },
+  new_abian: { name: 'New Abian', description: 'Finished the first 5 steps', emoji: '🏅' },
 }
 
 export const BADGE_ORDER = Object.keys(BADGES)
@@ -51,10 +52,12 @@ export const EARNING_RULES: Array<{ reason: string; label: string; points: strin
   { reason: 'poll_vote', label: 'Vote in a poll', points: '+2' },
   { reason: 'contest_vote', label: 'Vote in a contest', points: '+5' },
   { reason: 'streak_bonus', label: '7-day / 30-day streak', points: '+20 / +100' },
+  { reason: 'starter_bonus', label: 'Finish your first 5 steps', points: '+50', cap: 'Once' },
 ]
 
 export const REASON_LABELS: Record<string, string> = {
   daily_checkin: 'Daily check-in',
+  starter_bonus: 'First 5 steps bonus',
   streak_bonus: 'Streak bonus',
   thread: 'New discussion',
   reply: 'Reply',

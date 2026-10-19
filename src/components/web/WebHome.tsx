@@ -9,15 +9,24 @@ import { HeroSlider } from '@/components/forum/HeroSlider'
 import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
 import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
 import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
+import { StarterSteps, useWelcomeRedirect } from '@/components/engagement/StarterSteps'
 import { NewDiscussionsBanner, OnlineMembersPill } from '@/components/engagement/LiveCommunity'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProfile } from '@/hooks/useProfile'
 import { useCommunityStats } from '@/hooks/useCommunityStats'
 import { supabase } from '@/lib/supabase'
 import { contestPhase, listContests } from '@/lib/engagement'
+import { daysSince, useJourney } from '@/lib/journey'
 import { cn } from '@/lib/utils'
 
-type FeedTab = 'latest' | 'popular' | 'unanswered'
+type FeedTab = 'latest' | 'my-lga' | 'popular' | 'unanswered'
+
+const TAB_LABELS: Record<FeedTab, string> = {
+  latest: 'Latest',
+  'my-lga': 'From your LGA',
+  popular: 'Popular',
+  unanswered: 'Needs a reply',
+}
 
 interface FeedRow {
   id: string
@@ -42,12 +51,13 @@ interface Topic {
   thread_count: number
 }
 
-async function loadFeed(tab: FeedTab): Promise<FeedRow[]> {
+async function loadFeed(tab: FeedTab, lgaGroup: string | null): Promise<FeedRow[]> {
   let query = supabase
     .from('threads')
     .select('id, title, created_at, is_pinned, is_anonymous, view_count, author_id, replies(count), categories(id, name, icon)')
     .eq('is_deleted', false)
-    .is('subgroup_id', null)
+  // "From your LGA" shows the member's LGA group; the others show the open forum.
+  query = tab === 'my-lga' && lgaGroup ? query.eq('subgroup_id', lgaGroup) : query.is('subgroup_id', null)
   if (tab === 'popular') {
     query = query.gte('created_at', new Date(Date.now() - 90 * 86400_000).toISOString()).order('view_count', { ascending: false })
   } else {
@@ -85,8 +95,14 @@ export function WebHome() {
   const { user } = useAuth()
   const { data: profile } = useProfile()
   const stats = useCommunityStats()
+  const journey = useJourney()
+  useWelcomeRedirect()
+  const lgaGroup = journey.data?.lga_group ?? null
   const [tab, setTab] = useState<FeedTab>('latest')
-  const feed = useQuery({ queryKey: ['web-home-feed', tab], queryFn: () => loadFeed(tab), staleTime: 30_000 })
+  const tabs: FeedTab[] = lgaGroup ? ['latest', 'my-lga', 'popular', 'unanswered'] : ['latest', 'popular', 'unanswered']
+  const feed = useQuery({ queryKey: ['web-home-feed', tab, lgaGroup], queryFn: () => loadFeed(tab, lgaGroup), staleTime: 30_000 })
+  // A member's first day: welcome them, don't say "welcome back".
+  const firstDay = daysSince(journey.data?.created_at) < 1
   const topics = useQuery({
     queryKey: ['categories'],
     staleTime: 5 * 60_000,
@@ -109,9 +125,11 @@ export function WebHome() {
             <p className="text-sm font-medium uppercase tracking-[0.14em] text-muted-foreground">
               {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
-            <h1 className="mt-1 text-3xl font-semibold md:text-4xl">{firstName ? `Welcome back, ${firstName}` : 'Welcome back'}</h1>
+            <h1 className="mt-1 text-3xl font-semibold md:text-4xl">
+              {firstDay ? `Welcome, ${firstName || 'friend'} 👋🏾` : firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
+            </h1>
             <div className="mt-2 flex flex-wrap items-center gap-3 text-muted-foreground">
-              <span>Here’s what the community is talking about.</span>
+              <span>{firstDay ? 'Glad you’re here. Your first steps are just below.' : 'Here’s what the community is talking about.'}</span>
               <OnlineMembersPill />
             </div>
           </div>
@@ -122,6 +140,7 @@ export function WebHome() {
           </Button>
         </section>
       ) : null}
+      {user ? <StarterSteps /> : null}
       {user ? <BirthdayGreeting /> : null}
       {user ? <AddBirthdayPrompt /> : null}
       {user ? null : (
@@ -171,7 +190,7 @@ export function WebHome() {
                 Discussions
               </h2>
               <div className="flex gap-1 border-b border-border" role="tablist" aria-label="Sort discussions">
-                {(['latest', 'popular', 'unanswered'] as FeedTab[]).map((t) => (
+                {tabs.map((t) => (
                   <button
                     key={t}
                     type="button"
@@ -179,11 +198,11 @@ export function WebHome() {
                     aria-selected={tab === t}
                     onClick={() => setTab(t)}
                     className={cn(
-                      '-mb-px border-b-2 px-3 py-2 text-sm font-medium capitalize transition-colors',
+                      '-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors',
                       tab === t ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground',
                     )}
                   >
-                    {t}
+                    {TAB_LABELS[t]}
                   </button>
                 ))}
               </div>
@@ -202,7 +221,18 @@ export function WebHome() {
                 <p className="p-6 text-center text-muted-foreground">Couldn’t load discussions. Please refresh.</p>
               ) : !feed.data?.length ? (
                 <p className="p-8 text-center text-muted-foreground">
-                  {tab === 'unanswered' ? 'Every recent discussion has a reply. 🎉' : 'No discussions yet.'}
+                  {tab === 'unanswered' ? (
+                    'Every recent discussion has a reply. 🎉'
+                  ) : tab === 'my-lga' ? (
+                    <>
+                      Your LGA group is quiet so far.{' '}
+                      <Link to={`/subgroups/${lgaGroup}`} className="font-semibold text-primary hover:underline">
+                        Be the first to start a conversation
+                      </Link>
+                    </>
+                  ) : (
+                    'No discussions yet.'
+                  )}
                 </p>
               ) : (
                 <ul className="divide-y divide-border">

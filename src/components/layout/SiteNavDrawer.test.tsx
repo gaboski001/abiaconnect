@@ -16,6 +16,7 @@ vi.mock('@/hooks/useSiteSettings', () => ({
   useSiteSettings: () => ({ settings: { site_name: 'AbiaConnect', store_link: 'https://store.example.com' } }),
 }))
 vi.mock('@/hooks/useSignedUrl', () => ({ useSignedUrl: () => null }))
+vi.mock('@/lib/journey', () => ({ useJourney: () => ({ data: null }), isNewcomer: () => false }))
 vi.mock('@/lib/supabase', () => ({
   supabase: { storage: { from: () => ({ createSignedUrl: async () => ({ data: null }) }) } },
 }))

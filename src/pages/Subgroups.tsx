@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Users, Plus, Search, MessageSquare, Lock, ChevronDown } from 'lucide-react'
+import { Users, Plus, Search, MessageSquare, Lock, ChevronDown, Sparkles } from 'lucide-react'
 import { SEO } from '@/components/SEO'
 import {
   Accordion,
@@ -15,6 +15,7 @@ import { moderateContent } from '@/lib/moderateContent'
 import { confirmModerationWarning, showModerationBlocked } from '@/components/moderation/ModerationBlockedDialog'
 import { SUBGROUP_MEMBERS_UPSERT_OPTIONS } from '@/lib/subgroupMembers'
 import { useAuth } from '@/contexts/AuthContext'
+import { loadGroups, suggestGroups, useJourney } from '@/lib/journey'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -191,9 +192,9 @@ export default function Subgroups() {
             <Users className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold native:hidden">Community Subgroups</h1>
+            <h1 className="text-2xl font-bold native:hidden">Community Groups</h1>
             <p className="text-sm text-muted-foreground">
-              Discover and join groups of like-minded Abians
+              Your LGA, your interests, your people. Join a group to chat, share news and meet Abians.
             </p>
           </div>
         </div>
@@ -211,6 +212,14 @@ export default function Subgroups() {
           </Dialog>
         )}
       </div>
+
+      {user && !search.trim() ? (
+        <RecommendedGroups
+          joined={myMembershipsQ.data ?? new Set<string>()}
+          joining={joinMut.isPending}
+          onJoin={(id) => joinMut.mutate(id)}
+        />
+      ) : null}
 
       <div className="relative max-w-md mb-6">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -240,7 +249,9 @@ export default function Subgroups() {
             if (!groups.has(key)) groups.set(key, [])
             groups.get(key)!.push(s)
           }
-          const entries = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+          // Local Government Areas first: everyone has one.
+          const rank = (name: string) => (name === 'Local Government Areas' ? 0 : 1)
+          const entries = Array.from(groups.entries()).sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]))
           const searching = !!search.trim()
           // When searching, force-open all categories so matches are visible;
           // otherwise honor the user's persisted choice.
@@ -360,6 +371,52 @@ export default function Subgroups() {
         })()
       )}
     </div>
+  )
+}
+
+/** Your LGA group and groups that match your interests, with one-tap join. */
+function RecommendedGroups({
+  joined,
+  joining,
+  onJoin,
+}: {
+  joined: Set<string>
+  joining: boolean
+  onJoin: (id: string) => void
+}) {
+  const journey = useJourney()
+  const groups = useQuery({ queryKey: ['welcome-groups'], queryFn: loadGroups, staleTime: 5 * 60_000 })
+  const all = groups.data ?? []
+  const mine = all.find((g) => g.id === journey.data?.lga_group)
+  const picks = [
+    ...(mine && !joined.has(mine.id) ? [mine] : []),
+    ...suggestGroups(all, journey.data?.interests ?? [], joined),
+  ].slice(0, 3)
+  if (!picks.length) return null
+  return (
+    <section className="mb-6 rounded-2xl border border-primary/20 bg-primary/[0.04] p-4">
+      <h2 className="flex items-center gap-2 font-semibold">
+        <Sparkles className="h-4 w-4 text-primary" /> Recommended for you
+      </h2>
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        {picks.map((g) => (
+          <div key={g.id} className="flex flex-col rounded-xl border bg-card p-3">
+            <Link to={`/subgroups/${g.id}`} className="flex items-start gap-3">
+              <span className="text-2xl" aria-hidden>{g.icon ?? '👥'}</span>
+              <span className="min-w-0">
+                {g.id === mine?.id ? (
+                  <span className="mb-0.5 block text-xs font-semibold text-primary">Your LGA</span>
+                ) : null}
+                <span className="block font-semibold leading-snug">{g.name}</span>
+              </span>
+            </Link>
+            <Button size="sm" className="mt-3" disabled={joining} onClick={() => onJoin(g.id)}>
+              Join
+            </Button>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 

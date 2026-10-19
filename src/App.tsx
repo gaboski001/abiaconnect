@@ -21,6 +21,7 @@ const CategoryPage = lazy(() => import('@/pages/Category'))
 const Thread = lazy(() => import('@/pages/Thread'))
 const CreateThread = lazy(() => import('@/pages/CreateThread'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
+const Welcome = lazy(() => import('@/pages/Welcome'))
 const Profile = lazy(() => import('@/pages/Profile'))
 const Polls = lazy(() => import('@/pages/Polls'))
 const Rewards = lazy(() => import('@/pages/Rewards'))
@@ -167,6 +168,7 @@ export default function App() {
 
                 <Route element={<ProtectedRoute />}>
                   <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="welcome" element={<Welcome />} />
                   <Route path="profile" element={<Profile />} />
                   <Route path="polls" element={<Polls />} />
                   <Route path="rewards" element={<Rewards />} />

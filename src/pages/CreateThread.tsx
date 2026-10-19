@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { loadTopics } from '@/lib/journey'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -79,6 +80,14 @@ export default function CreateThread() {
   const [params] = useSearchParams()
   const presetCategory = params.get('category') ?? ''
   const presetSubgroup = params.get('subgroup') ?? ''
+  const [topicId, setTopicId] = useState(params.get('topic') ?? '')
+  const topicsQ = useQuery({
+    queryKey: ['subgroup-topics', presetSubgroup],
+    enabled: !!presetSubgroup,
+    queryFn: () => loadTopics(presetSubgroup),
+    staleTime: 5 * 60_000,
+  })
+  const chosenTopic = (topicsQ.data ?? []).find((t) => t.id === topicId) ?? null
 
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
@@ -270,18 +279,21 @@ export default function CreateThread() {
     }
 
     const finalTags = values.flair && !tags.includes(values.flair) ? [values.flair, ...tags] : tags
+    const payload = {
+      user_id: user.id,
+      title: values.title.trim(),
+      content: values.content,
+      tags: finalTags,
+      allow_replies: values.allow_replies,
+      is_anonymous: values.is_anonymous,
+      subgroup_id: values.subgroup_id || null,
+      category_id: values.category_id || null,
+      // The sub-topic inside the group, when one was chosen.
+      ...(values.subgroup_id && topicId ? { topic_id: topicId } : {}),
+    }
     const { data, error } = await supabase
       .from('threads')
-      .insert({
-        user_id: user.id,
-        title: values.title.trim(),
-        content: values.content,
-        tags: finalTags,
-        allow_replies: values.allow_replies,
-        is_anonymous: values.is_anonymous,
-        subgroup_id: values.subgroup_id || null,
-        category_id: values.category_id || null,
-      })
+      .insert(payload as typeof payload & { topic_id?: string } as never)
       .select('id')
       .single()
 
@@ -311,8 +323,27 @@ export default function CreateThread() {
 
         {presetSubgroup ? (
           <div className="rounded-xl border border-border bg-card p-3 text-sm">
-            Posting in subgroup{' '}
+            Posting in{' '}
             <span className="font-semibold">{subgroupQ.data?.name ?? '…'}</span>
+            {(topicsQ.data ?? []).length ? (
+              <div className="mt-3 space-y-1.5">
+                <Label htmlFor="topic">Topic</Label>
+                <select
+                  id="topic"
+                  value={topicId}
+                  onChange={(event) => setTopicId(event.target.value)}
+                  className="h-10 w-full rounded-lg border border-border bg-background px-3"
+                >
+                  <option value="">No particular topic</option>
+                  {(topicsQ.data ?? []).map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.emoji} {t.name}
+                    </option>
+                  ))}
+                </select>
+                {chosenTopic?.description ? <p className="text-xs text-muted-foreground">{chosenTopic.description}</p> : null}
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="space-y-1.5">

@@ -18,6 +18,7 @@ import {
 import { matchPath } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { isNewcomer, useJourney } from '@/lib/journey'
 
 export interface NavItem {
   label: string
@@ -45,16 +46,23 @@ export function useNavSections() {
   const { settings } = useSiteSettings()
   const subgroupsEnabled = settings.global_subgroups_enabled !== 'false'
   const storeLink = settings.store_link
+  // In their first week, new members see a shorter menu; the rest is under Community.
+  const journey = useJourney()
+  const simple = isNewcomer(journey.data)
+  const later: NavItem[] = [
+    { label: 'Contests', to: '/contests', icon: Vote },
+    { label: 'Connect', to: '/relationship', icon: Handshake },
+  ]
 
   const primary: NavItem[] = [
     { label: 'Forums', to: '/', icon: MessagesSquare, end: true },
     ...(subgroupsEnabled ? [{ label: 'Groups', to: '/subgroups', icon: Users }] : []),
     { label: 'Polls', to: '/polls', icon: BarChart3 },
-    { label: 'Contests', to: '/contests', icon: Vote },
-    { label: 'Connect', to: '/relationship', icon: Handshake },
+    ...(simple ? [] : later),
   ]
 
   const community: NavItem[] = [
+    ...(simple ? later : []),
     { label: 'About Us', to: '/about', icon: Info },
     ...(storeLink ? [{ label: 'Store', to: storeLink, icon: ShoppingBag, external: true }] : []),
     { label: 'Donate', to: '/donate', icon: HandHeart, highlight: true },

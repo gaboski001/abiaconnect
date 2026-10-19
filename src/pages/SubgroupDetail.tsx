@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { loadTopics } from '@/lib/journey'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -44,6 +45,24 @@ export default function SubgroupDetail() {
   const { user } = useAuth()
   const qc = useQueryClient()
   const [page, setPage] = useState(0)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTopic = searchParams.get('topic')
+  const topicsQ = useQuery({
+    queryKey: ['subgroup-topics', subgroupId],
+    enabled: !!subgroupId,
+    queryFn: () => loadTopics(subgroupId!),
+    staleTime: 5 * 60_000,
+  })
+  const topics = topicsQ.data ?? []
+  const topicById = new Map(topics.map((t) => [t.id, t]))
+  const currentTopic = activeTopic ? topicById.get(activeTopic) ?? null : null
+  const chooseTopic = (id: string | null) => {
+    setPage(0)
+    const next = new URLSearchParams(searchParams)
+    if (id) next.set('topic', id)
+    else next.delete('topic')
+    setSearchParams(next, { replace: true })
+  }
   const [rulesOpen, setRulesOpen] = useState(true)
   const [rulesDraft, setRulesDraft] = useState<string | null>(null)
   const [inviteExpiryHours, setInviteExpiryHours] = useState<number>(24)
@@ -95,15 +114,22 @@ export default function SubgroupDetail() {
   })
 
   const threadsQ = useQuery({
-    queryKey: ['subgroup-threads', subgroupId, page],
-    enabled: !!subgroupId,
+    // Topics exist only once the newcomer database update is in; until then, ask without them.
+    queryKey: ['subgroup-threads', subgroupId, page, activeTopic, topicsQ.data?.length ?? 0],
+    enabled: !!subgroupId && topicsQ.isFetched,
     queryFn: async () => {
       const from = page * PAGE_SIZE
       const to = from + PAGE_SIZE - 1
-      const { data, error } = await supabase
+      let query = sb
         .from('threads')
-        .select('id, subgroup_id, author_id, title, tags, is_anonymous, created_at, is_pinned, pinned_at, upvotes, view_count, profiles:author_id(display_name, avatar_url)')
+        .select(
+          `id, subgroup_id, author_id, title, tags, is_anonymous, created_at, is_pinned, pinned_at, upvotes, view_count${
+            topics.length ? ', topic_id' : ''
+          }, profiles:author_id(display_name, avatar_url)`,
+        )
         .eq('subgroup_id', subgroupId!)
+      if (activeTopic && topics.length) query = query.eq('topic_id', activeTopic)
+      const { data, error } = await query
         .order('is_pinned', { ascending: false })
         .order('pinned_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
@@ -483,7 +509,7 @@ export default function SubgroupDetail() {
       return (
         <>
           <Button asChild>
-            <Link to={`/create-thread?subgroup=${s.id}`}>
+            <Link to={`/create-thread?subgroup=${s.id}${activeTopic ? `&topic=${activeTopic}` : ''}`}>
               <Plus className="h-4 w-4 mr-1" /> Post in this group
             </Link>
           </Button>
@@ -580,13 +606,48 @@ export default function SubgroupDetail() {
             </TabsList>
 
             <TabsContent value="threads" className="mt-4">
+              {topics.length ? (
+                <div className="mb-4 space-y-3">
+                  <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Topics in this group">
+                    <TopicChip label="All topics" active={!activeTopic} onClick={() => chooseTopic(null)} />
+                    {topics.map((t) => (
+                      <TopicChip
+                        key={t.id}
+                        label={`${t.emoji ?? '💬'} ${t.name}`}
+                        active={activeTopic === t.id}
+                        onClick={() => chooseTopic(t.id)}
+                      />
+                    ))}
+                  </div>
+                  {currentTopic ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/40 p-3">
+                      <p className="text-sm">
+                        <span className="font-semibold">{currentTopic.emoji} {currentTopic.name}.</span>{' '}
+                        <span className="text-muted-foreground">{currentTopic.description}</span>
+                      </p>
+                      {isMember ? (
+                        <Button asChild size="sm">
+                          <Link to={`/create-thread?subgroup=${s.id}&topic=${currentTopic.id}`}>
+                            <Plus className="h-4 w-4 mr-1" />
+                            {currentTopic.name === 'Introduce yourself' ? 'Say hello' : 'Start a discussion here'}
+                          </Link>
+                        </Button>
+                      ) : user && !s.is_private ? (
+                        <Button size="sm" onClick={() => joinMut.mutate()} disabled={joinMut.isPending}>
+                          Join to post here
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               {threadsQ.isLoading && page === 0 ? (
                 <div className="space-y-2">
                   {Array.from({ length: 5 }).map((_, i) => (<Skeleton key={i} className="h-20 rounded-xl" />))}
                 </div>
               ) : (threadsQ.data ?? []).length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground rounded-xl border border-dashed">
-                  No threads yet in this subgroup.
+                  {currentTopic ? `Nothing in “${currentTopic.name}” yet. Be the first!` : 'No discussions yet. Start the first one!'}
                 </div>
               ) : (
                 <>
@@ -600,6 +661,11 @@ export default function SubgroupDetail() {
                             )}
                             <h3 className="font-semibold truncate">{t.title}</h3>
                           </div>
+                          {t.topic_id && topicById.get(t.topic_id) && !activeTopic ? (
+                            <span className="mt-1 inline-block rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                              {topicById.get(t.topic_id)!.emoji} {topicById.get(t.topic_id)!.name}
+                            </span>
+                          ) : null}
                           <p className="text-xs text-muted-foreground mt-1">
                             by {t.is_anonymous ? 'Anonymous' : (t.profiles?.display_name || 'Member')} ·{' '}
                             {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
@@ -809,5 +875,21 @@ export default function SubgroupDetail() {
         </aside>
       </div>
     </div>
+  )
+}
+
+function TopicChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+        active ? 'border-primary bg-primary text-primary-foreground' : 'bg-card hover:border-primary/50'
+      }`}
+    >
+      {label}
+    </button>
   )
 }

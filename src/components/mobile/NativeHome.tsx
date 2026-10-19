@@ -11,6 +11,8 @@ import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
 import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
 import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
+import { StarterSteps, useWelcomeRedirect } from '@/components/engagement/StarterSteps'
+import { daysSince, useJourney } from '@/lib/journey'
 import { NewDiscussionsBanner, OnlineMembersPill } from '@/components/engagement/LiveCommunity'
 import { ContestCard } from '@/pages/Contests'
 import { contestPhase, listContests } from '@/lib/engagement'
@@ -54,6 +56,9 @@ export function NativeHome() {
   const { user } = useAuth()
   const { data: profile } = useProfile()
   const firstName = (profile?.display_name || profile?.username || '').split(' ')[0]
+  const journey = useJourney()
+  useWelcomeRedirect()
+  const firstDay = daysSince(journey.data?.created_at) < 1
 
   const contestsQ = useQuery({ queryKey: ['contests'], queryFn: listContests, enabled: !!user, staleTime: 60_000 })
   const openContests = (contestsQ.data ?? [])
@@ -126,10 +131,10 @@ export function NativeHome() {
           <>
             <p className="text-[14px] font-medium text-muted-foreground">{greeting()}</p>
             <h1 className="mt-0.5 text-[26px] font-extrabold leading-tight tracking-tight text-foreground">
-              {firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
+              {firstDay ? `Welcome, ${firstName || 'friend'} 👋🏾` : firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
             </h1>
             <p className="mt-1.5 text-[15px] leading-6 text-muted-foreground">
-              Catch up on what Abians are talking about today.
+              {firstDay ? 'Glad you’re here. Your first steps are just below.' : 'Catch up on what Abians are talking about today.'}
             </p>
             <OnlineMembersPill className="mt-3" />
             <BirthdayGreeting className="mt-4" />
@@ -172,6 +177,12 @@ export function NativeHome() {
           </>
         )}
       </section>
+
+      {user ? (
+        <section className="px-4 empty:hidden">
+          <StarterSteps compact />
+        </section>
+      ) : null}
 
       {user ? (
         <section className="px-4">

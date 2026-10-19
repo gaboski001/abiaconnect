@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { AtSign, Bell, Gift, MessageSquare, ThumbsUp, UserPlus, Vote } from 'lucide-react'
+import { AtSign, Bell, Gift, MessageSquare, ThumbsUp, UserPlus, Vote, PartyPopper, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useAuth } from '@/contexts/AuthContext'
@@ -31,7 +31,12 @@ export function notifIcon(type: string) {
     case 'vote':
       return ThumbsUp
     case 'follow':
+    case 'welcome_neighbour':
       return UserPlus
+    case 'welcome':
+      return PartyPopper
+    case 'nudge':
+      return Sparkles
     case 'reward':
       return Gift
     case 'contest':

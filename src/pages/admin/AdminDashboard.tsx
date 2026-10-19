@@ -1,3 +1,4 @@
+import { NewcomerFunnelSection } from '@/components/admin/NewcomerFunnelSection'
 import { useEffect, useMemo, useState } from 'react'
 import { toWebP } from '@/lib/image'
 import { useAuth } from '@/contexts/AuthContext'
@@ -151,6 +152,7 @@ export default function AdminDashboard() {
             <>
               <HeroSlidesExpiryAlert />
               <OverviewSection />
+              <NewcomerFunnelSection />
             </>
           )}
           {section === 'users' && <UsersSection />}
