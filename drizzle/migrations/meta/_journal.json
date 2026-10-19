@@ -106,6 +106,13 @@
       "when": 1792417524551,
       "tag": "0014_starter_bonus_reason",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792449697164,
+      "tag": "0015_group_posts_visible",
+      "breakpoints": true
     }
   ]
 }
