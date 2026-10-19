@@ -159,6 +159,9 @@ export function explainFailure(provider: AiProvider, status: number | null, deta
   if (status === 402) return `Your ${name} account has no credit left.`
   if (status === 404) return `${name} does not recognise the model name. Pick another model on the AI provider page.`
   if (status === 429) return `${name} is busy or your account's limit was reached.`
+  if (status === 500 || status === 502 || status === 503 || status === 504) {
+    return `${name} is overloaded or having a problem right now (error ${status}). It usually passes within minutes; the backup answers meanwhile if it is switched on.`
+  }
   return `${name} answered with an error (${status}).`
 }
 
@@ -185,6 +188,19 @@ export function recommendGeminiModel(names: string[]): string | null {
     version(name)
   const ranked = [...writers].sort((a, b) => score(b) - score(a) || a.localeCompare(b))
   return ranked[0] ?? null
+}
+
+/** The next-best Gemini models after the one that failed, best first. */
+export function alternativeGeminiModels(names: string[], failed: string): string[] {
+  const rest = names.filter((name) => name !== failed)
+  const ordered: string[] = []
+  while (rest.length) {
+    const best = recommendGeminiModel(rest)
+    if (!best) break
+    ordered.push(best)
+    rest.splice(rest.indexOf(best), 1)
+  }
+  return ordered
 }
 
 /** The model names in a Gemini "list models" answer that can write text. */

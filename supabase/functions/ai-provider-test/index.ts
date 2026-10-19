@@ -3,6 +3,7 @@
 // Never uses the Lovable AI backup, so a broken key shows up as broken.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import * as ai from '../_shared/ai.ts'
 import { askAiJson, loadAiConfig, modelFor, PROVIDERS, type AiProvider } from '../_shared/ai.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -44,7 +45,7 @@ Deno.serve(async (req) => {
   return json({
     ok: !!answer.json,
     provider,
-    model: modelFor(config, provider),
+    model: ai.lastModel ?? modelFor(config, provider),
     seconds: Math.round((Date.now() - started) / 100) / 10,
     message,
     problem: answer.json ? null : answer.problem,

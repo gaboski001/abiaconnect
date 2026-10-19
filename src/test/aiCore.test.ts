@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   buildRequest,
   DEFAULT_MODELS,
+  alternativeGeminiModels,
   explainFailure,
   extractJson,
   geminiThinking,
@@ -111,5 +112,16 @@ describe('Gemini speed', () => {
     expect(withIt.generationConfig.thinkingConfig).toEqual({ thinkingLevel: 'low' })
     const without = JSON.parse(buildRequest('gemini', 'k', 'gemini-3.8-flash', ask, { thinking: false }).init.body as string)
     expect(without.generationConfig.thinkingConfig).toBeUndefined()
+  })
+})
+
+describe('Gemini when Google is overloaded', () => {
+  it('offers the next-best models after the one that failed', () => {
+    const names = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-3.8-pro', 'gemini-embedding-001']
+    expect(alternativeGeminiModels(names, 'gemini-3.8-flash')).toEqual(['gemini-3.5-flash', 'gemini-3.8-pro'])
+  })
+
+  it('explains a 503 as a passing problem at Google', () => {
+    expect(explainFailure('gemini', 503)).toMatch(/overloaded/)
   })
 })

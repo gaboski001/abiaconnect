@@ -13,6 +13,7 @@ import {
   readConfig,
   readGeminiModels,
   recommendGeminiModel,
+  alternativeGeminiModels,
   type AiAsk,
   type AiConfig,
   type AiFeature,
@@ -26,6 +27,9 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 
 const service = SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null
+
+/** The model that actually answered last, when it wasn't the saved one (for the test page). */
+export let lastModel: string | null = null
 
 // The choice is read at most once a minute per running function.
 let cached: { at: number; config: AiConfig } | null = null
@@ -96,8 +100,9 @@ async function callOnce(
   timeoutMs: number,
   retried = false,
   thinking = true,
+  modelOverride: string | null = null,
 ): Promise<{ text: string | null; problem: string | null }> {
-  const model = modelFor(config, provider)
+  const model = modelOverride ?? modelFor(config, provider)
   if (provider === 'claude') {
     const key = config.keys.claude
     if (!key) return { text: null, problem: 'No Claude API key is saved.' }
@@ -134,11 +139,28 @@ async function callOnce(
       }
       // A model that doesn't take the thinking setting: ask again without it.
       if (provider === 'gemini' && res.status === 400 && thinking && /thinking/i.test(detail)) {
-        return callOnce(provider, config, ask, timeoutMs, retried, false)
+        return callOnce(provider, config, ask, timeoutMs, retried, false, modelOverride)
+      }
+      // Google overloaded or failing: try again without the thinking setting,
+      // then once with the next-best model this key can use (not saved).
+      if (provider === 'gemini' && res.status >= 500) {
+        if (thinking) {
+          await new Promise((resolve) => setTimeout(resolve, 1500))
+          return callOnce(provider, config, ask, timeoutMs, retried, false, modelOverride)
+        }
+        if (!modelOverride) {
+          const next = alternativeGeminiModels(await listGeminiModels(key), model)[0]
+          if (next) {
+            console.error(`gemini model "${model}" failed with ${res.status}; trying "${next}" this time`)
+            return callOnce(provider, config, ask, timeoutMs, true, true, next)
+          }
+        }
       }
       return { text: null, problem: explainFailure(provider, res.status, detail) }
     }
-    return { text: readAnswer(provider, await res.json()), problem: null }
+    const text = readAnswer(provider, await res.json())
+    if (modelOverride) lastModel = modelOverride
+    return { text, problem: null }
   } catch (error) {
     console.error(`${provider} unreachable`, error instanceof Error ? error.message : String(error))
     return { text: null, problem: explainFailure(provider, null) }
@@ -162,6 +184,7 @@ export async function askAiJson(
   ask: AiAsk,
   options: { timeoutMs?: number; noFallback?: boolean; provider?: AiProvider } = {},
 ): Promise<AiAnswer> {
+  lastModel = null
   const config = await loadAiConfig()
   const chosen = options.provider ?? config.provider
   const timeoutMs = options.timeoutMs ?? 45_000
