@@ -136,17 +136,17 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://abiaconnect.com/category/f04f204e-a54d-4719-baca-33649e68dbef</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://abiaconnect.com/category/eccb7d12-f7bc-47e1-884a-08e0d32b7d0b</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://abiaconnect.com/category/5d998d3c-4bfd-4838-90b2-f34d55ed1749</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://abiaconnect.com/category/f04f204e-a54d-4719-baca-33649e68dbef</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -161,12 +161,22 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://abiaconnect.com/category/3efd3b52-6fb9-4fe3-b267-c2b883cb9a45</loc>
+    <loc>https://abiaconnect.com/category/096bb830-9d1d-4505-b6a8-c14da2a28280</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://abiaconnect.com/category/a7a3cc44-2e5a-4de7-a6d5-ea09c5318223</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://abiaconnect.com/category/8ecc538b-7adf-46fb-99f3-0da2157d9009</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://abiaconnect.com/category/3efd3b52-6fb9-4fe3-b267-c2b883cb9a45</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -181,17 +191,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://abiaconnect.com/category/8ecc538b-7adf-46fb-99f3-0da2157d9009</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://abiaconnect.com/category/80595ed4-c15b-4de8-96af-b143eedc31da</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://abiaconnect.com/category/096bb830-9d1d-4505-b6a8-c14da2a28280</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -1892,6 +1892,30 @@
   </url>
   <url>
     <loc>https://abiaconnect.com/thread/ac6752cb-c561-4154-9794-c2b9b2bd0aae</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://abiaconnect.com/thread/084d9e11-d180-47c0-8404-19bc07c56334</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://abiaconnect.com/thread/5ce4cbf5-3ea8-4846-9588-86789096e627</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://abiaconnect.com/thread/b03f161f-b51c-44aa-a7eb-6bffe52df68f</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://abiaconnect.com/thread/2007ff93-af60-4b4c-8520-5c533ca1ef1c</loc>
     <lastmod>2026-10-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>

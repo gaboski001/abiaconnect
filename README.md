@@ -49,6 +49,7 @@ A community forum for Abians worldwide — built with React, Vite, Tailwind, and
 - `npm run serve` — serve the prebuilt `dist/` via Express
 - `npm start` — build then serve in one step
 - `npm run cap:reset` — wipe `android/` & `ios/`, rebuild web, re-add Android, and sync Capacitor
+- `npm run install:functions` — install the Edge Functions' own dependencies into `supabase/functions/node_modules`. They are kept separate from the site's packages because the functions need React 18 while the website uses React 19. Run this after cloning if you want `deno check supabase/functions/*/index.ts` to pass.
 
 ## Push notifications — how it works and how to test
 
