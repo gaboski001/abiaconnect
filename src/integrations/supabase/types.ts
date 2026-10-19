@@ -1378,6 +1378,39 @@ export type Database = {
         }
         Relationships: []
       }
+      newcomer_nudges: {
+        Row: {
+          sent_at: string
+          stage: number
+          user_id: string
+        }
+        Insert: {
+          sent_at?: string
+          stage: number
+          user_id: string
+        }
+        Update: {
+          sent_at?: string
+          stage?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newcomer_nudges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newcomer_nudges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       newsdesk_posts: {
         Row: {
           banner_title: string | null
@@ -2010,6 +2043,7 @@ export type Database = {
           dob: string | null
           email: string | null
           id: string
+          interests: string[]
           is_banned: boolean
           is_deleted: boolean
           lga: string | null
@@ -2020,6 +2054,7 @@ export type Database = {
           native_app_version: string | null
           notification_mode: string
           occupation: string | null
+          onboarded_at: string | null
           reputation: number
           role: string | null
           sex: string | null
@@ -2037,6 +2072,7 @@ export type Database = {
           dob?: string | null
           email?: string | null
           id: string
+          interests?: string[]
           is_banned?: boolean
           is_deleted?: boolean
           lga?: string | null
@@ -2047,6 +2083,7 @@ export type Database = {
           native_app_version?: string | null
           notification_mode?: string
           occupation?: string | null
+          onboarded_at?: string | null
           reputation?: number
           role?: string | null
           sex?: string | null
@@ -2064,6 +2101,7 @@ export type Database = {
           dob?: string | null
           email?: string | null
           id?: string
+          interests?: string[]
           is_banned?: boolean
           is_deleted?: boolean
           lga?: string | null
@@ -2074,6 +2112,7 @@ export type Database = {
           native_app_version?: string | null
           notification_mode?: string
           occupation?: string | null
+          onboarded_at?: string | null
           reputation?: number
           role?: string | null
           sex?: string | null
@@ -2521,6 +2560,44 @@ export type Database = {
           },
         ]
       }
+      subgroup_topics: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          emoji: string | null
+          id: string
+          name: string
+          subgroup_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          emoji?: string | null
+          id?: string
+          name: string
+          subgroup_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          emoji?: string | null
+          id?: string
+          name?: string
+          subgroup_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subgroup_topics_subgroup_id_fkey"
+            columns: ["subgroup_id"]
+            isOneToOne: false
+            referencedRelation: "subgroups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subgroups: {
         Row: {
           category: string | null
@@ -2528,10 +2605,13 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          icon: string | null
           id: string
           is_active: boolean
           is_featured: boolean
           is_private: boolean
+          kind: string
+          lga: string | null
           name: string
           rules: string[]
           updated_at: string
@@ -2542,10 +2622,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean
           is_featured?: boolean
           is_private?: boolean
+          kind?: string
+          lga?: string | null
           name: string
           rules?: string[]
           updated_at?: string
@@ -2556,10 +2639,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          icon?: string | null
           id?: string
           is_active?: boolean
           is_featured?: boolean
           is_private?: boolean
+          kind?: string
+          lga?: string | null
           name?: string
           rules?: string[]
           updated_at?: string
@@ -2722,6 +2808,7 @@ export type Database = {
           subgroup_id: string | null
           tags: string[] | null
           title: string
+          topic_id: string | null
           updated_at: string
           upvotes: number
           user_id: string | null
@@ -2742,6 +2829,7 @@ export type Database = {
           subgroup_id?: string | null
           tags?: string[] | null
           title: string
+          topic_id?: string | null
           updated_at?: string
           upvotes?: number
           user_id?: string | null
@@ -2762,6 +2850,7 @@ export type Database = {
           subgroup_id?: string | null
           tags?: string[] | null
           title?: string
+          topic_id?: string | null
           updated_at?: string
           upvotes?: number
           user_id?: string | null
@@ -2794,6 +2883,13 @@ export type Database = {
             columns: ["subgroup_id"]
             isOneToOne: false
             referencedRelation: "subgroups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threads_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "subgroup_topics"
             referencedColumns: ["id"]
           },
         ]
@@ -3073,6 +3169,7 @@ export type Database = {
       }
     }
     Functions: {
+      add_default_topics: { Args: { _group: string }; Returns: undefined }
       admin_birthday_coverage: { Args: never; Returns: Json }
       admin_birthdays_today: {
         Args: never
@@ -3213,11 +3310,16 @@ export type Database = {
           ref_id: string
         }[]
       }
+      claim_starter_bonus: { Args: never; Returns: number }
       clear_conversation: {
         Args: { _conversation_id: string }
         Returns: number
       }
       community_today: { Args: never; Returns: string }
+      complete_welcome: {
+        Args: { _groups: string[]; _interests: string[] }
+        Returns: Json
+      }
       connections_blocked_with: { Args: { _owner: string }; Returns: boolean }
       connections_profile_visible: {
         Args: { _owner: string }
@@ -3430,6 +3532,7 @@ export type Database = {
         }[]
       }
       get_my_dating_entitlements: { Args: never; Returns: Json }
+      get_my_journey: { Args: never; Returns: Json }
       get_my_privacy: { Args: never; Returns: Json }
       get_my_profile: {
         Args: never
@@ -3444,6 +3547,7 @@ export type Database = {
           dob: string | null
           email: string | null
           id: string
+          interests: string[]
           is_banned: boolean
           is_deleted: boolean
           lga: string | null
@@ -3454,6 +3558,7 @@ export type Database = {
           native_app_version: string | null
           notification_mode: string
           occupation: string | null
+          onboarded_at: string | null
           reputation: number
           role: string | null
           sex: string | null
@@ -3556,6 +3661,7 @@ export type Database = {
         Args: { _subgroup_id: string; _user_id: string }
         Returns: boolean
       }
+      lga_group_for: { Args: { _lga: string }; Returns: string }
       log_monetization_event: {
         Args: { _event: string; _metadata?: Json; _uid: string }
         Returns: undefined
@@ -3574,6 +3680,7 @@ export type Database = {
           id: string
         }[]
       }
+      newcomer_funnel: { Args: { _days?: number }; Returns: Json }
       newsdesk_cleanup: { Args: never; Returns: number }
       newsdesk_notify_admins: { Args: { _waiting: number }; Returns: number }
       newsdesk_share_feed: {
@@ -3682,6 +3789,7 @@ export type Database = {
           username: string
         }[]
       }
+      send_newcomer_nudges: { Args: never; Returns: number }
       set_conversation_archived: {
         Args: { _archived: boolean; _conversation_id: string }
         Returns: undefined
