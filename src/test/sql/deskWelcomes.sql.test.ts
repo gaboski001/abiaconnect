@@ -35,13 +35,14 @@ const PRELUDE = `
     content text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
   );
   CREATE TABLE public.notifications (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL, type text NOT NULL, message text, link text);
-  INSERT INTO public.profiles VALUES ('${CHINEDU}', 'Chinedu Okafor'), ('${ADA}', 'Ada');
+  INSERT INTO public.profiles VALUES ('${CHINEDU}', 'Onyejiuba Chinedu Emmanuel'), ('${ADA}', 'Nwosu Ada');
   INSERT INTO public.newsdesk_settings VALUES (true, '${DESK}');
   INSERT INTO public.user_roles (user_id, role) VALUES ('${ADMIN}', 'Super Admin');
   INSERT INTO public.subgroups (id, name, kind, lga) VALUES ('${LGA}', 'Aba North LGA', 'lga', 'Aba North');
   INSERT INTO public.threads (id, subgroup_id, user_id, title, tags) VALUES ('${WELCOME}', '${LGA}', '${ADMIN}', 'Nnọọ, ndị Aba North!', ARRAY['welcome']);
 `
 const MIGRATION = readFileSync(resolve(__dirname, '../../../supabase/migrations/20261020150000_desk_welcomes.sql'), 'utf8')
+const NAMES = readFileSync(resolve(__dirname, '../../../supabase/migrations/20261024120000_desk_welcome_names.sql'), 'utf8')
 
 async function deskReplies(db: PGlite) {
   const r = await db.query<{ content: string; parent_reply_id: string | null }>(
@@ -58,11 +59,15 @@ describe('desk welcomes', () => {
     await db.exec(`INSERT INTO public.replies (thread_id, user_id, content) VALUES ('${WELCOME}', '${CHINEDU}',
       'Hello everyone, my name is chinedu. I live in aba and I''m into tailoring')`)
     await db.exec(MIGRATION)
+    // The first version greeted him by his surname; the names update fixes that.
+    expect((await deskReplies(db))[0].content).toContain('<strong>Onyejiuba</strong>')
+    await db.exec(NAMES)
 
     let desk = await deskReplies(db)
     expect(desk).toHaveLength(1)
     expect(desk[0].parent_reply_id).not.toBeNull()
     expect(desk[0].content).toContain('<strong>Chinedu</strong>')
+    expect(desk[0].content).not.toContain('Onyejiuba')
     expect(desk[0].content).toContain('Aba North LGA')
     expect(desk[0].content).toContain(`https://abiaconnect.com/subgroups/${LGA}`)
     expect(desk[0].content).toContain('https://abiaconnect.com"')
@@ -76,20 +81,36 @@ describe('desk welcomes', () => {
     await db.exec(`INSERT INTO public.threads (subgroup_id, user_id, title, content) VALUES ('${LGA}', '${ADA}', 'Hi everyone', 'I am from Aba')`)
     desk = await deskReplies(db)
     expect(desk).toHaveLength(2)
-    expect(desk[1].content).toContain('<strong>Ada</strong>')
+    // "I am from Aba" gives no name, so the whole display name is used.
+    expect(desk[1].content).toContain('<strong>Nwosu Ada</strong>')
 
     const alerts = await db.query<{ user_id: string }>('SELECT user_id FROM public.notifications ORDER BY user_id')
     expect(alerts.rows.map((a) => a.user_id)).toEqual([CHINEDU, ADA].sort())
 
-    // Running the update again changes nothing.
+    // Running the updates again changes nothing.
     await db.exec(MIGRATION)
+    await db.exec(NAMES)
     expect(await deskReplies(db)).toHaveLength(2)
+  })
+
+  it('finds the name a member gives, and ignores phrases that are not names', async () => {
+    const db = new PGlite()
+    await db.exec(PRELUDE)
+    await db.exec(MIGRATION)
+    await db.exec(NAMES)
+    const name = async (text: string) =>
+      (await db.query<{ n: string }>('SELECT public.intro_first_name($1, $2) AS n', [text, 'Okafor Emeka'])).rows[0].n
+    expect(await name('<p>Hello everyone, my name is chinedu. I live in aba</p>')).toBe('Chinedu')
+    expect(await name("Hi all, I'm Ngozi from Umuahia")).toBe('Ngozi')
+    expect(await name('I am into tailoring')).toBe('Okafor Emeka')
+    expect(await name('Hello everyone!')).toBe('Okafor Emeka')
   })
 
   it('leaves ordinary group posts alone', async () => {
     const db = new PGlite()
     await db.exec(PRELUDE)
     await db.exec(MIGRATION)
+    await db.exec(NAMES)
     await db.exec(`INSERT INTO public.threads (subgroup_id, user_id, title, content) VALUES ('${LGA}', '${ADA}', 'Road repairs on Faulks Road', 'When will it be fixed?')`)
     expect(await deskReplies(db)).toHaveLength(0)
   })
