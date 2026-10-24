@@ -13,7 +13,6 @@ import {
   Pin,
   Share2,
   ThumbsDown,
-  ThumbsUp,
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
@@ -37,7 +36,14 @@ import { confirmModerationWarning, showModerationBlocked } from '@/components/mo
 const EDIT_REPLY = 'ugo:edit-reply'
 import { useAuth } from '@/contexts/AuthContext'
 import { FacebookShareButton } from '@/components/thread/FacebookShareButton'
-import { ReactionButton } from '@/components/thread/ReactionButton'
+import {
+  ReactionButton,
+  ReactionPicker,
+  loadReplyReactions,
+  saveReplyReaction,
+  type ReactionCount,
+  type ReactionId,
+} from '@/components/thread/ReactionButton'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
 import { UserAvatar } from '@/components/ui/UserAvatar'
@@ -101,6 +107,8 @@ const Avatar = memo(function Avatar({
   return <UserAvatar avatarUrl={url} displayName={name} size={avatarSize} />
 })
 
+const EMPTY_COUNTS: ReactionCount[] = []
+
 interface ReplyItemProps {
   reply: Reply
   canVote: boolean
@@ -110,6 +118,10 @@ interface ReplyItemProps {
   nestedDraft: string
   submitting: boolean
   onVote: (replyId: string, value: 1 | -1) => void
+  /** Reactions on this reply; null until reactions are switched on in the database. */
+  reactionCounts: ReactionCount[] | null
+  myReaction: string | null
+  onReact: (replyId: string, next: ReactionId | null) => void
   onToggleReply: (replyId: string) => void
   onNestedDraftChange: (v: string) => void
   onSubmitNested: (replyId: string) => void
@@ -125,6 +137,9 @@ const ReplyItem = memo(function ReplyItem({
   nestedDraft,
   submitting,
   onVote,
+  reactionCounts,
+  myReaction,
+  onReact,
   onToggleReply,
   onNestedDraftChange,
   onSubmitNested,
@@ -155,14 +170,15 @@ const ReplyItem = memo(function ReplyItem({
         dangerouslySetInnerHTML={{ __html: safeHtml }}
       />
       <div className="flex items-center gap-1 mt-2">
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={!canVote || voting || isOptimistic}
-          onClick={() => onVote(r.id, 1)}
-        >
-          <ThumbsUp className="size-3.5" /> {r.upvotes ?? 0}
-        </Button>
+        <ReactionPicker
+          compact
+          mine={myReaction}
+          counts={reactionCounts ?? []}
+          total={reactionCounts ? reactionCounts.reduce((sum, c) => sum + c.total, 0) : (r.upvotes ?? 0)}
+          ready={!!reactionCounts}
+          disabled={!canVote || voting || !!isOptimistic}
+          onChoose={(next) => (reactionCounts ? onReact(r.id, next) : onVote(r.id, 1))}
+        />
         <Button
           size="sm"
           variant="ghost"
@@ -395,6 +411,15 @@ function Thread() {
     })()
     return () => { cancelled = true }
   }, [threadId, replyIdsKey, qc])
+
+  // Reactions on the replies shown, in one request (null until switched on in the database).
+  const replyReactionsQ = useQuery({
+    queryKey: ['reply-reactions', threadId, replyIdsKey, user?.id ?? null],
+    enabled: !!threadId && !!replyIdsKey,
+    queryFn: () => loadReplyReactions(replyIdsKey.split(','), user?.id ?? null),
+    placeholderData: (prev) => prev,
+  })
+  const replyReactions = replyReactionsQ.data ?? null
 
 
 
@@ -654,6 +679,35 @@ function Thread() {
     },
   })
 
+  const reactReply = useMutation({
+    mutationFn: async ({ replyId, next }: { replyId: string; next: ReactionId | null }) => {
+      if (!user) throw new Error('Sign in to react')
+      await saveReplyReaction(replyId, user.id, replyReactions?.mine.get(replyId), next, true)
+      return replyId
+    },
+    onSuccess: async (replyId) => {
+      qc.invalidateQueries({ queryKey: ['reply-reactions', threadId] })
+      const { data } = await supabase.rpc('get_reply_vote_counts', { _reply_ids: [replyId] })
+      const row = (data as Array<{ reply_id: string; upvotes: number; downvotes: number }> | null)?.[0]
+      qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
+        if (!prev) return prev
+        const pages = prev.pages.map((p) => ({
+          ...p,
+          rows: p.rows.map((r) =>
+            r.id === replyId ? { ...r, upvotes: Number(row?.upvotes ?? 0), downvotes: Number(row?.downvotes ?? 0) } : r,
+          ),
+        }))
+        return { ...prev, pages }
+      })
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'That didn’t work. Please try again.'),
+  })
+  const handleReplyReact = useCallback(
+    (replyId: string, next: ReactionId | null) => reactReply.mutate({ replyId, next }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [replyReactions, user?.id],
+  )
+
   const voteReply = useMutation({
     mutationFn: async ({ replyId, value }: { replyId: string; value: 1 | -1 }) => {
       if (!user) throw new Error('Sign in to vote')
@@ -694,6 +748,8 @@ function Thread() {
       })
     },
     onSuccess: async (res) => {
+      // A thumbs-down replaces any reaction, so refresh those too.
+      qc.invalidateQueries({ queryKey: ['reply-reactions', threadId] })
       if (res.removed) {
         qc.setQueryData<InfiniteData<RepliesPage>>(['replies', threadId], (prev) => {
           if (!prev) return prev
@@ -986,6 +1042,12 @@ function Thread() {
                   nestedDraft={nestedDraft}
                   submitting={submitReply.isPending}
                   onVote={handleReplyVote}
+                  reactionCounts={replyReactions ? (replyReactions.counts.get(r.id) ?? EMPTY_COUNTS) : null}
+                  myReaction={(() => {
+                    const own = replyReactions?.mine.get(r.id)
+                    return own?.value === 1 ? (own.reaction ?? 'like') : null
+                  })()}
+                  onReact={handleReplyReact}
                   onToggleReply={handleToggleReply}
                   onNestedDraftChange={handleNestedDraftChange}
                   onSubmitNested={handleSubmitNested}
