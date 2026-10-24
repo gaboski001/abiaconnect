@@ -7,6 +7,8 @@
 //   3. asks the AI to write a short discussion starter from each report,
 //   4. publishes everyday topics as threads; posts for the sensitive forums,
 //      and any story that looks sensitive, wait for an admin's approval.
+// Each run also joins recent discussions: once members have replied to a
+// Newsdesk post, the Desk adds one note summing up the views and asking a deeper question.
 // Nothing is posted twice: one post per forum per day, and a story the bot has
 // used in the last two weeks is not offered again.
 //
@@ -19,7 +21,13 @@ import { requireScheduler } from '../_shared/cron-auth.ts'
 import { withinRateLimit } from '../_shared/rate-limit.ts'
 import {
   FEEDS,
+  FOLLOW_UP_MIN_MEMBERS,
+  FOLLOW_UP_MIN_REPLIES,
   SCHOOL_PAGES,
+  followUpSystemPrompt,
+  followUpUserMessage,
+  parseFollowUp,
+  renderFollowUpHtml,
   bannerHtml,
   buildCandidates,
   campusSelectionSystemPrompt,
@@ -164,6 +172,15 @@ async function run(db: Db, trigger: Trigger): Promise<Response> {
     if (!settings.author_id) return await finish('No account is set for the bot to post as.', {}, false)
     if (!(await aiAvailable())) {
       return await finish('No AI is set up. Add an API key on the Admin portal’s AI provider page.', {}, false)
+    }
+
+    // Keep recent discussions going (never in a test run, and never stops a run).
+    if (trigger !== 'test') {
+      try {
+        await followUps(db, settings.author_id)
+      } catch (e) {
+        console.error('newsdesk follow-ups failed', e instanceof Error ? e.message : String(e))
+      }
     }
 
     const today = lagosDate()
@@ -582,6 +599,67 @@ async function fetchText(url: string, timeoutMs: number, maxChars: number): Prom
 }
 
 /** One question to the AI; the answer is JSON text, or null when it could not answer. */
+/**
+ * The Desk joins Newsdesk discussions from the last 3 days that members have
+ * replied to (at least 3 replies from 2 members): one note per thread, at most
+ * 2 per run, summing up the views and asking a deeper question.
+ */
+async function followUps(db: Db, deskId: string): Promise<number> {
+  const since = new Date(Date.now() - 3 * 86400_000).toISOString()
+  const { data: posts, error } = await db
+    .from('newsdesk_posts')
+    .select('thread_id')
+    .eq('status', 'published')
+    .not('thread_id', 'is', null)
+    .gte('created_at', since)
+    .limit(60)
+  if (error) throw error
+  const ids = ((posts ?? []) as Array<{ thread_id: string }>).map((p) => p.thread_id)
+  if (!ids.length) return 0
+  const { data: done } = await db.from('newsdesk_followups').select('thread_id').in('thread_id', ids)
+  const skip = new Set(((done ?? []) as Array<{ thread_id: string }>).map((d) => d.thread_id))
+
+  let added = 0
+  for (const threadId of ids) {
+    if (added >= 2) break
+    if (skip.has(threadId)) continue
+    const { data: replies } = await db
+      .from('replies')
+      .select('user_id, content')
+      .eq('thread_id', threadId)
+      .order('created_at', { ascending: true })
+      .limit(40)
+    const members = ((replies ?? []) as Array<{ user_id: string; content: string }>).filter((r) => r.user_id !== deskId)
+    if (members.length < FOLLOW_UP_MIN_REPLIES || new Set(members.map((r) => r.user_id)).size < FOLLOW_UP_MIN_MEMBERS) continue
+    const { data: thread } = await db.from('threads').select('title, content, is_deleted, allow_replies').eq('id', threadId).maybeSingle()
+    if (!thread || thread.is_deleted || thread.allow_replies === false) continue
+
+    const answer = await askAi(
+      followUpSystemPrompt(),
+      followUpUserMessage({ title: thread.title, post: thread.content ?? '', replies: members.map((r) => r.content) }),
+      0.4,
+    )
+    const note = answer ? parseFollowUp(answer) : null
+    if (!note) continue
+    // Claim the thread first, so two runs never both join it.
+    const { error: claimError } = await db.from('newsdesk_followups').insert({ thread_id: threadId })
+    if (claimError) continue
+    const { data: reply, error: replyError } = await db
+      .from('replies')
+      .insert({ thread_id: threadId, user_id: deskId, content: renderFollowUpHtml(note) })
+      .select('id')
+      .maybeSingle()
+    if (replyError) {
+      console.error('newsdesk follow-up not saved', replyError.message)
+      await db.from('newsdesk_followups').delete().eq('thread_id', threadId)
+      continue
+    }
+    await db.from('newsdesk_followups').update({ reply_id: reply?.id ?? null }).eq('thread_id', threadId)
+    added++
+  }
+  return added
+}
+
 async function askAi(system: string, user: string, temperature: number): Promise<string | null> {
   // The AI chosen on the Admin portal's AI provider page (Lovable AI as backup).
   const answer = await askAiJson('newsdesk', { system, user, temperature }, { timeoutMs: 45_000 })

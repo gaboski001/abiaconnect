@@ -28,6 +28,13 @@ export const FEEDS: Feed[] = [
   { name: 'Google News', url: GOOGLE('Abia when:2d'), scope: 'abia' },
   { name: 'Google News', url: GOOGLE('Umuahia OR Enyimba OR Ariaria OR "Aba, Abia" when:2d'), scope: 'abia' },
   { name: 'Bing News', url: 'https://www.bing.com/news/search?q=Abia+State&format=rss', scope: 'abia' },
+  // Abia in depth: the government, the towns and LGAs, trade, and Abians abroad,
+  // as reported by the newspapers and broadcasters Google and Bing News index.
+  { name: 'Google News', url: GOOGLE('"Abia State Government" OR "Governor Otti" OR "Alex Otti" OR "Abia House of Assembly" when:2d'), scope: 'abia' },
+  { name: 'Google News', url: GOOGLE('Ohafia OR Arochukwu OR Bende OR Isuikwuato OR Umunneochi OR Ikwuano OR Osisioma OR "Isiala Ngwa" OR Obingwa OR Ukwa when:3d'), scope: 'abia' },
+  { name: 'Google News', url: GOOGLE('Aba traders OR "Aba market" OR "made in Aba" OR "Abia business" OR "Abia farmers" when:3d'), scope: 'abia' },
+  { name: 'Google News', url: GOOGLE('"Abia indigenes" OR "Abia diaspora" OR "Abia youths" OR "Abia women" when:7d'), scope: 'abia' },
+  { name: 'Bing News', url: 'https://www.bing.com/news/search?q=Aba+OR+Umuahia+Abia&format=rss', scope: 'abia' },
   { name: 'Vanguard', url: 'https://www.vanguardngr.com/feed/', scope: 'wider' },
   { name: 'Punch', url: 'https://rss.punchng.com/v1/category/latest_news', scope: 'wider' },
   { name: 'Premium Times', url: 'https://www.premiumtimesng.com/feed', scope: 'wider' },
@@ -452,6 +459,7 @@ export function selectionSystemPrompt(): string {
     'Rules:',
     '- At most ONE story per forum, and never the same story in two forums.',
     '- Only choose a story that clearly fits the forum and that members would really want to discuss. If a forum has no good story today, leave it out. Fewer, better picks are preferred; never pad.',
+    '- The site makes only a few news posts a day, so each one must count. Prefer the stories with the biggest effect on everyday life in Abia State: government decisions and budgets, roads, power and water, security, prices and markets, jobs and business, schools and health, and achievements by Abians. Prefer a story reported by two or more reputable publishers over one carried by a single outlet.',
     '- Abia State stories (marked [ABIA]) come first. Use a wider Nigerian story (marked [NIGERIA]) only when the forum has no Abia story and the story clearly affects Abians (prices, jobs, schools, health, farming, travel, diaspora).',
     `- Entertainment and celebrity stories (marked [SHOWBIZ]) go ONLY in the "${GOSSIP_FORUM}" forum, and that forum takes ONLY [SHOWBIZ] stories: music, film, television, fashion and what public figures have said or done in public. It does not need an Abia link. If "${GOSSIP_FORUM}" is not in the list of forums, leave [SHOWBIZ] stories out.`,
     `- Stories marked [CAMPUS] are news from or about universities, polytechnics and colleges in Abia State. They go ONLY in the "${INSTITUTIONS_FORUM}" forum, and that forum takes ONLY [CAMPUS] stories that students, staff, parents or alumni would want to know: admissions, fees, resumption and exam dates, accreditation, results, appointments, events and achievements. Skip [CAMPUS] items that are only a menu or department page, or that are not about a school in Abia State. If "${INSTITUTIONS_FORUM}" is not in the list of forums, leave [CAMPUS] stories out.`,
@@ -641,8 +649,8 @@ export function writerSystemPrompt(): string {
     '- Plain, warm Nigerian English that any reader understands. No hashtags, no emoji, no markdown, no HTML.',
     '- "title": a headline that states the news and invites discussion, 40 to 140 characters, ending with a question where natural.',
     '- "banner": the same news as a short headline for the post\'s picture, at most 70 characters, no question.',
-    '- "paragraphs": 1 to 3 short paragraphs (each under 600 characters) summarising the story in your own words. Do not copy sentences from the reports.',
-    '- "questions": 3 or 4 open questions that invite members to share experience or opinion, relevant to Abians.',
+    '- "paragraphs": 2 or 3 short paragraphs (each under 600 characters) in your own words. Do not copy sentences from the reports. The first says what happened. The next explains what it means for people in Abia State (or for Abians abroad), using only the material given. Where the reports give different views, set them out fairly, side by side, saying who holds each one.',
+    '- "questions": 3 or 4 thoughtful, open questions for a mature discussion: one about members’ own experience, one about causes or trade-offs, and one about practical solutions or what should happen next. Invite people with first-hand knowledge (traders, farmers, teachers, health workers, parents, students, people abroad) where it fits. Never ask a loaded or leading question.',
     '- "tags": 2 or 3 lower-case topic words (letters, digits and hyphens only).',
     '- "sensitive": true when the story involves deaths, violence, crime or arrests, court cases, accusations against a named person or organisation, elections, parties or candidates, ethnic or religious tension, or health scares.',
     '',
@@ -783,6 +791,7 @@ export function renderPostHtml(draft: Draft, sources: SourceLink[]): string {
     ...draft.paragraphs.map((p) => `<p>${escapeHtml(p)}</p>`),
     '<h3>Over to you</h3>',
     `<ol>${draft.questions.map((q) => `<li>${escapeHtml(q)}</li>`).join('')}</ol>`,
+    '<p><strong>Join in:</strong> share facts, first-hand experience and ideas. Disagree with respect: debate the issue, not the person.</p>',
     `<p><em>${sources.length === 1 ? 'Source' : 'Sources'}: ${links}. Put together by the AbiaConnect Newsdesk assistant from the linked ${sources.length === 1 ? 'report' : 'reports'}.</em></p>`,
   ].join('\n')
 }
@@ -809,4 +818,67 @@ export function lagosDate(now: Date = new Date()): string {
 /** The share page that shows a forum's picture, or null when the forum has none. */
 export function sharePathFor(forumSlug: string, threadId: string): string | null {
   return FORUM_CARDS.includes(forumSlug) ? `/share/forum-${forumSlug}.html?t=${threadId}` : null
+}
+
+// ---------------------------------------------------------------------------
+// The Desk joins the conversation: once members have replied to a Newsdesk
+// post, it adds one note that sums up the views so far and asks a deeper
+// question, the way a good moderator keeps a discussion going.
+// ---------------------------------------------------------------------------
+
+/** Replies from at least this many members (and this many replies) before the Desk joins in. */
+export const FOLLOW_UP_MIN_REPLIES = 3
+export const FOLLOW_UP_MIN_MEMBERS = 2
+
+export function followUpSystemPrompt(): string {
+  return [
+    'You are the moderator of AbiaConnect, a community forum for people of Abia State, Nigeria, at home and abroad.',
+    'You are given a news discussion thread: the post and the replies members have written so far.',
+    'Write one short note that keeps the discussion going in a mature, respectful way.',
+    '',
+    'Rules:',
+    '- Sum up the main views members have shared in one or two sentences, fairly and without naming anyone. If they agree, say so; if they differ, set the views side by side.',
+    '- Then ask ONE deeper follow-up question that moves the discussion forward: towards causes, trade-offs, practical solutions, or what members can do themselves.',
+    '- Use only what is in the post and the replies. Add no facts, numbers or names of your own.',
+    '- Neutral: do not take a side in politics or religion, do not judge any member, and do not praise or blame anyone.',
+    '- If a reply is rude or off-topic, ignore it. Never repeat insults, personal details or phone numbers.',
+    '- Plain, warm Nigerian English. No emoji, no hashtags, no markdown, no HTML. At most 450 characters in all.',
+    '',
+    'Reply with JSON only:',
+    '{"summary":"...","question":"..."}',
+  ].join('\n')
+}
+
+export function followUpUserMessage(args: { title: string; post: string; replies: string[] }): string {
+  return [
+    `Thread: ${args.title}`,
+    '',
+    'The post:',
+    plainText(args.post).slice(0, 1500),
+    '',
+    'Replies so far (oldest first):',
+    ...args.replies.slice(0, 25).map((r, i) => `${i + 1}. ${plainText(r).slice(0, 400)}`),
+  ].join('\n')
+}
+
+export interface FollowUp {
+  summary: string
+  question: string
+}
+
+export function parseFollowUp(text: string): FollowUp | null {
+  const data = parseJson(text) as Record<string, unknown> | null
+  if (!data) return null
+  const summary = clean(data.summary, 400)
+  const question = clean(data.question, 240)
+  if (summary.length < 30 || question.length < 15) return null
+  return { summary, question }
+}
+
+export function renderFollowUpHtml(note: FollowUp): string {
+  return [
+    `<p>${escapeHtml(note.summary)}</p>`,
+    `<p><strong>To take it further:</strong> ${escapeHtml(note.question)}</p>`,
+    '<p><em>The AbiaConnect Desk</em></p>',
+  ].join('\n')
 }

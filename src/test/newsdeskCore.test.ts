@@ -20,6 +20,9 @@ import {
   parseSelection,
   prioritise,
   renderPostHtml,
+  followUpUserMessage,
+  parseFollowUp,
+  renderFollowUpHtml,
   selectionUserMessage,
   sharePathFor,
   sourcesOf,
@@ -519,5 +522,29 @@ describe('news from institutions’ own websites', () => {
     const farm = items.find((i) => /Ohafia/.test(i.title))!
     const picks = parseSelection(JSON.stringify({ picks: [{ forum: 'institutions', ids: [farm.id, campus[1].id] }] }), [institutions], campus)
     expect(picks.map((p) => [p.forum, p.items.map((i) => i.title)])).toEqual([['institutions', [campus[1].title]]])
+  })
+})
+describe('Desk follow-ups', () => {
+  it('accepts a summary and a question, and builds safe HTML from them', () => {
+    const note = parseFollowUp(
+      '```json\n{"summary":"Members agree the road needs fixing, but differ on who should pay.","question":"What could traders do together while they wait?"}\n```',
+    )
+    expect(note).not.toBeNull()
+    const html = renderFollowUpHtml({ summary: 'A <b>bold</b> view & more', question: note!.question })
+    expect(html).toContain('A &lt;b&gt;bold&lt;/b&gt; view &amp; more')
+    expect(html).toContain('<strong>To take it further:</strong>')
+    expect(html).toContain('The AbiaConnect Desk')
+  })
+
+  it('refuses notes that are too thin', () => {
+    expect(parseFollowUp('{"summary":"ok","question":"Why?"}')).toBeNull()
+    expect(parseFollowUp('not json')).toBeNull()
+  })
+
+  it('gives the AI the post and the replies as plain text', () => {
+    const msg = followUpUserMessage({ title: 'Aba road', post: '<p>The <strong>road</strong> is bad.</p>', replies: ['<p>It is terrible</p>', 'Agreed'] })
+    expect(msg).toContain('The road is bad.')
+    expect(msg).toContain('1. It is terrible')
+    expect(msg).not.toContain('<p>')
   })
 })
