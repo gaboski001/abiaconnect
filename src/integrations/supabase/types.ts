@@ -530,6 +530,27 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_questions: {
+        Row: {
+          id: number
+          last_used: string | null
+          question: string
+          thread_id: string | null
+        }
+        Insert: {
+          id?: number
+          last_used?: string | null
+          question: string
+          thread_id?: string | null
+        }
+        Update: {
+          id?: number
+          last_used?: string | null
+          question?: string
+          thread_id?: string | null
+        }
+        Relationships: []
+      }
       dating_likes: {
         Row: {
           created_at: string
@@ -954,6 +975,49 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      group_champions: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          subgroup_id: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          subgroup_id: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          subgroup_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_champions_subgroup_id_fkey"
+            columns: ["subgroup_id"]
+            isOneToOne: false
+            referencedRelation: "subgroups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_champions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_champions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       group_desk_welcomes: {
         Row: {
@@ -1518,6 +1582,39 @@ export type Database = {
           },
         ]
       }
+      newsdesk_followups: {
+        Row: {
+          created_at: string
+          reply_id: string | null
+          thread_id: string
+        }
+        Insert: {
+          created_at?: string
+          reply_id?: string | null
+          thread_id: string
+        }
+        Update: {
+          created_at?: string
+          reply_id?: string | null
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsdesk_followups_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsdesk_followups_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: true
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       newsdesk_posts: {
         Row: {
           banner_title: string | null
@@ -1653,8 +1750,10 @@ export type Database = {
       newsdesk_settings: {
         Row: {
           author_id: string | null
+          daily_total: number
           default_forum_limit: number
           enabled: boolean
+          forum_choices: Json | null
           forum_limits: Json
           id: boolean
           log_cleared_at: string | null
@@ -1665,8 +1764,10 @@ export type Database = {
         }
         Insert: {
           author_id?: string | null
+          daily_total?: number
           default_forum_limit?: number
           enabled?: boolean
+          forum_choices?: Json | null
           forum_limits?: Json
           id?: boolean
           log_cleared_at?: string | null
@@ -1677,8 +1778,10 @@ export type Database = {
         }
         Update: {
           author_id?: string | null
+          daily_total?: number
           default_forum_limit?: number
           enabled?: boolean
+          forum_choices?: Json | null
           forum_limits?: Json
           id?: boolean
           log_cleared_at?: string | null
@@ -2391,6 +2494,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          reaction: string | null
           reply_id: string
           user_id: string
           value: number
@@ -2398,6 +2502,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          reaction?: string | null
           reply_id: string
           user_id: string
           value: number
@@ -2405,6 +2510,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          reaction?: string | null
           reply_id?: string
           user_id?: string
           value?: number
@@ -3004,6 +3110,29 @@ export type Database = {
           },
         ]
       }
+      unanswered_alerts: {
+        Row: {
+          alerted_at: string
+          thread_id: string
+        }
+        Insert: {
+          alerted_at?: string
+          thread_id: string
+        }
+        Update: {
+          alerted_at?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unanswered_alerts_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: true
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_known_devices: {
         Row: {
           fingerprint: string
@@ -3380,6 +3509,10 @@ export type Database = {
         Args: { _fallback: boolean; _models: Json; _provider: string }
         Returns: undefined
       }
+      admin_set_group_champion: {
+        Args: { _on: boolean; _subgroup: string; _user: string }
+        Returns: undefined
+      }
       admin_set_member_dob: {
         Args: { _dob: string; _user_id: string }
         Returns: undefined
@@ -3414,6 +3547,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      alert_unanswered_posts: { Args: never; Returns: number }
       award_points: {
         Args: { _amount: number; _reason: string; _ref: string; _user: string }
         Returns: number
@@ -3565,6 +3699,7 @@ export type Database = {
       desk_account: { Args: never; Returns: string }
       desk_welcome: {
         Args: {
+          _intro: string
           _member: string
           _parent_reply: string
           _subgroup: string
@@ -3753,6 +3888,14 @@ export type Database = {
         }[]
       }
       get_push_internal_secret: { Args: never; Returns: string }
+      get_reply_reactions: {
+        Args: { _reply_ids: string[] }
+        Returns: {
+          reaction: string
+          reply_id: string
+          total: number
+        }[]
+      }
       get_reply_vote_counts: {
         Args: { _reply_ids: string[] }
         Returns: {
@@ -3784,6 +3927,7 @@ export type Database = {
           upvotes: number
         }[]
       }
+      group_welcome_thread: { Args: { _subgroup: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3791,9 +3935,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      html_text: { Args: { _s: string }; Returns: string }
       increment_thread_view: {
         Args: { _thread_id: string }
         Returns: undefined
+      }
+      intro_first_name: {
+        Args: { _display: string; _text: string }
+        Returns: string
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_displayed_storage_object: {
@@ -3830,8 +3979,10 @@ export type Database = {
         }[]
       }
       newcomer_funnel: { Args: { _days?: number }; Returns: Json }
+      newsdesk_author_id: { Args: never; Returns: string }
       newsdesk_cleanup: { Args: never; Returns: number }
       newsdesk_notify_admins: { Args: { _waiting: number }; Returns: number }
+      newsdesk_plan_today: { Args: never; Returns: Json }
       newsdesk_share_feed: {
         Args: never
         Returns: {
@@ -3899,6 +4050,17 @@ export type Database = {
       }
       points_daily_cap: { Args: { _reason: string }; Returns: number }
       points_level: { Args: { _points: number }; Returns: number }
+      post_question_of_the_day: { Args: never; Returns: string }
+      posts_waiting_for_reply: {
+        Args: { _limit?: number }
+        Returns: {
+          author_name: string
+          created_at: string
+          group_name: string
+          id: string
+          title: string
+        }[]
+      }
       premium_invite_claim: {
         Args: { _limit?: number }
         Returns: {
@@ -3938,6 +4100,7 @@ export type Database = {
           username: string
         }[]
       }
+      send_daily_nudges: { Args: never; Returns: number }
       send_newcomer_nudges: { Args: never; Returns: number }
       set_conversation_archived: {
         Args: { _archived: boolean; _conversation_id: string }
@@ -3981,6 +4144,17 @@ export type Database = {
       track_monetization_event: {
         Args: { _event: string; _metadata?: Json }
         Returns: undefined
+      }
+      unanswered_member_threads: {
+        Args: { _since: string }
+        Returns: {
+          author_id: string
+          created_at: string
+          id: string
+          is_anonymous: boolean
+          subgroup_id: string
+          title: string
+        }[]
       }
       verify_cron_token: { Args: { _token: string }; Returns: boolean }
       volunteer_decide: {
