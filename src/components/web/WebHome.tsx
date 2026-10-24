@@ -20,12 +20,15 @@ import { daysSince, useJourney } from '@/lib/journey'
 import { cn } from '@/lib/utils'
 import { QuickPollCard } from '@/components/engagement/QuickPollCard'
 import { QuestionOfTheDayCard } from '@/components/engagement/QuestionOfTheDayCard'
+import { WaitingForReplyCard } from '@/components/engagement/WaitingForReplyCard'
+import { feedFilter, useNewsdeskAuthor } from '@/lib/feed'
 
-type FeedTab = 'latest' | 'my-lga' | 'popular' | 'unanswered'
+type FeedTab = 'community' | 'my-lga' | 'news' | 'popular' | 'unanswered'
 
 const TAB_LABELS: Record<FeedTab, string> = {
-  latest: 'Latest',
+  community: 'From members',
   'my-lga': 'From your LGA',
+  news: 'News',
   popular: 'Popular',
   unanswered: 'Needs a reply',
 }
@@ -40,6 +43,7 @@ interface FeedRow {
   author_id: string | null
   reply_count: number
   category: { id: string; name: string; icon: string | null } | null
+  group: { name: string } | null
   author: { display_name: string | null; avatar_url: string | null } | null
 }
 
@@ -53,13 +57,16 @@ interface Topic {
   thread_count: number
 }
 
-async function loadFeed(tab: FeedTab, lgaGroup: string | null): Promise<FeedRow[]> {
+async function loadFeed(tab: FeedTab, lgaGroup: string | null, newsdesk: string | null): Promise<FeedRow[]> {
   let query = supabase
     .from('threads')
-    .select('id, title, created_at, is_pinned, is_anonymous, view_count, author_id, replies(count), categories(id, name, icon)')
+    .select('id, title, created_at, is_pinned, is_anonymous, view_count, author_id, replies(count), categories(id, name, icon), subgroups(name)')
     .eq('is_deleted', false)
-  // "From your LGA" shows the member's LGA group; the others show the open forum.
-  query = tab === 'my-lga' && lgaGroup ? query.eq('subgroup_id', lgaGroup) : query.is('subgroup_id', null)
+  // Members' posts (forum and groups) come first; the Newsdesk's news has its own tab.
+  if (tab === 'my-lga' && lgaGroup) query = query.eq('subgroup_id', lgaGroup)
+  else if (tab === 'community' || tab === 'unanswered') query = feedFilter(query, 'community', newsdesk)
+  else if (tab === 'news') query = feedFilter(query, 'news', newsdesk)
+  else query = query.is('subgroup_id', null)
   if (tab === 'popular') {
     query = query.gte('created_at', new Date(Date.now() - 90 * 86400_000).toISOString()).order('view_count', { ascending: false })
   } else {
@@ -70,11 +77,13 @@ async function loadFeed(tab: FeedTab, lgaGroup: string | null): Promise<FeedRow[
   type Raw = Omit<FeedRow, 'reply_count' | 'category' | 'author'> & {
     replies?: { count: number }[]
     categories?: FeedRow['category'] | FeedRow['category'][]
+    subgroups?: FeedRow['group'] | FeedRow['group'][]
   }
   let rows = ((data ?? []) as unknown as Raw[]).map((r) => ({
     ...r,
     reply_count: r.replies?.[0]?.count ?? 0,
     category: (Array.isArray(r.categories) ? r.categories[0] : r.categories) ?? null,
+    group: (Array.isArray(r.subgroups) ? r.subgroups[0] : r.subgroups) ?? null,
     author: null as FeedRow['author'],
   }))
   if (tab === 'unanswered') rows = rows.filter((r) => r.reply_count === 0).slice(0, 15)
@@ -100,9 +109,15 @@ export function WebHome() {
   const journey = useJourney()
   useWelcomeRedirect()
   const lgaGroup = journey.data?.lga_group ?? null
-  const [tab, setTab] = useState<FeedTab>('latest')
-  const tabs: FeedTab[] = lgaGroup ? ['latest', 'my-lga', 'popular', 'unanswered'] : ['latest', 'popular', 'unanswered']
-  const feed = useQuery({ queryKey: ['web-home-feed', tab, lgaGroup], queryFn: () => loadFeed(tab, lgaGroup), staleTime: 30_000 })
+  const [tab, setTab] = useState<FeedTab>('community')
+  const tabs: FeedTab[] = lgaGroup ? ['community', 'my-lga', 'news', 'popular', 'unanswered'] : ['community', 'news', 'popular', 'unanswered']
+  const newsdesk = useNewsdeskAuthor()
+  const feed = useQuery({
+    queryKey: ['web-home-feed', tab, lgaGroup, newsdesk.data ?? null],
+    enabled: newsdesk.isFetched,
+    queryFn: () => loadFeed(tab, lgaGroup, newsdesk.data ?? null),
+    staleTime: 30_000,
+  })
   // A member's first day: welcome them, don't say "welcome back".
   const firstDay = daysSince(journey.data?.created_at) < 1
   const topics = useQuery({
@@ -249,7 +264,7 @@ export function WebHome() {
                 <span className="text-center">Views</span>
                 <span className="text-right">Activity</span>
               </div>
-              {feed.isLoading ? (
+              {feed.isPending ? (
                 Array.from({ length: 6 }).map((_, i) => <div key={i} className="m-4 h-12 animate-pulse rounded-lg bg-muted" />)
               ) : feed.isError ? (
                 <p className="p-6 text-center text-muted-foreground">Couldn’t load discussions. Please refresh.</p>
@@ -265,7 +280,7 @@ export function WebHome() {
                       </Link>
                     </>
                   ) : (
-                    'No discussions yet.'
+                    tab === 'community' ? 'No posts from members yet. Start the first conversation!' : 'No discussions yet.'
                   )}
                 </p>
               ) : (
@@ -287,7 +302,12 @@ export function WebHome() {
                               </p>
                               <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
                                 <span>{name}</span>
-                                {t.category ? (
+                                {t.group ? (
+                                  <>
+                                    <span aria-hidden>·</span>
+                                    <span>👥 {t.group.name}</span>
+                                  </>
+                                ) : t.category ? (
                                   <>
                                     <span aria-hidden>·</span>
                                     <span>
@@ -321,6 +341,7 @@ export function WebHome() {
 
         {/* Sidebar */}
         <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+          {user ? <WaitingForReplyCard /> : null}
           <QuestionOfTheDayCard />
           {user ? <DailyRewardCard /> : null}
           {user ? <QuickPollCard /> : null}

@@ -37,7 +37,8 @@ async function callBot<T>(body: Record<string, unknown>): Promise<T> {
   return data as T
 }
 
-const FORUM_LIMITS = [0, 1, 2, 3, 4, 5]
+// How many Newsdesk posts a day in all. Few, so members' own posts aren't buried.
+const DAILY_TOTALS = [0, 1, 2, 3, 4, 5, 6, 8, 10]
 // After how many days a finished post leaves the "Recent posts" list.
 const LOG_KEEP_DAYS = [1, 3, 7, 14, 30]
 
@@ -119,15 +120,20 @@ export default function NewsdeskSection() {
     mutationFn: async (fields: {
       enabled?: boolean
       forum_limits?: Record<string, number>
+      daily_total?: number
+      forum_choices?: Record<string, number>
       review_slugs?: string[]
       log_keep_days?: number
       log_cleared_at?: string
     }) => {
-      const { error } = await supabase
+      // daily_total and forum_choices are newer than the generated types.
+      const { error } = await (supabase as any)
         .from('newsdesk_settings')
         .update({ ...fields, updated_at: new Date().toISOString() })
         .eq('id', true)
       if (error) throw error
+      // Today's posts are shared out again straight away.
+      if (fields.daily_total !== undefined || fields.forum_choices) await (supabase as any).rpc('newsdesk_plan_today')
       return fields
     },
     onSuccess: (fields) => {
@@ -179,11 +185,10 @@ export default function NewsdeskSection() {
   const busy = run.isPending
   const lastRun = runs.data?.[0]
 
-  const limits = (s?.forum_limits ?? {}) as Record<string, number>
-  const limitFor = (slug: string) => {
-    const n = Number(limits[slug] ?? s?.default_forum_limit ?? 2)
-    return FORUM_LIMITS.includes(n) ? n : 2
-  }
+  const settingsRow = s as (typeof s & { daily_total?: number; forum_choices?: Record<string, number> | null }) | undefined
+  const choices = (settingsRow?.forum_choices ?? {}) as Record<string, number>
+  const dailyTotal = settingsRow?.daily_total ?? 3
+  const today = (s?.forum_limits ?? {}) as Record<string, number>
 
   const toggleReview = (slug: string) => {
     if (!s) return
@@ -347,30 +352,42 @@ export default function NewsdeskSection() {
       <section className="rounded-2xl border bg-card p-5 space-y-4">
         <h2 className="font-bold">Settings</h2>
         <p className="text-sm text-muted-foreground">
-          Choose how many posts the bot may make in each forum per day (0 keeps the bot out of that forum), and tick the
-          forums where every post must wait for your approval. The bot adds at most one post to a forum each time it
-          runs, so a forum set to 3 gets a fresh story in the morning, at midday and in the evening. In forums that are
-          not ticked, posts are published by themselves unless the story looks sensitive (for example deaths, crime,
-          court cases or elections).
+          Keep the news to a few posts a day so members' own posts stay on top. The bot shares them out among the forums
+          you allow, taking turns: each day it picks the forums it has waited longest to post in. Tick "Ask me first"
+          where every post must wait for your approval. Elsewhere, posts are published by themselves unless the story
+          looks sensitive (for example deaths, crime, court cases or elections).
         </p>
+        <label className="flex flex-wrap items-center gap-2 text-sm font-medium">
+          News posts a day, in all
+          <select
+            className="rounded-md border bg-background px-2 py-1"
+            value={dailyTotal}
+            disabled={save.isPending}
+            onChange={(e) => save.mutate({ daily_total: Number(e.target.value) })}
+          >
+            {DAILY_TOTALS.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
         <ul className="divide-y rounded-xl border">
           {(categories.data ?? []).map((c) => (
             <li key={c.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
               <span className="min-w-0 flex-1 font-medium">{c.name}</span>
+              {Number(today[c.slug] ?? 0) > 0 ? (
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">Posting today</span>
+              ) : null}
               <label className="flex items-center gap-2 text-muted-foreground">
-                Posts a day
-                <select
-                  className="rounded-md border bg-background px-2 py-1 text-foreground"
-                  value={limitFor(c.slug)}
+                <input
+                  type="checkbox"
+                  className="size-4 accent-current"
+                  checked={Number(choices[c.slug] ?? 0) > 0}
                   disabled={save.isPending}
-                  onChange={(e) => save.mutate({ forum_limits: { ...limits, [c.slug]: Number(e.target.value) } })}
-                >
-                  {FORUM_LIMITS.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(e) => save.mutate({ forum_choices: { ...choices, [c.slug]: e.target.checked ? 1 : 0 } })}
+                />
+                Bot may post here
               </label>
               <label className="flex items-center gap-2 text-muted-foreground">
                 <input

@@ -18,6 +18,8 @@ import { ContestCard } from '@/pages/Contests'
 import { contestPhase, listContests } from '@/lib/engagement'
 import { QuickPollCard } from '@/components/engagement/QuickPollCard'
 import { QuestionOfTheDayCard } from '@/components/engagement/QuestionOfTheDayCard'
+import { WaitingForReplyCard } from '@/components/engagement/WaitingForReplyCard'
+import { feedFilter, useNewsdeskAuthor } from '@/lib/feed'
 
 interface Category {
   id: string
@@ -81,17 +83,39 @@ export function NativeHome() {
     },
   })
 
+  // Members' posts first; the Newsdesk's news in a short list of its own.
+  const newsdesk = useNewsdeskAuthor()
+  const newsQ = useQuery({
+    queryKey: ['native-home-news', newsdesk.data ?? null],
+    enabled: newsdesk.isFetched && !!newsdesk.data,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await feedFilter(
+        supabase.from('threads').select('id, title, created_at').eq('is_deleted', false),
+        'news',
+        newsdesk.data ?? null,
+      )
+        .order('created_at', { ascending: false })
+        .limit(4)
+      if (error) throw error
+      return (data ?? []) as { id: string; title: string; created_at: string }[]
+    },
+  })
   const feedQ = useQuery({
-    queryKey: ['native-home-feed'],
+    queryKey: ['native-home-feed', newsdesk.data ?? null],
+    enabled: newsdesk.isFetched,
     staleTime: 30_000,
     queryFn: async (): Promise<FeedThread[]> => {
-      const { data, error } = await supabase
-        .from('threads')
-        .select(
-          'id, title, created_at, is_pinned, is_anonymous, view_count, author_id, replies(count), categories(name, icon)',
-        )
-        .eq('is_deleted', false)
-        .is('subgroup_id', null)
+      const { data, error } = await feedFilter(
+        supabase
+          .from('threads')
+          .select(
+            'id, title, created_at, is_pinned, is_anonymous, view_count, author_id, replies(count), categories(name, icon)',
+          )
+          .eq('is_deleted', false),
+        'community',
+        newsdesk.data ?? null,
+      )
         .order('created_at', { ascending: false })
         .limit(8)
       if (error) throw error
@@ -186,6 +210,12 @@ export function NativeHome() {
         </section>
       ) : null}
 
+      {user ? (
+        <section className="px-4 empty:hidden">
+          <WaitingForReplyCard compact />
+        </section>
+      ) : null}
+
       <section className="px-4 empty:hidden">
         <QuestionOfTheDayCard compact />
       </section>
@@ -272,8 +302,8 @@ export function NativeHome() {
       {/* Latest discussions */}
       <section className="px-4">
         <NewDiscussionsBanner queryKeys={[['native-home-feed']]} />
-        <SectionHeader title="Latest discussions" />
-        {feedQ.isLoading ? (
+        <SectionHeader title="From members" />
+        {feedQ.isPending ? (
           <div className="space-y-2.5">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-[92px] animate-pulse rounded-2xl bg-muted" />
@@ -282,7 +312,7 @@ export function NativeHome() {
         ) : feedQ.isError ? (
           <ErrorCard onRetry={() => feedQ.refetch()} />
         ) : !feedQ.data?.length ? (
-          <EmptyCard text="No discussions yet. Be the first to start one." />
+          <EmptyCard text="No posts from members yet. Be the first to start one." />
         ) : (
           <ul className="space-y-2.5">
             {feedQ.data.map((t) => {
@@ -332,6 +362,24 @@ export function NativeHome() {
           </ul>
         )}
       </section>
+
+      {newsQ.data?.length ? (
+        <section className="px-4">
+          <SectionHeader title="📰 Today's news" />
+          <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+            {newsQ.data.map((n) => (
+              <li key={n.id}>
+                <Link to={`/thread/${n.id}`} className="block px-4 py-3 transition-colors active:bg-muted">
+                  <span className="line-clamp-2 text-[14px] font-medium leading-snug text-foreground">{n.title}</span>
+                  <span className="mt-0.5 block text-[12px] text-muted-foreground">
+                    {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   )
 }

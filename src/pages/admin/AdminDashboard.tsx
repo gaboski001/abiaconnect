@@ -1,5 +1,6 @@
 import { AiProviderSection } from '@/components/admin/AiProviderSection'
 import { NewcomerFunnelSection } from '@/components/admin/NewcomerFunnelSection'
+import { ChampionsSection } from '@/components/admin/ChampionsSection'
 import { useEffect, useMemo, useState } from 'react'
 import { toWebP } from '@/lib/image'
 import { useAuth } from '@/contexts/AuthContext'
@@ -53,12 +54,13 @@ import NewsdeskSection from '@/components/admin/NewsdeskSection'
 import { Newspaper } from 'lucide-react'
 import DatingMonetizationSection from '@/components/admin/DatingMonetizationSection'
 import { HeartHandshake } from 'lucide-react'
-import { Download as DownloadIcon, BellRing, Cake } from 'lucide-react'
+import { Download as DownloadIcon, BellRing, Cake, Award } from 'lucide-react'
 import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
 type SectionId =
   | 'overview'
   | 'users'
+  | 'champions'
   | 'categories'
   | 'moderation'
   | 'polls'
@@ -78,6 +80,7 @@ type SectionId =
 const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'overview', label: 'Overview', Icon: BarChart3 },
   { id: 'users', label: 'User Management', Icon: Users },
+  { id: 'champions', label: 'LGA Champions', Icon: Award },
   { id: 'categories', label: 'Categories', Icon: FolderTree },
   { id: 'moderation', label: 'Moderation Queue', Icon: Flag },
   { id: 'polls', label: 'Polls Management', Icon: Vote },
@@ -138,6 +141,7 @@ export default function AdminDashboard() {
             </>
           )}
           {section === 'users' && <UsersSection />}
+          {section === 'champions' && <ChampionsSection />}
           {section === 'categories' && <CategoriesSection />}
           {section === 'moderation' && <ModerationSection />}
           {section === 'polls' && <PollsSection />}
