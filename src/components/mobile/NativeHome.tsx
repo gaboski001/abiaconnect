@@ -17,6 +17,7 @@ import { NewDiscussionsBanner, OnlineMembersPill } from '@/components/engagement
 import { ContestCard } from '@/pages/Contests'
 import { contestPhase, listContests } from '@/lib/engagement'
 import { QuickPollCard } from '@/components/engagement/QuickPollCard'
+import { QuestionOfTheDayCard } from '@/components/engagement/QuestionOfTheDayCard'
 
 interface Category {
   id: string
@@ -184,6 +185,10 @@ export function NativeHome() {
           <StarterSteps compact />
         </section>
       ) : null}
+
+      <section className="px-4 empty:hidden">
+        <QuestionOfTheDayCard compact />
+      </section>
 
       {user ? (
         <section className="px-4">

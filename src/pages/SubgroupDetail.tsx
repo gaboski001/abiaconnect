@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { loadTopics } from '@/lib/journey'
+import { NEWCOMER_DAYS, daysSince, helloPath, loadTopics, loadWelcomeThread, useJourney } from '@/lib/journey'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -54,6 +54,16 @@ export default function SubgroupDetail() {
     staleTime: 5 * 60_000,
   })
   const topics = topicsQ.data ?? []
+  // Newcomers introduce themselves by replying on the group's welcome thread.
+  const welcomeQ = useQuery({
+    queryKey: ['subgroup-welcome-thread', subgroupId],
+    enabled: !!subgroupId,
+    queryFn: () => loadWelcomeThread(subgroupId!),
+    staleTime: 5 * 60_000,
+  })
+  const welcomeThread = welcomeQ.data ?? null
+  const journey = useJourney()
+  const needsHello = !!journey.data && !journey.data.steps.hello && daysSince(journey.data.created_at) < NEWCOMER_DAYS
   const topicById = new Map(topics.map((t) => [t.id, t]))
   const currentTopic = activeTopic ? topicById.get(activeTopic) ?? null : null
   const chooseTopic = (id: string | null) => {
@@ -606,6 +616,19 @@ export default function SubgroupDetail() {
             </TabsList>
 
             <TabsContent value="threads" className="mt-4">
+              {welcomeThread && needsHello ? (
+                <Link
+                  to={helloPath(welcomeThread)}
+                  className="mb-4 flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/[0.06] p-3 transition-colors hover:bg-primary/10"
+                >
+                  <span className="text-2xl" aria-hidden>👋🏾</span>
+                  <span className="min-w-0 flex-1 text-sm">
+                    <span className="font-semibold">New here? Say hello!</span>{' '}
+                    <span className="text-muted-foreground">Reply on the welcome post with your name, your town and what you do. Everyone will welcome you.</span>
+                  </span>
+                  <span className="shrink-0 text-sm font-medium text-primary">Say hello</span>
+                </Link>
+              ) : null}
               {topics.length ? (
                 <div className="mb-4 space-y-3">
                   <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Topics in this group">
@@ -627,7 +650,9 @@ export default function SubgroupDetail() {
                       </p>
                       {isMember ? (
                         <Button asChild size="sm">
-                          <Link to={`/create-thread?subgroup=${s.id}&topic=${currentTopic.id}`}>
+                          <Link to={currentTopic.name === 'Introduce yourself' && welcomeThread
+                            ? helloPath(welcomeThread)
+                            : `/create-thread?subgroup=${s.id}&topic=${currentTopic.id}`}>
                             <Plus className="h-4 w-4 mr-1" />
                             {currentTopic.name === 'Introduce yourself' ? 'Say hello' : 'Start a discussion here'}
                           </Link>

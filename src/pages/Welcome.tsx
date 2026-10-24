@@ -10,8 +10,10 @@ import {
   INTERESTS,
   STARTER_BONUS,
   completeWelcome,
+  helloPath,
   loadGroups,
   loadTopics,
+  loadWelcomeThread,
   suggestGroups,
   useJourney,
   useRefreshJourney,
@@ -34,6 +36,7 @@ export default function Welcome() {
   const [chosen, setChosen] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [introTopic, setIntroTopic] = useState<string | null>(null)
+  const [welcomeThread, setWelcomeThread] = useState<string | null>(null)
 
   const firstName = (profile?.display_name || '').split(' ')[0] || 'friend'
   const lga = journey.data?.lga ?? profile?.lga ?? null
@@ -73,8 +76,9 @@ export default function Welcome() {
       const result = await completeWelcome(interests, [...chosen])
       const home = result.lga_group ?? lgaGroup?.id
       if (home) {
-        const topics = await loadTopics(home)
+        const [topics, welcome] = await Promise.all([loadTopics(home), loadWelcomeThread(home)])
         setIntroTopic(topics.find((t) => t.name === 'Introduce yourself')?.id ?? null)
+        setWelcomeThread(welcome)
       }
       await refresh()
       setStep(3)
@@ -95,9 +99,12 @@ export default function Welcome() {
   }
 
   const homeGroup = lgaGroup ?? lgaGroups.find((g) => chosen.has(g.id)) ?? null
-  const helloLink = homeGroup
-    ? `/subgroups/${homeGroup.id}${introTopic ? `?topic=${introTopic}` : ''}`
-    : '/create-thread'
+  // Introductions go on the group's welcome thread, so there is one place to meet everyone.
+  const helloLink = welcomeThread
+    ? helloPath(welcomeThread)
+    : homeGroup
+      ? `/subgroups/${homeGroup.id}${introTopic ? `?topic=${introTopic}` : ''}`
+      : '/create-thread'
 
   return (
     <div className="mx-auto max-w-2xl py-6 md:py-12">
@@ -258,7 +265,7 @@ export default function Welcome() {
               to={helloLink}
               emoji="👋🏾"
               title={homeGroup ? `Say hello to ${homeGroup.lga ?? homeGroup.name}` : 'Say hello to the community'}
-              body="Introduce yourself. Your people will welcome you, and it earns points."
+              body={welcomeThread ? 'Reply on the welcome post with your name, town and what you do. Your people will welcome you, and it earns points.' : 'Introduce yourself. Your people will welcome you, and it earns points.'}
               primary
             />
             <NextAction to="/polls" emoji="🗳️" title="Vote in a poll" body="One tap, 2 points, and you see what Abians think." />

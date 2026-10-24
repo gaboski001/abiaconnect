@@ -150,6 +150,28 @@ export async function loadTopics(groupId: string): Promise<GroupTopic[]> {
   return (data ?? []) as GroupTopic[]
 }
 
+/** A group's pinned welcome thread, where newcomers introduce themselves, or null. */
+export async function loadWelcomeThread(groupId: string): Promise<string | null> {
+  const { data, error } = await loose
+    .from('threads')
+    .select('id')
+    .eq('subgroup_id', groupId)
+    .contains('tags', ['welcome'])
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: true })
+    .limit(1)
+  if (error || !data?.length) return null
+  return data[0].id as string
+}
+
+/** Where "Say hello" goes: the reply box on the group's welcome thread. */
+export const helloPath = (threadId: string) => `/thread/${threadId}?hello=1`
+
+/** Whether a post reads like someone introducing themselves (the same words the database checks). */
+export function looksLikeIntro(text: string) {
+  return /(my name is|my name's|introduc|hello everyone|hi everyone|hello all|hi all|greetings everyone|i am from|i'm from|i live in|ndewo|nnọọ|nnoo|kedu)/i.test(text)
+}
+
 /** Groups that match someone's interests, best first, leaving out ones already chosen. */
 export function suggestGroups(groups: GroupLite[], interests: string[], skip: Set<string> = new Set()) {
   const wanted = new Set(INTERESTS.filter((i) => interests.includes(i.id)).flatMap((i) => i.categories))

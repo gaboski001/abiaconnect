@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { loadTopics } from '@/lib/journey'
+import { loadTopics, loadWelcomeThread, looksLikeIntro } from '@/lib/journey'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -88,6 +88,15 @@ export default function CreateThread() {
     staleTime: 5 * 60_000,
   })
   const chosenTopic = (topicsQ.data ?? []).find((t) => t.id === topicId) ?? null
+  // Introductions in a group go on its welcome thread, so the group has one place to say hello.
+  const welcomeQ = useQuery({
+    queryKey: ['subgroup-welcome-thread', presetSubgroup],
+    enabled: !!presetSubgroup,
+    queryFn: () => loadWelcomeThread(presetSubgroup),
+    staleTime: 5 * 60_000,
+  })
+  const welcomeThread = welcomeQ.data ?? null
+  const introducing = !!welcomeThread && chosenTopic?.name === 'Introduce yourself'
 
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
@@ -278,6 +287,25 @@ export default function CreateThread() {
       // fail-open on network error — don't block legitimate users
     }
 
+    // An introduction becomes a reply on the group's welcome thread instead of a second thread.
+    const intro = !!welcomeThread && !values.is_anonymous && values.content.length <= 5000 &&
+      (chosenTopic?.name === 'Introduce yourself' || looksLikeIntro(`${values.title} ${plain}`))
+    if (intro) {
+      const { error } = await supabase
+        .from('replies')
+        .insert({ thread_id: welcomeThread, user_id: user.id, content: values.content.trim(), parent_reply_id: null })
+      if (error) {
+        toast.error(error.message)
+        return
+      }
+      submittedRef.current = true
+      clearDraft(draftScope)
+      form.setValue('content', '')
+      toast.success('Welcome! 🎉 Your introduction is on the group’s welcome post, where everyone says hello.')
+      navigate(`/thread/${welcomeThread}`)
+      return
+    }
+
     const finalTags = values.flair && !tags.includes(values.flair) ? [values.flair, ...tags] : tags
     const payload = {
       user_id: user.id,
@@ -342,6 +370,11 @@ export default function CreateThread() {
                   ))}
                 </select>
                 {chosenTopic?.description ? <p className="text-xs text-muted-foreground">{chosenTopic.description}</p> : null}
+                {introducing ? (
+                  <p className="rounded-lg bg-primary/[0.06] p-2 text-xs">
+                    👋🏾 Your introduction will be added to the group’s welcome post, so everyone can greet you in one place.
+                  </p>
+                ) : null}
               </div>
             ) : null}
           </div>

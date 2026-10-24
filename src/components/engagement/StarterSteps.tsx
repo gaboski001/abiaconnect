@@ -8,7 +8,9 @@ import {
   STARTER_BONUS,
   claimStarterBonus,
   daysSince,
+  helloPath,
   loadTopics,
+  loadWelcomeThread,
   needsWelcome,
   useJourney,
   useRefreshJourney,
@@ -50,7 +52,7 @@ function stepList(journey: Journey, helloLink: string) {
     { id: 'interests', title: 'Tell us what you like', hint: 'So we can show you the right groups.', to: '/welcome' },
     { id: 'group', title: 'Join your LGA group', hint: 'Your people, at home and abroad.', to: groupLink },
     { id: 'vote', title: 'Vote in a poll', hint: 'One tap. See what Abians think.', to: '/polls', points: '+2' },
-    { id: 'hello', title: 'Say hello', hint: 'Introduce yourself or reply to a discussion.', to: helloLink, points: '+5' },
+    { id: 'hello', title: 'Say hello', hint: 'Reply on your LGA welcome thread: your name, town and what you do.', to: helloLink, points: '+5' },
     { id: 'photo', title: 'Add a profile photo', hint: 'People reply more to a friendly face.', to: '/profile' },
   ]
   return items
@@ -69,10 +71,13 @@ export function StarterSteps({ compact = false }: { compact?: boolean }) {
 
   const data = journey.data
   useEffect(() => {
-    if (!data?.lga_group) return
-    void loadTopics(data.lga_group).then((topics) => {
-      const intro = topics.find((t) => t.name === 'Introduce yourself')
-      setHelloLink(`/subgroups/${data.lga_group}${intro ? `?topic=${intro.id}` : ''}`)
+    const group = data?.lga_group
+    if (!group) return
+    // Introductions go on the group's welcome thread, not in a new thread.
+    void loadWelcomeThread(group).then(async (welcome) => {
+      if (welcome) return setHelloLink(helloPath(welcome))
+      const intro = (await loadTopics(group)).find((t) => t.name === 'Introduce yourself')
+      setHelloLink(`/subgroups/${group}${intro ? `?topic=${intro.id}` : ''}`)
     })
   }, [data?.lga_group])
 

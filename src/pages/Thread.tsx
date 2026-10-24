@@ -1,5 +1,5 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 
 import { formatDistanceToNow } from 'date-fns'
@@ -262,6 +262,16 @@ function Thread() {
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [nestedDraft, setNestedDraft] = useState('')
   const commentingEnabled = settings.global_commenting_enabled !== 'false'
+  // "Say hello" links open a group's welcome thread with the reply box ready.
+  const [searchParams] = useSearchParams()
+  const saysHello = searchParams.get('hello') === '1'
+  useEffect(() => {
+    if (!saysHello) return
+    const timer = window.setTimeout(() => {
+      document.getElementById('reply-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 600)
+    return () => window.clearTimeout(timer)
+  }, [saysHello, threadId])
 
   // If RLS hides this thread because it belongs to a private subgroup,
   // bounce the visitor to the subgroup landing instead of showing a 404.
@@ -1081,17 +1091,27 @@ function Thread() {
         {user ? (
           commentingEnabled ? (
             <form
+              id="reply-box"
               onSubmit={(e) => {
                 e.preventDefault()
                 submitReply.mutate({ content: reply })
               }}
-              className="space-y-2"
+              className="space-y-2 scroll-mt-24"
             >
+              {saysHello ? (
+                <div className="rounded-xl border border-primary/30 bg-primary/[0.06] p-3 text-sm">
+                  <p className="font-semibold">👋🏾 Say hello to your people!</p>
+                  <p className="text-muted-foreground">
+                    Tell them your name, your town or village, where you live now and what you do. The Desk and your neighbours will welcome you.
+                  </p>
+                </div>
+              ) : null}
               <Suspense fallback={<div className="h-24 rounded-md bg-muted animate-pulse" />}>
                 <ReplyComposer
                   value={reply}
                   onChange={setReply}
-                  placeholder="Write a reply…"
+                  placeholder={saysHello ? 'Hello everyone, my name is… I am from… and I…' : 'Write a reply…'}
+                  autoFocus={saysHello}
                   minRows={4}
                   maxLength={5000}
                 />

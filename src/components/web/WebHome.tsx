@@ -19,6 +19,7 @@ import { contestPhase, listContests } from '@/lib/engagement'
 import { daysSince, useJourney } from '@/lib/journey'
 import { cn } from '@/lib/utils'
 import { QuickPollCard } from '@/components/engagement/QuickPollCard'
+import { QuestionOfTheDayCard } from '@/components/engagement/QuestionOfTheDayCard'
 
 type FeedTab = 'latest' | 'my-lga' | 'popular' | 'unanswered'
 
@@ -320,6 +321,7 @@ export function WebHome() {
 
         {/* Sidebar */}
         <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+          <QuestionOfTheDayCard />
           {user ? <DailyRewardCard /> : null}
           {user ? <QuickPollCard /> : null}
 
