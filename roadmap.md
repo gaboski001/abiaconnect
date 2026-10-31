@@ -1,4 +1,6 @@
 # Tasks
+- [x] Add Ubani Favour’s account notification about the three missing photos, linking both affected threads.
+- [ ] Send Ubani Favour a signup-email reminder; blocked until the email sender domain is linked to the new workspace.
 - [ ] Restore three missing photos on Ubani Favour’s two older threads; blocked until the original images are provided because the referenced files no longer exist in storage.
 - [x] Recheck automatic WebP conversion and posted-image retention; all 7 existing regression checks passed.
 - [x] Stop greeting phrases from redirecting ordinary group posts to welcome replies; 12 regression checks passed.
