@@ -32,6 +32,7 @@ describe('thread photo lifecycle', () => {
     fireEvent.change(input, { target: { files: [new File(['original'], 'photo.jpg', { type: 'image/jpeg' })] } })
     await waitFor(() => expect(container.querySelector('img')).not.toBeNull())
     expect(storage.upload).toHaveBeenCalledWith(expect.stringMatching(/\.webp$/), expect.objectContaining({ type: 'image/webp' }), expect.objectContaining({ contentType: 'image/webp' }))
+    rerender(<ThreadEditor value={onChange.mock.lastCall?.[0] ?? html} onChange={onChange} />)
     rerender(<ThreadEditor value="" onChange={onChange} />)
     await waitFor(() => expect(container.querySelector('img')).toBeNull())
     unmount()
