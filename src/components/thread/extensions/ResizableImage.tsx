@@ -39,7 +39,21 @@ export const ResizableImage = Image.extend({
 
   parseHTML() {
     return [
-      { tag: 'figure[data-type="image"]' },
+      {
+        tag: 'figure[data-type="image"]',
+        getAttrs: (element) => {
+          const image = element.querySelector('img')
+          if (!image?.getAttribute('src')) return false
+          return {
+            src: image.getAttribute('src'),
+            alt: image.getAttribute('alt'),
+            title: image.getAttribute('title'),
+            width: image.style.width || '100%',
+            align: element.getAttribute('data-align') || image.getAttribute('data-align') || 'center',
+            caption: element.querySelector('figcaption')?.textContent || '',
+          }
+        },
+      },
       { tag: 'img[src]' },
     ]
   },

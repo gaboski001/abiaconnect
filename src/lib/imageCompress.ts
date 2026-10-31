@@ -44,7 +44,7 @@ export async function compressToWebp(
     if (opts.requireWebp) throw new Error('This browser cannot convert photos to WebP. Please use another browser.')
     return { file, converted: false }
   }
-  if (blob.size >= file.size && file.type === 'image/webp') {
+  if (blob.size >= file.size && file.type === 'image/webp' && !opts.requireWebp) {
     return { file, converted: false }
   }
 
