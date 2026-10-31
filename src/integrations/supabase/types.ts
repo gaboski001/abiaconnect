@@ -2358,6 +2358,27 @@ export type Database = {
         }
         Relationships: []
       }
+      relationship_access_settings: {
+        Row: {
+          id: boolean
+          plans_enabled: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          plans_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          plans_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       relationship_blocks: {
         Row: {
           blocked_id: string
@@ -3525,6 +3546,10 @@ export type Database = {
         Args: { _name: string; _value: string }
         Returns: string
       }
+      admin_set_relationship_plan_mode: {
+        Args: { _enabled: boolean }
+        Returns: undefined
+      }
       admin_wallet_adjust: {
         Args: { _amount: number; _reason: string; _user: string }
         Returns: {
@@ -4083,6 +4108,7 @@ export type Database = {
         Returns: number
       }
       redeem_subgroup_invite: { Args: { _token: string }; Returns: string }
+      relationship_plans_enabled: { Args: never; Returns: boolean }
       resolve_username_to_email: {
         Args: { _username: string }
         Returns: string
