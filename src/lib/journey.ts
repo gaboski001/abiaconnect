@@ -167,9 +167,9 @@ export async function loadWelcomeThread(groupId: string): Promise<string | null>
 /** Where "Say hello" goes: the reply box on the group's welcome thread. */
 export const helloPath = (threadId: string) => `/thread/${threadId}?hello=1`
 
-/** Whether a post reads like someone introducing themselves (the same words the database checks). */
-export function looksLikeIntro(text: string) {
-  return /(my name is|my name's|introduc|hello everyone|hi everyone|hello all|hi all|greetings everyone|i am from|i'm from|i live in|ndewo|nnọọ|nnoo|kedu)/i.test(text)
+/** Only an explicitly selected introduction topic may route a post to the welcome thread. */
+export function shouldReplyToWelcome(welcomeThread: string | null, topicName: string | undefined, isAnonymous: boolean, content: string) {
+  return !!welcomeThread && topicName === 'Introduce yourself' && !isAnonymous && content.length <= 5000
 }
 
 /** Groups that match someone's interests, best first, leaving out ones already chosen. */
