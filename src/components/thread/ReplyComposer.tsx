@@ -54,14 +54,8 @@ export function ReplyComposer({
     if (autoFocus) editorRef.current?.focus()
   }, [autoFocus])
 
-  // Best-effort cleanup on unmount if never posted.
-  useEffect(() => {
-    return () => {
-      if (submittedRef.current) return
-      const paths = [...uploadedPathsRef.current]
-      if (paths.length) void deleteAttachmentPaths(paths)
-    }
-  }, [])
+  // Navigation can unmount this before the post-success reset runs.
+  // Only delete explicitly removed images, never uploads on unmount.
 
   // Expose a "mark submitted" hook via a global-ish pattern would be ugly.
   // Instead, when value becomes empty (parent reset after successful post),
@@ -113,7 +107,7 @@ export function ReplyComposer({
     setUploading(true)
     const t = toast.loading('Optimizing & uploading…')
     try {
-      const { file: outFile, converted } = await compressToWebp(file, { maxEdge: 1600, quality: 0.82 })
+      const { file: outFile, converted } = await compressToWebp(file, { maxEdge: 1600, quality: 0.82, requireWebp: true })
       const ext = outFile.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'webp'
       const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
       const { error: upErr } = await supabase.storage
@@ -122,7 +116,7 @@ export function ReplyComposer({
       if (upErr) throw upErr
       const { data: signed, error: signErr } = await supabase.storage
         .from('thread-attachments')
-        .createSignedUrl(path, 60 * 60 * 24 * 365 * 10)
+        .createSignedUrl(path, 3600)
       if (signErr || !signed?.signedUrl) throw signErr ?? new Error('Could not sign URL')
       uploadedPathsRef.current.add(path)
       editorRef.current?.focus()

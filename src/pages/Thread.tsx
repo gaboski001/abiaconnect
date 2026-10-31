@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 
 import { formatDistanceToNow } from 'date-fns'
-import { sanitizeThreadHtml } from '@/lib/sanitizeThreadHtml'
+import { useThreadHtml } from '@/hooks/useThreadHtml'
 import { threadShareLink } from '@/lib/shareLinks'
 import {
   Bookmark,
@@ -147,7 +147,7 @@ const ReplyItem = memo(function ReplyItem({
 }: ReplyItemProps) {
   const name = r.profiles?.display_name ?? 'Member'
   const isOptimistic = (r as Reply & { _optimistic?: boolean })._optimistic
-  const safeHtml = useMemo(() => sanitizeThreadHtml(r.content), [r.content])
+  const safeHtml = useThreadHtml(r.content)
   const isOpen = replyingTo === r.id
   return (
     <li
@@ -801,7 +801,7 @@ function Thread() {
   )
 
   const threadContent = threadQ.data?.content ?? ''
-  const safeBody = useMemo(() => sanitizeThreadHtml(threadContent), [threadContent])
+  const safeBody = useThreadHtml(threadContent)
   const plainBody = useMemo(
     () => threadContent.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
     [threadContent],

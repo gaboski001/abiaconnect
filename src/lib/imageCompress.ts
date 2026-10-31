@@ -7,16 +7,19 @@
  */
 export async function compressToWebp(
   file: File,
-  opts: { maxEdge?: number; quality?: number } = {},
+  opts: { maxEdge?: number; quality?: number; requireWebp?: boolean } = {},
 ): Promise<{ file: File; converted: boolean }> {
   const maxEdge = opts.maxEdge ?? 1600
   const quality = opts.quality ?? 0.82
 
-  if (file.type === 'image/gif') return { file, converted: false }
+  if (file.type === 'image/gif' && !opts.requireWebp) return { file, converted: false }
   if (!/^image\//.test(file.type)) return { file, converted: false }
 
   const bitmap = await loadBitmap(file)
-  if (!bitmap) return { file, converted: false }
+  if (!bitmap) {
+    if (opts.requireWebp) throw new Error('This image could not be converted. Please choose another photo.')
+    return { file, converted: false }
+  }
 
   const { width, height } = bitmap
   const scale = Math.min(1, maxEdge / Math.max(width, height))
@@ -27,14 +30,20 @@ export async function compressToWebp(
   canvas.width = w
   canvas.height = h
   const ctx = canvas.getContext('2d')
-  if (!ctx) return { file, converted: false }
+  if (!ctx) {
+    if (opts.requireWebp) throw new Error('Image conversion is unavailable in this browser.')
+    return { file, converted: false }
+  }
   ctx.drawImage(bitmap, 0, 0, w, h)
   if ('close' in bitmap) (bitmap as ImageBitmap).close()
 
   const blob: Blob | null = await new Promise((resolve) =>
     canvas.toBlob(resolve, 'image/webp', quality),
   )
-  if (!blob || blob.size === 0) return { file, converted: false }
+  if (!blob || blob.size === 0 || blob.type !== 'image/webp') {
+    if (opts.requireWebp) throw new Error('This browser cannot convert photos to WebP. Please use another browser.')
+    return { file, converted: false }
+  }
   if (blob.size >= file.size && file.type === 'image/webp') {
     return { file, converted: false }
   }
