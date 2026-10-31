@@ -289,7 +289,7 @@ export default function CreateThread() {
 
     // Only the member's explicit introduction-topic choice can reroute a post.
     const intro = shouldReplyToWelcome(welcomeThread, chosenTopic?.name, values.is_anonymous, values.content)
-    if (intro) {
+    if (intro && welcomeThread) {
       const { error } = await supabase
         .from('replies')
         .insert({ thread_id: welcomeThread, user_id: user.id, content: values.content.trim(), parent_reply_id: null })
