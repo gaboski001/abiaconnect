@@ -107,9 +107,14 @@ export default function DatingPremium() {
         </section>
       )}
 
-      <WhyMembership />
+      {ent?.plan_code !== 'community_premium' && <WhyMembership />}
 
-      {!purchasable ? (
+      {ent?.plan_code === 'community_premium' ? (
+        <div className="mx-auto max-w-xl space-y-3 text-center">
+          <p className="text-muted-foreground">Premium relationship access is included for everyone. No purchase needed.</p>
+          <Button asChild><Link to="/relationship">Find connections</Link></Button>
+        </div>
+      ) : !purchasable ? (
         <p className="mx-auto max-w-xl rounded-2xl bg-muted p-4 text-center text-sm text-muted-foreground">
           {t('pricing.app_store_notice')}
         </p>

@@ -14,5 +14,6 @@ export function useDatingEntitlements() {
     queryFn: getEntitlements,
     enabled: !!user,
     staleTime: 60_000,
+    refetchInterval: 15_000,
   })
 }
