@@ -166,20 +166,14 @@ export function ThreadEditor({
     }
     // Empty parent reset ⇒ clear and mark submitted so unmount cleanup is skipped.
     if (value === '' && current !== '<p></p>' && current !== '') {
-      editor.commands.clearContent()
       submittedRef.current = true
       uploadedPathsRef.current.clear()
+      editor.commands.clearContent()
     }
   }, [value, editor])
 
-  // Best-effort cleanup on unmount if the composer is abandoned.
-  useEffect(() => {
-    return () => {
-      if (submittedRef.current) return
-      const paths = [...uploadedPathsRef.current]
-      if (paths.length) void deleteAttachmentPaths(paths)
-    }
-  }, [])
+  // Drafts survive navigation; never delete their uploads on unmount.
+  // Removed images are cleaned up by onUpdate, not by a posting/navigation race.
 
   const uploadFiles = useCallback(async (files: File[]) => {
     if (!editor) return
@@ -190,7 +184,7 @@ export function ThreadEditor({
       if (file.size > MAX_BYTES) { toast.error(`${file.name}: over 5 MB`); continue }
       const t = toast.loading(`Optimizing ${file.name}…`)
       try {
-        const { file: outFile, converted } = await compressToWebp(file, { maxEdge: 1600, quality: 0.82 })
+        const { file: outFile, converted } = await compressToWebp(file, { maxEdge: 1600, quality: 0.82, requireWebp: true })
         const ext = outFile.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'webp'
         const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
         const { error: upErr } = await supabase.storage
@@ -199,7 +193,7 @@ export function ThreadEditor({
         if (upErr) throw upErr
         const { data: signed, error: signErr } = await supabase.storage
           .from('thread-attachments')
-          .createSignedUrl(path, 60 * 60 * 24 * 365 * 10)
+          .createSignedUrl(path, 3600)
         if (signErr || !signed?.signedUrl) throw signErr ?? new Error('Could not sign URL')
         uploadedPathsRef.current.add(path)
         editor.chain().focus().setImage({ src: signed.signedUrl, alt: file.name }).createParagraphNear().run()

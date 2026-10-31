@@ -16,6 +16,7 @@ import { formatMoney } from '@/lib/monetization/strings'
 import type { Plan, PlanLimits } from '@/lib/monetization/api'
 import { toast } from '@/lib/toast'
 import { DatingGettingStarted, type MonetizationTab } from './DatingGettingStarted'
+import { RelationshipPlanMode } from './RelationshipPlanMode'
 
 // Monetization tables are newer than the generated Supabase types.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,6 +35,7 @@ export default function DatingMonetizationSection() {
           history.
         </p>
       </div>
+      <RelationshipPlanMode />
       <Tabs value={tab} onValueChange={(v) => setTab(v as MonetizationTab)}>
         <TabsList className="flex h-auto flex-wrap justify-start gap-1">
           <TabsTrigger value="start">Getting started</TabsTrigger>
