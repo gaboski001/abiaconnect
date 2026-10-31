@@ -2,3 +2,4 @@
 - Thread and reply images are private storage objects; refresh their signed URLs under the viewer's session so private-group access remains protected.
 - Do not delete composer uploads on unmount or post-success clearing; navigation and autosaved drafts can still reference them.
 - Relationship plan mode is enforced through the database's central plan resolver, not client flags; preserve blocking, account standing, privacy, and abuse protection.
+- Route group posts to welcome replies only for an explicitly selected introduction topic; greeting-text heuristics must not decide where a post is stored.

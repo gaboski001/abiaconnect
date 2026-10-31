@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { loadTopics, loadWelcomeThread, looksLikeIntro } from '@/lib/journey'
+import { loadTopics, loadWelcomeThread, shouldReplyToWelcome } from '@/lib/journey'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -287,10 +287,9 @@ export default function CreateThread() {
       // fail-open on network error — don't block legitimate users
     }
 
-    // An introduction becomes a reply on the group's welcome thread instead of a second thread.
-    const intro = !!welcomeThread && !values.is_anonymous && values.content.length <= 5000 &&
-      (chosenTopic?.name === 'Introduce yourself' || looksLikeIntro(`${values.title} ${plain}`))
-    if (intro) {
+    // Only the member's explicit introduction-topic choice can reroute a post.
+    const intro = shouldReplyToWelcome(welcomeThread, chosenTopic?.name, values.is_anonymous, values.content)
+    if (intro && welcomeThread) {
       const { error } = await supabase
         .from('replies')
         .insert({ thread_id: welcomeThread, user_id: user.id, content: values.content.trim(), parent_reply_id: null })
