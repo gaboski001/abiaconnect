@@ -1,4 +1,5 @@
 # Tasks
+- [x] Add Google sign-in to the website's sign-in and sign-up pages, with the destination page restored after the round trip; 9 regression checks passed.
 - [x] Add Ubani Favour’s account notification about the three missing photos, linking both affected threads.
 - [ ] Send Ubani Favour a signup-email reminder; blocked until the email sender domain is linked to the new workspace.
 - [ ] Restore three missing photos on Ubani Favour’s two older threads; blocked until the original images are provided because the referenced files no longer exist in storage.
