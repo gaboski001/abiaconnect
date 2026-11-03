@@ -80,7 +80,7 @@ ReactDOM.createRoot(rootEl).render(
           <AuthProvider>
             <BrowserRouter>
               <PushBootstrap />
-              <App />
+              <GoogleSignInLanding />
               <Toaster richColors position="top-right" />
               <AdConsentBanner />
             </BrowserRouter>
