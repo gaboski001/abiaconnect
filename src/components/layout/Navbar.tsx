@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { canDonateHere } from '@/lib/storePolicy'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowUpRight, ChevronDown, HandHeart, LogOut, Search } from 'lucide-react'
+import { ArrowUpRight, ChevronDown, LogOut, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -23,13 +22,12 @@ export function Navbar() {
   const { pathname } = useLocation()
   const { user } = useAuth()
   const { settings } = useSiteSettings()
-  const { primary, community } = useNavSections()
+  const { primary, community, more } = useNavSections()
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
 
   const siteName = settings.site_name || 'AbiaConnect'
-  // Donate gets its own button on the right; the rest sit in the main nav.
-  const navItems = [...primary, ...community.filter((i) => !i.highlight)]
+  const navItems = [...primary, ...community]
 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,6 +69,11 @@ export function Navbar() {
                 <HeaderLink item={item} active={isNavItemActive(item, pathname)} />
               </li>
             ))}
+            {more.length ? (
+              <li>
+                <MoreMenu items={more} pathname={pathname} />
+              </li>
+            ) : null}
           </ul>
         </nav>
 
@@ -89,17 +92,6 @@ export function Navbar() {
               {searchField(true)}
             </PopoverContent>
           </Popover>
-
-          {canDonateHere() && <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="hidden h-9 rounded-full border-rose-500/30 px-3.5 text-rose-600 hover:bg-rose-500/10 hover:text-rose-700 lg:inline-flex dark:text-rose-400"
-          >
-            <Link to="/donate">
-              <HandHeart className="size-4" /> Donate
-            </Link>
-          </Button>}
 
           <Separator orientation="vertical" className="mx-1 hidden h-6 lg:block" />
 
@@ -150,6 +142,50 @@ function HeaderLink({ item, active }: { item: NavItem; active: boolean }) {
     <Link to={item.to} className={className} aria-current={active ? 'page' : undefined}>
       {item.label}
     </Link>
+  )
+}
+
+/** "More" in the header: Connect, Store and Donate, out of the main bar. */
+function MoreMenu({ items, pathname }: { items: NavItem[]; pathname: string }) {
+  const [open, setOpen] = useState(false)
+  const active = items.some((i) => isNavItemActive(i, pathname))
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        className={cn(
+          'relative inline-flex h-16 items-center gap-1 whitespace-nowrap px-2.5 text-[15px] font-medium transition-colors xl:px-3',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          active || open ? 'text-primary' : 'text-foreground/70 hover:text-foreground',
+        )}
+      >
+        More <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} aria-hidden />
+      </PopoverTrigger>
+      <PopoverContent align="center" className="w-56 rounded-2xl p-1.5">
+        <ul>
+          {items.map((item) => {
+            const Icon = item.icon
+            const className = cn(
+              'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted',
+              item.highlight ? 'text-rose-600 dark:text-rose-400' : 'text-foreground',
+            )
+            return (
+              <li key={item.label}>
+                {item.external ? (
+                  <a href={item.to} target="_blank" rel="noopener noreferrer" className={className} onClick={() => setOpen(false)}>
+                    <Icon className="size-4" aria-hidden /> {item.label}
+                    <ArrowUpRight className="ml-auto size-3.5 opacity-60" aria-hidden />
+                  </a>
+                ) : (
+                  <Link to={item.to} className={className} onClick={() => setOpen(false)}>
+                    <Icon className="size-4" aria-hidden /> {item.label}
+                  </Link>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </PopoverContent>
+    </Popover>
   )
 }
 

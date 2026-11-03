@@ -18,6 +18,7 @@ import {
 import { matchPath } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { canDonateHere } from '@/lib/storePolicy'
 import { isNewcomer, useJourney } from '@/lib/journey'
 
 export interface NavItem {
@@ -49,10 +50,7 @@ export function useNavSections() {
   // In their first week, new members see a shorter menu; the rest is under Community.
   const journey = useJourney()
   const simple = isNewcomer(journey.data)
-  const later: NavItem[] = [
-    { label: 'Contests', to: '/contests', icon: Vote },
-    { label: 'Connect', to: '/relationship', icon: Handshake },
-  ]
+  const later: NavItem[] = [{ label: 'Contests', to: '/contests', icon: Vote }]
 
   const primary: NavItem[] = [
     { label: 'Forums', to: '/', icon: MessagesSquare, end: true },
@@ -64,8 +62,13 @@ export function useNavSections() {
   const community: NavItem[] = [
     ...(simple ? later : []),
     { label: 'About Us', to: '/about', icon: Info },
+  ]
+
+  // Kept out of the main bar so the forum comes across as the heart of the site.
+  const more: NavItem[] = [
+    { label: 'Connect', to: '/relationship', icon: Handshake },
     ...(storeLink ? [{ label: 'Store', to: storeLink, icon: ShoppingBag, external: true }] : []),
-    { label: 'Donate', to: '/donate', icon: HandHeart, highlight: true },
+    ...(canDonateHere() ? [{ label: 'Donate', to: '/donate', icon: HandHeart, highlight: true }] : []),
   ]
 
   const account: NavItem[] = user
@@ -87,11 +90,12 @@ export function useNavSections() {
   const sections: NavSection[] = [
     { title: 'Explore', items: primary },
     { title: 'Community', items: community },
+    { title: 'More', items: more },
     ...(account.length ? [{ title: 'Account', items: account }] : []),
     ...(admin.length ? [{ title: 'Admin', items: admin }] : []),
   ]
 
-  return { primary, community, account, admin, sections }
+  return { primary, community, more, account, admin, sections }
 }
 
 export function isNavItemActive(item: NavItem, pathname: string) {
