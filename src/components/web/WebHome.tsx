@@ -13,7 +13,6 @@ import { StarterSteps, useWelcomeRedirect } from '@/components/engagement/Starte
 import { NewDiscussionsBanner, OnlineMembersPill } from '@/components/engagement/LiveCommunity'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProfile } from '@/hooks/useProfile'
-import { useCommunityStats } from '@/hooks/useCommunityStats'
 import { supabase } from '@/lib/supabase'
 import { contestPhase, listContests } from '@/lib/engagement'
 import { daysSince, useJourney } from '@/lib/journey'
@@ -109,7 +108,6 @@ async function loadFeed(tab: FeedTab, lgaGroup: string | null, newsdesk: string 
 export function WebHome() {
   const { user } = useAuth()
   const { data: profile } = useProfile()
-  const stats = useCommunityStats()
   const journey = useJourney()
   useWelcomeRedirect()
   const lgaGroup = journey.data?.lga_group ?? null
@@ -140,65 +138,50 @@ export function WebHome() {
 
   return (
     <div className="space-y-10">
-      {/* Welcome */}
-      {user ? (
-        <section className="flex flex-col justify-between gap-4 border-b border-border pb-6 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
-            </p>
-            <h1 className="mt-1 text-3xl font-semibold md:text-4xl">
-              {firstDay ? `Welcome, ${firstName || 'friend'} 👋🏾` : firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-muted-foreground">
-              <span>{firstDay ? 'Glad you’re here. Your first steps are just below.' : 'Here’s what the community is talking about.'}</span>
-              <OnlineMembersPill />
-            </div>
+      {/* Welcome: one slim row for everyone, so visitors see the conversations straight away. */}
+      <section className="flex flex-col justify-between gap-4 border-b border-border pb-6 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-sm font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
+          <h1 className="mt-1 text-3xl font-semibold md:text-4xl">
+            {!user
+              ? 'Welcome to AbiaConnect'
+              : firstDay
+                ? `Welcome, ${firstName || 'friend'} 👋🏾`
+                : firstName
+                  ? `Welcome back, ${firstName}`
+                  : 'Welcome back'}
+          </h1>
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-muted-foreground">
+            <span>
+              {user && firstDay ? 'Glad you’re here. Your first steps are just below.' : 'Here’s what the community is talking about.'}
+            </span>
+            <OnlineMembersPill />
           </div>
+        </div>
+        {user ? (
           <Button asChild size="lg" className="h-11 rounded-full px-6">
             <Link to="/create-thread">
               <PenSquare className="size-4" /> Start a discussion
             </Link>
           </Button>
-        </section>
-      ) : null}
+        ) : (
+          <div className="flex gap-2">
+            <Button asChild size="lg" className="h-11 rounded-full px-6">
+              <Link to="/register">
+                Join free <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="h-11 rounded-full px-6">
+              <Link to="/login">Sign in</Link>
+            </Button>
+          </div>
+        )}
+      </section>
       {user ? <StarterSteps /> : null}
       {user ? <BirthdayGreeting /> : null}
       {user ? <AddBirthdayPrompt /> : null}
-      {user ? null : (
-        <section className="grid items-center gap-8 rounded-3xl border border-border bg-gradient-to-br from-primary/[0.06] via-background to-secondary/[0.08] p-8 md:grid-cols-[1.4fr_1fr] md:p-12">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">The Abia community online</p>
-            <h1 className="mt-3 text-4xl font-semibold leading-tight md:text-5xl">The trusted digital home for Abians worldwide</h1>
-            <p className="mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              Join thoughtful discussions, connect with professionals and friends, and take part in community decisions,
-              at home and across the diaspora.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Button asChild size="lg" className="h-12 rounded-full px-7 text-base">
-                <Link to="/register">
-                  Join free <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="h-12 rounded-full px-7 text-base">
-                <Link to="/login">Sign in</Link>
-              </Button>
-            </div>
-          </div>
-          <dl className="grid grid-cols-3 gap-3 md:grid-cols-1">
-            {[
-              { label: 'Discussions', value: stats.data?.discussions },
-              { label: 'Community groups', value: stats.data?.groups },
-              { label: 'Forum topics', value: stats.data?.topics },
-            ].map((s) => (
-              <div key={s.label} className="rounded-2xl border border-border bg-card/80 px-5 py-4">
-                <dt className="text-sm text-muted-foreground">{s.label}</dt>
-                <dd className="mt-0.5 text-2xl font-semibold text-foreground md:text-3xl">{s.value == null ? '—' : s.value.toLocaleString()}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      )}
 
       {/* Announcements and advertisements (managed by admins) */}
       <HeroSlider />
