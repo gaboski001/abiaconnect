@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { SEO } from '@/components/SEO'
@@ -264,7 +265,11 @@ function PollCard({
 
       <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border pt-3">
         <span>{total} {total === 1 ? 'vote' : 'votes'}</span>
-        {!isLoggedIn && !closed && <span>Sign in to vote</span>}
+        {!isLoggedIn && !closed && (
+          <Link to="/register" className="font-semibold text-primary hover:underline">
+            Join free to vote
+          </Link>
+        )}
       </div>
     </article>
   )

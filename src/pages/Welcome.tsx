@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { SEO } from '@/components/SEO'
 import { Button } from '@/components/ui/button'
 import { useProfile } from '@/hooks/useProfile'
+import { supabase } from '@/lib/supabase'
 import {
   INTERESTS,
   STARTER_BONUS,
@@ -73,6 +74,12 @@ export default function Welcome() {
   async function finish() {
     setSaving(true)
     try {
+      // Joining no longer asks for an LGA, so the LGA group picked here becomes theirs.
+      const picked = lga ? null : lgaGroups.find((g) => chosen.has(g.id))?.lga
+      if (picked && profile?.id) {
+        const { error } = await supabase.from('profiles').update({ lga: picked }).eq('id', profile.id)
+        if (error) throw error
+      }
       const result = await completeWelcome(interests, [...chosen])
       const home = result.lga_group ?? lgaGroup?.id
       if (home) {

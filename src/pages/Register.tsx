@@ -4,19 +4,12 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { AtSign, CalendarDays, CheckCircle2, Loader2, Lock, Mail, MailCheck, MapPin, User } from 'lucide-react'
+import { CheckCircle2, Loader2, Lock, Mail, MailCheck, MapPin, User } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SEO } from '@/components/SEO'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -26,6 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { supabase } from '@/lib/supabase'
+import { makeUsername } from '@/lib/username'
 import { trackEvent } from '@/lib/metaPixel'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
@@ -38,8 +32,6 @@ const ABIA_LGAS = [
   'Osisioma Ngwa', 'Ugwunagbo', 'Ukwa East', 'Ukwa West',
   'Umuahia North', 'Umuahia South', 'Umunneochi',
 ] as const
-
-const LGA_OPTIONS = [...ABIA_LGAS, 'Non-Indigene (Preferred LGA)'] as const
 
 const POOL_A = ['Ikeja', 'Badagry', 'Epe', 'Ikorodu', 'Mushin']
 const POOL_B = ['Dala', 'Fagge', 'Gwale', 'Kumbotso', 'Tarauni']
@@ -54,18 +46,12 @@ function makeQuiz() {
   return { correct, options }
 }
 
+// Joining asks only what's needed to sign in. The username is made from the name, and
+// LGA and birthday are asked after joining (welcome steps and the birthday prompt).
 const schema = z.object({
   name: z.string().trim().min(2, 'Enter your full name').max(100),
-  username: z
-    .string()
-    .trim()
-    .min(3, 'Use at least 3 characters')
-    .max(30)
-    .regex(/^[A-Za-z0-9_]+$/, 'Letters, numbers, and underscores only'),
   email: z.string().trim().email('Enter a valid email address').max(255),
   password: z.string().min(8, 'Use at least 8 characters').max(72),
-  dob: z.string().min(1, 'Enter your date of birth'),
-  lga: z.enum(LGA_OPTIONS, { message: 'Select your LGA' }),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -157,7 +143,7 @@ export default function Register() {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: '', username: '', email: '', password: '', dob: '', lga: undefined as unknown as FormValues['lga'],
+      name: '', email: '', password: '',
     },
     mode: 'onBlur',
   })
@@ -204,9 +190,7 @@ export default function Register() {
         emailRedirectTo: 'https://abiaconnect.com/',
         data: {
           display_name: v.name,
-          username: v.username,
-          lga: v.lga,
-          dob: v.dob,
+          username: makeUsername(v.name),
         },
       },
     })
@@ -273,16 +257,6 @@ export default function Register() {
             <form onSubmit={onStep1} className="space-y-5">
               <AuthField label="Full name" icon={User} autoComplete="name" placeholder="e.g. Chidi Okafor" error={errors.name?.message} {...form.register('name')} />
               <AuthField
-                label="Username"
-                icon={AtSign}
-                autoComplete="username"
-                autoCapitalize="none"
-                placeholder="e.g. chidi_okafor"
-                hint="Letters, numbers and underscores only."
-                error={errors.username?.message}
-                {...form.register('username')}
-              />
-              <AuthField
                 label="Email address"
                 icon={Mail}
                 type="email"
@@ -302,38 +276,12 @@ export default function Register() {
                 error={errors.password?.message}
                 {...form.register('password')}
               />
-              <AuthField
-                label="Date of birth"
-                icon={CalendarDays}
-                type="date"
-                max={new Date().toISOString().slice(0, 10)}
-                error={errors.dob?.message}
-                {...form.register('dob')}
-              />
-              <div className="space-y-2">
-                <span className="text-[13px] font-semibold text-slate-200" id="lga-label">LGA of origin</span>
-                <Select value={form.watch('lga')} onValueChange={(v) => form.setValue('lga', v as FormValues['lga'], { shouldValidate: true })}>
-                  <SelectTrigger
-                    aria-labelledby="lga-label"
-                    aria-invalid={errors.lga ? true : undefined}
-                    className={`relative h-[52px] rounded-xl bg-white/[0.05] pl-11 text-[15px] text-white data-[placeholder]:text-slate-400/70 ${
-                      errors.lga ? 'border-red-400/75' : 'border-white/12'
-                    }`}
-                  >
-                    <MapPin aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-slate-400" />
-                    <SelectValue placeholder="Select your LGA" />
-                  </SelectTrigger>
-                  <SelectContent className="dark max-h-72">
-                    {LGA_OPTIONS.map((l) => (<SelectItem key={l} value={l}>{l}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-                {errors.lga?.message ? <p className="text-[13px] text-red-300">{errors.lga.message}</p> : null}
-              </div>
               <p className="pt-1 text-[13px] leading-5 text-slate-400">
                 By continuing, you agree to our{' '}
                 <Link to="/terms-of-service" className="font-medium text-slate-200 underline underline-offset-2">Terms of Service</Link>{' '}
                 and{' '}
-                <Link to="/privacy-policy" className="font-medium text-slate-200 underline underline-offset-2">Privacy Policy</Link>.
+                <Link to="/privacy-policy" className="font-medium text-slate-200 underline underline-offset-2">Privacy Policy</Link>, and
+                confirm you are 13 or older.
               </p>
               <AuthSubmit>Continue</AuthSubmit>
             </form>
@@ -524,33 +472,18 @@ export default function Register() {
                 <Field label="Full Name" error={form.formState.errors.name?.message}>
                   <Input {...form.register('name')} />
                 </Field>
-                <Field label="Username" error={form.formState.errors.username?.message}>
-                  <Input {...form.register('username')} />
-                </Field>
                 <Field label="Email" error={form.formState.errors.email?.message}>
                   <Input type="email" {...form.register('email', { onBlur: (e) => checkEmailExists(e.target.value) })} />
                 </Field>
                 <Field label="Password" error={form.formState.errors.password?.message}>
                   <Input type="password" {...form.register('password')} />
                 </Field>
-                <Field label="Date of Birth" error={form.formState.errors.dob?.message}>
-                  <Input type="date" {...form.register('dob')} />
-                </Field>
-                <Field label="LGA of Origin" error={form.formState.errors.lga?.message}>
-                  <Select
-                    value={form.watch('lga')}
-                    onValueChange={(v) => form.setValue('lga', v as FormValues['lga'], { shouldValidate: true })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your LGA" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LGA_OPTIONS.map((l) => (
-                        <SelectItem key={l} value={l}>{l}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
+                <p className="text-xs text-muted-foreground">
+                  By continuing, you agree to our{' '}
+                  <Link to="/terms-of-service" className="font-medium underline underline-offset-2">Terms of Service</Link> and{' '}
+                  <Link to="/privacy-policy" className="font-medium underline underline-offset-2">Privacy Policy</Link>, and confirm
+                  you are 13 or older.
+                </p>
                 <Button type="submit" className="w-full">Continue to Verification →</Button>
                 <p className="text-sm text-center text-muted-foreground">
                   Already have an account?{' '}

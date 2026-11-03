@@ -22,8 +22,12 @@ import { QuickPollCard } from '@/components/engagement/QuickPollCard'
 import { QuestionOfTheDayCard } from '@/components/engagement/QuestionOfTheDayCard'
 import { WaitingForReplyCard } from '@/components/engagement/WaitingForReplyCard'
 import { feedFilter, useNewsdeskAuthor } from '@/lib/feed'
+import { shownCount } from '@/lib/quietNumbers'
 
 type FeedTab = 'community' | 'my-lga' | 'news' | 'popular' | 'unanswered'
+
+/** Topics shown before "Show all topics". */
+const TOPICS_SHOWN = 6
 
 const TAB_LABELS: Record<FeedTab, string> = {
   community: 'From members',
@@ -110,6 +114,7 @@ export function WebHome() {
   useWelcomeRedirect()
   const lgaGroup = journey.data?.lga_group ?? null
   const [tab, setTab] = useState<FeedTab>('community')
+  const [allTopics, setAllTopics] = useState(false)
   const tabs: FeedTab[] = lgaGroup ? ['community', 'my-lga', 'news', 'popular', 'unanswered'] : ['community', 'news', 'popular', 'unanswered']
   const newsdesk = useNewsdeskAuthor()
   const feed = useQuery({
@@ -200,39 +205,7 @@ export function WebHome() {
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-10">
-          {/* Topic index */}
-          <section aria-labelledby="topics-heading">
-            <h2 id="topics-heading" className="mb-4 text-2xl font-semibold">
-              Browse by topic
-            </h2>
-            <div className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
-              {(topics.data ?? []).map((c) => (
-                <Link
-                  key={c.id}
-                  to={c.slug === 'relationship' ? '/relationship' : `/category/${c.id}`}
-                  className="flex gap-4 bg-card p-5 transition-colors hover:bg-muted/40"
-                >
-                  <span
-                    className="flex size-11 shrink-0 items-center justify-center rounded-xl text-xl"
-                    style={{ backgroundColor: `${c.color ?? '#1B3D1B'}1F` }}
-                    aria-hidden
-                  >
-                    {c.icon ?? '💬'}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block font-semibold text-foreground">{c.name}</span>
-                    {c.description ? <span className="mt-0.5 block line-clamp-2 text-sm text-muted-foreground">{c.description}</span> : null}
-                    <span className="mt-1.5 block text-xs font-medium text-muted-foreground">
-                      {(c.thread_count ?? 0).toLocaleString()} {c.thread_count === 1 ? 'discussion' : 'discussions'}
-                    </span>
-                  </span>
-                </Link>
-              ))}
-              {topics.isLoading ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 animate-pulse bg-card" />) : null}
-            </div>
-          </section>
-
-          {/* Discussions */}
+          {/* Discussions come first: real conversations are what make people stay. */}
           <section aria-labelledby="discussions-heading">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
               <h2 id="discussions-heading" className="text-2xl font-semibold">
@@ -264,10 +237,10 @@ export function WebHome() {
             </div>
             <NewDiscussionsBanner queryKeys={[['web-home-feed']]} />
             <div className="overflow-hidden rounded-2xl border border-border bg-card">
-              <div className="hidden grid-cols-[minmax(0,1fr)_88px_88px_120px] gap-4 border-b border-border bg-muted/50 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:grid">
+              {/* No views column: low view counts make a young forum look empty. */}
+              <div className="hidden grid-cols-[minmax(0,1fr)_120px_120px] gap-4 border-b border-border bg-muted/50 px-5 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:grid">
                 <span>Topic</span>
                 <span className="text-center">Replies</span>
-                <span className="text-center">Views</span>
                 <span className="text-right">Activity</span>
               </div>
               {feed.isPending ? (
@@ -297,7 +270,7 @@ export function WebHome() {
                       <li key={t.id}>
                         <Link
                           to={`/thread/${t.id}`}
-                          className="grid gap-x-4 gap-y-2 px-5 py-4 transition-colors hover:bg-muted/40 md:grid-cols-[minmax(0,1fr)_88px_88px_120px] md:items-center"
+                          className="grid gap-x-4 gap-y-2 px-5 py-4 transition-colors hover:bg-muted/40 md:grid-cols-[minmax(0,1fr)_120px_120px] md:items-center"
                         >
                           <div className="flex min-w-0 gap-3">
                             <UserAvatar avatarUrl={t.author?.avatar_url} displayName={name} size="sm" className="mt-0.5 hidden h-9 w-9 border-0 sm:block" />
@@ -324,13 +297,16 @@ export function WebHome() {
                               </p>
                             </div>
                           </div>
-                          <span className="flex items-center gap-1 text-sm text-muted-foreground md:justify-center">
-                            <MessageCircle className="size-3.5 md:hidden" /> {t.reply_count}
-                            <span className="md:hidden">replies</span>
-                          </span>
-                          <span className="hidden text-center text-sm text-muted-foreground md:block">
-                            {t.view_count.toLocaleString()}
-                          </span>
+                          {t.reply_count ? (
+                            <span className="flex items-center gap-1 text-sm text-muted-foreground md:justify-center">
+                              <MessageCircle className="size-3.5 md:hidden" /> {t.reply_count}
+                              <span className="md:hidden">{t.reply_count === 1 ? 'reply' : 'replies'}</span>
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-sm font-semibold text-primary md:justify-center">
+                              <MessageCircle className="size-3.5" /> Reply first
+                            </span>
+                          )}
                           <span className="text-sm text-muted-foreground md:text-right">
                             {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
                           </span>
@@ -343,6 +319,45 @@ export function WebHome() {
             </div>
           </section>
 
+          {/* Topic index: a short list with the rest one tap away. */}
+          <section aria-labelledby="topics-heading">
+            <h2 id="topics-heading" className="mb-4 text-2xl font-semibold">
+              Browse by topic
+            </h2>
+            <div className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
+              {(allTopics ? topics.data ?? [] : (topics.data ?? []).slice(0, TOPICS_SHOWN)).map((c) => {
+                const count = shownCount(c.thread_count)
+                return (
+                  <Link
+                    key={c.id}
+                    to={c.slug === 'relationship' ? '/relationship' : `/category/${c.id}`}
+                    className="flex gap-4 bg-card p-5 transition-colors hover:bg-muted/40"
+                  >
+                    <span
+                      className="flex size-11 shrink-0 items-center justify-center rounded-xl text-xl"
+                      style={{ backgroundColor: `${c.color ?? '#1B3D1B'}1F` }}
+                      aria-hidden
+                    >
+                      {c.icon ?? '💬'}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-foreground">{c.name}</span>
+                      {c.description ? <span className="mt-0.5 block line-clamp-2 text-sm text-muted-foreground">{c.description}</span> : null}
+                      {count ? (
+                        <span className="mt-1.5 block text-xs font-medium text-muted-foreground">{count.toLocaleString()} discussions</span>
+                      ) : null}
+                    </span>
+                  </Link>
+                )
+              })}
+              {topics.isLoading ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 animate-pulse bg-card" />) : null}
+            </div>
+            {(topics.data?.length ?? 0) > TOPICS_SHOWN ? (
+              <Button variant="outline" className="mt-4 w-full rounded-full" onClick={() => setAllTopics((v) => !v)}>
+                {allTopics ? 'Show fewer topics' : `Show all ${topics.data?.length} topics`}
+              </Button>
+            ) : null}
+          </section>
         </div>
 
         {/* Sidebar */}

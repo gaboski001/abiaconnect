@@ -163,6 +163,10 @@ export default function App() {
                 <Route path="unsubscribe" element={<Unsubscribe />} />
                 <Route path="version" element={<Version />} />
                 <Route path="download" element={<Download />} />
+                {/* Visitors can look around before joining; taking part asks them to join. */}
+                <Route path="polls" element={<Polls />} />
+                <Route path="subgroups" element={<Subgroups />} />
+                <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
 
 
 
@@ -170,14 +174,11 @@ export default function App() {
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="welcome" element={<Welcome />} />
                   <Route path="profile" element={<Profile />} />
-                  <Route path="polls" element={<Polls />} />
                   <Route path="rewards" element={<Rewards />} />
                   <Route path="leaderboard" element={<Leaderboard />} />
                   <Route path="contests" element={<Contests />} />
                   <Route path="contests/new" element={<ContestNew />} />
                   <Route path="contests/:contestId" element={<ContestDetail />} />
-                  <Route path="subgroups" element={<Subgroups />} />
-                  <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
                   <Route path="subgroups/invite/:token" element={<SubgroupInvite />} />
                   <Route path="notifications" element={<Notifications />} />
                   <Route path="create-thread" element={<CreateThread />} />

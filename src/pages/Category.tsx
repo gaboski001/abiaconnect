@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { supabase } from '@/lib/supabase'
+import { shownCount } from '@/lib/quietNumbers'
 import { useAuth } from '@/contexts/AuthContext'
 import { SEO } from '@/components/SEO'
 import { UserAvatar } from '@/components/ui/UserAvatar'
@@ -289,18 +290,27 @@ export default function CategoryPage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-medium text-foreground">
-                        <MessageSquare className="size-4" />
-                        {replyCount}
-                      </span>
+                      {replyCount ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-medium text-foreground">
+                          <MessageSquare className="size-4" />
+                          {replyCount}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+                          <MessageSquare className="size-4" />
+                          Reply first
+                        </span>
+                      )}
                       <span className="inline-flex items-center gap-1">
                         <ArrowBigUp className="size-3.5" />
                         {t.upvotes ?? 0}
                       </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Eye className="size-3.5" />
-                        {t.view_count ?? 0}
-                      </span>
+                      {shownCount(t.view_count) ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Eye className="size-3.5" />
+                          {t.view_count}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                 </li>

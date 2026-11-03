@@ -513,7 +513,7 @@ export default function SubgroupDetail() {
 
   const renderJoinButton = () => {
     if (!user) {
-      return <Button asChild variant="secondary"><Link to="/login">Sign in to join</Link></Button>
+      return <Button asChild variant="secondary"><Link to="/register">Join free to take part</Link></Button>
     }
     if (isMember) {
       return (

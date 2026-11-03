@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { toast } from '@/lib/toast'
 import { REASON_LABELS } from '@/lib/engagement'
+import { SHOW_ONLINE_FROM } from '@/lib/quietNumbers'
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 import { MY_REWARDS_KEY } from './DailyRewardCard'
 
@@ -56,7 +57,8 @@ export function CommunityPresence() {
 
 export function OnlineMembersPill({ className = '' }: { className?: string }) {
   const n = useOnlineCount()
-  if (n < 1) return null
+  // "1 member online" (often just you) makes the site look empty.
+  if (n < SHOW_ONLINE_FROM) return null
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[12px] font-semibold text-emerald-700 dark:text-emerald-300 ${className}`}

@@ -335,7 +335,7 @@ export default function Subgroups() {
                               <div className="mt-4">
                                 {!user ? (
                                   <Button asChild variant="outline" size="sm" className="w-full">
-                                    <Link to="/login">Sign in to join</Link>
+                                    <Link to="/register">Join free to take part</Link>
                                   </Button>
                                 ) : joined ? (
                                   <Button

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { ChevronRight, Eye, MessageCircle, PenSquare, Pin, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { shownCount } from '@/lib/quietNumbers'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProfile } from '@/hooks/useProfile'
 import { HeroSlider } from '@/components/forum/HeroSlider'
@@ -288,9 +289,9 @@ export function NativeHome() {
                   </span>
                   <span className="min-w-0">
                     <span className="line-clamp-2 text-[14px] font-semibold leading-tight text-foreground">{c.name}</span>
-                    <span className="mt-0.5 block text-[12px] text-muted-foreground">
-                      {c.thread_count ?? 0} {c.thread_count === 1 ? 'thread' : 'threads'}
-                    </span>
+                    {shownCount(c.thread_count) ? (
+                      <span className="mt-0.5 block text-[12px] text-muted-foreground">{c.thread_count} threads</span>
+                    ) : null}
                   </span>
                 </Link>
               )
@@ -348,12 +349,20 @@ export function NativeHome() {
                         className="h-5 w-5 border-0"
                       />
                       <span className="min-w-0 flex-1 truncate">{name}</span>
-                      <span className="inline-flex items-center gap-1">
-                        <MessageCircle className="size-3.5" /> {t.reply_count}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Eye className="size-3.5" /> {t.view_count}
-                      </span>
+                      {t.reply_count ? (
+                        <span className="inline-flex items-center gap-1">
+                          <MessageCircle className="size-3.5" /> {t.reply_count}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 font-semibold text-primary">
+                          <MessageCircle className="size-3.5" /> Reply first
+                        </span>
+                      )}
+                      {shownCount(t.view_count) ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Eye className="size-3.5" /> {t.view_count}
+                        </span>
+                      ) : null}
                     </div>
                   </Link>
                 </li>
