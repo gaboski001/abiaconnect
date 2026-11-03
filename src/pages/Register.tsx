@@ -506,9 +506,11 @@ export default function Register() {
                   <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">or</span>
                   <span className="h-px flex-1 bg-border" />
                 </div>
+                {/* Home, not /welcome: existing members use this button too, and home
+                    already sends brand-new members to the welcome page once. */}
                 <GoogleSignInButton
-                  afterSignIn="/welcome"
-                  label="Sign up with Google"
+                  afterSignIn="/"
+                  label="Continue with Google"
                   busyLabel="Opening Google…"
                   className="w-full"
                 />
