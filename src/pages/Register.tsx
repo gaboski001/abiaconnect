@@ -26,6 +26,7 @@ import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { AuthField, AuthSubmit, NativeAuthLayout, isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { WebAuthLayout } from '@/components/web/WebAuthLayout'
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 
 const ABIA_LGAS = [
   'Aba North', 'Aba South', 'Arochukwu', 'Bende', 'Ikwuano',
@@ -500,6 +501,17 @@ export default function Register() {
                   you are 13 or older.
                 </p>
                 <Button type="submit" className="w-full">Continue to Verification →</Button>
+                <div className="flex items-center gap-3 py-1" aria-hidden>
+                  <span className="h-px flex-1 bg-border" />
+                  <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">or</span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                <GoogleSignInButton
+                  afterSignIn="/welcome"
+                  label="Sign up with Google"
+                  busyLabel="Opening Google…"
+                  className="w-full"
+                />
                 <p className="text-sm text-center text-muted-foreground">
                   Already have an account?{' '}
                   <Link to="/login" className="text-primary font-medium hover:underline">Sign In</Link>

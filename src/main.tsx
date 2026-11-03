@@ -8,6 +8,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { Toaster } from '@/components/ui/sonner'
 import { AdConsentBanner } from '@/components/AdConsentBanner'
+import { GoogleSignInLanding } from '@/components/auth/GoogleSignInButton'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { Capacitor } from '@capacitor/core'
 import '@fontsource/lora/400.css'
@@ -80,6 +81,7 @@ ReactDOM.createRoot(rootEl).render(
           <AuthProvider>
             <BrowserRouter>
               <PushBootstrap />
+              <GoogleSignInLanding />
               <App />
               <Toaster richColors position="top-right" />
               <AdConsentBanner />
