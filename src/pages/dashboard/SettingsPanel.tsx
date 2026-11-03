@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
 import {
   AlertDialog,
@@ -287,7 +288,7 @@ export default function SettingsPanel({
       <section className="rounded-[1.8rem] border border-white/10 bg-[rgba(10,18,32,0.82)] p-5 backdrop-blur-2xl" style={{ boxShadow: PREMIUM_SHADOW }}>
         <h2 className="text-lg font-black text-white">Change password</h2>
         <div className="mt-4 space-y-3">
-          <Input type="password" placeholder="New password (min 8 chars)" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 rounded-2xl border-white/10 bg-slate-950/40 text-white" />
+          <PasswordInput autoComplete="new-password" placeholder="New password (min 8 chars)" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 rounded-2xl border-white/10 bg-slate-950/40 text-white" />
           <Button variant="secondary" onClick={updatePassword} className="rounded-2xl">Update password</Button>
         </div>
       </section>

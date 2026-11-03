@@ -24,6 +24,7 @@ import { areCallsEnabled, hydrateCallsEnabledFromProfile, setCallsEnabled, subsc
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
 import {
   AlertDialog,
@@ -608,8 +609,8 @@ function SettingsPanel({ profile, onSaved }: { profile: Profile; onSaved: () => 
 
       <section className="rounded-2xl border border-border bg-card p-5 space-y-4">
         <h2 className="font-bold">Change Password</h2>
-        <Input
-          type="password"
+        <PasswordInput
+          autoComplete="new-password"
           placeholder="New password (min 8 chars)"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
