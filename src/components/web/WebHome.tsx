@@ -238,7 +238,11 @@ export function WebHome() {
               <h2 id="discussions-heading" className="text-2xl font-semibold">
                 Discussions
               </h2>
-              <div className="flex gap-1 border-b border-border" role="tablist" aria-label="Sort discussions">
+              <div
+                className="flex gap-1 overflow-x-auto shadow-[inset_0_-1px_0_var(--border)] [scrollbar-width:none]"
+                role="tablist"
+                aria-label="Sort discussions"
+              >
                 {tabs.map((t) => (
                   <button
                     key={t}
@@ -247,7 +251,9 @@ export function WebHome() {
                     aria-selected={tab === t}
                     onClick={() => setTab(t)}
                     className={cn(
-                      '-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+                      // The four tabs are wider than a small phone: they scroll instead of
+                      // widening the page.
+                      'shrink-0 whitespace-nowrap border-b-2 px-2.5 py-2 text-sm font-medium transition-colors sm:px-3',
                       tab === t ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground',
                     )}
                   >
