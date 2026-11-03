@@ -12,6 +12,7 @@ import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { AuthField, AuthSubmit, NativeAuthLayout, isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { WebAuthLayout } from '@/components/web/WebAuthLayout'
 import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton'
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { BiometricOptInDialog } from '@/components/auth/BiometricOptInDialog'
 import {
   isBiometricAvailable,
@@ -215,6 +216,14 @@ export default function Login() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Signing in…' : 'Sign In'}
           </Button>
+
+          <div className="flex items-center gap-3 py-1" aria-hidden>
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">or</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <GoogleSignInButton afterSignIn={afterSignIn} className="w-full" disabled={loading} />
 
           <p className="text-sm text-center text-muted-foreground">
             New here?{' '}
