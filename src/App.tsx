@@ -9,6 +9,7 @@ import { ScrollToTop } from '@/components/ScrollToTop'
 import { useReportNativeInstall } from '@/hooks/useReportNativeInstall'
 import { ProtectedRoute, AdminRoute } from '@/routes/ProtectedRoute'
 import Home from '@/pages/Home'
+import { InviteClaimer } from '@/components/community/CommunityCards'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
 
@@ -21,6 +22,8 @@ const CategoryPage = lazy(() => import('@/pages/Category'))
 const Thread = lazy(() => import('@/pages/Thread'))
 const CreateThread = lazy(() => import('@/pages/CreateThread'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
+const MemberPage = lazy(() => import('@/pages/MemberPage'))
+const Opportunities = lazy(() => import('@/pages/Opportunities'))
 const Welcome = lazy(() => import('@/pages/Welcome'))
 const Profile = lazy(() => import('@/pages/Profile'))
 const Polls = lazy(() => import('@/pages/Polls'))
@@ -110,6 +113,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <InviteClaimer />
       {/* Native-only enhancements */}
       <NativeOnboardingGate />
       {isNativeApp() && (
@@ -175,6 +179,8 @@ export default function App() {
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="welcome" element={<Welcome />} />
                   <Route path="profile" element={<Profile />} />
+                  <Route path="member/:userId" element={<MemberPage />} />
+                  <Route path="opportunities" element={<Opportunities />} />
                   <Route path="rewards" element={<Rewards />} />
                   <Route path="leaderboard" element={<Leaderboard />} />
                   <Route path="contests" element={<Contests />} />

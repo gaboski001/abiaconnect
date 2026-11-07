@@ -43,6 +43,8 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = false
   [functions.daily-support-appeal]
     verify_jwt = false
+  [functions.abia-this-week]
+    verify_jwt = false
   [functions.volunteer-apply]
     verify_jwt = false
   [functions.volunteer-decide]

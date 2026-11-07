@@ -47,7 +47,7 @@ function SlideLink({
   )
 }
 
-export function SlideCard({ slide }: { slide: HeroSlideLike }) {
+export function SlideCard({ slide, compact }: { slide: HeroSlideLike; compact?: boolean }) {
   if (slide.full_image && slide.image_url) return <BannerSlide slide={slide} />
   const from = slide.bg_color_from || '#013220'
   const to = slide.bg_color_to || '#000000'
@@ -55,7 +55,7 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
 
   return (
     <div
-      className="relative w-full h-full rounded-[32px] overflow-hidden border-2 border-secondary/20 min-h-[380px] md:min-h-[460px] flex flex-col items-center justify-center px-6 py-10 md:py-16 text-center"
+      className={`relative w-full h-full rounded-[32px] overflow-hidden border-2 border-secondary/20 ${compact ? 'min-h-[240px] md:min-h-[260px]' : 'min-h-[380px] md:min-h-[460px]'} flex flex-col items-center justify-center px-6 py-10 md:py-16 text-center`}
       style={bgStyle}
     >
       {/* The slide's picture shows what it is about; the shade over it keeps the words readable. */}
@@ -96,7 +96,7 @@ export function SlideCard({ slide }: { slide: HeroSlideLike }) {
           </div>
         )}
 
-        <h2 className="text-3xl md:text-5xl font-bold leading-tight">
+        <h2 className={compact ? 'text-2xl md:text-3xl font-bold leading-tight' : 'text-3xl md:text-5xl font-bold leading-tight'}>
           {slide.isDefault ? (
             <>
               <span className="text-white">{slide.title}</span>

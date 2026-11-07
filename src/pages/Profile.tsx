@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
@@ -63,6 +63,7 @@ export default function Profile() {
   const requestedId = searchParams.get('id')
   const viewedId = requestedId || user?.id || null
   const isSelf = !!user && !!viewedId && viewedId === user.id
+  const othersPage = !isSelf && !!viewedId
 
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Partial<Profile>>({})
@@ -204,6 +205,9 @@ export default function Profile() {
   }
 
 
+  // Other members now have one public page.
+  if (othersPage) return <Navigate to={`/member/${viewedId}`} replace />
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <SEO
@@ -227,6 +231,11 @@ export default function Profile() {
                   <p className="text-sm text-muted-foreground">@{profile.username}</p>
                 )}
               </div>
+              {isSelf && !editing && (
+                <Button asChild size="sm" variant="ghost">
+                  <Link to={`/member/${viewedId}`}>View my public page</Link>
+                </Button>
+              )}
               {isSelf && !editing && (
                 <Button size="sm" variant="outline" onClick={startEdit}>
                   <Pencil className="size-4" /> Edit Profile

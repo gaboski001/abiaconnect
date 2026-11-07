@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 const CallHistory = lazy(() => import('@/components/dashboard/CallHistory'))
 import { toWebP } from '@/lib/image'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { SEO } from '@/components/SEO'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow, startOfDay, subDays, format } from 'date-fns'
@@ -18,6 +18,18 @@ import {
   PhoneOff,
   Settings as SettingsIcon,
   Trash2,
+  BarChart3,
+  Briefcase,
+  CalendarDays,
+  Eye,
+  Gift,
+  MapPin,
+  MessageCircle,
+  Pencil,
+  PenSquare,
+  Trophy,
+  Users,
+  Vote,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { areCallsEnabled, hydrateCallsEnabledFromProfile, setCallsEnabled, subscribeCallsEnabled } from '@/lib/callPreferences'
@@ -47,21 +59,30 @@ import { NotificationSoundToggle } from '@/components/notifications/Notification
 import { NativeAppDownload } from '@/components/pwa/NativeAppDownload'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { NativeDashboard } from '@/components/mobile/NativeDashboard'
+import { HeroSlider } from '@/components/forum/HeroSlider'
+import { CommunityFeed } from '@/components/community/CommunityFeed'
+import { InviteCard, JoinInTodayCard, LgaOfTheMonthCard, OpportunitiesCard, PageProgressBar } from '@/components/community/CommunityCards'
+import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
+import { QuestionOfTheDayCard } from '@/components/engagement/QuestionOfTheDayCard'
+import { WaitingForReplyCard } from '@/components/engagement/WaitingForReplyCard'
+import { useUnreadMessagesCount } from '@/components/messages/MessagesBell'
+import { getConnectSummary } from '@/lib/connect'
+import { contestPhase, listContests } from '@/lib/engagement'
+import { useJourney } from '@/lib/journey'
+import { APP_HEADER_GRADIENT } from '@/lib/mobileBrand'
 import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
 import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
 import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
 type Tab = 'overview' | 'posts' | 'saved' | 'messages' | 'calls' | 'notifications' | 'settings'
 
-const NAV: Array<{ id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'posts', label: 'My Posts', icon: FileText },
-  { id: 'saved', label: 'Saved Posts', icon: Bookmark },
-  { id: 'messages', label: 'Messages', icon: Mail },
-  { id: 'calls', label: 'Calls', icon: Phone },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'settings', label: 'Settings', icon: SettingsIcon },
-]
+type NavItem = {
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  tab?: Tab
+  to?: string
+  badge?: number
+}
 
 interface Profile {
   id?: string
@@ -77,7 +98,16 @@ export default function Dashboard() {
   const { user, role, signOut } = useAuth()
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const [tab, setTab] = useState<Tab>('overview')
+  const [params, setParams] = useSearchParams()
+  const tab = (params.get('tab') as Tab | null) ?? 'overview'
+  const setTab = (next: Tab) => setParams(next === 'overview' ? {} : { tab: next })
+  const journey = useJourney()
+  const unreadMessages = useUnreadMessagesCount()
+  const summaryQ = useQuery({
+    queryKey: ['member-summary', user?.id],
+    enabled: !!user,
+    queryFn: () => getConnectSummary(user!.id).catch(() => null),
+  })
 
   const profileQ = useQuery({
     queryKey: ['profile', user?.id],
@@ -158,14 +188,20 @@ export default function Dashboard() {
 
   if (isNativeApp()) {
     return (
-      <div className="-mt-6 -mx-3 px-3 py-6 min-h-screen bg-[#F7F5EF] dark:bg-[#0B1220]">
+      <div className="-mt-6 -mx-3 px-3 py-6 min-h-screen bg-muted/50">
         <SEO title="Dashboard" description="Your AbiaConnect Dashboard" path="/dashboard" />
-        <NativeDashboard
-          profile={profile}
-          stats={statsQ.data ?? { posts: 0, replies: 0, bookmarks: 0, reputation: 0 }}
-          chartData={chartData}
-          recentThreads={recentQ.data ?? []}
-        />
+        {tab === 'overview' ? (
+          <NativeDashboard
+            profile={profile}
+            stats={statsQ.data ?? { posts: 0, replies: 0, bookmarks: 0, reputation: 0 }}
+            chartData={chartData}
+            recentThreads={recentQ.data ?? []}
+          />
+        ) : (
+          <div className="pb-28">
+            <TabPanel tab={tab} profile={profile} onSaved={() => profileQ.refetch()} onDeleted={() => qc.invalidateQueries({ queryKey: ['my-threads'] })} />
+          </div>
+        )}
       </div>
     )
   }
@@ -175,150 +211,281 @@ export default function Dashboard() {
     navigate('/')
   }
 
+  const lgaGroup = journey.data?.lga_group ?? null
+  const groups: Array<{ title: string; items: NavItem[] }> = [
+    {
+      title: 'My page',
+      items: [
+        { label: 'Overview', icon: LayoutDashboard, tab: 'overview' },
+        { label: 'My public page', icon: Eye, to: `/member/${user?.id ?? ''}` },
+        { label: 'My posts', icon: FileText, tab: 'posts' },
+        { label: 'Saved posts', icon: Bookmark, tab: 'saved' },
+        { label: 'Followers & likes', icon: Users, to: '/relationship/people' },
+        { label: 'Rewards', icon: Gift, to: '/rewards' },
+      ],
+    },
+    {
+      title: 'Community',
+      items: [
+        { label: 'Forum', icon: MessageCircle, to: '/' },
+        { label: lgaGroup ? 'My LGA group' : 'Groups', icon: MapPin, to: lgaGroup ? `/subgroups/${lgaGroup}` : '/subgroups' },
+        { label: 'Contests', icon: Vote, to: '/contests' },
+        { label: 'Polls', icon: BarChart3, to: '/polls' },
+        { label: 'Events', icon: CalendarDays, to: '/events' },
+        { label: 'Leaderboard', icon: Trophy, to: '/leaderboard' },
+        { label: 'Jobs and services', icon: Briefcase, to: '/opportunities' },
+      ],
+    },
+    {
+      title: 'Inbox',
+      items: [
+        { label: 'Messages', icon: Mail, to: '/messages', badge: unreadMessages },
+        { label: 'Calls', icon: Phone, tab: 'calls' },
+        { label: 'Notifications', icon: Bell, to: '/notifications' },
+      ],
+    },
+    { title: 'Account', items: [{ label: 'Settings', icon: SettingsIcon, tab: 'settings' }] },
+  ]
+
+  const navClass = (active: boolean) =>
+    `w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+      active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/60'
+    }`
+  const pillClass = (active: boolean) =>
+    `whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium border ${
+      active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border'
+    }`
+
   return (
-    <div className="grid lg:grid-cols-[16rem_1fr] gap-6">
-      <SEO title="Your Dashboard" description="Track your posts, replies, bookmarks, and reputation on AbiaConnect." path="/dashboard" />
-      {/* Sidebar - desktop */}
+    <div className="grid lg:grid-cols-[15rem_minmax(0,1fr)] gap-6">
+      <SEO title="Your Dashboard" description="Manage your page and take part in the AbiaConnect community." path="/dashboard" />
+      {/* Menu - desktop */}
       <aside className="hidden lg:block">
-        <div className="rounded-2xl border border-border bg-card p-5 sticky top-24 space-y-4">
-          <div className="flex flex-col items-center text-center gap-2">
-            <UserAvatar avatarUrl={profile.avatar_url} displayName={displayName} size="xl" />
-            <div>
-              <div className="font-bold">{displayName}</div>
-              {profile.username && (
-                <div className="text-xs text-muted-foreground">@{profile.username}</div>
+        <nav className="rounded-2xl border border-border bg-card p-3 sticky top-24 space-y-3" aria-label="Dashboard">
+          {groups.map((g) => (
+            <div key={g.title}>
+              <h2 className="mb-1 px-3 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">{g.title}</h2>
+              {g.items.map((n) =>
+                n.to ? (
+                  <Link key={n.label} to={n.to} className={navClass(false)}>
+                    <n.icon className="size-4" /> {n.label}
+                    {n.badge ? <span className="ml-auto rounded-full bg-primary/10 px-2 text-xs font-bold text-primary">{n.badge}</span> : null}
+                  </Link>
+                ) : (
+                  <button key={n.label} type="button" onClick={() => setTab(n.tab!)} className={navClass(tab === n.tab)}>
+                    <n.icon className="size-4" /> {n.label}
+                  </button>
+                ),
               )}
             </div>
-            <span className="text-xs rounded-full bg-primary/10 text-primary px-2 py-0.5 font-semibold">
-              {role}
-            </span>
-          </div>
-          <nav className="space-y-1">
-            {NAV.map((n) => {
-              const active = tab === n.id
-              return (
-                <button
-                  key={n.id}
-                  onClick={() => setTab(n.id)}
-                  className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors border-l-4 ${
-                    active
-                      ? 'border-secondary bg-muted text-foreground'
-                      : 'border-transparent text-muted-foreground hover:bg-muted/60'
-                  }`}
-                >
-                  <n.icon className="size-4" />
-                  {n.label}
-                </button>
-              )
-            })}
-            <button
-              onClick={handleSignOut}
-              className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/60 border-l-4 border-transparent"
-            >
-              <LogOut className="size-4" /> Sign Out
-            </button>
-          </nav>
-        </div>
+          ))}
+          <button type="button" onClick={handleSignOut} className={navClass(false)}>
+            <LogOut className="size-4" /> Sign Out
+          </button>
+        </nav>
       </aside>
 
-      {/* Mobile tabs */}
+      {/* Menu - small screens */}
       <div className="lg:hidden -mx-3 px-3 overflow-x-auto">
         <div className="flex gap-2 pb-2">
-          {NAV.map((n) => (
-            <button
-              key={n.id}
-              onClick={() => setTab(n.id)}
-              className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium border ${
-                tab === n.id
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-card text-muted-foreground border-border'
-              }`}
-            >
-              {n.label}
-            </button>
-          ))}
+          {groups.flatMap((g) => g.items).map((n) =>
+            n.to ? (
+              <Link key={n.label} to={n.to} className={pillClass(false)}>
+                {n.label}
+              </Link>
+            ) : (
+              <button key={n.label} type="button" onClick={() => setTab(n.tab!)} className={pillClass(tab === n.tab)}>
+                {n.label}
+              </button>
+            ),
+          )}
+          <button type="button" onClick={handleSignOut} className={pillClass(false)}>
+            Sign Out
+          </button>
         </div>
       </div>
 
       <main className="min-w-0">
-        {tab === 'overview' && <Overview displayName={displayName} stats={statsQ.data} chartData={chartData} recentThreads={recentQ.data} />}
-        {tab === 'posts' && <MyPosts onDeleted={() => qc.invalidateQueries({ queryKey: ['my-threads'] })} />}
-        {tab === 'saved' && <SavedPosts />}
-        {tab === 'messages' && (
-          <LinkCard to="/messages" label="Open Messages" description="View and reply to your conversations." icon={Mail} />
+        {tab === 'overview' ? (
+          <Overview
+            userId={user?.id ?? ''}
+            displayName={displayName}
+            profile={profile}
+            stats={statsQ.data}
+            followers={summaryQ.data?.followers ?? 0}
+            chartData={chartData}
+            recentThreads={recentQ.data}
+          />
+        ) : (
+          <TabPanel tab={tab} profile={profile} onSaved={() => profileQ.refetch()} onDeleted={() => qc.invalidateQueries({ queryKey: ['my-threads'] })} />
         )}
-        {tab === 'calls' && (
-          <Suspense fallback={<div className="text-sm text-slate-300/70">Loading call history…</div>}>
-            <CallHistory />
-          </Suspense>
-        )}
-        {tab === 'notifications' && (
-          <LinkCard to="/notifications" label="Open Notifications" description="See your latest alerts." icon={Bell} />
-        )}
-        {tab === 'settings' && <SettingsPanel profile={profile} onSaved={() => profileQ.refetch()} />}
       </main>
     </div>
   )
 }
 
+/* ----------------- Tabs other than the overview ----------------- */
+function TabPanel({ tab, profile, onSaved, onDeleted }: { tab: Tab; profile: Profile; onSaved: () => void; onDeleted: () => void }) {
+  return (
+    <>
+      {tab === 'posts' && <MyPosts onDeleted={onDeleted} />}
+      {tab === 'saved' && <SavedPosts />}
+      {tab === 'messages' && (
+        <LinkCard to="/messages" label="Open Messages" description="View and reply to your conversations." icon={Mail} />
+      )}
+      {tab === 'calls' && (
+        <Suspense fallback={<div className="text-sm text-slate-300/70">Loading call history…</div>}>
+          <CallHistory />
+        </Suspense>
+      )}
+      {tab === 'notifications' && (
+        <LinkCard to="/notifications" label="Open Notifications" description="See your latest alerts." icon={Bell} />
+      )}
+      {tab === 'settings' && <SettingsPanel profile={profile} onSaved={onSaved} />}
+    </>
+  )
+}
+
 /* ----------------- Overview ----------------- */
-function Overview({ displayName, stats, chartData, recentThreads }: {
+function Overview({ userId, displayName, profile, stats, followers, chartData, recentThreads }: {
+  userId: string
   displayName: string
+  profile: Profile
   stats?: any
+  followers: number
   chartData: any[]
   recentThreads?: any[]
 }) {
+  const contests = useQuery({ queryKey: ['contests'], queryFn: listContests, staleTime: 60_000 })
+  const open = (contests.data ?? []).map((c) => ({ ...c, phase: contestPhase(c) })).filter((c) => c.phase === 'open')
   const cards = [
     { label: 'My Posts', value: stats?.posts ?? 0 },
     { label: 'Replies', value: stats?.replies ?? 0 },
     { label: 'Reputation', value: stats?.reputation ?? 0 },
-    { label: 'Bookmarks', value: stats?.bookmarks ?? 0 },
+    { label: 'Followers', value: followers },
+    { label: 'Saved', value: stats?.bookmarks ?? 0 },
   ]
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Welcome back, {displayName}!</h1>
-      <BirthdayGreeting />
-      <AddBirthdayPrompt />
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {cards.map((c) => (
-          <div key={c.label} className="rounded-2xl border border-border bg-card p-4">
-            <div className="text-xs text-muted-foreground uppercase">{c.label}</div>
-            <div className="text-2xl font-bold mt-1">{c.value}</div>
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]">
+      <div className="min-w-0 space-y-5">
+        {/* My page */}
+        <section className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="h-24 px-5 py-3 font-serif text-white/90" style={{ backgroundImage: APP_HEADER_GRADIENT }}>
+            Connecting Abians worldwide
           </div>
-        ))}
-      </div>
+          <div className="px-5 pb-5">
+            <div className="-mt-9 flex flex-wrap items-end gap-x-4 gap-y-3">
+              <UserAvatar avatarUrl={profile.avatar_url} displayName={displayName} size="xl" className="size-24 border-4 border-card" />
+              <div className="min-w-[12rem] flex-1">
+                <h1 className="text-2xl font-bold leading-tight">Welcome back, {displayName}!</h1>
+                <p className="text-sm text-muted-foreground">{[profile.username ? `@${profile.username}` : null, profile.lga].filter(Boolean).join(' · ')}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link to={`/member/${userId}`}>
+                    <Eye className="size-4" /> View my public page
+                  </Link>
+                </Button>
+                <Button asChild className="rounded-full">
+                  <Link to="/profile">
+                    <Pencil className="size-4" /> Edit my page
+                  </Link>
+                </Button>
+              </div>
+            </div>
+            <PageProgressBar profile={profile as Record<string, unknown>} className="mt-4" />
+          </div>
+        </section>
 
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="font-bold mb-4">Recent Activity</h2>
-        <div className="h-56">
-          <Suspense fallback={<div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />}>
-            <ActivityChart data={chartData} />
-          </Suspense>
+        <BirthdayGreeting />
+        <AddBirthdayPrompt />
+
+        {/* Announcements and promotions (managed by admins) */}
+        <HeroSlider compact />
+
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+          {cards.map((c) => (
+            <div key={c.label} className="rounded-2xl border border-border bg-card p-4">
+              <div className="text-xs font-semibold text-muted-foreground">{c.label}</div>
+              <div className="mt-1 font-serif text-2xl font-bold">{c.value}</div>
+            </div>
+          ))}
         </div>
 
+        {/* The main forum, without leaving the dashboard */}
+        <div className="overflow-hidden rounded-2xl border border-border">
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-card px-4 pt-4">
+            <h2 className="text-lg font-semibold">From your community</h2>
+            <Button asChild size="sm" className="rounded-full">
+              <Link to="/create-thread">
+                <PenSquare className="size-4" /> Start a discussion
+              </Link>
+            </Button>
+          </div>
+          <CommunityFeed pageSize={5} moreLink={{ to: '/', label: 'Open the full forum' }} />
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <h2 className="mb-4 font-bold">Recent Activity</h2>
+            <div className="h-56">
+              <Suspense fallback={<div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />}>
+                <ActivityChart data={chartData} />
+              </Suspense>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <h2 className="mb-4 font-bold">My Recent Threads</h2>
+            {!recentThreads?.length ? (
+              <p className="text-sm text-muted-foreground">No threads yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {recentThreads.map((t) => (
+                  <li key={t.id} className="flex items-center justify-between gap-3">
+                    <Link to={`/thread/${t.id}`} className="text-sm font-medium hover:text-primary truncate">
+                      {t.title}
+                    </Link>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="font-bold mb-4">My Recent Threads</h2>
-        {!recentThreads?.length ? (
-          <p className="text-sm text-muted-foreground">No threads yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {recentThreads.map((t) => (
-              <li key={t.id} className="flex items-center justify-between gap-3">
-                <Link to={`/thread/${t.id}`} className="text-sm font-medium hover:text-primary truncate">
-                  {t.title}
-                </Link>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <aside className="space-y-4">
+        <JoinInTodayCard />
+        <DailyRewardCard />
+        <WaitingForReplyCard />
+        <QuestionOfTheDayCard />
+        {open.length ? (
+          <section className="rounded-2xl border border-border bg-card p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-[15px] font-bold">Vote now</h2>
+              <Link to="/contests" className="text-sm font-semibold text-primary">
+                All contests
+              </Link>
+            </div>
+            <ul className="space-y-1.5">
+              {open.slice(0, 3).map((c) => (
+                <li key={c.id}>
+                  <Link to={`/contests/${c.id}`} className="block text-sm font-semibold hover:text-primary">
+                    {c.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+        <LgaOfTheMonthCard />
+        <OpportunitiesCard />
+        <InviteCard />
+      </aside>
     </div>
   )
 }

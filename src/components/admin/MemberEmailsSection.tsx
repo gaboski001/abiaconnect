@@ -4,10 +4,16 @@ import { supabase } from '@/lib/supabase'
 import { toast } from '@/lib/toast'
 import { Switch } from '@/components/ui/switch'
 
-type Key = 'premium_invite' | 'support_appeal'
+type Key = 'premium_invite' | 'support_appeal' | 'abia_this_week'
 type Status = Record<Key, { enabled: boolean; sent_30d: number; unsubscribed: number }>
 
 const EMAILS: { key: Key; name: string; about: string }[] = [
+  {
+    key: 'abia_this_week',
+    name: 'Abia this week',
+    about:
+      'Sent at 8:00 am on weekdays, in batches, to members who signed in during the last 90 days: the week’s busiest public discussions and the leading LGA. At most once a week per member, and nothing in a quiet week.',
+  },
   {
     key: 'premium_invite',
     name: 'Premium invitation',
@@ -64,7 +70,7 @@ export default function MemberEmailsSection() {
           <MailPlus className="size-4" /> Emails to members
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          These go out by themselves every morning. Switch one off to stop it; nothing is sent again until you switch it
+          These go out by themselves in the morning. Switch one off to stop it; nothing is sent again until you switch it
           back on.
         </p>
       </div>
@@ -77,6 +83,7 @@ export default function MemberEmailsSection() {
         <ul className="space-y-3">
           {EMAILS.map((e) => {
             const s = q.data[e.key]
+            if (!s) return null
             const id = `member-email-${e.key}`
             return (
               <li key={e.key} className="flex items-start justify-between gap-4 rounded-xl border p-4">

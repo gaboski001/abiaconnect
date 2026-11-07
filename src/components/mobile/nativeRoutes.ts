@@ -24,6 +24,8 @@ const TITLES: Array<[string, string]> = [
   ['/relationship/people', 'Your people'],
   ['/relationship/:userId', 'Member profile'],
   ['/notifications', 'Notifications'],
+  ['/member/:userId', 'Member page'],
+  ['/opportunities', 'Jobs and services'],
   ['/profile', 'My profile'],
   ['/dashboard', 'Dashboard'],
   ['/polls', 'Polls'],

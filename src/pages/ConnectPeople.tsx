@@ -36,7 +36,7 @@ function People({ kind, empty }: { kind: PeopleKind; empty: string }) {
         return (
           <li key={`${person.user_id}-${person.photo_url ?? ''}`}>
             <Link
-              to={`/relationship/${person.user_id}`}
+              to={`/member/${person.user_id}`}
               className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3"
             >
               <UserAvatar avatarUrl={person.avatar_url} displayName={name} size="md" />
@@ -67,7 +67,7 @@ export default function ConnectPeople() {
       <SEO title="Your people" description="See who follows you and who liked your photos." path="/relationship/people" />
       <div className="mb-4 flex items-center gap-2 native:hidden">
         <Button asChild variant="ghost" size="icon" className="rounded-full" aria-label="Back to my profile">
-          <Link to={user ? `/relationship/${user.id}` : '/relationship'}>
+          <Link to={user ? `/member/${user.id}` : '/relationship'}>
             <ArrowLeft className="size-5" />
           </Link>
         </Button>

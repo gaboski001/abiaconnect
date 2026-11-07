@@ -1,20 +1,31 @@
 import { Suspense, lazy } from 'react'
 import { Link } from 'react-router-dom'
-import { Star, FileText, MessageCircle, Bookmark, TrendingUp, ChevronRight, Plus } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { Bookmark, Briefcase, CalendarDays, ChevronRight, Eye, FileText, Gift, MapPin, Pencil, PenSquare, Phone, Settings, Trophy, Users, Vote } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/contexts/AuthContext'
+import { getConnectSummary } from '@/lib/connect'
+import { useJourney } from '@/lib/journey'
+import { APP_HEADER_GRADIENT } from '@/lib/mobileBrand'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { Button } from '@/components/ui/button'
 import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
 import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
-import { Button } from '@/components/ui/button'
-import { APP_HEADER_GRADIENT, GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
-import { formatDistanceToNow } from 'date-fns'
+import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
+import { WaitingForReplyCard } from '@/components/engagement/WaitingForReplyCard'
+import { HeroSlider } from '@/components/forum/HeroSlider'
+import { CommunityFeed } from '@/components/community/CommunityFeed'
+import { InviteCard, JoinInTodayCard, LgaOfTheMonthCard, PageProgressBar } from '@/components/community/CommunityCards'
 
 const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
 
 interface NativeDashboardProps {
   profile: {
+    id?: string
     display_name?: string | null
     username?: string | null
     avatar_url?: string | null
+    lga?: string | null
     reputation?: number | null
   }
   stats: {
@@ -27,144 +38,144 @@ interface NativeDashboardProps {
   recentThreads: Array<{ id: string; title: string; created_at: string }>
 }
 
+/** The app's dashboard: your page and tools first, then the community, like a social profile. */
 export function NativeDashboard({ profile, stats, chartData, recentThreads }: NativeDashboardProps) {
+  const { user } = useAuth()
+  const journey = useJourney()
   const displayName = profile.display_name || 'User'
+  const lgaGroup = journey.data?.lga_group ?? null
+  const summaryQ = useQuery({
+    queryKey: ['member-summary', user?.id],
+    enabled: !!user,
+    queryFn: () => getConnectSummary(user!.id).catch(() => null),
+  })
+
+  const tiles = [
+    { to: '/dashboard?tab=posts', label: 'My posts', icon: FileText },
+    { to: '/dashboard?tab=saved', label: 'Saved', icon: Bookmark },
+    { to: '/relationship/people', label: 'People', icon: Users },
+    { to: '/rewards', label: 'Rewards', icon: Gift },
+    { to: lgaGroup ? `/subgroups/${lgaGroup}` : '/subgroups', label: lgaGroup ? 'My LGA' : 'Groups', icon: MapPin },
+    { to: '/contests', label: 'Vote', icon: Vote },
+    { to: '/events', label: 'Events', icon: CalendarDays },
+    { to: '/leaderboard', label: 'Top members', icon: Trophy },
+    { to: '/opportunities', label: 'Jobs', icon: Briefcase },
+    { to: '/dashboard?tab=calls', label: 'Calls', icon: Phone },
+    { to: '/create-thread', label: 'New post', icon: PenSquare },
+    { to: '/dashboard?tab=settings', label: 'Settings', icon: Settings },
+  ]
+  const numbers = [
+    { label: 'Posts', value: stats.posts },
+    { label: 'Replies', value: stats.replies },
+    { label: 'Reputation', value: stats.reputation },
+    { label: 'Followers', value: summaryQ.data?.followers ?? 0 },
+  ]
 
   return (
-    <div className="flex flex-col gap-6 pb-32 animate-in fade-in duration-500">
-      <BirthdayGreeting />
-      <AddBirthdayPrompt />
-
-      {/* Header Section */}
-      <section className="relative overflow-hidden rounded-[2rem] p-6 text-white shadow-xl" style={{ backgroundImage: APP_HEADER_GRADIENT }}>
-        {/* Glow effect */}
-        <div
-          className="absolute -right-20 -top-20 h-72 w-72 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(248,195,1,0.24) 0%, rgba(248,195,1,0) 70%)' }}
-        />
-
-        <div className="relative flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-[#F8C301] blur-md opacity-40 animate-pulse" />
-              <div className="relative rounded-full border-2 border-[#F8C301]/50 p-0.5">
-                <UserAvatar
-                  avatarUrl={profile.avatar_url}
-                  displayName={displayName}
-                  size="xl"
-                  className="h-20 w-20 border-2 border-[#14532D]"
-                />
-              </div>
-            </div>
-            <div>
-              <h1 className="text-xl font-black leading-tight tracking-tight">
-                Hello, {displayName}!
-              </h1>
-              <p className="text-[12px] font-semibold text-[#F8C301]">
-                {profile.username ? `@${profile.username}` : 'Member'}
-              </p>
+    <div className="-mx-3 -mt-6 flex flex-col gap-2 pb-28">
+      {/* My page */}
+      <section className="bg-card">
+        <div className="h-24" style={{ backgroundImage: APP_HEADER_GRADIENT }} />
+        <div className="px-4 pb-4">
+          <div className="-mt-11 flex items-end gap-3">
+            <UserAvatar avatarUrl={profile.avatar_url} displayName={displayName} size="xl" className="size-[88px] border-4 border-card" />
+            <div className="min-w-0 flex-1 pb-1">
+              <h1 className="truncate text-xl font-extrabold leading-tight">{displayName}</h1>
+              <p className="truncate text-[13px] text-muted-foreground">{[profile.username ? `@${profile.username}` : null, profile.lga].filter(Boolean).join(' · ')}</p>
             </div>
           </div>
 
-        </div>
+          <div className="mt-3 grid grid-cols-4 divide-x divide-border rounded-xl border border-border py-2.5 text-center">
+            {numbers.map((n) => (
+              <div key={n.label}>
+                <span className="block text-lg font-extrabold leading-tight">{n.value}</span>
+                <span className="block text-[11px] text-muted-foreground">{n.label}</span>
+              </div>
+            ))}
+          </div>
 
-        <div className="relative mt-8 flex gap-3">
-          <Button
-            asChild
-            className="h-12 flex-1 gap-2 rounded-2xl border-0 text-sm font-bold text-[#0B1F0B] active:scale-95 transition-transform"
-            style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
-          >
-            <Link to="/create-thread">
-              <Plus className="size-4 stroke-[3]" />
-              Start Discussion
-            </Link>
-          </Button>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Button asChild variant="outline" className="rounded-full">
+              <Link to={`/member/${user?.id ?? ''}`}>
+                <Eye className="size-4" /> My page
+              </Link>
+            </Button>
+            <Button asChild className="rounded-full">
+              <Link to="/profile">
+                <Pencil className="size-4" /> Edit page
+              </Link>
+            </Button>
+          </div>
+          <PageProgressBar profile={profile} className="mt-3" />
         </div>
       </section>
 
+      <div className="space-y-2 px-3 empty:hidden">
+        <BirthdayGreeting />
+        <AddBirthdayPrompt />
+      </div>
 
+      {/* Announcements and promotions (managed by admins) */}
+      <section className="px-3">
+        <HeroSlider compact />
+      </section>
 
-
-      {/* Stats Grid */}
-      <section className="grid grid-cols-2 gap-4">
-        {[
-          { label: 'Reputation', value: stats.reputation, icon: Star, color: 'text-[#F8C301]', bg: 'bg-[#F8C301]/10' },
-          { label: 'Threads', value: stats.posts, icon: FileText, color: 'text-blue-400', bg: 'bg-blue-400/10' },
-          { label: 'Replies', value: stats.replies, icon: MessageCircle, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
-          { label: 'Saved', value: stats.bookmarks, icon: Bookmark, color: 'text-orange-400', bg: 'bg-orange-400/10' },
-        ].map((item) => (
-          <div
-            key={item.label}
-            className="flex flex-col gap-3 rounded-[2rem] border border-slate-200/50 bg-white p-5 shadow-sm dark:border-white/5 dark:bg-[#161D2D]"
-          >
-            <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${item.bg}`}>
-              <item.icon className={`size-5 ${item.color}`} />
-            </div>
-            <div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white leading-none">
-                {item.value}
-              </div>
-              <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                {item.label}
-              </div>
-            </div>
-          </div>
+      <section className="grid grid-cols-4 gap-2 px-3" aria-label="My tools">
+        {tiles.map((t) => (
+          <Link key={t.label} to={t.to} className="flex flex-col items-center gap-1.5 rounded-2xl bg-card py-3 text-center text-[12px] font-semibold shadow-sm">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <t.icon className="size-5" />
+            </span>
+            {t.label}
+          </Link>
         ))}
       </section>
 
-      {/* Activity Insight */}
-      <section className="rounded-[2rem] border border-slate-200/50 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-[#161D2D]">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="size-4 text-blue-400" />
-            <h2 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">
-              Activity Insight
-            </h2>
-          </div>
-          <TrendingUp className="size-4 text-slate-300 dark:text-white/20" />
-        </div>
-
-        <div className="h-48 w-full">
-          <Suspense fallback={<div className="h-full w-full animate-pulse rounded-2xl bg-slate-100 dark:bg-white/5" />}>
-            <ActivityChart data={chartData} />
-          </Suspense>
-        </div>
+      <section className="space-y-2 px-3">
+        <DailyRewardCard />
+        <JoinInTodayCard />
+        <WaitingForReplyCard compact />
       </section>
 
-      {/* Latest Posts */}
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between px-2">
-          <h2 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">
-            My Latest Posts
-          </h2>
-          <Link to="/dashboard?tab=posts" className="text-[10px] font-black uppercase tracking-widest text-[#F8C301] hover:underline">
-            View All
-          </Link>
+      {/* The main forum, without leaving the dashboard */}
+      <CommunityFeed pageSize={5} moreLink={{ to: '/', label: 'Open the full forum' }} />
+
+      <section className="space-y-2 px-3">
+        <LgaOfTheMonthCard />
+        <InviteCard />
+
+        <div className="rounded-2xl bg-card p-4 shadow-sm">
+          <h2 className="mb-3 text-[15px] font-bold">Posts I made this week</h2>
+          <div className="h-44 w-full">
+            <Suspense fallback={<div className="h-full w-full animate-pulse rounded-xl bg-muted" />}>
+              <ActivityChart data={chartData} />
+            </Suspense>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3">
-          {recentThreads.length > 0 ? (
-            recentThreads.map((thread) => (
-              <Link
-                key={thread.id}
-                to={`/thread/${thread.id}`}
-                className="group flex items-center justify-between gap-4 rounded-[1.5rem] border border-slate-200/50 bg-white p-4 shadow-sm active:scale-[0.98] transition-all dark:border-white/5 dark:bg-[#161D2D]"
-              >
-                <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#F8C301]">
-                    {thread.title}
-                  </h3>
-                  <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
-                    {formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}
-                  </p>
-                </div>
-                <ChevronRight className="size-4 text-slate-300 dark:text-white/20" />
-              </Link>
-            ))
+        <div className="rounded-2xl bg-card p-4 shadow-sm">
+          <div className="mb-1 flex items-center justify-between">
+            <h2 className="text-[15px] font-bold">My recent threads</h2>
+            <Link to="/dashboard?tab=posts" className="text-[13px] font-bold text-primary">
+              See all
+            </Link>
+          </div>
+          {!recentThreads.length ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">No threads yet.</p>
           ) : (
-            <div className="rounded-[1.5rem] border border-dashed border-slate-200 p-8 text-center dark:border-white/10">
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">No threads yet</p>
-            </div>
+            <ul className="divide-y divide-border">
+              {recentThreads.map((thread) => (
+                <li key={thread.id}>
+                  <Link to={`/thread/${thread.id}`} className="flex items-center gap-2 py-3">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold">{thread.title}</span>
+                      <span className="block text-xs text-muted-foreground">{formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}</span>
+                    </span>
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </section>

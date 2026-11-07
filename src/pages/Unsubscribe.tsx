@@ -18,9 +18,11 @@ const MESSAGES: Record<State, string> = {
 export default function Unsubscribe() {
   const [params] = useSearchParams()
   // Premium invitation and support appeal emails carry the member's own link
-  // (?t=..., with k=support for the support appeal).
+  // (?t=..., with k=support for the support appeal and k=weekly for Abia this week).
   const token = params.get('t') ?? ''
-  const optOut = params.get('k') === 'support' ? 'support_appeal_opt_out' : 'premium_invite_opt_out'
+  const kind = params.get('k')
+  const optOut =
+    kind === 'support' ? 'support_appeal_opt_out' : kind === 'weekly' ? 'abia_this_week_opt_out' : 'premium_invite_opt_out'
   const valid = UUID.test(token)
   const [state, setState] = useState<State>(valid ? 'working' : 'none')
 

@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 
@@ -6,7 +6,9 @@ import { formatDistanceToNow } from 'date-fns'
 import { useThreadHtml } from '@/hooks/useThreadHtml'
 import { threadShareLink } from '@/lib/shareLinks'
 import {
+  BellRing,
   Bookmark,
+  CheckCircle2,
   ChevronLeft,
   Eye,
   Loader2,
@@ -47,6 +49,8 @@ import {
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SEO } from '@/components/SEO'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { FollowMemberButton, MemberMarks } from '@/components/community/PostCard'
+import { getThreadState, setBestAnswer, toggleThreadFollow, useFollowingIds, useMemberLabels, type MemberLabel } from '@/lib/community'
 import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
 // Lazy-load the reply composer — only needed when user opens a reply form.
@@ -126,6 +130,11 @@ interface ReplyItemProps {
   onNestedDraftChange: (v: string) => void
   onSubmitNested: (replyId: string) => void
   onCancelNested: () => void
+  isBest: boolean
+  /** The asker can choose the best answer, except their own reply. */
+  canChooseBest: boolean
+  onChooseBest: (replyId: string | null) => void
+  label?: MemberLabel
 }
 
 const ReplyItem = memo(function ReplyItem({
@@ -144,6 +153,10 @@ const ReplyItem = memo(function ReplyItem({
   onNestedDraftChange,
   onSubmitNested,
   onCancelNested,
+  isBest,
+  canChooseBest,
+  onChooseBest,
+  label,
 }: ReplyItemProps) {
   const name = r.profiles?.display_name ?? 'Member'
   const isOptimistic = (r as Reply & { _optimistic?: boolean })._optimistic
@@ -151,14 +164,32 @@ const ReplyItem = memo(function ReplyItem({
   const isOpen = replyingTo === r.id
   return (
     <li
-      className={`rounded-2xl border border-border bg-card p-4 transition-opacity ${
+      className={`rounded-2xl border bg-card p-4 transition-opacity ${isBest ? 'border-primary ring-1 ring-primary/40' : 'border-border'} ${
         r.parent_reply_id ? 'ml-8' : ''
       } ${isOptimistic ? 'opacity-60' : ''}`}
       aria-busy={isOptimistic ? 'true' : undefined}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <Avatar name={name} url={r.profiles?.avatar_url} />
-        <span className="font-medium text-sm">{name}</span>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
+        {r.user_id ? (
+          <Link to={`/member/${r.user_id}`} aria-label={name} className="shrink-0">
+            <Avatar name={name} url={r.profiles?.avatar_url} size={10} />
+          </Link>
+        ) : (
+          <Avatar name={name} url={r.profiles?.avatar_url} size={10} />
+        )}
+        {r.user_id ? (
+          <Link to={`/member/${r.user_id}`} className="font-semibold text-sm hover:underline">
+            {name}
+          </Link>
+        ) : (
+          <span className="font-semibold text-sm">{name}</span>
+        )}
+        <MemberMarks label={label} />
+        {isBest ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 text-xs font-bold leading-5 text-primary">
+            <CheckCircle2 className="size-3.5" /> Best answer
+          </span>
+        ) : null}
         <span className="text-xs text-muted-foreground">
           {isOptimistic
             ? 'Sending…'
@@ -190,6 +221,11 @@ const ReplyItem = memo(function ReplyItem({
         {canReply && !isOptimistic && (
           <Button size="sm" variant="ghost" onClick={() => onToggleReply(r.id)}>
             {isOpen ? 'Cancel' : 'Reply'}
+          </Button>
+        )}
+        {canChooseBest && !isOptimistic && (
+          <Button size="sm" variant="ghost" className="text-primary" onClick={() => onChooseBest(isBest ? null : r.id)}>
+            <CheckCircle2 className="size-3.5" /> {isBest ? 'Not the best answer' : 'Choose as best answer'}
           </Button>
         )}
       </div>
@@ -548,6 +584,32 @@ function Thread() {
     )
   }
 
+  const threadStateQ = useQuery({
+    queryKey: ['thread-state', threadId, user?.id],
+    enabled: !!threadId && !!user,
+    queryFn: () => getThreadState(threadId!),
+  })
+  const threadState = threadStateQ.data ?? null
+  const followDiscussion = useMutation({
+    mutationFn: () => toggleThreadFollow(threadId!),
+    onSuccess: (on) => {
+      toast.success(on ? 'You’ll get an alert when someone replies.' : 'You’ve stopped following this discussion.')
+      threadStateQ.refetch()
+    },
+    onError: () => toast.error('That didn’t work. Please try again.'),
+  })
+  const chooseBest = useMutation({
+    mutationFn: (replyId: string | null) => setBestAnswer(threadId!, replyId),
+    onSuccess: (_, replyId) => {
+      if (replyId) toast.success('Best answer chosen. Thank you for recognising the helper!')
+      threadStateQ.refetch()
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'That didn’t work. Please try again.'),
+  })
+  const chooseBestRef = useRef(chooseBest.mutate)
+  chooseBestRef.current = chooseBest.mutate
+  const handleChooseBest = useCallback((replyId: string | null) => chooseBestRef.current(replyId), [])
+
   const bookmark = useMutation({
     mutationFn: async () => {
       if (!user || !threadId) throw new Error('Sign in to bookmark')
@@ -850,6 +912,9 @@ function Thread() {
     onError: (e: Error) => toast.error(e.message || 'Failed to clear replies'),
   })
 
+  const followingQ = useFollowingIds(user?.id)
+  const memberLabels = useMemberLabels([threadQ.data?.author_id, ...replies.map((r) => r.user_id)])
+
   if (threadQ.isLoading) {
     return (
       <div className="py-16 text-center text-muted-foreground">
@@ -868,6 +933,8 @@ function Thread() {
 
 
   const authorName = thread.profiles?.display_name ?? 'Member'
+  // Anonymous posts have no author_id, so they never link to anyone.
+  const memberId = (thread as ThreadRow & { author_id?: string | null }).author_id ?? null
 
   const metaDesc = plainBody.slice(0, 160) || `Discussion by ${authorName} on AbiaConnect.`
 
@@ -926,10 +993,23 @@ function Thread() {
         <h1 className="text-3xl font-bold">{thread.title}</h1>
 
         <div className="flex items-start gap-3">
-          <Avatar name={authorName} url={thread.profiles?.avatar_url} size={10} />
+          {memberId ? (
+            <Link to={`/member/${memberId}`} aria-label={authorName} className="shrink-0">
+              <Avatar name={authorName} url={thread.profiles?.avatar_url} size={10} />
+            </Link>
+          ) : (
+            <Avatar name={authorName} url={thread.profiles?.avatar_url} size={10} />
+          )}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold">{authorName}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              {memberId ? (
+                <Link to={`/member/${memberId}`} className="font-semibold hover:underline">
+                  {authorName}
+                </Link>
+              ) : (
+                <span className="font-semibold">{authorName}</span>
+              )}
+              <MemberMarks label={memberId ? memberLabels[memberId] : undefined} />
               {thread.profiles?.role && (
                 <span className="text-xs rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">
                   {thread.profiles.role}
@@ -942,6 +1022,9 @@ function Thread() {
               Posted {formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}
             </div>
           </div>
+          {user && memberId && memberId !== user.id ? (
+            <FollowMemberButton memberId={memberId} following={(followingQ.data ?? []).includes(memberId)} />
+          ) : null}
         </div>
 
         <div
@@ -968,6 +1051,17 @@ function Thread() {
           <Button size="sm" variant="ghost" onClick={() => bookmark.mutate()} disabled={!user}>
             <Bookmark /> Bookmark
           </Button>
+          {threadState ? (
+            <Button
+              size="sm"
+              variant={threadState.following ? 'secondary' : 'ghost'}
+              onClick={() => followDiscussion.mutate()}
+              disabled={followDiscussion.isPending}
+              aria-pressed={threadState.following}
+            >
+              <BellRing /> {threadState.following ? 'Following' : 'Follow discussion'}
+            </Button>
+          ) : null}
           <Button size="sm" variant="ghost" onClick={share}>
             <Share2 /> Share
           </Button>
@@ -1062,6 +1156,10 @@ function Thread() {
                   onNestedDraftChange={handleNestedDraftChange}
                   onSubmitNested={handleSubmitNested}
                   onCancelNested={handleCancelNested}
+                  isBest={threadState?.best_reply_id === r.id}
+                  canChooseBest={!!threadState?.is_mine && !!r.user_id && r.user_id !== user?.id}
+                  onChooseBest={handleChooseBest}
+                  label={r.user_id ? memberLabels[r.user_id] : undefined}
                 />
               ))}
             </ul>

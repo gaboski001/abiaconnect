@@ -25,17 +25,20 @@ export interface NotificationRow {
 export function notifIcon(type: string) {
   switch (type) {
     case 'reply':
+    case 'thread_follow':
       return MessageSquare
     case 'mention':
       return AtSign
     case 'vote':
       return ThumbsUp
     case 'follow':
+    case 'connect_follow':
     case 'welcome_neighbour':
       return UserPlus
     case 'welcome':
       return PartyPopper
     case 'nudge':
+    case 'post_doing_well':
       return Sparkles
     case 'reward':
       return Gift

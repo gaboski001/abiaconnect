@@ -3,6 +3,7 @@ import { template as newDeviceLogin } from './new-device-login.tsx'
 import { template as birthdayGreeting } from './birthday-greeting.tsx'
 import { template as premiumInvite } from './premium-invite.tsx'
 import { template as supportAppeal } from './support-appeal.tsx'
+import { template as abiaThisWeek } from './abia-this-week.tsx'
 import { received as volunteerReceived, approved as volunteerApproved, declined as volunteerDeclined } from './volunteer.tsx'
 
 export interface TemplateEntry {
@@ -18,6 +19,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'birthday-greeting': birthdayGreeting,
   'premium-invite': premiumInvite,
   'support-appeal': supportAppeal,
+  'abia-this-week': abiaThisWeek,
   'volunteer-received': volunteerReceived,
   'volunteer-approved': volunteerApproved,
   'volunteer-declined': volunteerDeclined,

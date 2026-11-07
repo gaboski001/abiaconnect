@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { SlideCard, type HeroSlideLike } from './SlideCard'
 
-export function HeroSlider() {
+/** `compact` is a shorter banner, for the dashboard and other busy screens. */
+export function HeroSlider({ compact }: { compact?: boolean }) {
   const queryClient = useQueryClient()
   const { settings } = useSiteSettings()
 
@@ -76,15 +77,15 @@ export function HeroSlider() {
   if (allSlides.length === 1) {
     return (
       <section aria-label="Hero">
-        <SlideCard slide={allSlides[0]} />
+        <SlideCard slide={allSlides[0]} compact={compact} />
       </section>
     )
   }
 
-  return <HeroCarousel slides={allSlides} />
+  return <HeroCarousel slides={allSlides} compact={compact} />
 }
 
-function HeroCarousel({ slides }: { slides: HeroSlideLike[] }) {
+function HeroCarousel({ slides, compact }: { slides: HeroSlideLike[]; compact?: boolean }) {
   const { settings } = useSiteSettings()
   const prefersReduced =
     typeof window !== 'undefined' &&
@@ -169,7 +170,7 @@ function HeroCarousel({ slides }: { slides: HeroSlideLike[] }) {
               className="flex-[0_0_100%] min-w-0"
               aria-current={idx === selectedIndex ? 'true' : undefined}
             >
-              <SlideCard slide={slide} />
+              <SlideCard slide={slide} compact={compact} />
             </div>
           ))}
         </div>

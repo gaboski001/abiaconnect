@@ -1,7 +1,8 @@
+import { Fragment, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
-import { BarChart3, ChevronRight, Eye, Gift, Heart, MessageCircle, PenSquare, Pin, Sparkles, Vote } from 'lucide-react'
+import { BarChart3, Briefcase, CalendarDays, ChevronRight, Gift, Heart, PenSquare, Sparkles, Trophy, Vote } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { shownCount } from '@/lib/quietNumbers'
 import { useAuth } from '@/contexts/AuthContext'
@@ -14,7 +15,9 @@ import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
 import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
 import { StarterSteps, useWelcomeRedirect } from '@/components/engagement/StarterSteps'
 import { daysSince, useJourney } from '@/lib/journey'
-import { NewDiscussionsBanner, OnlineMembersPill } from '@/components/engagement/LiveCommunity'
+import { CommunityFeed } from '@/components/community/CommunityFeed'
+import { InviteCard, JoinInTodayCard, LgaOfTheMonthCard } from '@/components/community/CommunityCards'
+import { OnlineMembersPill } from '@/components/engagement/LiveCommunity'
 import { ContestCard } from '@/pages/Contests'
 import { contestPhase, listContests } from '@/lib/engagement'
 import { QuickPollCard } from '@/components/engagement/QuickPollCard'
@@ -32,24 +35,14 @@ interface Category {
   is_popular: boolean
 }
 
-interface FeedThread {
-  id: string
-  title: string
-  created_at: string
-  is_pinned: boolean
-  is_anonymous: boolean
-  view_count: number
-  author_id: string | null
-  reply_count: number
-  category: { name: string; icon: string | null } | null
-  author: { display_name: string | null; avatar_url: string | null } | null
-}
-
 const QUICK_ACTIONS = [
   { to: '/relationship', label: 'Connect', icon: Heart, tone: 'bg-pink-500/15 text-pink-600 dark:text-pink-300' },
+  { to: '/opportunities', label: 'Jobs', icon: Briefcase, tone: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' },
   { to: '/polls', label: 'Polls', icon: BarChart3, tone: 'bg-sky-500/15 text-sky-600 dark:text-sky-300' },
   { to: '/contests', label: 'Contests', icon: Vote, tone: 'bg-violet-500/15 text-violet-600 dark:text-violet-300' },
   { to: '/rewards', label: 'Rewards', icon: Gift, tone: 'bg-amber-500/15 text-amber-600 dark:text-amber-300' },
+  { to: '/events', label: 'Events', icon: CalendarDays, tone: 'bg-teal-500/15 text-teal-700 dark:text-teal-300' },
+  { to: '/leaderboard', label: 'Top members', icon: Trophy, tone: 'bg-orange-500/15 text-orange-600 dark:text-orange-300' },
 ]
 
 function greeting(): string {
@@ -109,134 +102,16 @@ export function NativeHome() {
       return (data ?? []) as { id: string; title: string; created_at: string }[]
     },
   })
-  const feedQ = useQuery({
-    queryKey: ['native-home-feed', newsdesk.data ?? null],
-    enabled: newsdesk.isFetched,
-    staleTime: 30_000,
-    queryFn: async (): Promise<FeedThread[]> => {
-      const { data, error } = await feedFilter(
-        supabase
-          .from('threads')
-          .select(
-            'id, title, created_at, is_pinned, is_anonymous, view_count, author_id, replies(count), categories(name, icon)',
-          )
-          .eq('is_deleted', false),
-        'community',
-        newsdesk.data ?? null,
-      )
-        .order('created_at', { ascending: false })
-        .limit(8)
-      if (error) throw error
-      const rows = (data ?? []) as unknown as Array<
-        Omit<FeedThread, 'reply_count' | 'category' | 'author'> & {
-          replies?: { count: number }[]
-          categories?: { name: string; icon: string | null } | { name: string; icon: string | null }[] | null
-        }
-      >
-      const ids = Array.from(
-        new Set(rows.filter((r) => !r.is_anonymous && r.author_id).map((r) => r.author_id as string)),
-      )
-      const profiles = new Map<string, { display_name: string | null; avatar_url: string | null }>()
-      if (ids.length) {
-        const { data: profs } = await supabase.rpc('get_public_profiles', { _ids: ids })
-        for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null; avatar_url: string | null }>) {
-          profiles.set(p.id, { display_name: p.display_name, avatar_url: p.avatar_url })
-        }
-      }
-      return rows.map((r) => ({
-        ...r,
-        reply_count: r.replies?.[0]?.count ?? 0,
-        category: Array.isArray(r.categories) ? r.categories[0] ?? null : r.categories ?? null,
-        author: !r.is_anonymous && r.author_id ? profiles.get(r.author_id) ?? null : null,
-      }))
-    },
-  })
-
-  return (
-    <div className="-mx-4 -mt-4 space-y-6">
-      {/* Welcome */}
-      <section
-        className="dark relative overflow-hidden rounded-b-[2rem] px-5 pb-6 pt-3 text-white shadow-lg"
-        style={{ backgroundImage: APP_HEADER_GRADIENT }}
-      >
-        <div
-          className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(248,195,1,0.28) 0%, rgba(248,195,1,0) 70%)' }}
-          aria-hidden
-        />
-        {user ? (
-          <>
-            <p className="text-[14px] font-medium text-white/75">{greeting()}</p>
-            <h1 className="mt-0.5 text-[26px] font-extrabold leading-tight tracking-tight text-white">
-              {firstDay ? `Welcome, ${firstName || 'friend'} 👋🏾` : firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
-            </h1>
-            <p className="mt-1.5 text-[15px] leading-6 text-white/80">
-              {firstDay ? 'Glad you’re here. Your first steps are just below.' : 'Catch up on what Abians are talking about today.'}
-            </p>
-            <OnlineMembersPill className="mt-3" />
-            <Link
-              to="/create-thread"
-              className="mt-5 flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-bold text-[#0B1F0B] active:scale-[0.98]"
-              style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
-            >
-              <PenSquare className="size-[18px]" />
-              Start a discussion
-            </Link>
-          </>
-        ) : (
-          <>
-            <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-amber-300">
-              <Sparkles className="size-4" /> Welcome to AbiaConnect
-            </p>
-            <h1 className="mt-1 text-[26px] font-extrabold leading-tight tracking-tight text-white">
-              The trusted digital home for Abians worldwide
-            </h1>
-            <p className="mt-1.5 text-[15px] leading-6 text-white/80">
-              Join conversations, meet professionals and stay informed.
-            </p>
-            <div className="mt-5 grid grid-cols-2 gap-2.5">
-              <Link
-                to="/register"
-                className="flex h-12 items-center justify-center rounded-xl text-[15px] font-bold text-[#0B1F0B]"
-                style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
-              >
-                Join free
-              </Link>
-              <Link
-                to="/login"
-                className="flex h-12 items-center justify-center rounded-xl border border-white/30 bg-white/10 text-[15px] font-semibold text-white"
-              >
-                Sign in
-              </Link>
-            </div>
-          </>
-        )}
-      </section>
-
-      {user ? (
-        <section className="px-4 empty:hidden">
-          <BirthdayGreeting />
-          <AddBirthdayPrompt />
-        </section>
-      ) : null}
-
-      {user ? (
-        <section className="grid grid-cols-4 gap-2 px-4" aria-label="Quick links">
-          {QUICK_ACTIONS.map((a) => (
-            <Link
-              key={a.to}
-              to={a.to}
-              className="flex flex-col items-center gap-1.5 rounded-2xl bg-card py-3 text-[12px] font-semibold text-foreground shadow-sm transition-transform active:scale-95"
-            >
-              <span className={`flex size-11 items-center justify-center rounded-2xl ${a.tone}`}>
-                <a.icon className="size-[22px]" />
-              </span>
-              {a.label}
-            </Link>
-          ))}
-        </section>
-      ) : null}
-
+  /**
+   * Other cards sit between the posts, as on a social feed. Whatever the feed is
+   * too short to reach still shows after its last post, so nothing is lost.
+   */
+  const slots: Array<ReactNode> = [
+    <section key="question" className="space-y-2 bg-transparent empty:hidden">
+      <QuestionOfTheDayCard compact />
+    </section>,
+    null,
+    <Fragment key="connect">
       <section className="px-4">
         <Link
           to={user ? '/relationship' : '/register'}
@@ -246,9 +121,9 @@ export function NativeHome() {
             <Heart className="size-7" fill="currentColor" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[17px] font-extrabold leading-tight">Meet someone new</span>
+            <span className="block text-[17px] font-extrabold leading-tight">Meet people from home</span>
             <span className="mt-0.5 block text-[13px] leading-snug text-white/90">
-              Swipe through Abians looking for friends and business partners.
+              Abians looking for work, business partners, friends and more.
             </span>
           </span>
           <ChevronRight className="size-5 shrink-0" />
@@ -257,32 +132,12 @@ export function NativeHome() {
 
       {user ? (
         <section className="px-4 empty:hidden">
-          <StarterSteps compact />
-        </section>
-      ) : null}
-
-      {user ? (
-        <section className="px-4 empty:hidden">
-          <WaitingForReplyCard compact />
-        </section>
-      ) : null}
-
-      <section className="px-4 empty:hidden">
-        <QuestionOfTheDayCard compact />
-      </section>
-
-      {user ? (
-        <section className="px-4">
-          <DailyRewardCard />
-        </section>
-      ) : null}
-
-      {user ? (
-        <section className="px-4 empty:hidden">
           <QuickPollCard compact />
         </section>
       ) : null}
-
+    </Fragment>,
+    null,
+    <Fragment key="vote">
       {openContests.length ? (
         <section className="px-4">
           <div className="mb-3 flex items-center justify-between">
@@ -301,11 +156,12 @@ export function NativeHome() {
         </section>
       ) : null}
 
-      {/* Admin announcements / featured */}
-      <section className="px-4">
-        <HeroSlider />
+      <section className="px-4 empty:hidden">
+        <LgaOfTheMonthCard />
       </section>
-
+    </Fragment>,
+    null,
+    <Fragment key="topics">
       {/* Topics */}
       <section className="px-4">
         <SectionHeader title="Browse topics" />
@@ -351,77 +207,6 @@ export function NativeHome() {
       </section>
 
       {/* Latest discussions */}
-      <section className="px-4">
-        <NewDiscussionsBanner queryKeys={[['native-home-feed']]} />
-        <SectionHeader title="From members" />
-        {feedQ.isPending ? (
-          <div className="space-y-2.5">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-[92px] animate-pulse rounded-2xl bg-muted" />
-            ))}
-          </div>
-        ) : feedQ.isError ? (
-          <ErrorCard onRetry={() => feedQ.refetch()} />
-        ) : !feedQ.data?.length ? (
-          <EmptyCard text="No posts from members yet. Be the first to start one." />
-        ) : (
-          <ul className="space-y-2.5">
-            {feedQ.data.map((t) => {
-              const name = t.is_anonymous ? 'Anonymous member' : t.author?.display_name || 'Member'
-              return (
-                <li key={t.id}>
-                  <Link
-                    to={`/thread/${t.id}`}
-                    className="block rounded-2xl bg-card p-4 shadow-sm transition-transform active:scale-[0.99]"
-                  >
-                    <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                      {t.category ? (
-                        <span className="inline-flex max-w-[55%] items-center gap-1 truncate rounded-full bg-muted px-2 py-0.5 font-medium text-foreground/80">
-                          <span aria-hidden>{t.category.icon ?? '💬'}</span>
-                          <span className="truncate">{t.category.name}</span>
-                        </span>
-                      ) : null}
-                      {t.is_pinned ? (
-                        <span className="inline-flex items-center gap-0.5 font-semibold text-amber-600 dark:text-amber-300">
-                          <Pin className="size-3" /> Pinned
-                        </span>
-                      ) : null}
-                      <span className="ml-auto shrink-0">
-                        {formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}
-                      </span>
-                    </div>
-                    <h3 className="mt-2 line-clamp-2 text-[15px] font-semibold leading-snug text-foreground">{t.title}</h3>
-                    <div className="mt-3 flex items-center gap-2 text-[12px] text-muted-foreground">
-                      <UserAvatar
-                        avatarUrl={t.author?.avatar_url}
-                        displayName={name}
-                        size="xs"
-                        className="h-5 w-5 border-0"
-                      />
-                      <span className="min-w-0 flex-1 truncate">{name}</span>
-                      {t.reply_count ? (
-                        <span className="inline-flex items-center gap-1">
-                          <MessageCircle className="size-3.5" /> {t.reply_count}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 font-semibold text-primary">
-                          <MessageCircle className="size-3.5" /> Reply first
-                        </span>
-                      )}
-                      {shownCount(t.view_count) ? (
-                        <span className="inline-flex items-center gap-1">
-                          <Eye className="size-3.5" /> {t.view_count}
-                        </span>
-                      ) : null}
-                    </div>
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </section>
-
       {newsQ.data?.length ? (
         <section className="px-4">
           <SectionHeader title="📰 Today's news" />
@@ -439,6 +224,122 @@ export function NativeHome() {
           </ul>
         </section>
       ) : null}
+      {user ? (
+        <section className="px-4 empty:hidden">
+          <InviteCard />
+        </section>
+      ) : null}
+    </Fragment>,
+  ]
+  const between = (i: number, total: number) => {
+    const shown = i === total - 1 ? slots.slice(Math.max(i, 0)) : [slots[i]]
+    return shown.some(Boolean) ? <div className="space-y-4 py-2">{shown}</div> : null
+  }
+
+  return (
+    <div className="-mx-4 -mt-4 space-y-2">
+      {/* Welcome */}
+      <section
+        className="dark relative overflow-hidden px-4 pb-14 pt-3 text-white"
+        style={{ backgroundImage: APP_HEADER_GRADIENT }}
+      >
+        <div
+          className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(248,195,1,0.28) 0%, rgba(248,195,1,0) 70%)' }}
+          aria-hidden
+        />
+        {user ? (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h1 className="text-[20px] font-extrabold leading-tight tracking-tight text-white">
+              {firstDay ? `Welcome, ${firstName || 'friend'} 👋🏾` : `${greeting()}${firstName ? `, ${firstName}` : ''}`}
+            </h1>
+            <OnlineMembersPill />
+          </div>
+        ) : (
+          <>
+            <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-amber-300">
+              <Sparkles className="size-4" /> Welcome to AbiaConnect
+            </p>
+            <h1 className="mt-1 text-[26px] font-extrabold leading-tight tracking-tight text-white">
+              The trusted digital home for Abians worldwide
+            </h1>
+            <p className="mt-1.5 text-[15px] leading-6 text-white/80">
+              Join conversations, meet professionals and stay informed.
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-2.5">
+              <Link
+                to="/register"
+                className="flex h-12 items-center justify-center rounded-xl text-[15px] font-bold text-[#0B1F0B]"
+                style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
+              >
+                Join free
+              </Link>
+              <Link
+                to="/login"
+                className="flex h-12 items-center justify-center rounded-xl border border-white/30 bg-white/10 text-[15px] font-semibold text-white"
+              >
+                Sign in
+              </Link>
+            </div>
+          </>
+        )}
+      </section>
+
+      {user ? (
+        <section className="relative z-10 -mt-12 px-4">
+          <div className="rounded-2xl bg-card p-3 shadow-md">
+            <Link to="/create-thread" className="flex items-center gap-3">
+              <UserAvatar avatarUrl={profile?.avatar_url} displayName={profile?.display_name ?? 'You'} size="md" className="size-11" />
+              <span className="min-w-0 flex-1 truncate rounded-full border border-border bg-muted/50 px-4 py-2.5 text-[14px] text-muted-foreground">
+                What’s on your mind{firstName ? `, ${firstName}` : ''}?
+              </span>
+            </Link>
+            <Link
+              to="/create-thread"
+              className="mt-3 flex h-11 items-center justify-center gap-2 rounded-xl text-[15px] font-bold text-[#1E1800]"
+              style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
+            >
+              <PenSquare className="size-[18px]" />
+              Start a discussion
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
+      {/* Announcements and promotions (managed by admins) */}
+      <section className="px-4">
+        <HeroSlider compact />
+      </section>
+
+      {user ? (
+        <section className="flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]" aria-label="Quick links">
+          {QUICK_ACTIONS.map((a) => (
+            <Link
+              key={a.to}
+              to={a.to}
+              className="flex w-[76px] shrink-0 flex-col items-center gap-1.5 rounded-2xl bg-card py-3 text-center text-[12px] font-semibold text-foreground shadow-sm"
+            >
+              <span className={`flex size-11 items-center justify-center rounded-2xl ${a.tone}`}>
+                <a.icon className="size-[22px]" />
+              </span>
+              {a.label}
+            </Link>
+          ))}
+        </section>
+      ) : null}
+
+      {user ? (
+        <section className="space-y-2 px-4 empty:hidden">
+          <BirthdayGreeting />
+          <AddBirthdayPrompt />
+          <StarterSteps compact />
+          <WaitingForReplyCard compact />
+          <DailyRewardCard />
+          <JoinInTodayCard />
+        </section>
+      ) : null}
+
+      <CommunityFeed between={between} />
     </div>
   )
 }
