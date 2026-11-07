@@ -13,7 +13,7 @@ const banner = {
 }
 
 describe('SlideCard full banner', () => {
-  it('shows the designed image in full: wide on computers, portrait on phones, linking to sign-up', () => {
+  it('shows the wide designed image in full on every screen, in a short strip on phones, linking to sign-up', () => {
     const { container } = render(
       <MemoryRouter>
         <SlideCard slide={banner} />
@@ -22,9 +22,8 @@ describe('SlideCard full banner', () => {
     const img = screen.getByRole('img', { name: banner.title })
     expect(img).toHaveAttribute('src', banner.image_url)
     expect(img.className).not.toMatch(/opacity-20/)
-    const source = container.querySelector('source')
-    expect(source).toHaveAttribute('media', '(max-width: 767px)')
-    expect(source).toHaveAttribute('srcset', banner.mobile_image_url)
+    expect(container.querySelector('source')).toBeNull()
+    expect(img.parentElement?.className).toMatch(/max-sm:h-\[172px\]/)
     expect(screen.getByRole('link')).toHaveAttribute('href', '/register')
     expect(screen.queryByText('Advertisement')).not.toBeInTheDocument()
   })
