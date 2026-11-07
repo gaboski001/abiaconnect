@@ -1,33 +1,28 @@
 package com.abiaconnect.app;
 
-import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.webkit.JavascriptInterface;
 
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import org.json.JSONObject;
 
 public class MainActivity extends BaseActivity {
-    private static final int NOTIFICATION_PERMISSION_CODE = 100;
 
     private BroadcastReceiver hangupReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        requestNotificationPermission();
         installCallJsBridge();
         registerHangupReceiver();
         handleNotificationIntent(getIntent());
@@ -47,19 +42,6 @@ public class MainActivity extends BaseActivity {
             hangupReceiver = null;
         }
         super.onDestroy();
-    }
-
-    private void requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                    NOTIFICATION_PERMISSION_CODE
-                );
-            }
-        }
     }
 
     private void handleNotificationIntent(Intent intent) {
