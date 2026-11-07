@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useProfile } from '@/hooks/useProfile'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { Button } from '@/components/ui/button'
-import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
+import { APP_HEADER_GRADIENT, GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { SiteLogo } from '@/components/layout/SiteLogo'
 import { MobileSideNav } from './MobileSideNav'
 import { isNativeApp } from './NativeAuthLayout'
@@ -32,7 +32,7 @@ function NativeTopBar() {
   }
 
   return (
-    <header className="md:hidden sticky top-0 z-50 border-b border-white/[0.08] bg-[rgba(8,13,23,0.94)] backdrop-blur-xl">
+    <header className="md:hidden sticky top-0 z-50" style={{ backgroundImage: APP_HEADER_GRADIENT }}>
       <div className="flex h-14 items-center gap-2 px-2">
         {screen.kind === 'home' ? (
           <Link to="/" className="ml-2 flex min-w-0 items-center" aria-label={`${siteName} home`}>

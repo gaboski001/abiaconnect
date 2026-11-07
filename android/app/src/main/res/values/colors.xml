@@ -14,14 +14,14 @@
     <color name="notification_color">#F8C301</color>
 
     <!-- App Theme Colors (Light Mode) -->
-    <color name="colorPrimary">#1CA9D9</color>
-    <color name="colorPrimaryDark">#1CA9D9</color>
+    <color name="colorPrimary">#0B3D1E</color>
+    <color name="colorPrimaryDark">#0B3D1E</color>
     <color name="colorAccent">#F8C301</color>
     <color name="windowBackground">#F7F5EF</color>
     <color name="navigationBarColor">#FFFFFF</color>
 
     <!-- UI Color Mapping -->
-    <color name="status_bar_color">#1CA9D9</color>
+    <color name="status_bar_color">#0B3D1E</color>
     <!-- Same navy in light and dark mode: matches the logo, the web launch cover and the intro. -->
     <color name="splash_background">#0B1220</color>
     <color name="ic_launcher_background">#000000</color>

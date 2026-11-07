@@ -13,9 +13,11 @@ import {
 interface Props {
   disabled?: boolean
   onSend: (file: File, durationMs: number) => void
+  /** Extra classes for the idle mic button. */
+  className?: string
 }
 
-export function VoiceRecorderButton({ disabled, onSend }: Props) {
+export function VoiceRecorderButton({ disabled, onSend, className }: Props) {
   const [recording, setRecording] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [level, setLevel] = useState(0)
@@ -116,6 +118,7 @@ export function VoiceRecorderButton({ disabled, onSend }: Props) {
         type="button"
         variant="ghost"
         size="icon"
+        className={className}
         onClick={start}
         disabled={disabled || busy}
         aria-label="Record voice note"

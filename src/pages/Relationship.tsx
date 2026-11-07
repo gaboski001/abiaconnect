@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { Heart, MessageCircle, Sparkles, X, LayoutGrid, Layers, MapPin, Pencil, Filter, RefreshCw, AlertCircle, Crown, ChevronDown } from 'lucide-react'
+import { Hand, Heart, MessageCircle, Sparkles, X, LayoutGrid, Layers, MapPin, Pencil, Filter, RefreshCw, AlertCircle, Crown, ChevronDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from '@/lib/toast'
@@ -26,6 +26,7 @@ import { t } from '@/lib/monetization/strings'
 import { PaywallDialog } from '@/components/dating/PaywallDialog'
 import { MatchDialog, type MatchPartner } from '@/components/dating/MatchDialog'
 import { HowItWorks } from '@/components/dating/HowItWorks'
+import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { PrivacySettingsDialog } from '@/components/dating/PrivacySettingsDialog'
 import { useStartDatingChat } from '@/hooks/useStartDatingChat'
 
@@ -346,7 +347,8 @@ export default function Relationship() {
         </nav>
       </header>
 
-      {user && <HowItWorks />}
+      {/* The app teaches the swipe on the card itself, so the card stays on screen. */}
+      {user && !isNativeApp() && <HowItWorks />}
 
       {user && myProfile === null && (
         <section className="mb-4 flex flex-col items-start gap-3 rounded-2xl border border-pink-500/30 bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -363,7 +365,7 @@ export default function Relationship() {
       )}
 
       {user && (
-        <div className="mb-5 rounded-2xl border border-border bg-card/60 p-3">
+        <div className="mb-5 rounded-2xl border border-border bg-card/60 p-3 native:mb-3 native:border-0 native:bg-transparent native:p-0">
           <div className="flex items-center justify-between gap-2 sm:mb-2">
             {/* Phones: filters collapse behind this toggle to keep the cards on screen. */}
             <button
@@ -790,7 +792,7 @@ function DiscoverView({ cards: allCards }: { cards: RelationshipCard[] }) {
 
   return (
     <div className="mx-auto max-w-md">
-      <SwipeDeck card={current} direction={direction} disabled={busy} onSwipe={react} />
+      <SwipeDeck card={current} direction={direction} disabled={busy} hasMore={remaining > 1} onSwipe={react} />
 
       <div className="mt-4 flex items-center justify-center gap-4 sm:mt-5">
         <button
@@ -839,6 +841,7 @@ function DiscoverView({ cards: allCards }: { cards: RelationshipCard[] }) {
 
 const SWIPE_DISTANCE = 110
 const SWIPE_VELOCITY = 700
+const SWIPE_COACHED_KEY = 'abia:swipe-coached'
 
 /**
  * The current Discover card. Drag right to like, left to pass (touch or
@@ -848,20 +851,58 @@ function SwipeDeck({
   card,
   direction,
   disabled,
+  hasMore,
   onSwipe,
 }: {
   card: RelationshipCard
   direction: 'like' | 'pass'
   disabled: boolean
+  hasMore: boolean
   onSwipe: (kind: 'like' | 'pass') => void
 }) {
+  const [coached, setCoached] = useState(() => {
+    try {
+      return localStorage.getItem(SWIPE_COACHED_KEY) === '1'
+    } catch {
+      return true
+    }
+  })
+  // Any reaction (a swipe or a button) means the member has got it.
+  const firstCard = useRef(card.id)
+  useEffect(() => {
+    if (coached || card.id === firstCard.current) return
+    setCoached(true)
+    try {
+      localStorage.setItem(SWIPE_COACHED_KEY, '1')
+    } catch {
+      /* private mode: the hint just comes back next visit */
+    }
+  }, [card.id, coached])
+
   return (
     // Phones: cap the height so the card and the like/pass buttons fit on one
     // screen; larger screens keep the classic 3:4 card.
-    <div className="relative h-[min(calc((100vw-1.5rem)*4/3),47svh)] w-full sm:h-auto sm:aspect-[3/4]">
+    <div className="relative h-[min(calc((100vw-1.5rem)*4/3),47svh)] w-full native:h-[min(calc((100vw-2rem)*4/3),calc(100svh-24.5rem))] sm:h-auto sm:aspect-[3/4]">
+      {hasMore && (
+        <div
+          className="absolute inset-x-3 -bottom-2 h-16 rounded-3xl border border-border bg-gradient-to-br from-pink-200 to-rose-200 dark:from-pink-900 dark:to-rose-950"
+          aria-hidden
+        />
+      )}
       <AnimatePresence initial={false} custom={direction}>
         <SwipeCard key={card.id} card={card} disabled={disabled} onSwipe={onSwipe} />
       </AnimatePresence>
+      {!coached && (
+        <div className="pointer-events-none absolute inset-x-0 top-1/3 z-10 flex justify-center" aria-hidden>
+          <motion.span
+            className="inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-[13px] font-bold text-white shadow-lg"
+            animate={{ x: [0, 22, 0, -22, 0] }}
+            transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <Hand className="size-4" /> Swipe the card
+          </motion.span>
+        </div>
+      )}
     </div>
   )
 }
@@ -897,7 +938,7 @@ function SwipeCard({
 
   return (
     <motion.div
-      className="absolute inset-0 cursor-grab touch-pan-y overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-pink-500/20 to-rose-600/20 shadow-2xl active:cursor-grabbing"
+      className="absolute inset-0 cursor-grab touch-pan-y overflow-hidden rounded-3xl [-webkit-touch-callout:none] border border-border bg-gradient-to-br from-pink-500/20 to-rose-600/20 shadow-2xl active:cursor-grabbing"
       style={{ x, rotate }}
       variants={cardVariants}
       initial="enter"
@@ -917,7 +958,14 @@ function SwipeCard({
             : info.offset.x < -SWIPE_DISTANCE || info.velocity.x < -SWIPE_VELOCITY
               ? 'pass'
               : null
-        if (kind) onSwipe(kind)
+        if (kind) {
+          try {
+            navigator.vibrate?.(15)
+          } catch {
+            /* noop */
+          }
+          onSwipe(kind)
+        }
         // Let the click that ends a drag be ignored by the profile link.
         setTimeout(() => {
           dragged.current = false

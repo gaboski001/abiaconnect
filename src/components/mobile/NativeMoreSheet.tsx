@@ -146,7 +146,7 @@ export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenC
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="dark max-h-[88dvh] overflow-y-auto overscroll-contain rounded-t-[28px] border-white/10 bg-[#0B1220] p-0 text-slate-50 [&>button]:right-5 [&>button]:top-5 [&>button]:rounded-full [&>button]:bg-white/10 [&>button]:p-1.5 [&>button]:text-slate-200 [&>button]:opacity-100"
+        className="dark max-h-[88dvh] overflow-y-auto overscroll-contain rounded-t-[28px] border-white/10 bg-[#0B1F0B] p-0 text-slate-50 [&>button]:right-5 [&>button]:top-5 [&>button]:rounded-full [&>button]:bg-white/10 [&>button]:p-1.5 [&>button]:text-slate-200 [&>button]:opacity-100"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 1rem)' }}
         // Don't jump focus to the close button (it showed a focus ring on open).
         onOpenAutoFocus={(e) => e.preventDefault()}

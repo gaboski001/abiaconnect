@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
-import { ChevronRight, Eye, MessageCircle, PenSquare, Pin, Sparkles } from 'lucide-react'
+import { BarChart3, ChevronRight, Eye, Gift, Heart, MessageCircle, PenSquare, Pin, Sparkles, Vote } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { shownCount } from '@/lib/quietNumbers'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProfile } from '@/hooks/useProfile'
 import { HeroSlider } from '@/components/forum/HeroSlider'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
+import { APP_HEADER_GRADIENT, GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
 import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
 import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
@@ -44,6 +44,13 @@ interface FeedThread {
   category: { name: string; icon: string | null } | null
   author: { display_name: string | null; avatar_url: string | null } | null
 }
+
+const QUICK_ACTIONS = [
+  { to: '/relationship', label: 'Connect', icon: Heart, tone: 'bg-pink-500/15 text-pink-600 dark:text-pink-300' },
+  { to: '/polls', label: 'Polls', icon: BarChart3, tone: 'bg-sky-500/15 text-sky-600 dark:text-sky-300' },
+  { to: '/contests', label: 'Contests', icon: Vote, tone: 'bg-violet-500/15 text-violet-600 dark:text-violet-300' },
+  { to: '/rewards', label: 'Rewards', icon: Gift, tone: 'bg-amber-500/15 text-amber-600 dark:text-amber-300' },
+]
 
 function greeting(): string {
   const h = new Date().getHours()
@@ -146,26 +153,27 @@ export function NativeHome() {
   })
 
   return (
-    <div className="-mx-4 -mt-4 space-y-7">
+    <div className="-mx-4 -mt-4 space-y-6">
       {/* Welcome */}
-      <section className="relative overflow-hidden px-4 pb-1 pt-6">
+      <section
+        className="dark relative overflow-hidden rounded-b-[2rem] px-5 pb-6 pt-3 text-white shadow-lg"
+        style={{ backgroundImage: APP_HEADER_GRADIENT }}
+      >
         <div
-          className="pointer-events-none absolute -right-16 -top-24 size-64 rounded-full blur-3xl"
-          style={{ background: 'rgba(248,195,1,0.10)' }}
+          className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(248,195,1,0.28) 0%, rgba(248,195,1,0) 70%)' }}
           aria-hidden
         />
         {user ? (
           <>
-            <p className="text-[14px] font-medium text-muted-foreground">{greeting()}</p>
-            <h1 className="mt-0.5 text-[26px] font-extrabold leading-tight tracking-tight text-foreground">
+            <p className="text-[14px] font-medium text-white/75">{greeting()}</p>
+            <h1 className="mt-0.5 text-[26px] font-extrabold leading-tight tracking-tight text-white">
               {firstDay ? `Welcome, ${firstName || 'friend'} 👋🏾` : firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
             </h1>
-            <p className="mt-1.5 text-[15px] leading-6 text-muted-foreground">
+            <p className="mt-1.5 text-[15px] leading-6 text-white/80">
               {firstDay ? 'Glad you’re here. Your first steps are just below.' : 'Catch up on what Abians are talking about today.'}
             </p>
             <OnlineMembersPill className="mt-3" />
-            <BirthdayGreeting className="mt-4" />
-            <AddBirthdayPrompt className="mt-4" />
             <Link
               to="/create-thread"
               className="mt-5 flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-bold text-[#0B1F0B] active:scale-[0.98]"
@@ -177,13 +185,13 @@ export function NativeHome() {
           </>
         ) : (
           <>
-            <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-amber-500 dark:text-amber-300">
+            <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-amber-300">
               <Sparkles className="size-4" /> Welcome to AbiaConnect
             </p>
-            <h1 className="mt-1 text-[26px] font-extrabold leading-tight tracking-tight text-foreground">
+            <h1 className="mt-1 text-[26px] font-extrabold leading-tight tracking-tight text-white">
               The trusted digital home for Abians worldwide
             </h1>
-            <p className="mt-1.5 text-[15px] leading-6 text-muted-foreground">
+            <p className="mt-1.5 text-[15px] leading-6 text-white/80">
               Join conversations, meet professionals and stay informed.
             </p>
             <div className="mt-5 grid grid-cols-2 gap-2.5">
@@ -196,13 +204,55 @@ export function NativeHome() {
               </Link>
               <Link
                 to="/login"
-                className="flex h-12 items-center justify-center rounded-xl border border-border bg-card text-[15px] font-semibold text-foreground"
+                className="flex h-12 items-center justify-center rounded-xl border border-white/30 bg-white/10 text-[15px] font-semibold text-white"
               >
                 Sign in
               </Link>
             </div>
           </>
         )}
+      </section>
+
+      {user ? (
+        <section className="px-4 empty:hidden">
+          <BirthdayGreeting />
+          <AddBirthdayPrompt />
+        </section>
+      ) : null}
+
+      {user ? (
+        <section className="grid grid-cols-4 gap-2 px-4" aria-label="Quick links">
+          {QUICK_ACTIONS.map((a) => (
+            <Link
+              key={a.to}
+              to={a.to}
+              className="flex flex-col items-center gap-1.5 rounded-2xl bg-card py-3 text-[12px] font-semibold text-foreground shadow-sm transition-transform active:scale-95"
+            >
+              <span className={`flex size-11 items-center justify-center rounded-2xl ${a.tone}`}>
+                <a.icon className="size-[22px]" />
+              </span>
+              {a.label}
+            </Link>
+          ))}
+        </section>
+      ) : null}
+
+      <section className="px-4">
+        <Link
+          to={user ? '/relationship' : '/register'}
+          className="relative flex items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-pink-600 to-rose-500 p-4 text-white shadow-lg transition-transform active:scale-[0.98]"
+        >
+          <span className="flex size-14 shrink-0 rotate-[-6deg] items-center justify-center rounded-2xl bg-white/20">
+            <Heart className="size-7" fill="currentColor" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[17px] font-extrabold leading-tight">Meet someone new</span>
+            <span className="mt-0.5 block text-[13px] leading-snug text-white/90">
+              Swipe through Abians looking for friends and business partners.
+            </span>
+          </span>
+          <ChevronRight className="size-5 shrink-0" />
+        </Link>
       </section>
 
       {user ? (
@@ -278,7 +328,7 @@ export function NativeHome() {
                 <Link
                   key={c.id}
                   to={href}
-                  className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 transition-colors active:bg-muted"
+                  className="flex items-center gap-3 rounded-2xl bg-card p-3 shadow-sm transition-transform active:scale-[0.98]"
                 >
                   <span
                     className="flex size-11 shrink-0 items-center justify-center rounded-xl text-xl"
@@ -322,7 +372,7 @@ export function NativeHome() {
                 <li key={t.id}>
                   <Link
                     to={`/thread/${t.id}`}
-                    className="block rounded-2xl border border-border bg-card p-4 transition-colors active:bg-muted"
+                    className="block rounded-2xl bg-card p-4 shadow-sm transition-transform active:scale-[0.99]"
                   >
                     <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
                       {t.category ? (

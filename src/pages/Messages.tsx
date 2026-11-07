@@ -1,5 +1,6 @@
 import { FormEvent, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { APP_HEADER_GRADIENT, GOLD_GRADIENT } from '@/lib/mobileBrand'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
 import {
@@ -33,6 +34,7 @@ import {
   Video,
   BellOff,
   Bell,
+  ShieldCheck,
 } from 'lucide-react'
 import {
   AlertDialog,
@@ -207,10 +209,7 @@ function MessageAttachment({ m, mine, native }: { m: Message; mine: boolean; nat
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className={cn(
-          'block overflow-hidden rounded-lg',
-          native && 'ring-1 ring-white/10 bg-black/20',
-        )}
+        className="block overflow-hidden rounded-lg"
       >
         <img
           src={url}
@@ -231,16 +230,14 @@ function MessageAttachment({ m, mine, native }: { m: Message; mine: boolean; nat
         download={m.attachment_name || undefined}
         className={cn(
           'flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-colors',
-          native
-            ? mine
-              ? 'bg-black/25 text-white/95 hover:bg-black/35'
-              : 'bg-white/5 text-white/95 hover:bg-white/10'
+          native && mine
+            ? 'bg-black/25 text-white/95 hover:bg-black/35'
             : mine
               ? 'bg-secondary-foreground/10'
               : 'bg-background/60',
         )}
       >
-        <FileText className={cn('h-4 w-4 shrink-0', native && 'text-emerald-300')} />
+        <FileText className={cn('h-4 w-4 shrink-0', native && mine && 'text-emerald-300')} />
         <span className="truncate flex-1">{m.attachment_name || 'Attachment'}</span>
         <Download className="h-3.5 w-3.5 shrink-0 opacity-70" />
       </a>
@@ -266,6 +263,7 @@ function ConversationRow({
   const qc = useQueryClient()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const native = isNativeApp()
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirm, setConfirm] = useState<null | 'clear' | 'delete'>(null)
 
@@ -288,6 +286,7 @@ function ConversationRow({
     <div
       className={cn(
         'group relative flex items-start gap-3 px-3 py-3 border-l-4 hover:bg-muted/50 transition-colors',
+        'native:mx-3 native:mb-2.5 native:items-center native:rounded-2xl native:border-l-0 native:bg-card native:p-3 native:shadow-sm',
         active ? 'border-secondary bg-secondary/5' : 'border-transparent',
       )}
     >
@@ -297,24 +296,29 @@ function ConversationRow({
         aria-label={`Open conversation with ${c.other_user?.display_name || c.other_user?.username || 'user'}`}
       />
       <div className="relative z-[1] pointer-events-none">
-        <Avatar profile={c.other_user} />
+        <Avatar profile={c.other_user} size={native ? 'lg' : 'md'} />
+        {native && !!c.unread_count && (
+          <span className="absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white ring-2 ring-card">
+            {c.unread_count > 99 ? '99+' : c.unread_count}
+          </span>
+        )}
       </div>
       <div className="relative z-[1] min-w-0 flex-1 pointer-events-none">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-semibold truncate flex items-center gap-1">
+          <span className="text-sm font-semibold truncate flex items-center gap-1 native:text-[16px] native:font-bold">
             {pinned && <Pin className="h-3 w-3 text-muted-foreground shrink-0" />}
             {c.other_user?.display_name || c.other_user?.username || 'User'}
           </span>
-          <span className="text-[10px] text-muted-foreground shrink-0">
+          <span className="text-[10px] text-muted-foreground shrink-0 native:text-[12px] native:font-medium">
             {c.last_message_at &&
-              formatDistanceToNow(new Date(c.last_message_at), { addSuffix: false })}
+              (native ? listTime(c.last_message_at) : formatDistanceToNow(new Date(c.last_message_at), { addSuffix: false }))}
           </span>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground truncate">
+          <p className={cn('text-xs text-muted-foreground truncate native:mt-0.5 native:text-[14px]', !!c.unread_count && 'native:font-semibold native:text-foreground')}>
             {previewText(c.last_message)}
           </p>
-          {!!c.unread_count && (
+          {!native && !!c.unread_count && (
             <span className="text-[10px] font-bold bg-secondary text-secondary-foreground rounded-full px-1.5 min-w-[18px] text-center">
               {c.unread_count}
             </span>
@@ -326,7 +330,7 @@ function ConversationRow({
           <button
             type="button"
             aria-label="Conversation actions"
-            className="relative z-[2] h-8 w-8 shrink-0 grid place-items-center rounded-full text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-muted transition-opacity data-[state=open]:opacity-100"
+            className="relative z-[2] h-8 w-8 shrink-0 grid place-items-center rounded-full text-muted-foreground opacity-0 native:opacity-100 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-muted transition-opacity data-[state=open]:opacity-100"
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
@@ -494,6 +498,7 @@ export default function Messages() {
   const [search, setSearch] = useState('')
   const [newOpen, setNewOpen] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [listTab, setListTab] = useState<'chats' | 'calls'>('chats')
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null)
 
   const convosQ = useQuery({
@@ -608,40 +613,85 @@ export default function Messages() {
     [convosQ.data, conversationId],
   )
 
+  const native = isNativeApp()
+  const newMessage = (
+    <Dialog open={newOpen} onOpenChange={setNewOpen}>
+      <DialogTrigger asChild>
+        {native ? (
+          <button
+            type="button"
+            aria-label="New message"
+            className="flex size-14 items-center justify-center rounded-2xl text-[#0B1F0B] shadow-xl transition-transform active:scale-95"
+            style={{ backgroundImage: GOLD_GRADIENT }}
+          >
+            <MessageSquarePlus className="size-6" />
+          </button>
+        ) : (
+          <Button size="icon" variant="ghost" aria-label="New message">
+            <MessageSquarePlus className="h-5 w-5" />
+          </Button>
+        )}
+      </DialogTrigger>
+      <NewMessageDialog onClose={() => setNewOpen(false)} />
+    </Dialog>
+  )
+
   return (
     <>
       <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
-    <div className={cn('container mx-auto px-0 md:px-4 py-0 md:py-6', isNativeApp() && conversationId && 'h-full max-w-full p-0', isNativeApp() && !conversationId && '-mx-4 -mt-4 -mb-28')}>
+    <div className={cn('container mx-auto px-0 md:px-4 py-0 md:py-6', isNativeApp() && conversationId && 'h-full max-w-full p-0', isNativeApp() && !conversationId && '-mx-4 -mt-4 -mb-28 !w-auto !max-w-none')}>
       <div className={cn('md:rounded-2xl md:border md:bg-card overflow-hidden flex bg-gradient-to-b from-background to-muted/30 transition-[height] duration-150', isNativeApp() && conversationId ? 'h-full md:h-[calc(100vh-8rem)]' : isNativeApp() ? 'h-[calc(100dvh-var(--kb-inset,0px)-7.5rem-env(safe-area-inset-bottom))]' : 'h-[calc(100dvh-var(--kb-inset,0px)-3.5rem)] md:h-[calc(100vh-8rem)]')}>
 
 
         {/* LEFT */}
         <aside
           className={cn(
-            'w-full md:w-80 border-r flex-col bg-background native:border-r-0',
+            'relative w-full md:w-80 border-r flex-col bg-background native:border-r-0',
             conversationId ? 'hidden md:flex' : 'flex',
           )}
         >
-          <div className="p-4 border-b flex items-center justify-between gap-2 native:justify-end native:border-b-0 native:px-3 native:pb-0 native:pt-3">
-            <h1 className="text-lg font-bold native:hidden">Messages</h1>
-            <Dialog open={newOpen} onOpenChange={setNewOpen}>
-              <DialogTrigger asChild>
-                <Button size="icon" variant="ghost" aria-label="New message" className="native:w-auto native:gap-2 native:rounded-full native:bg-amber-400/15 native:px-4 native:font-semibold native:text-amber-600 dark:native:text-amber-300">
-                  <MessageSquarePlus className="h-5 w-5" />
-                  <span className="hidden native:inline">New message</span>
-                </Button>
-              </DialogTrigger>
-              <NewMessageDialog onClose={() => setNewOpen(false)} />
-            </Dialog>
-          </div>
-          <div className="p-3 border-b space-y-2">
+          {native ? (
+            <div
+              className="flex items-center gap-7 px-5"
+              style={{ backgroundImage: APP_HEADER_GRADIENT }}
+              role="tablist"
+              aria-label="Messages and calls"
+            >
+              {(['chats', 'calls'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={listTab === tab}
+                  onClick={() => setListTab(tab)}
+                  className={cn(
+                    'relative pb-3 pt-1 text-[17px] transition-colors',
+                    listTab === tab ? 'font-extrabold text-white' : 'font-semibold text-white/60',
+                  )}
+                >
+                  {tab === 'chats' ? 'Chats' : 'Calls'}
+                  {listTab === tab && <span className="absolute inset-x-0 bottom-0 h-[3px] rounded-full bg-amber-300" aria-hidden />}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 border-b flex items-center justify-between gap-2">
+              <h1 className="text-lg font-bold">Messages</h1>
+              {newMessage}
+            </div>
+          )}
+          {listTab === 'calls' ? (
+            <CallHistory conversations={convosQ.data ?? []} loading={convosQ.isLoading} />
+          ) : (
+            <>
+          <div className="p-3 border-b space-y-2 native:border-b-0">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search conversations..."
-                className="pl-9"
+                className="pl-9 native:h-11 native:rounded-full native:border-0 native:bg-card native:shadow-sm"
               />
             </div>
             {archivedList.length > 0 && (
@@ -657,13 +707,30 @@ export default function Messages() {
               </button>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto native:pb-24">
             {convosQ.isLoading ? (
-              <div className="p-4 text-sm text-muted-foreground">Loading…</div>
+              native ? (
+                <ListSkeleton />
+              ) : (
+                <div className="p-4 text-sm text-muted-foreground">Loading…</div>
+              )
             ) : filteredConvos.length === 0 ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">
-                {showArchived ? 'No archived chats.' : 'No conversations yet.'}
-              </div>
+              native && !showArchived && !search.trim() ? (
+                <div className="px-8 py-12 text-center">
+                  <span className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-amber-500/15 text-amber-600 dark:text-amber-300">
+                    <MessageSquarePlus className="size-8" />
+                  </span>
+                  <p className="mt-4 text-[17px] font-bold">No chats yet</p>
+                  <p className="mt-1 text-[14px] text-muted-foreground">Say hello to someone, or find new people on Connect.</p>
+                  <Button asChild className="mt-5 rounded-full">
+                    <Link to="/relationship">Meet people</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="p-6 text-center text-sm text-muted-foreground">
+                  {showArchived ? 'No archived chats.' : 'No conversations yet.'}
+                </div>
+              )
             ) : (
               filteredConvos.map((c) => (
                 <ConversationRow
@@ -677,6 +744,9 @@ export default function Messages() {
               ))
             )}
           </div>
+            </>
+          )}
+          {native && <div className="absolute bottom-4 right-4 z-10">{newMessage}</div>}
         </aside>
 
         {/* RIGHT */}
@@ -1416,13 +1486,86 @@ function ConversationView({
   }, [messagesQ.data])
 
   const native = isNativeApp()
+  const otherName = other?.display_name || other?.username || 'user'
+  const toolClass = (tone: string) => (native ? cn('h-11 w-11 rounded-2xl transition-transform active:scale-90', tone) : undefined)
+  const toolButtons = (
+    <>
+          <input
+            ref={fileRef}
+            type="file"
+            className="hidden"
+            accept="image/*,application/pdf,.doc,.docx,.txt,.zip"
+            onChange={(e) => handleFilePick(e.target.files?.[0] ?? null)}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={toolClass('bg-sky-500/15 text-sky-600 hover:bg-sky-500/25 dark:text-sky-300')}
+            onClick={() => fileRef.current?.click()}
+            aria-label="Attach file"
+          >
+            <Paperclip className="h-5 w-5" />
+          </Button>
+          {user && (
+            <VoiceRecorderButton
+              disabled={!conversationId}
+              className={toolClass('bg-violet-500/15 text-violet-600 hover:bg-violet-500/25 dark:text-violet-300')}
+              onSend={(file) => {
+                uploadQueue.enqueue({
+                  conversationId,
+                  senderId: user.id,
+                  content: '',
+                  file,
+                })
+              }}
+            />
+          )}
+          <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={toolClass('bg-amber-500/15 text-amber-600 hover:bg-amber-500/25 dark:text-amber-300')}
+                aria-label="Add emoji"
+              >
+                <Smile className="h-5 w-5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="start"
+              side="top"
+              className="p-0 border-0 w-auto bg-transparent shadow-none"
+            >
+              <Suspense
+                fallback={
+                  <div className="h-80 w-72 flex items-center justify-center rounded-lg border bg-popover">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                }
+              >
+                <EmojiPicker
+                  lazyLoadEmojis
+                  width={300}
+                  height={360}
+                  onEmojiClick={(d) => {
+                    insertEmoji(d.emoji)
+                    setEmojiOpen(false)
+                  }}
+                />
+              </Suspense>
+            </PopoverContent>
+          </Popover>
+    </>
+  )
   return (
     <>
       <div
         className={cn(
           'sticky top-0 z-10 border-b backdrop-blur-xl backdrop-saturate-150 shadow-[0_1px_0_0_hsl(var(--border))]',
           native
-            ? 'bg-[#1f2c33] text-white border-black/40 pt-[max(0,env(safe-area-inset-top))]'
+            ? 'bg-card pt-[max(0,env(safe-area-inset-top))]'
             : 'bg-background/85 supports-[backdrop-filter]:bg-background/70',
         )}
       >
@@ -1430,19 +1573,19 @@ function ConversationView({
         <Button
           variant="ghost"
           size="icon"
-          className={cn('md:hidden -ml-1 rounded-full', native && 'text-white hover:bg-white/10 hover:text-white')}
+          className={'md:hidden -ml-1 rounded-full'}
           onClick={onBack}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <Avatar profile={other} size="sm" />
         <div className="min-w-0 flex-1 leading-tight">
-          <p className={cn('font-semibold text-sm truncate flex items-center gap-1.5', native && 'text-white')}>
+          <p className={'font-semibold text-sm truncate flex items-center gap-1.5 native:text-[16px] native:font-bold'}>
             <span className="truncate">{other?.display_name || other?.username || 'Conversation'}</span>
-            {isMuted && <BellOff className={cn('h-3.5 w-3.5 shrink-0', native ? 'text-white/60' : 'text-muted-foreground')} aria-label="Muted" />}
+            {isMuted && <BellOff className={cn('h-3.5 w-3.5 shrink-0', 'text-muted-foreground')} aria-label="Muted" />}
           </p>
           {otherTyping ? (
-            <p className={cn('text-[11px] truncate flex items-center gap-1', native ? 'text-emerald-300' : 'text-emerald-600 dark:text-emerald-400')}>
+            <p className={cn('text-[11px] truncate flex items-center gap-1', 'text-emerald-600 dark:text-emerald-400')}>
               <span className="inline-flex gap-0.5" aria-hidden>
                 <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
                 <span className="w-1 h-1 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
@@ -1451,43 +1594,9 @@ function ConversationView({
               typing…
             </p>
           ) : other?.username ? (
-            <p className={cn('text-[11px] truncate', native ? 'text-white/60' : 'text-muted-foreground')}>@{other.username}</p>
+            <p className={cn('text-[11px] truncate', 'text-muted-foreground')}>@{other.username}</p>
           ) : null}
         </div>
-        {/* Native-only WhatsApp-style call cluster. Hidden on the web project. */}
-        {native && other?.id && (
-          <>
-            {([
-              { video: true, Icon: Video, label: 'Video call' },
-              { video: false, Icon: Phone, label: 'Voice call' },
-            ] as const).map(({ video, Icon, label }) => (
-              <Button
-                key={label}
-                variant="ghost"
-                size="icon"
-                className="rounded-full text-white hover:bg-white/10 hover:text-white active:scale-95 transition-transform"
-                aria-label={`${label} ${other.display_name || other.username || 'user'}`}
-                onClick={async () => {
-                  try {
-                    await callManager.startCall(
-                      {
-                        id: other.id!,
-                        name: other.display_name || other.username || 'User',
-                        avatarUrl: other.avatar_url ?? null,
-                        conversationId,
-                      },
-                      { video },
-                    )
-                  } catch (e) {
-                    toast.error((e as Error).message || 'Could not start the call')
-                  }
-                }}
-              >
-                <Icon className="h-5 w-5" />
-              </Button>
-            ))}
-          </>
-        )}
         {other?.id && (
           <Popover>
             <PopoverTrigger asChild>
@@ -1496,7 +1605,6 @@ function ConversationView({
                 size="icon"
                 className={cn(
                   'rounded-full active:scale-95 transition-transform',
-                  native && 'text-white hover:bg-white/10 hover:text-white',
                 )}
                 aria-label="More options"
               >
@@ -1509,14 +1617,13 @@ function ConversationView({
               sideOffset={6}
               className={cn(
                 'w-56 p-1 rounded-xl',
-                native && 'bg-[#233138] border-black/40 text-white shadow-2xl',
               )}
             >
               <button
                 type="button"
                 className={cn(
                   'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
-                  native ? 'hover:bg-white/[0.06]' : 'hover:bg-muted',
+                  'hover:bg-muted',
                 )}
                 onClick={() => {
                   setSearchOpen(true)
@@ -1530,7 +1637,7 @@ function ConversationView({
                   type="button"
                   className={cn(
                     'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
-                    native ? 'hover:bg-white/[0.06]' : 'hover:bg-muted',
+                    'hover:bg-muted',
                   )}
                   onClick={() => setMute(null)}
                 >
@@ -1541,7 +1648,7 @@ function ConversationView({
                   type="button"
                   className={cn(
                     'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
-                    native ? 'hover:bg-white/[0.06]' : 'hover:bg-muted',
+                    'hover:bg-muted',
                   )}
                   onClick={() => setMuteDialogOpen(true)}
                 >
@@ -1552,18 +1659,18 @@ function ConversationView({
                 type="button"
                 className={cn(
                   'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
-                  native ? 'hover:bg-white/[0.06]' : 'hover:bg-muted',
+                  'hover:bg-muted',
                 )}
                 onClick={() => setClearDialogOpen(true)}
               >
                 <Archive className="h-4 w-4 opacity-80" /> Clear history
               </button>
-              <div className={cn('my-1 h-px', native ? 'bg-white/10' : 'bg-border')} />
+              <div className={cn('my-1 h-px', 'bg-border')} />
               <button
                 type="button"
                 className={cn(
                   'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm',
-                  native ? 'text-red-400 hover:bg-red-500/10' : 'text-destructive hover:bg-destructive/10',
+                  'text-destructive hover:bg-destructive/10',
                 )}
                 onClick={() => setDeleteDialogOpen(true)}
               >
@@ -1574,8 +1681,8 @@ function ConversationView({
         )}
         </div>
         {searchOpen && (
-          <div className={cn('px-3 md:px-4 pb-2 flex items-center gap-2', native ? 'bg-[#1f2c33]' : 'bg-background/85')}>
-            <Search className={cn('h-4 w-4', native ? 'text-white/60' : 'text-muted-foreground')} />
+          <div className={cn('px-3 md:px-4 pb-2 flex items-center gap-2', 'bg-background/85 native:bg-card')}>
+            <Search className={cn('h-4 w-4', 'text-muted-foreground')} />
             <Input
               autoFocus
               value={searchQuery}
@@ -1583,13 +1690,12 @@ function ConversationView({
               placeholder="Search in this chat…"
               className={cn(
                 'h-8 flex-1 border-0 shadow-none focus-visible:ring-0 px-1',
-                native && 'bg-transparent text-white placeholder:text-white/40',
               )}
             />
             <Button
               variant="ghost"
               size="icon"
-              className={cn('h-7 w-7 rounded-full', native && 'text-white hover:bg-white/10 hover:text-white')}
+              className={'h-7 w-7 rounded-full'}
               onClick={() => {
                 setSearchOpen(false)
                 setSearchQuery('')
@@ -1736,20 +1842,13 @@ function ConversationView({
 
 
 
+      {native && <ChatSafetyNote />}
+
       <div
         ref={scrollRef}
         className={cn(
           'flex-1 overflow-y-auto px-3 md:px-4 py-4 space-y-5',
-          native && 'bg-[#0b141a] text-white',
         )}
-        style={
-          native
-            ? {
-                backgroundImage:
-                  'radial-gradient(circle at 20% 10%, rgba(255,255,255,0.03) 0, transparent 40%), radial-gradient(circle at 80% 60%, rgba(255,255,255,0.025) 0, transparent 45%)',
-              }
-            : undefined
-        }
       >
 
         {messagesQ.isLoading ? (
@@ -1921,9 +2020,7 @@ function ConversationView({
               onClick={() => scrollToBottom('smooth')}
               className={cn(
                 'pointer-events-auto flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold shadow-lg active:scale-95 transition-transform',
-                native
-                  ? 'bg-[#005c4b] text-white ring-1 ring-emerald-300/40'
-                  : 'bg-primary text-primary-foreground ring-1 ring-primary/40',
+                'bg-primary text-primary-foreground ring-1 ring-primary/40',
               )}
               aria-label={
                 unreadNew > 0 ? `Jump to ${unreadNew} new message${unreadNew === 1 ? '' : 's'}` : 'Jump to latest'
@@ -1936,7 +2033,7 @@ function ConversationView({
                   <span
                     className={cn(
                       'ml-0.5 inline-flex items-center justify-center rounded-full px-1.5 min-w-[1.1rem] text-[10px] font-bold',
-                      native ? 'bg-white text-[#005c4b]' : 'bg-primary-foreground text-primary',
+                      'bg-primary-foreground text-primary',
                     )}
                   >
                     {unreadNew > 99 ? '99+' : unreadNew}
@@ -1971,7 +2068,7 @@ function ConversationView({
         className={cn(
           'sticky bottom-0 z-10 p-3 border-t backdrop-blur-xl space-y-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
           native
-            ? 'bg-[#1f2c33] border-black/40 text-white shadow-[0_-1px_0_0_rgba(0,0,0,0.4)]'
+            ? 'bg-card'
             : 'bg-background/85 supports-[backdrop-filter]:bg-background/70 shadow-[0_-1px_0_0_hsl(var(--border))]',
         )}
       >
@@ -2048,65 +2145,7 @@ function ConversationView({
           </div>
         )}
         <div className="flex items-end gap-1.5">
-          <input
-            ref={fileRef}
-            type="file"
-            className="hidden"
-            accept="image/*,application/pdf,.doc,.docx,.txt,.zip"
-            onChange={(e) => handleFilePick(e.target.files?.[0] ?? null)}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => fileRef.current?.click()}
-            aria-label="Attach file"
-          >
-            <Paperclip className="h-5 w-5" />
-          </Button>
-          {user && (
-            <VoiceRecorderButton
-              disabled={!conversationId}
-              onSend={(file) => {
-                uploadQueue.enqueue({
-                  conversationId,
-                  senderId: user.id,
-                  content: '',
-                  file,
-                })
-              }}
-            />
-          )}
-          <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
-            <PopoverTrigger asChild>
-              <Button type="button" variant="ghost" size="icon" aria-label="Add emoji">
-                <Smile className="h-5 w-5" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="start"
-              side="top"
-              className="p-0 border-0 w-auto bg-transparent shadow-none"
-            >
-              <Suspense
-                fallback={
-                  <div className="h-80 w-72 flex items-center justify-center rounded-lg border bg-popover">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
-                }
-              >
-                <EmojiPicker
-                  lazyLoadEmojis
-                  width={300}
-                  height={360}
-                  onEmojiClick={(d) => {
-                    insertEmoji(d.emoji)
-                    setEmojiOpen(false)
-                  }}
-                />
-              </Suspense>
-            </PopoverContent>
-          </Popover>
+          {!native && toolButtons}
           <Textarea
             ref={textareaRef}
             value={draft}
@@ -2119,17 +2158,47 @@ function ConversationView({
             }}
             placeholder="Write a message..."
             rows={1}
-            className="resize-none min-h-[40px] max-h-32 rounded-2xl bg-background text-foreground placeholder:text-muted-foreground border border-input focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+            className="native:min-h-[46px] native:rounded-3xl native:border-0 native:bg-muted native:px-4 native:py-3 native:text-[15px] resize-none min-h-[40px] max-h-32 rounded-2xl bg-background text-foreground placeholder:text-muted-foreground border border-input focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring transition-colors"
           />
           <Button
             type="submit"
             size="icon"
             disabled={!canSend}
-            className="rounded-full shadow-md active:scale-95 transition-transform disabled:opacity-40"
+            className="native:size-[46px] native:bg-[#14532D] native:text-white rounded-full shadow-md active:scale-95 transition-transform disabled:opacity-40"
           >
             <Send className="h-4 w-4" />
           </Button>
         </div>
+        {native && (
+          // While recording a voice note, its controls take the whole row.
+          <div className="flex items-center justify-between gap-1 [&:has([role=status])>*:not([role=status])]:hidden">
+            {toolButtons}
+            {other?.id && (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={toolClass('bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25 dark:text-emerald-300')}
+                  aria-label={`Voice call ${otherName}`}
+                  onClick={() => startCallWith(other, conversationId, false)}
+                >
+                  <Phone className="h-5 w-5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={toolClass('bg-pink-500/15 text-pink-600 hover:bg-pink-500/25 dark:text-pink-300')}
+                  aria-label={`Video call ${otherName}`}
+                  onClick={() => startCallWith(other, conversationId, true)}
+                >
+                  <Video className="h-5 w-5" />
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </form>
     </>
   )
@@ -2284,6 +2353,165 @@ function formatCallDuration(sec: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
 }
 
+/** How a call entry reads, from the point of view of whoever is looking at it. */
+export function describeCall(info: CallLogInfo, mine: boolean) {
+  const isMissed = info.kind === 'missed'
+  const kind = info.video ? 'video call' : 'voice call'
+  return {
+    Icon: isMissed ? PhoneMissed : mine ? PhoneOutgoing : PhoneIncoming,
+    tone: isMissed ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400',
+    label: isMissed
+      ? mine ? 'Cancelled call' : `Missed ${kind}`
+      : mine ? `Outgoing ${kind}` : `Incoming ${kind}`,
+    detail: info.kind === 'ended' ? formatCallDuration(info.durationSec) : info.reason,
+  }
+}
+
+async function startCallWith(other: Profile, conversationId: string, video: boolean) {
+  try {
+    await callManager.startCall(
+      {
+        id: other.id!,
+        name: other.display_name || other.username || 'User',
+        avatarUrl: other.avatar_url ?? null,
+        conversationId,
+      },
+      { video },
+    )
+  } catch (e) {
+    toast.error((e as Error).message || 'Could not start the call')
+  }
+}
+
+/** The app's Calls tab: every call in the member's chats, newest first. */
+function CallHistory({ conversations, loading }: { conversations: Conversation[]; loading: boolean }) {
+  const { user } = useAuth()
+  const ids = useMemo(() => conversations.map((c) => c.id), [conversations])
+  const callsQ = useQuery({
+    queryKey: ['call-history', user?.id, ids.length],
+    enabled: !!user && ids.length > 0,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('id, conversation_id, sender_id, content, created_at')
+        .in('conversation_id', ids)
+        .like('content', '[call:%')
+        .order('created_at', { ascending: false })
+        .limit(50)
+      if (error) throw error
+      return (data ?? []) as Array<Pick<Message, 'id' | 'conversation_id' | 'sender_id' | 'content' | 'created_at'>>
+    },
+  })
+
+  if (loading || (ids.length > 0 && callsQ.isPending)) return <ListSkeleton />
+  if (callsQ.isError) {
+    return <p className="p-6 text-center text-sm text-muted-foreground">Couldn't load your calls. Please try again.</p>
+  }
+  if (!callsQ.data?.length) {
+    return (
+      <div className="px-8 py-12 text-center">
+        <span className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-300">
+          <Phone className="size-8" />
+        </span>
+        <p className="mt-4 text-[17px] font-bold">No calls yet</p>
+        <p className="mt-1 text-[14px] text-muted-foreground">Open a chat and tap the phone or video button to call.</p>
+      </div>
+    )
+  }
+
+  return (
+    <ul className="flex-1 space-y-2.5 overflow-y-auto px-3 pb-24 pt-3">
+      {callsQ.data.map((row) => {
+        const info = parseCallLog(row.content)
+        const convo = conversations.find((c) => c.id === row.conversation_id)
+        if (!info || !convo) return null
+        const other = convo.other_user
+        const { Icon, tone, label, detail } = describeCall(info, row.sender_id === user?.id)
+        const name = other?.display_name || other?.username || 'User'
+        const CallBack = info.video ? Video : Phone
+        return (
+          <li key={row.id} className="relative flex items-center gap-3 rounded-2xl bg-card p-3 shadow-sm">
+            <Link to={`/messages/${convo.id}`} className="absolute inset-0" aria-label={`Open chat with ${name}`} />
+            <Avatar profile={other} size="lg" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[16px] font-bold">{name}</p>
+              <p className={cn('mt-0.5 flex items-center gap-1 text-[13px] font-semibold', tone)}>
+                <Icon className="size-3.5 shrink-0" />
+                <span className="truncate">{label}</span>
+              </p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
+                {detail} · {format(new Date(row.created_at), 'MMM d, p')}
+              </p>
+            </div>
+            {other?.id && (
+              <button
+                type="button"
+                onClick={() => startCallWith(other, convo.id, info.video)}
+                aria-label={`Call ${name} back`}
+                className="relative flex size-12 shrink-0 items-center justify-center rounded-full text-[#0B1F0B] shadow-md transition-transform active:scale-90"
+                style={{ backgroundImage: GOLD_GRADIENT }}
+              >
+                <CallBack className="size-5" />
+              </button>
+            )}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function ListSkeleton() {
+  return (
+    <div className="space-y-2.5 px-3 pt-3" aria-hidden>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="h-[80px] animate-pulse rounded-2xl bg-muted" />
+      ))}
+    </div>
+  )
+}
+
+const SAFETY_NOTE_KEY = 'abia:chat-safety-dismissed'
+
+/** A short safety reminder at the top of chats, until the member closes it. */
+function ChatSafetyNote() {
+  const [hidden, setHidden] = useState(() => {
+    try {
+      return localStorage.getItem(SAFETY_NOTE_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  if (hidden) return null
+  return (
+    <div className="mx-3 mt-2 flex items-start gap-2.5 rounded-2xl bg-amber-500/15 px-3 py-2.5 text-[13px] leading-snug text-amber-900 dark:text-amber-200">
+      <ShieldCheck className="mt-0.5 size-4 shrink-0" />
+      <p className="flex-1">Stay safe: never send money or bank details to someone you haven't met.</p>
+      <button
+        type="button"
+        aria-label="Hide safety note"
+        className="-m-1 grid size-7 shrink-0 place-items-center rounded-full"
+        onClick={() => {
+          setHidden(true)
+          try {
+            localStorage.setItem(SAFETY_NOTE_KEY, '1')
+          } catch {
+            /* private mode: it just comes back next visit */
+          }
+        }}
+      >
+        <X className="size-4" />
+      </button>
+    </div>
+  )
+}
+
+function listTime(iso: string) {
+  const d = new Date(iso)
+  return isToday(d) ? format(d, 'p') : format(d, 'MMM d')
+}
+
 function CallLogRow({
   mine,
   info,
@@ -2293,16 +2521,7 @@ function CallLogRow({
   info: CallLogInfo
   createdAt: string
 }) {
-  const isMissed = info.kind === 'missed'
-  const Icon = isMissed ? PhoneMissed : mine ? PhoneOutgoing : PhoneIncoming
-  const tone = isMissed
-    ? 'text-rose-600 dark:text-rose-400'
-    : 'text-emerald-600 dark:text-emerald-400'
-  const kind = info.video ? 'video call' : 'voice call'
-  const label = isMissed
-    ? mine ? 'Cancelled call' : `Missed ${kind}`
-    : mine ? `Outgoing ${kind}` : `Incoming ${kind}`
-  const detail = info.kind === 'ended' ? formatCallDuration(info.durationSec) : info.reason
+  const { Icon, tone, label, detail } = describeCall(info, mine)
 
   return (
     <div className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
@@ -2436,8 +2655,8 @@ function MessageBubble({
           'relative max-w-[78%] rounded-2xl px-3.5 py-2 text-sm space-y-1.5 shadow-sm ring-1 select-none',
           native
             ? mine
-              ? 'bg-[#005c4b] text-white rounded-br-md ring-transparent'
-              : 'bg-[#1f2c33] text-white rounded-bl-md ring-white/5'
+              ? 'bg-gradient-to-br from-[#1F7A45] to-[#14532D] text-white rounded-br-md ring-transparent text-[15px]'
+              : 'bg-card text-foreground rounded-bl-md ring-border/60 text-[15px]'
             : mine
               ? 'bubble-mine bg-secondary text-secondary-foreground rounded-br-md ring-secondary/30'
               : 'bg-card text-foreground rounded-bl-md ring-border/60',
@@ -2460,9 +2679,7 @@ function MessageBubble({
               className={cn(
                 'absolute z-50 -top-12 flex items-center gap-1 rounded-full px-2 py-1.5 shadow-xl ring-1 animate-in fade-in zoom-in-95 duration-150',
                 mine ? 'right-0 origin-bottom-right' : 'left-0 origin-bottom-left',
-                native
-                  ? 'bg-[#233138] ring-white/10'
-                  : 'bg-popover text-popover-foreground ring-border',
+                'bg-popover text-popover-foreground ring-border',
               )}
             >
               {QUICK_REACTIONS.map((emoji) => {
@@ -2477,7 +2694,7 @@ function MessageBubble({
                     }}
                     className={cn(
                       'grid place-items-center w-9 h-9 rounded-full text-xl leading-none transition-transform active:scale-90 hover:scale-110',
-                      active && (native ? 'bg-white/10' : 'bg-muted'),
+                      active && 'bg-muted',
                     )}
                     aria-label={active ? `Remove ${emoji} reaction` : `React with ${emoji}`}
                   >
@@ -2501,20 +2718,18 @@ function MessageBubble({
             onClick={() => onJumpToQuoted?.(quoted.id)}
             className={cn(
               'w-full text-left rounded-lg px-2 py-1.5 border-l-2 text-xs mb-1 transition-colors cursor-pointer',
-              native
-                ? mine
-                  ? 'bg-black/25 border-emerald-300/70 text-white/90 hover:bg-black/35 active:bg-black/45'
-                  : 'bg-white/[0.06] border-emerald-400/70 text-white/90 hover:bg-white/[0.10] active:bg-white/[0.14]'
+              native && mine
+                ? 'bg-black/25 border-emerald-300/70 text-white/90 hover:bg-black/35 active:bg-black/45'
                 : mine
                   ? 'bg-secondary-foreground/10 border-secondary-foreground/40 hover:bg-secondary-foreground/15'
                   : 'bg-muted border-primary/60 hover:bg-muted/80',
             )}
             aria-label="Jump to quoted message"
           >
-            <p className={cn('font-semibold text-[11px] mb-0.5', native ? 'text-emerald-300' : 'opacity-80')}>
+            <p className={cn('font-semibold text-[11px] mb-0.5', native ? (mine ? 'text-emerald-200' : 'text-primary') : 'opacity-80')}>
               {quoted.sender_id === userId ? 'You' : otherName}
             </p>
-            <p className={cn('truncate', native ? 'text-white/70' : 'opacity-80')}>{messagePreview(quoted)}</p>
+            <p className={cn('truncate', native && mine ? 'text-white/70' : 'opacity-80')}>{messagePreview(quoted)}</p>
           </button>
         )}
 
@@ -2543,7 +2758,7 @@ function MessageBubble({
           {mine && !deleted && (m._status || m.is_read) && (
             <span
               aria-label={m.is_read ? 'read' : m._status === 'delivered' ? 'delivered' : 'sent'}
-              className={cn(m.is_read && 'text-sky-500')}
+              className={cn(m.is_read && (native && mine ? 'text-sky-300' : 'text-sky-500'))}
             >
               {m.is_read || m._status === 'delivered' ? '✓✓' : '✓'}
             </span>
@@ -2567,11 +2782,7 @@ function MessageBubble({
                 aria-pressed={r.mine}
                 className={cn(
                   'flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] leading-none shadow-sm ring-1 transition-transform active:scale-90 hover:scale-105',
-                  native
-                    ? r.mine
-                      ? 'bg-[#005c4b] ring-emerald-300/50 text-white'
-                      : 'bg-[#2a3942] ring-white/10 text-white'
-                    : r.mine
+                  r.mine
                       ? 'bg-primary text-primary-foreground ring-primary/40'
                       : 'bg-background text-foreground ring-border',
                 )}
@@ -2649,7 +2860,7 @@ function BubbleMenu({
           type="button"
           aria-label="Message actions"
           className={cn(
-            'h-7 w-7 grid place-items-center rounded-full text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-muted transition-opacity data-[state=open]:opacity-100 shrink-0',
+            'h-7 w-7 grid place-items-center rounded-full text-muted-foreground opacity-0 native:opacity-100 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-muted transition-opacity data-[state=open]:opacity-100 shrink-0',
             'md:opacity-0 opacity-100', // always visible on mobile
           )}
         >

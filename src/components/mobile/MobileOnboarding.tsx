@@ -1,25 +1,21 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import useEmblaCarousel from 'embla-carousel-react';
 import {
+  ArrowRight,
+  Gift,
+  Heart,
   MessagesSquare,
-  Users,
-  Bell,
-  ChevronRight,
-  ChevronLeft,
-  ShieldCheck,
-  Zap,
-  Rocket,
-  Handshake,
   Phone,
+  Rocket,
   Sparkles,
-  Target,
-  Eye,
-  HandHeart,
+  UserRound,
+  Users,
+  Vote,
+  X,
 } from 'lucide-react';
 
 interface MobileOnboardingProps {
@@ -29,28 +25,27 @@ interface MobileOnboardingProps {
   onReady?: () => void;
 }
 
-// Brand palette — dark forest green + AbiaConnect gold for the onboarding canvas.
-const BRAND = {
-  bg: '#0B1F0B',
-  surface: '#163516',
-  surfaceAlt: '#102A10',
-  border: 'rgba(255,255,255,0.08)',
-  gold: '#F8C301',
-  goldDark: '#E87015',
-  green: '#1B3D1B',
-  greenDark: '#0B1F0B',
-  text: '#FFFFFF',
-  textMuted: '#B0B0B0',
-  textDim: '#707070',
-};
+const GOLD = '#F8C301';
+const GOLD_DARK = '#E87015';
+const INK = '#0B1F0B';
 
-/** Drifting gold particles in the background — pure CSS/Motion, no canvas. */
+/** Each slide has its own colour, faded in behind the swipe. */
+const SLIDE_BACKGROUNDS = [
+  'linear-gradient(160deg, #0B3D1E 0%, #14532D 55%, #0B1F0B 100%)',
+  'linear-gradient(160deg, #065F46 0%, #0F766E 55%, #0B3D2E 100%)',
+  'linear-gradient(160deg, #BE185D 0%, #DB2777 50%, #6D1B45 100%)',
+  'linear-gradient(160deg, #B45309 0%, #C2410C 45%, #0B1F0B 100%)',
+];
+
+const LAST_SLIDE = SLIDE_BACKGROUNDS.length - 1;
+
+/** Soft drifting dots in the background — pure CSS/Motion, no canvas. */
 const Particles = () => {
   const particles = useMemo(
     () =>
-      Array.from({ length: 18 }).map((_, i) => ({
+      Array.from({ length: 12 }).map((_, i) => ({
         id: i,
-        size: 2 + Math.random() * 4,
+        size: 3 + Math.random() * 4,
         x: Math.random() * 100,
         y: Math.random() * 100,
         duration: 8 + Math.random() * 10,
@@ -63,67 +58,23 @@ const Particles = () => {
       {particles.map((p) => (
         <motion.div
           key={p.id}
-          className="absolute rounded-full"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            width: p.size,
-            height: p.size,
-            background: BRAND.gold,
-            boxShadow: `0 0 ${p.size * 4}px ${BRAND.gold}`,
-          }}
-          animate={{
-            y: [0, -40, 0],
-            opacity: [0.15, 0.6, 0.15],
-          }}
-          transition={{
-            duration: p.duration,
-            delay: p.delay,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
+          className="absolute rounded-full bg-white"
+          style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size }}
+          animate={{ y: [0, -40, 0], opacity: [0.08, 0.35, 0.08] }}
+          transition={{ duration: p.duration, delay: p.delay, repeat: Infinity, ease: 'easeInOut' }}
         />
       ))}
     </div>
   );
 };
 
-type SlideType = 'welcome' | 'about' | 'features' | 'start';
-
-interface BaseSlide {
-  id: number;
-  type: SlideType;
-}
-interface WelcomeSlide extends BaseSlide {
-  type: 'welcome';
-  tagline: string;
-  subtitle: string;
-}
-interface AboutSlide extends BaseSlide {
-  type: 'about';
-  title: string;
-  cards: { icon: typeof Target; label: string; body: string }[];
-}
-interface FeaturesSlide extends BaseSlide {
-  type: 'features';
-  title: string;
-  features: { icon: typeof MessagesSquare; name: string; desc: string }[];
-}
-interface StartSlide extends BaseSlide {
-  type: 'start';
-  title: string;
-  subtitle: string;
-}
-type Slide = WelcomeSlide | AboutSlide | FeaturesSlide | StartSlide;
-
 export const MobileOnboarding = ({ onFinish, initialSlide = 0, onReady }: MobileOnboardingProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { settings } = useSiteSettings();
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: false,
     duration: 24,
-    startIndex: initialSlide
+    startIndex: initialSlide,
   });
   const [currentSlide, setCurrentSlide] = useState(initialSlide);
 
@@ -139,66 +90,10 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0, onReady }: Mobile
     emblaApi.on('reInit', onSelect);
   }, [emblaApi, onSelect]);
 
-  const slides: Slide[] = [
-    {
-      id: 1,
-      type: 'welcome',
-      tagline: settings.site_tagline || 'Connect, Communicate, Collaborate',
-      subtitle: 'The trusted digital home for Abians at home and across the world.',
-    },
-    {
-      id: 2,
-      type: 'about',
-      title: 'About AbiaConnect',
-      cards: [
-        {
-          icon: Target,
-          label: 'Mission',
-          body: 'To unite Abians at home and abroad through meaningful conversation, opportunity and collaboration.',
-        },
-        {
-          icon: Eye,
-          label: 'Vision',
-          body: 'A connected Abia community where distance never limits identity, voice or progress.',
-        },
-        {
-          icon: HandHeart,
-          label: 'Values',
-          body: 'Integrity, respect, unity and progress in every interaction.',
-        },
-      ],
-    },
-    {
-      id: 3,
-      type: 'features',
-      title: 'Everything you need',
-      features: [
-        { icon: MessagesSquare, name: 'Community Forums', desc: 'Thoughtful discussions on the issues that matter' },
-        { icon: Handshake, name: 'Connect', desc: 'Meet professionals, partners and friends' },
-        { icon: Users, name: 'Subgroups', desc: 'Spaces for your LGA, profession and interests' },
-        { icon: Phone, name: 'Messages & Calls', desc: 'Private, secure chats and voice calls' },
-        { icon: Zap, name: 'Live Polls', desc: 'Shape community decisions in real time' },
-        { icon: Bell, name: 'Smart Alerts', desc: 'Stay informed on what matters to you' },
-      ],
-    },
-    {
-      id: 4,
-      type: 'start',
-      title: 'Ready to join?',
-      subtitle: 'Build your network, share your voice and grow together.',
-    },
-  ];
-
-  const handleNext = () => {
-    if (emblaApi?.canScrollNext()) emblaApi.scrollNext();
-    else handleFinish();
-  };
-  const handlePrev = () => emblaApi?.scrollPrev();
-
   const handleFinish = () => {
     // If skipping from an early slide and not logged in, go to the last slide instead of finishing.
-    if (!user && currentSlide < slides.length - 1) {
-      emblaApi?.scrollTo(slides.length - 1);
+    if (!user && currentSlide < LAST_SLIDE) {
+      emblaApi?.scrollTo(LAST_SLIDE);
       return;
     }
 
@@ -210,7 +105,12 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0, onReady }: Mobile
     onFinish();
   };
 
-  const isLast = currentSlide === slides.length - 1;
+  const handleNext = () => {
+    if (emblaApi?.canScrollNext()) emblaApi.scrollNext();
+    else handleFinish();
+  };
+
+  const isLast = currentSlide === LAST_SLIDE;
 
   useEffect(() => {
     const id = requestAnimationFrame(() => onReady?.());
@@ -241,6 +141,23 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0, onReady }: Mobile
     };
   }, []);
 
+  const views = [
+    <WelcomeView key="welcome" />,
+    <CommunityView key="community" />,
+    <SwipeView key="swipe" active={currentSlide === 2} />,
+    <StartView
+      key="start"
+      onCreate={() => {
+        handleFinish();
+        navigate('/register');
+      }}
+      onSignIn={() => {
+        handleFinish();
+        navigate('/login');
+      }}
+    />,
+  ];
+
   return (
     <motion.div
       // Opaque from the first frame: fading in from transparent would let the
@@ -249,399 +166,261 @@ export const MobileOnboarding = ({ onFinish, initialSlide = 0, onReady }: Mobile
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.45, ease: 'easeOut' }}
-      className="fixed inset-0 z-[100] flex flex-col overflow-hidden overscroll-none font-sans"
-      style={{ background: BRAND.bg, color: BRAND.text }}
+      className="fixed inset-0 z-[100] flex flex-col overflow-hidden overscroll-none font-sans text-white"
+      style={{ background: INK }}
       role="dialog"
       aria-label="Welcome to AbiaConnect"
     >
-      {/* Layered gradient + particles backdrop */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `radial-gradient(ellipse at 20% 0%, ${BRAND.green}40 0%, transparent 50%),
-                       radial-gradient(ellipse at 80% 100%, ${BRAND.gold}25 0%, transparent 55%),
-                       linear-gradient(180deg, ${BRAND.bg} 0%, ${BRAND.surfaceAlt} 100%)`,
-        }}
-      />
+      {SLIDE_BACKGROUNDS.map((background, i) => (
+        <motion.div
+          key={background}
+          className="absolute inset-0 pointer-events-none"
+          style={{ background }}
+          initial={false}
+          animate={{ opacity: currentSlide === i ? 1 : 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        />
+      ))}
       <Particles />
 
       {/* Top bar: Skip */}
       <div
-        className="relative z-10 flex items-center justify-end px-4"
-        style={{ paddingTop: 'max(env(safe-area-inset-top), 1rem)' }}
+        className="relative z-10 flex h-14 items-center justify-end px-4"
+        style={{ marginTop: 'env(safe-area-inset-top)' }}
       >
-        <AnimatePresence>
-          {!isLast && (
-            <motion.div
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
-            >
-              <Button
-                variant="ghost"
-                onClick={handleFinish}
-                className="font-medium hover:bg-white/5"
-                style={{ color: BRAND.textMuted }}
-                aria-label="Skip onboarding"
-              >
-                Skip
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {!isLast && (
+          <Button
+            variant="ghost"
+            onClick={handleFinish}
+            className="rounded-full font-semibold text-white/80 hover:bg-white/10 hover:text-white"
+            aria-label="Skip onboarding"
+          >
+            Skip
+          </Button>
+        )}
       </div>
 
       {/* Slides */}
       <div className="flex-1 overflow-hidden relative z-10" ref={emblaRef} style={{ touchAction: 'pan-y pinch-zoom' }}>
         <div className="flex h-full">
-          {slides.map((slide, idx) => (
+          {views.map((view, idx) => (
             <div
-              key={slide.id}
+              key={idx}
               className="flex-[0_0_100%] h-full overflow-y-auto overscroll-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              <div className="min-h-full flex flex-col items-center justify-center px-6 py-4 text-center relative">
-              <AnimatePresence mode="wait">
-                {currentSlide === idx && (
-                  <motion.div
-                    key={slide.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.5, ease: 'easeOut' }}
-                    className="w-full flex flex-col items-center"
-                  >
-                    {slide.type === 'welcome' && <WelcomeView slide={slide} />}
-                    {slide.type === 'about' && <AboutView slide={slide} />}
-                    {slide.type === 'features' && <FeaturesView slide={slide} />}
-                    {slide.type === 'start' && (
-                      <StartView
-                        slide={slide}
-                        onCreate={() => {
-                          handleFinish();
-                          navigate('/register');
-                        }}
-                        onSignIn={() => {
-                          handleFinish();
-                          navigate('/login');
-                        }}
-                      />
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              </div>
+              <motion.div
+                initial={false}
+                animate={{ opacity: currentSlide === idx ? 1 : 0.3, y: currentSlide === idx ? 0 : 14 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="min-h-full flex flex-col items-center justify-center px-7 py-4 text-center"
+              >
+                {view}
+              </motion.div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Bottom controls: dots + back/next */}
-      {!isLast && (
-        <div
-          className="relative z-10 flex items-center justify-between px-6 pt-4"
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 1.25rem)' }}
-        >
-          {/* Back */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handlePrev}
-            disabled={currentSlide === 0}
-            aria-label="Previous slide"
-            className="size-12 rounded-2xl disabled:opacity-0 transition-opacity"
-            style={{ color: BRAND.textMuted }}
-          >
-            <ChevronLeft className="size-5" />
-          </Button>
-
-          {/* Tiny Line Indicators */}
-          <div className="flex items-center gap-1.5" role="tablist" aria-label="Onboarding progress">
-            {slides.map((_, i) => (
-              <motion.button
-                key={i}
-                onClick={() => emblaApi?.scrollTo(i)}
-                role="tab"
-                aria-selected={currentSlide === i}
-                aria-label={`Go to slide ${i + 1}`}
-                className="h-1 rounded-full flex-shrink-0"
-                initial={false}
-                animate={{
-                  width: currentSlide === i ? 16 : 4,
-                  backgroundColor: currentSlide === i ? BRAND.gold : `${BRAND.gold}20`,
-                }}
-                transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-              />
-            ))}
-          </div>
-
-          {/* Next */}
-          <Button
-            size="icon"
-            onClick={handleNext}
-            aria-label="Next slide"
-            className="size-12 rounded-2xl shadow-lg group"
-            style={{
-              background: `linear-gradient(135deg, ${BRAND.gold} 0%, ${BRAND.goldDark} 100%)`,
-              color: BRAND.bg,
-              boxShadow: `0 8px 24px -8px ${BRAND.gold}80`,
-            }}
-          >
-            <ChevronRight className="size-5 group-hover:translate-x-0.5 transition-transform" />
-          </Button>
+      {/* Progress dots + Next. The last slide has its own buttons, but keeps
+          its dots so people can see where they are and go back. */}
+      <div
+        className="relative z-10 flex min-h-[4.5rem] items-center justify-between gap-4 px-7 pt-3"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 1.25rem)' }}
+      >
+        <div className="flex items-center gap-2" role="tablist" aria-label="Onboarding progress">
+          {SLIDE_BACKGROUNDS.map((_, i) => (
+            <motion.button
+              key={i}
+              type="button"
+              onClick={() => emblaApi?.scrollTo(i)}
+              role="tab"
+              aria-selected={currentSlide === i}
+              aria-label={`Go to slide ${i + 1}`}
+              className="h-2 rounded-full"
+              initial={false}
+              animate={{
+                width: currentSlide === i ? 26 : 8,
+                backgroundColor: currentSlide === i ? '#FFFFFF' : 'rgba(255,255,255,0.35)',
+              }}
+              transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+            />
+          ))}
         </div>
-      )}
+        {!isLast && (
+          <button
+            type="button"
+            onClick={handleNext}
+            aria-label={currentSlide === LAST_SLIDE - 1 ? 'Get started' : 'Next slide'}
+            className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-[15px] font-bold shadow-xl transition-transform active:scale-95"
+            style={{ color: INK }}
+          >
+            {currentSlide === LAST_SLIDE - 1 ? 'Get started' : 'Next'}
+            <ArrowRight className="size-[18px]" />
+          </button>
+        )}
+      </div>
     </motion.div>
   );
 };
 
 /* ---------- Slide views ---------- */
 
-const WelcomeView = ({ slide }: { slide: WelcomeSlide }) => (
+const Headline = ({ title, body }: { title: ReactNode; body: string }) => (
   <>
-    <motion.div
-      initial={{ scale: 0.7, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.7, ease: 'easeOut' }}
-      className="mb-8 relative"
-    >
-      <motion.div
-        className="absolute inset-0 rounded-full blur-3xl scale-150"
-        style={{ background: `${BRAND.gold}33` }}
-        animate={{ scale: [1.5, 1.8, 1.5], opacity: [0.4, 0.7, 0.4] }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      {/* One smooth 3D entrance that always ends facing forward, then a gentle
-          float. (A continuous spin showed the logo mirrored half the time.) */}
-      <motion.div
-        initial={{ rotateY: -70, opacity: 0 }}
-        animate={{ rotateY: 0, opacity: 1, y: [0, -6, 0] }}
-        transition={{
-          rotateY: { duration: 0.9, ease: [0.22, 1, 0.36, 1] },
-          opacity: { duration: 0.5 },
-          y: { delay: 1, duration: 4, repeat: Infinity, ease: 'easeInOut' },
-        }}
-        className="relative w-44 h-44 flex items-center justify-center"
-        style={{ transformPerspective: 900, backfaceVisibility: 'hidden' }}
-      >
-        <img
-          src="/email-logo.png"
-          alt="AbiaConnect logo"
-          className="w-36 h-32 object-contain drop-shadow-[0_20px_50px_rgba(200,169,81,0.3)]"
-        />
-      </motion.div>
-    </motion.div>
-    <motion.h1
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3, duration: 0.5 }}
-      className="text-5xl font-black mb-4 leading-[1.1] tracking-tight bg-clip-text text-transparent px-2"
-      style={{ backgroundImage: `linear-gradient(135deg, ${BRAND.gold} 0%, #FDE68A 100%)` }}
-    >
-      {slide.tagline}
-    </motion.h1>
-    <motion.p
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.5, duration: 0.5 }}
-      className="text-xl font-bold max-w-xs mx-auto leading-snug"
-      style={{ color: BRAND.text }}
-    >
-      {slide.subtitle}
-    </motion.p>
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.8 }}
-      className="mt-10 inline-flex items-center gap-2 px-5 py-2.5 rounded-full shadow-lg"
-      style={{ background: `${BRAND.gold}20`, border: `1px solid ${BRAND.gold}40` }}
-    >
-      <Sparkles className="size-4" style={{ color: BRAND.gold }} />
-      <span className="text-sm font-bold tracking-wide" style={{ color: BRAND.gold }}>
-        Connecting Abians Worldwide
-      </span>
-    </motion.div>
+    <h2 className="text-[34px] font-black leading-[1.1] tracking-tight">{title}</h2>
+    <p className="mt-3 max-w-xs text-[16px] font-medium leading-relaxed text-white/85">{body}</p>
   </>
 );
 
-const AboutView = ({ slide }: { slide: AboutSlide }) => (
-  <div className="w-full max-w-sm">
-    <div
-      className="mb-5 inline-flex p-3.5 rounded-3xl shadow-xl"
-      style={{ background: `${BRAND.green}60`, color: BRAND.gold, border: `1px solid ${BRAND.gold}30` }}
-    >
-      <ShieldCheck className="size-10" />
-    </div>
-    <h2 className="text-3xl font-black mb-2 tracking-tight" style={{ color: BRAND.text }}>
-      {slide.title}
-    </h2>
-    <p className="text-base font-bold mb-6" style={{ color: BRAND.gold }}>
-      The trusted digital home for indigenous Abians
-    </p>
-    <div className="space-y-3 text-left">
-      {slide.cards.map((c, i) => (
-        <motion.div
-          key={c.label}
-          initial={{ opacity: 0, x: -16 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.15 + i * 0.12, duration: 0.4 }}
-          className="flex gap-4 p-4 rounded-[1.5rem] backdrop-blur-md shadow-lg"
-          style={{
-            background: `${BRAND.surface}90`,
-            border: `1px solid ${BRAND.border}`,
-          }}
-        >
-          <div
-            className="shrink-0 size-12 rounded-2xl flex items-center justify-center shadow-inner"
-            style={{ background: `${BRAND.gold}20`, color: BRAND.gold }}
-          >
-            <c.icon className="size-6" />
-          </div>
-          <div className="min-w-0">
-            <h3 className="font-black text-base mb-1 uppercase tracking-wider" style={{ color: BRAND.gold }}>
-              {c.label}
-            </h3>
-            <p className="text-sm leading-relaxed font-medium" style={{ color: BRAND.text }}>
-              {c.body}
-            </p>
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  </div>
-);
-
-const FeaturesView = ({ slide }: { slide: FeaturesSlide }) => (
-  <div className="w-full max-w-md">
-    <h2 className="text-3xl font-black mb-2 tracking-tight" style={{ color: BRAND.text }}>
-      {slide.title}
-    </h2>
-    <p className="text-base font-bold mb-6" style={{ color: BRAND.gold }}>
-      One platform for community, opportunity and connection
-    </p>
-    <div className="grid grid-cols-2 gap-3">
-      {slide.features.map((f, i) => (
-        <motion.div
-          key={f.name}
-          initial={{ opacity: 0, y: 16, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ delay: 0.1 + i * 0.08, duration: 0.35, ease: 'easeOut' }}
-          className="p-4 rounded-[1.5rem] flex flex-col items-center text-center backdrop-blur-md shadow-xl"
-          style={{
-            background: `${BRAND.surface}99`,
-            border: `1px solid ${BRAND.border}`,
-          }}
-        >
-          <div
-            className="p-2.5 rounded-2xl mb-2.5 shadow-lg"
-            style={{ background: `linear-gradient(135deg, ${BRAND.gold}30 0%, ${BRAND.gold}10 100%)`, color: BRAND.gold }}
-          >
-            <f.icon className="size-6" />
-          </div>
-          <h3 className="font-black text-sm mb-1 tracking-tight" style={{ color: BRAND.text }}>
-            {f.name}
-          </h3>
-          <p className="text-xs leading-snug font-semibold" style={{ color: BRAND.textMuted }}>
-            {f.desc}
-          </p>
-        </motion.div>
-      ))}
-    </div>
-  </div>
-);
-
-const StartView = ({
-  slide,
-  onCreate,
-  onSignIn,
-}: {
-  slide: StartSlide;
-  onCreate: () => void;
-  onSignIn: () => void;
-}) => (
-  <div className="w-full max-w-sm px-4">
+const WelcomeView = () => (
+  <>
     <motion.div
-      initial={{ scale: 0.8, opacity: 0, y: 20 }}
-      animate={{ scale: 1, opacity: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 120, damping: 20, delay: 0.1 }}
-      className="relative size-24 mx-auto mb-8"
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1, y: [0, -6, 0] }}
+      transition={{
+        scale: { duration: 0.6, ease: 'easeOut' },
+        opacity: { duration: 0.5 },
+        y: { delay: 0.8, duration: 4, repeat: Infinity, ease: 'easeInOut' },
+      }}
+      className="relative mb-7 flex size-44 items-center justify-center rounded-full bg-white/10"
     >
-      {/* Premium Glow Effect */}
-      <div
-        className="absolute inset-0 rounded-[2.5rem] blur-2xl opacity-40 animate-pulse"
-        style={{ background: BRAND.gold }}
+      <img
+        src="/email-logo.png"
+        alt="AbiaConnect logo"
+        className="h-32 w-36 object-contain drop-shadow-[0_16px_32px_rgba(0,0,0,0.35)]"
       />
+    </motion.div>
+    <Headline
+      title={
+        <>
+          Welcome home,
+          <br />
+          <span style={{ color: GOLD }}>Abian</span> 👋🏾
+        </>
+      }
+      body="Your people, your LGA and your news, all in one place, wherever you live."
+    />
+    <span className="mt-7 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-[13px] font-bold">
+      <Sparkles className="size-4" style={{ color: GOLD }} />
+      Connecting Abians worldwide
+    </span>
+  </>
+);
 
-      <div
-        className="relative h-full w-full rounded-[2.5rem] flex items-center justify-center border border-white/10 shadow-2xl overflow-hidden"
-        style={{
-          background: `linear-gradient(145deg, ${BRAND.gold} 0%, ${BRAND.goldDark} 100%)`,
-        }}
-      >
-        {/* Subtle glass reflection */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-50" />
-        <Rocket className="size-12 drop-shadow-lg" style={{ color: BRAND.bg }} />
+const COMMUNITY_ITEMS = [
+  { icon: MessagesSquare, name: 'Join the talk', desc: 'Discussions on what matters to Abians', color: '#38BDF8' },
+  { icon: Users, name: 'Your LGA group', desc: 'Meet people from your own home town', color: '#34D399' },
+  { icon: Vote, name: 'Polls and contests', desc: 'Have your say and vote', color: GOLD },
+  { icon: Gift, name: 'Daily rewards', desc: 'Earn points for taking part', color: '#FB7185' },
+];
+
+const CommunityView = () => (
+  <>
+    <Headline title="Be part of the conversation" body="Something new to read, answer and vote on every day." />
+    <ul className="mt-6 w-full max-w-sm space-y-2.5 text-left">
+      {COMMUNITY_ITEMS.map((item) => (
+        <li key={item.name} className="flex items-center gap-3.5 rounded-2xl bg-white/[0.13] p-3.5">
+          <span
+            className="flex size-11 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: `${item.color}33`, color: item.color }}
+          >
+            <item.icon className="size-[22px]" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[15px] font-bold leading-tight">{item.name}</span>
+            <span className="mt-0.5 block text-[13px] leading-snug text-white/75">{item.desc}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  </>
+);
+
+/** A small animated card showing the Connect swipe. */
+const SwipeView = ({ active }: { active: boolean }) => {
+  const reduceMotion = useReducedMotion();
+  const animate = active && !reduceMotion;
+  const timing = { duration: 4, repeat: Infinity, ease: 'easeInOut' as const, times: [0, 0.2, 0.4, 0.6, 0.8, 1] };
+  return (
+    <>
+      <div className="relative mb-7 h-56 w-44">
+        <div className="absolute inset-0 translate-y-2 scale-95 rotate-[-5deg] rounded-3xl bg-white/20" aria-hidden />
+        <motion.div
+          className="absolute inset-0 overflow-hidden rounded-3xl bg-white shadow-2xl"
+          animate={animate ? { x: [0, 56, 0, -56, 0, 0], rotate: [0, 10, 0, -10, 0, 0] } : { x: 0, rotate: 0 }}
+          transition={timing}
+          aria-hidden
+        >
+          <div className="flex h-[70%] items-center justify-center bg-gradient-to-br from-pink-200 to-amber-100">
+            <UserRound className="size-20 text-pink-500/70" />
+          </div>
+          <div className="space-y-2 p-3.5">
+            <div className="h-2.5 w-3/4 rounded-full bg-slate-300" />
+            <div className="h-2 w-1/2 rounded-full bg-slate-200" />
+          </div>
+          <motion.span
+            className="absolute left-2.5 top-3 -rotate-12 rounded-lg border-[3px] border-emerald-500 px-1.5 text-[13px] font-black text-emerald-500"
+            animate={animate ? { opacity: [0, 1, 0, 0, 0, 0] } : { opacity: 0 }}
+            transition={timing}
+          >
+            CONNECT
+          </motion.span>
+          <motion.span
+            className="absolute right-2.5 top-3 rotate-12 rounded-lg border-[3px] border-rose-500 px-1.5 text-[13px] font-black text-rose-500"
+            animate={animate ? { opacity: [0, 0, 0, 1, 0, 0] } : { opacity: 0 }}
+            transition={timing}
+          >
+            SKIP
+          </motion.span>
+        </motion.div>
       </div>
-    </motion.div>
-
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3, duration: 0.6 }}
-    >
-      <h2 className="text-3xl font-black mb-3 tracking-tight" style={{ color: BRAND.text }}>
-        Your Community.<br />
-        <span className="text-transparent bg-clip-text" style={{ backgroundImage: `linear-gradient(to right, ${BRAND.gold}, #FDE68A)` }}>
-          Your Identity.
+      <Headline title="Swipe to meet people" body="Swipe right to connect, left to skip. Find friends, business partners and more." />
+      <div className="mt-5 flex items-center justify-center gap-2 text-[13px] font-bold">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
+          <X className="size-4" /> Skip
         </span>
-      </h2>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
+          <Heart className="size-4" fill="currentColor" /> Connect
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5">
+          <Phone className="size-4" /> Chat
+        </span>
+      </div>
+    </>
+  );
+};
 
-      <p className="text-base leading-relaxed mb-8 font-medium" style={{ color: BRAND.textMuted }}>
-        Join the trusted digital home for <span className="text-white">indigenous Abians</span> worldwide.
-        {' '}{slide.subtitle}
-      </p>
-    </motion.div>
-
+const StartView = ({ onCreate, onSignIn }: { onCreate: () => void; onSignIn: () => void }) => (
+  <div className="w-full max-w-sm">
     <motion.div
-      className="flex flex-col gap-4"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.5, duration: 0.6 }}
+      animate={{ y: [0, -8, 0] }}
+      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      className="mx-auto mb-7 flex size-24 items-center justify-center rounded-[2rem] shadow-2xl"
+      style={{ background: `linear-gradient(145deg, ${GOLD} 0%, ${GOLD_DARK} 100%)` }}
     >
+      <Rocket className="size-12" style={{ color: INK }} />
+    </motion.div>
+    <div className="flex flex-col items-center">
+      <Headline title="Ready when you are" body="Join in a minute and meet your community." />
+    </div>
+    <div className="mt-8 flex flex-col gap-3">
       <Button
         size="lg"
         onClick={onCreate}
-        className="h-16 rounded-2xl text-lg font-bold transition-all active:scale-[0.98]"
-        style={{
-          background: `linear-gradient(135deg, ${BRAND.gold} 0%, ${BRAND.goldDark} 100%)`,
-          color: BRAND.bg,
-          boxShadow: `0 12px 30px -10px ${BRAND.gold}90`,
-        }}
+        className="h-14 rounded-2xl border-0 text-[17px] font-bold transition-transform active:scale-[0.98]"
+        style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`, color: INK }}
       >
         Create a free account
       </Button>
-
       <Button
         size="lg"
         variant="outline"
         onClick={onSignIn}
-        className="h-16 rounded-2xl text-lg font-bold bg-white/5 border-white/10 backdrop-blur-md transition-all active:scale-[0.98] hover:bg-white/10"
-        style={{
-          color: BRAND.text,
-        }}
+        className="h-14 rounded-2xl border-white/30 bg-white/10 text-[17px] font-bold text-white transition-transform hover:bg-white/20 hover:text-white active:scale-[0.98]"
       >
         Sign in
       </Button>
-    </motion.div>
-
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 0.5 }}
-      transition={{ delay: 1, duration: 1 }}
-      className="mt-8 pt-5 border-t border-white/5"
-    >
-      <p className="text-[11px] uppercase tracking-widest font-bold opacity-60" style={{ color: BRAND.textDim }}>
-        &copy; 2026 AbiaConnect · One People. One Voice.
-      </p>
-    </motion.div>
+    </div>
+    <p className="mt-6 text-[12px] font-semibold text-white/60">One People. One Voice.</p>
   </div>
 );

@@ -5,7 +5,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar'
 import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
 import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
 import { Button } from '@/components/ui/button'
-import { GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
+import { APP_HEADER_GRADIENT, GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { formatDistanceToNow } from 'date-fns'
 
 const ActivityChart = lazy(() => import('@/components/dashboard/ActivityChart'))
@@ -32,16 +32,16 @@ export function NativeDashboard({ profile, stats, chartData, recentThreads }: Na
 
   return (
     <div className="flex flex-col gap-6 pb-32 animate-in fade-in duration-500">
-      {/* App update banner removed by user request */}
-
-
       <BirthdayGreeting />
       <AddBirthdayPrompt />
 
       {/* Header Section */}
-      <section className="relative overflow-hidden rounded-[2.5rem] bg-[#0B1220] p-6 text-white shadow-2xl">
+      <section className="relative overflow-hidden rounded-[2rem] p-6 text-white shadow-xl" style={{ backgroundImage: APP_HEADER_GRADIENT }}>
         {/* Glow effect */}
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[#F8C301]/10 blur-[80px]" />
+        <div
+          className="absolute -right-20 -top-20 h-72 w-72 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(248,195,1,0.24) 0%, rgba(248,195,1,0) 70%)' }}
+        />
 
         <div className="relative flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -52,7 +52,7 @@ export function NativeDashboard({ profile, stats, chartData, recentThreads }: Na
                   avatarUrl={profile.avatar_url}
                   displayName={displayName}
                   size="xl"
-                  className="h-20 w-20 border-2 border-[#0B1220]"
+                  className="h-20 w-20 border-2 border-[#14532D]"
                 />
               </div>
             </div>
@@ -71,7 +71,7 @@ export function NativeDashboard({ profile, stats, chartData, recentThreads }: Na
         <div className="relative mt-8 flex gap-3">
           <Button
             asChild
-            className="h-12 flex-1 gap-2 rounded-2xl border-0 text-sm font-bold text-[#0B1220] active:scale-95 transition-transform"
+            className="h-12 flex-1 gap-2 rounded-2xl border-0 text-sm font-bold text-[#0B1F0B] active:scale-95 transition-transform"
             style={{ backgroundImage: GOLD_GRADIENT, boxShadow: GOLD_SHADOW }}
           >
             <Link to="/create-thread">

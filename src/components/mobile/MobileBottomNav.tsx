@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAppUpdate } from '@/hooks/useAppUpdate'
 import { useUnreadMessagesCount } from '@/components/messages/MessagesBell'
+import { GOLD_GRADIENT } from '@/lib/mobileBrand'
 import { isNativeApp } from './NativeAuthLayout'
 import { NativeMoreSheet } from './NativeMoreSheet'
 
@@ -41,14 +42,21 @@ function NativeBottomNav() {
 
   const itemClass = (active: boolean) =>
     cn(
-      'relative flex h-full flex-1 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-medium transition-colors active:bg-white/[0.06]',
-      active ? 'text-amber-300' : 'text-slate-400',
+      'relative flex h-full flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl text-[11px] font-medium transition-colors active:bg-muted',
+      active ? 'font-bold text-foreground' : 'text-muted-foreground',
     )
+
+  const iconClass = (active: boolean) =>
+    cn(
+      'relative flex h-8 w-12 items-center justify-center rounded-xl transition-all duration-200',
+      active && 'scale-105 text-[#0B1F0B] shadow-sm',
+    )
+  const iconStyle = (active: boolean) => (active ? { backgroundImage: GOLD_GRADIENT } : undefined)
 
   return (
     <>
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[rgba(8,13,23,0.97)] backdrop-blur-2xl md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card shadow-[0_-6px_20px_-12px_rgba(0,0,0,0.25)] md:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         aria-label="Main navigation"
       >
@@ -64,11 +72,10 @@ function NativeBottomNav() {
                 aria-current={active ? 'page' : undefined}
                 className={itemClass(active)}
               >
-                {active ? <span className="absolute top-0 h-[3px] w-8 rounded-full bg-amber-300" aria-hidden /> : null}
-                <span className="relative">
+                <span className={iconClass(active)} style={iconStyle(active)}>
                   <tab.icon className="size-[22px]" strokeWidth={active ? 2.3 : 1.9} />
                   {badge ? (
-                    <span className="absolute -right-2.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-[#080D17]">
+                    <span className="absolute -right-2.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-card">
                       {badge > 99 ? '99+' : badge}
                     </span>
                   ) : null}
@@ -85,11 +92,10 @@ function NativeBottomNav() {
             aria-expanded={moreOpen}
             className={itemClass(moreOpen)}
           >
-            {moreOpen ? <span className="absolute top-0 h-[3px] w-8 rounded-full bg-amber-300" aria-hidden /> : null}
-            <span className="relative">
+            <span className={iconClass(moreOpen)} style={iconStyle(moreOpen)}>
               <LayoutGrid className="size-[22px]" strokeWidth={moreOpen ? 2.3 : 1.9} />
               {hasUpdate ? (
-                <span className="absolute -right-1 -top-1 size-2 rounded-full bg-red-500 ring-2 ring-[#080D17]" aria-label="Update available" />
+                <span className="absolute -right-1 -top-1 size-2 rounded-full bg-red-500 ring-2 ring-card" aria-label="Update available" />
               ) : null}
             </span>
             More
