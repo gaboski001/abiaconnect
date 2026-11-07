@@ -4,10 +4,16 @@ import { supabase } from '@/lib/supabase'
 import { toast } from '@/lib/toast'
 import { Switch } from '@/components/ui/switch'
 
-type Key = 'premium_invite' | 'support_appeal' | 'abia_this_week'
+type Key = 'premium_invite' | 'support_appeal' | 'abia_this_week' | 'app_tester_invite'
 type Status = Record<Key, { enabled: boolean; sent_30d: number; unsubscribed: number }>
 
 const EMAILS: { key: Key; name: string; about: string }[] = [
+  {
+    key: 'app_tester_invite',
+    name: 'App tester invitation',
+    about:
+      'Sent once, in hourly batches of 100, to members who signed in during the last 90 days: an invitation to test the Android app. Members who unsubscribed from any other email are left out.',
+  },
   {
     key: 'abia_this_week',
     name: 'Abia this week',

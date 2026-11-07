@@ -45,6 +45,8 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = false
   [functions.abia-this-week]
     verify_jwt = false
+  [functions.app-tester-invite]
+    verify_jwt = false
   [functions.volunteer-apply]
     verify_jwt = false
   [functions.volunteer-decide]
