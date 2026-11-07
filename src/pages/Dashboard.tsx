@@ -64,6 +64,7 @@ import { CommunityFeed } from '@/components/community/CommunityFeed'
 import { InviteCard, JoinInTodayCard, LgaOfTheMonthCard, OpportunitiesCard, PageProgressBar } from '@/components/community/CommunityCards'
 import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
 import { QuestionOfTheDayCard } from '@/components/engagement/QuestionOfTheDayCard'
+import { CollapsibleCard } from '@/components/community/CollapsibleCard'
 import { WaitingForReplyCard } from '@/components/engagement/WaitingForReplyCard'
 import { useUnreadMessagesCount } from '@/components/messages/MessagesBell'
 import { getConnectSummary } from '@/lib/connect'
@@ -464,13 +465,15 @@ function Overview({ userId, displayName, profile, stats, followers, chartData, r
         <WaitingForReplyCard />
         <QuestionOfTheDayCard />
         {open.length ? (
-          <section className="rounded-2xl border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-[15px] font-bold">Vote now</h2>
-              <Link to="/contests" className="text-sm font-semibold text-primary">
+          <CollapsibleCard
+            name="Vote now"
+            title="Vote now"
+            action={
+              <Link to="/contests" className="shrink-0 text-sm font-semibold text-primary">
                 All contests
               </Link>
-            </div>
+            }
+          >
             <ul className="space-y-1.5">
               {open.slice(0, 3).map((c) => (
                 <li key={c.id}>
@@ -480,7 +483,7 @@ function Overview({ userId, displayName, profile, stats, followers, chartData, r
                 </li>
               ))}
             </ul>
-          </section>
+          </CollapsibleCard>
         ) : null}
         <LgaOfTheMonthCard />
         <OpportunitiesCard />

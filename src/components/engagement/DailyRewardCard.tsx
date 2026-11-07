@@ -12,9 +12,10 @@ export const MY_REWARDS_KEY = ['my-rewards']
 
 /**
  * Daily check-in + level progress. One tap a day; the streak grows the reward,
- * which is what brings members back every day.
+ * which is what brings members back every day. Goes away for the day once
+ * claimed; the rewards page keeps it, with the level progress.
  */
-export function DailyRewardCard() {
+export function DailyRewardCard({ alwaysShow = false }: { alwaysShow?: boolean }) {
   const { user } = useAuth()
   const qc = useQueryClient()
   const [celebrate, setCelebrate] = useState<number | null>(null)
@@ -38,6 +39,7 @@ export function DailyRewardCard() {
   if (q.isLoading || !q.data) return <div className="h-[132px] animate-pulse rounded-2xl bg-muted" />
 
   const r = q.data
+  if (r.claimed_today && celebrate == null && !alwaysShow) return null
   const { current, next, progress } = levelFor(r.points)
   const streak = r.current_streak
   const nextReward = 10 + Math.min(streak, 6) * 2

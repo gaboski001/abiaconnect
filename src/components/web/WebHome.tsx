@@ -18,6 +18,7 @@ import { contestPhase, listContests } from '@/lib/engagement'
 import { daysSince, useJourney } from '@/lib/journey'
 import { cn } from '@/lib/utils'
 import { QuickPollCard } from '@/components/engagement/QuickPollCard'
+import { CollapsibleCard } from '@/components/community/CollapsibleCard'
 import { QuestionOfTheDayCard } from '@/components/engagement/QuestionOfTheDayCard'
 import { WaitingForReplyCard } from '@/components/engagement/WaitingForReplyCard'
 import { CommunityFeed } from '@/components/community/CommunityFeed'
@@ -250,19 +251,24 @@ function SideCard({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 font-semibold">
+    <CollapsibleCard
+      name={title}
+      className="p-5"
+      title={
+        <>
           <Icon className="size-4 text-primary" /> {title}
-        </h3>
-        {action ? (
-          <Link to={action.to} className="text-sm font-medium text-primary hover:underline">
+        </>
+      }
+      action={
+        action ? (
+          <Link to={action.to} className="shrink-0 text-sm font-medium text-primary hover:underline">
             {action.label}
           </Link>
-        ) : null}
-      </div>
+        ) : null
+      }
+    >
       {children}
-    </section>
+    </CollapsibleCard>
   )
 }
 

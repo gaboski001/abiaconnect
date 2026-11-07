@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { HeartHandshake } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { CollapsibleCard } from '@/components/community/CollapsibleCard'
 import { cn } from '@/lib/utils'
 
 const sb = supabase as any
@@ -39,11 +40,16 @@ export function WaitingForReplyCard({ compact = false }: { compact?: boolean }) 
   const posts = waitingQ.data ?? []
   if (!posts.length) return null
   return (
-    <section className={cn('rounded-2xl border border-rose-500/30 bg-rose-500/[0.05]', compact ? 'p-4' : 'p-5')}>
-      <h3 className="flex items-center gap-2 font-semibold">
-        <HeartHandshake className="size-4 text-rose-600 dark:text-rose-400" /> Waiting for your reply
-      </h3>
-      <p className="mt-1 text-xs text-muted-foreground">Nobody has answered these members yet. A quick reply makes them feel at home.</p>
+    <CollapsibleCard
+      name="waiting-for-reply"
+      className={cn('border-rose-500/30 bg-rose-500/[0.05]', compact ? 'p-4' : 'p-5')}
+      title={
+        <>
+          <HeartHandshake className="size-4 text-rose-600 dark:text-rose-400" /> Waiting for your reply
+        </>
+      }
+    >
+      <p className="text-xs text-muted-foreground">Nobody has answered these members yet. A quick reply makes them feel at home.</p>
       <ul className="mt-3 space-y-2">
         {posts.map((p) => (
           <li key={p.id}>
@@ -57,6 +63,6 @@ export function WaitingForReplyCard({ compact = false }: { compact?: boolean }) 
           </li>
         ))}
       </ul>
-    </section>
+    </CollapsibleCard>
   )
 }

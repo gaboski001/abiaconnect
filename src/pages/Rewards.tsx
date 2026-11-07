@@ -25,7 +25,7 @@ export default function Rewards() {
         <p className="text-sm text-muted-foreground">Earn points by taking part. Level up and collect badges.</p>
       </header>
 
-      <DailyRewardCard />
+      <DailyRewardCard alwaysShow />
 
       {r && lvl ? (
         <section className="grid grid-cols-3 gap-2.5">

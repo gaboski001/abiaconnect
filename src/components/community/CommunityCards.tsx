@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Briefcase, Check, Copy, MessageCircle, PenSquare, Share2, Sparkles, Trophy, UserPlus, Vote } from 'lucide-react'
+import { Briefcase, Check, Copy, Gift, MessageCircle, PenSquare, Share2, Sparkles, Trophy, UserPlus, Vote } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProfile } from '@/hooks/useProfile'
 import { toast } from '@/lib/toast'
@@ -10,48 +10,76 @@ import { MY_REWARDS_KEY } from '@/components/engagement/DailyRewardCard'
 import { claimRememberedInvite, getLgaOfTheMonth, getMyInvite, inviteLink, rememberInvite } from '@/lib/community'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { CollapsibleCard } from './CollapsibleCard'
 
-function Card({ title, icon: Icon, children, className }: { title: string; icon: typeof Trophy; children: React.ReactNode; className?: string }) {
+function Card({
+  title,
+  icon: Icon,
+  version,
+  action,
+  children,
+  className,
+}: {
+  title: string
+  icon: typeof Trophy
+  version?: string
+  action?: React.ReactNode
+  children: React.ReactNode
+  className?: string
+}) {
   return (
-    <section className={cn('rounded-2xl border border-border bg-card p-4', className)}>
-      <h2 className="mb-3 flex items-center gap-2 text-[15px] font-bold text-foreground">
-        <Icon className="size-[18px] text-primary" /> {title}
-      </h2>
+    <CollapsibleCard
+      name={title}
+      version={version}
+      action={action}
+      className={className}
+      title={
+        <>
+          <Icon className="size-[18px] text-primary" /> {title}
+        </>
+      }
+    >
       {children}
-    </section>
+    </CollapsibleCard>
   )
 }
 
-/** A few small things to do today, using the points members already earn. */
+/** A few small things to do today, using the points members already earn. Each one goes away once done. */
 export function JoinInTodayCard({ className }: { className?: string }) {
   const { user } = useAuth()
-  const rewardsQ = useQuery({ queryKey: MY_REWARDS_KEY, enabled: !!user, queryFn: getMyRewards, staleTime: 60_000 })
+  const rewardsQ = useQuery({ queryKey: MY_REWARDS_KEY, enabled: !!user, queryFn: getMyRewards, staleTime: 60_000, refetchOnMount: 'always' })
   const r = rewardsQ.data
   if (!r) return null
   const today = (r.today ?? {}) as Record<string, number>
   const tasks = [
-    { label: 'Check in today', points: '+10', done: r.claimed_today, to: '/rewards', icon: Check },
+    { label: 'Check in today', points: '+10', done: r.claimed_today, to: '/rewards', icon: Gift },
     { label: 'Answer a post that needs a reply', points: '+5', done: !!today.reply, to: '/?feed=unanswered', icon: MessageCircle },
     { label: 'Start a discussion', points: '+15', done: !!today.thread, to: '/create-thread', icon: PenSquare },
     { label: 'Vote in a poll or contest', points: '+2', done: !!today.poll_vote || !!today.contest_vote, to: '/contests', icon: Vote },
   ]
-  const finished = tasks.filter((t) => t.done).length
+  const left = tasks.filter((t) => !t.done)
+  if (!left.length) return null
   return (
-    <Card title="Join in today" icon={Sparkles} className={className}>
+    <Card
+      title="Join in today"
+      icon={Sparkles}
+      version={new Date().toDateString()}
+      className={className}
+      action={<span className="shrink-0 text-xs font-medium text-muted-foreground">{left.length} left</span>}
+    >
       <ul className="divide-y divide-border">
-        {tasks.map((t) => (
+        {left.map((t) => (
           <li key={t.label}>
             <Link to={t.to} className="flex items-center gap-2.5 py-2.5 text-sm">
-              <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-full', t.done ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
-                {t.done ? <Check className="size-3.5" /> : <t.icon className="size-3.5" />}
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <t.icon className="size-3.5" />
               </span>
-              <span className={cn('min-w-0 flex-1 font-semibold', t.done && 'font-normal text-muted-foreground line-through')}>{t.label}</span>
+              <span className="min-w-0 flex-1 font-semibold">{t.label}</span>
               <span className="shrink-0 rounded-full bg-amber-400/20 px-2 text-xs font-bold leading-5 text-amber-800 dark:text-amber-300">{t.points}</span>
             </Link>
           </li>
         ))}
       </ul>
-      {finished === tasks.length ? <p className="mt-2 text-sm font-semibold text-primary">All done for today. Well done! 🎉</p> : null}
     </Card>
   )
 }
