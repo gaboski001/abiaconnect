@@ -188,6 +188,30 @@ export type Database = {
         }
         Relationships: []
       }
+      app_tester_invites: {
+        Row: {
+          attempts: number
+          last_sent_at: string | null
+          opted_out_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          last_sent_at?: string | null
+          opted_out_at?: string | null
+          token?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          last_sent_at?: string | null
+          opted_out_at?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bookmarks: {
         Row: {
           created_at: string
@@ -3775,6 +3799,20 @@ export type Database = {
         }
       }
       alert_unanswered_posts: { Args: never; Returns: number }
+      app_tester_invite_claim: {
+        Args: { _limit?: number }
+        Returns: {
+          email: string
+          name: string
+          token: string
+          user_id: string
+        }[]
+      }
+      app_tester_invite_opt_out: { Args: { _token: string }; Returns: boolean }
+      app_tester_invite_retry: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
       award_points: {
         Args: { _amount: number; _reason: string; _ref: string; _user: string }
         Returns: number
