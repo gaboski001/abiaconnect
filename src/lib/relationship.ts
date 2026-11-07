@@ -1,7 +1,15 @@
 import { supabase } from '@/lib/supabase'
 import { messagingRuleText } from '@/lib/monetization/strings'
 
-export type LookingFor = 'friendship' | 'dating' | 'serious' | 'marriage' | 'networking'
+export type LookingFor =
+  | 'work'
+  | 'hiring'
+  | 'networking'
+  | 'services'
+  | 'friendship'
+  | 'dating'
+  | 'serious'
+  | 'marriage'
 export type RelSex = 'male' | 'female' | 'other' | 'prefer_not_to_say'
 export type RelMarital =
   | 'single'
@@ -24,6 +32,9 @@ export interface RelationshipProfile {
   height_cm: number | null
   current_location: string | null
   occupation: string | null
+  work_experience?: string | null
+  business_name?: string | null
+  services?: string | null
   sex: RelSex | null
   marital_status: RelMarital | null
   lga: string | null
@@ -41,11 +52,31 @@ export interface RelationshipCard extends RelationshipProfile {
 
 // Order matters: it is the order shown in filters and forms.
 export const LOOKING_FOR_LABELS: Record<LookingFor, string> = {
+  work: 'Looking for work',
+  hiring: 'Hiring',
   networking: 'Business & networking',
+  services: 'Professional services',
   friendship: 'Friendship',
   dating: 'Dating',
   serious: 'Long-term relationship',
   marriage: 'Marriage',
+}
+
+/** The choices at the top of Connect. Dating, long-term and marriage share one. */
+export const REASON_FILTERS = [
+  { id: 'work', label: 'Work', reasons: ['work'] },
+  { id: 'hiring', label: 'Hiring', reasons: ['hiring'] },
+  { id: 'business', label: 'Business', reasons: ['networking'] },
+  { id: 'services', label: 'Services', reasons: ['services'] },
+  { id: 'friendship', label: 'Friendship', reasons: ['friendship'] },
+  { id: 'dating', label: 'Dating & marriage', reasons: ['dating', 'serious', 'marriage'] },
+] as const satisfies readonly { id: string; label: string; reasons: readonly LookingFor[] }[]
+
+export type ReasonFilterId = (typeof REASON_FILTERS)[number]['id']
+
+/** Age, height and marital status only belong on personal profiles. */
+export function isPersonalReason(reason: LookingFor | null | undefined): boolean {
+  return reason === 'friendship' || reason === 'dating' || reason === 'serious' || reason === 'marriage'
 }
 
 export function calcAge(dob?: string | null): number | null {

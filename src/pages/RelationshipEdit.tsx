@@ -13,7 +13,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SEO } from '@/components/SEO'
-import { LOOKING_FOR_LABELS, LookingFor, RelationshipProfile } from '@/lib/relationship'
+import { isPersonalReason, LOOKING_FOR_LABELS, LookingFor, RelationshipProfile } from '@/lib/relationship'
+import { ReasonBadge } from '@/components/connect/ReasonBadge'
+import { cn } from '@/lib/utils'
 import { isValidHttpUrl } from '@/lib/images'
 
 const SEX = ['male', 'female', 'other', 'prefer_not_to_say'] as const
@@ -45,6 +47,9 @@ export default function RelationshipEdit() {
     height_cm: '' as string,
     current_location: '',
     occupation: '',
+    work_experience: '',
+    business_name: '',
+    services: '',
     sex: '' as string,
     marital_status: '' as string,
     lga: '',
@@ -69,6 +74,9 @@ export default function RelationshipEdit() {
         height_cm: mine.height_cm ? String(mine.height_cm) : '',
         current_location: mine.current_location ?? '',
         occupation: mine.occupation ?? '',
+        work_experience: mine.work_experience ?? '',
+        business_name: mine.business_name ?? '',
+        services: mine.services ?? '',
         sex: mine.sex ?? '',
         marital_status: mine.marital_status ?? '',
         lga: mine.lga ?? '',
@@ -160,6 +168,7 @@ export default function RelationshipEdit() {
 
   const save = async () => {
     if (!user) return
+    if (!form.looking_for) return toast.error('Choose why you are here')
     if (!form.headline.trim()) return toast.error('Add a short headline')
     setSaving(true)
     const payload = {
@@ -172,6 +181,9 @@ export default function RelationshipEdit() {
       height_cm: form.height_cm ? Number(form.height_cm) : null,
       current_location: form.current_location.trim() || null,
       occupation: form.occupation.trim() || null,
+      work_experience: form.work_experience.trim().slice(0, 2000) || null,
+      business_name: form.business_name.trim().slice(0, 120) || null,
+      services: form.services.trim().slice(0, 1000) || null,
       sex: form.sex || null,
       marital_status: form.marital_status || null,
       lga: form.lga.trim() || null,
@@ -184,7 +196,7 @@ export default function RelationshipEdit() {
     setSaving(false)
     if (error) return toast.error(error.message)
     toast.success('Connect profile saved')
-    navigate('/relationship')
+    navigate(`/relationship/${user.id}`)
   }
 
   if (!user) return <p className="p-6">Please sign in.</p>
@@ -204,19 +216,38 @@ export default function RelationshipEdit() {
       <div>
         <h1 className="text-2xl font-bold native:hidden">Your Connect profile</h1>
         <p className="text-sm text-muted-foreground">
-          Introduce yourself professionally. Say what you do and what you are looking for: business, networking,
-          friendship or a relationship.
+          Say why you are here and what you do, so the right people can find you.
         </p>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <div>
+          <Label>Why are you here?*</Label>
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {(Object.keys(LOOKING_FOR_LABELS) as LookingFor[]).map((k) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={form.looking_for === k}
+                onClick={() => setForm((f) => ({ ...f, looking_for: k }))}
+                className={cn(
+                  'flex items-center justify-between gap-2 rounded-xl border-2 p-3 text-left text-sm font-semibold',
+                  form.looking_for === k ? 'border-emerald-700 bg-emerald-700/5' : 'border-border',
+                )}
+              >
+                {LOOKING_FOR_LABELS[k]}
+                {form.looking_for === k && <ReasonBadge reason={k} className="[&>span]:hidden" />}
+              </button>
+            ))}
+          </div>
+        </div>
         <div>
           <Label>Headline*</Label>
           <Input
             value={form.headline}
             onChange={(e) => setForm((f) => ({ ...f, headline: e.target.value }))}
             maxLength={120}
-            placeholder="e.g. Agro-business founder in Aba, open to partnerships"
+            placeholder="e.g. Accountant with 5 years in retail, open to new roles"
           />
         </div>
         <div>
@@ -230,6 +261,47 @@ export default function RelationshipEdit() {
           />
         </div>
 
+        <div>
+          <Label>Occupation</Label>
+          <Input value={form.occupation} onChange={(e) => setForm((f) => ({ ...f, occupation: e.target.value }))} placeholder="What do you do?" />
+        </div>
+
+        {!isPersonalReason(form.looking_for || null) && (
+          <>
+            <div>
+              <Label>Work experience</Label>
+              <Textarea
+                value={form.work_experience}
+                onChange={(e) => setForm((f) => ({ ...f, work_experience: e.target.value }))}
+                rows={3}
+                maxLength={2000}
+                placeholder="e.g. 5 years as an accountant at a retail company in Umuahia"
+              />
+            </div>
+            <div>
+              <Label>Business or company</Label>
+              <Input
+                value={form.business_name}
+                onChange={(e) => setForm((f) => ({ ...f, business_name: e.target.value }))}
+                maxLength={120}
+                placeholder="Name of your business or where you work"
+              />
+            </div>
+            <div>
+              <Label>Services you offer</Label>
+              <Textarea
+                value={form.services}
+                onChange={(e) => setForm((f) => ({ ...f, services: e.target.value }))}
+                rows={2}
+                maxLength={1000}
+                placeholder="e.g. Tax filing, bookkeeping, business registration"
+              />
+            </div>
+          </>
+        )}
+
+        {isPersonalReason(form.looking_for || null) && (
+          <>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Date of birth</Label>
@@ -239,18 +311,6 @@ export default function RelationshipEdit() {
             <Label>Height (cm)</Label>
             <Input type="number" min={100} max={250} value={form.height_cm} onChange={(e) => setForm((f) => ({ ...f, height_cm: e.target.value }))} />
           </div>
-        </div>
-
-        <div>
-          <Label>Looking for</Label>
-          <Select value={form.looking_for || undefined} onValueChange={(v) => setForm((f) => ({ ...f, looking_for: v as LookingFor }))}>
-            <SelectTrigger><SelectValue placeholder="Choose one" /></SelectTrigger>
-            <SelectContent>
-              {(Object.keys(LOOKING_FOR_LABELS) as LookingFor[]).map((k) => (
-                <SelectItem key={k} value={k}>{LOOKING_FOR_LABELS[k]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -274,6 +334,9 @@ export default function RelationshipEdit() {
           </div>
         </div>
 
+          </>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>LGA</Label>
@@ -286,12 +349,7 @@ export default function RelationshipEdit() {
         </div>
 
         <div>
-          <Label>Occupation</Label>
-          <Input value={form.occupation} onChange={(e) => setForm((f) => ({ ...f, occupation: e.target.value }))} placeholder="What do you do?" />
-        </div>
-
-        <div>
-          <Label>Interests</Label>
+          <Label>Skills and interests</Label>
           <div className="flex flex-wrap gap-1.5 mt-1 rounded-xl border border-input p-2">
             {form.interests.map((t) => (
               <span key={t} className="inline-flex items-center gap-1 rounded-full bg-pink-500/10 text-pink-600 dark:text-pink-400 text-xs font-medium px-2.5 py-0.5">

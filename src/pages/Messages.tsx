@@ -1257,50 +1257,39 @@ function ConversationView({
 
 
 
-  // Viewport-based read receipts: mark each incoming message read only when it scrolls into view.
-  const markedRef = useRef<Set<string>>(new Set())
-  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map())
-  const registerMessageRef = (id: string) => (el: HTMLDivElement | null) => {
-    if (el) messageRefs.current.set(id, el)
-    else messageRefs.current.delete(id)
-  }
-
+  // Opening a chat reads all of it, so the unread count can't get stuck on
+  // messages that never scrolled into view. New arrivals are read straight
+  // away while the chat is on screen.
+  const markingReadRef = useRef(false)
   useEffect(() => {
-    if (!user || !messagesQ.data?.length) return
-    const root = scrollRef.current
-    if (!root) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue
-          const id = (entry.target as HTMLElement).dataset.mid
-          if (!id || markedRef.current.has(id)) continue
-          markedRef.current.add(id)
-          observer.unobserve(entry.target)
-          const nowIso = new Date().toISOString()
-          // Optimistic local patch — no refetch, no duplicate render.
-          qc.setQueryData<Message[]>(queryKey, (prev) =>
-            (prev ?? []).map((m) =>
-              m.id === id ? { ...m, is_read: true, read_at: m.read_at ?? nowIso } : m,
-            ),
-          )
-          supabase.rpc('mark_message_read', { _message_id: id }).then(() => {
-            qc.invalidateQueries({ queryKey: ['conversations', user.id] })
-            qc.invalidateQueries({ queryKey: ['messages-unread', user.id] })
-          })
-        }
-      },
-      { root, threshold: 0.6 },
-    )
-    for (const m of messagesQ.data) {
-      if (m.sender_id === user.id || m.is_read || markedRef.current.has(m.id)) continue
-      const el = messageRefs.current.get(m.id)
-      if (el) observer.observe(el)
+    if (!user || !conversationId) return
+    const uid = user.id
+    const markRead = async () => {
+      if (markingReadRef.current || document.visibilityState !== 'visible') return
+      const list = qc.getQueryData<Message[]>(queryKey) ?? []
+      if (!list.some((m) => m.sender_id !== uid && !m.is_read)) return
+      markingReadRef.current = true
+      const nowIso = new Date().toISOString()
+      qc.setQueryData<Message[]>(queryKey, (prev) =>
+        (prev ?? []).map((m) =>
+          m.sender_id !== uid && !m.is_read ? { ...m, is_read: true, read_at: m.read_at ?? nowIso } : m,
+        ),
+      )
+      qc.setQueryData<Conversation[]>(['conversations', uid], (prev) =>
+        prev?.map((c) => (c.id === conversationId ? { ...c, unread_count: 0 } : c)),
+      )
+      try {
+        await supabase.rpc('mark_conversation_read', { _conversation_id: conversationId })
+      } finally {
+        markingReadRef.current = false
+        qc.invalidateQueries({ queryKey: ['conversations', uid] })
+        qc.invalidateQueries({ queryKey: ['messages-unread', uid] })
+      }
     }
-    return () => observer.disconnect()
-  }, [messagesQ.data, user, qc, queryKey])
-  
-
+    void markRead()
+    document.addEventListener('visibilitychange', markRead)
+    return () => document.removeEventListener('visibilitychange', markRead)
+  }, [messagesQ.data, user, conversationId, qc, queryKey])
 
   const queueItems = useUploadQueue(conversationId)
 
@@ -1893,7 +1882,6 @@ function ConversationView({
                     quoted={m.reply_to_id ? messageById.get(m.reply_to_id) ?? null : null}
                     userId={user?.id}
                     otherName={other?.display_name || other?.username || 'User'}
-                    innerRef={!mine && !m.is_read ? registerMessageRef(m.id) : undefined}
                     onReply={() => {
                       setEditing(null)
                       setReplyTo(m)

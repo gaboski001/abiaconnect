@@ -68,6 +68,7 @@ const Unsubscribe = lazy(() => import('@/pages/Unsubscribe'))
 const Version = lazy(() => import('@/pages/Version'))
 const Relationship = lazy(() => import('@/pages/Relationship'))
 const RelationshipEdit = lazy(() => import('@/pages/RelationshipEdit'))
+const ConnectPeople = lazy(() => import('@/pages/ConnectPeople'))
 const RelationshipProfilePage = lazy(() => import('@/pages/RelationshipProfile'))
 const DatingLikes = lazy(() => import('@/pages/DatingLikes'))
 const DatingPremium = lazy(() => import('@/pages/DatingPremium'))
@@ -186,6 +187,7 @@ export default function App() {
                   <Route path="messages/:conversationId" element={<Messages />} />
                   <Route path="relationship" element={<Relationship />} />
                   <Route path="relationship/edit" element={<RelationshipEdit />} />
+                  <Route path="relationship/people" element={<ConnectPeople />} />
                   <Route path="relationship/likes" element={<DatingLikes />} />
                   <Route path="relationship/premium" element={<DatingPremium />} />
                   <Route path="relationship/payment/callback" element={<DatingPaymentCallback />} />

@@ -87,6 +87,7 @@ vi.mock('@/lib/monetization/api', async (orig) => ({
 import Relationship from './Relationship'
 
 async function openDiscover() {
+  localStorage.setItem('abia:dating-mode', 'discover')
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
     <QueryClientProvider client={qc}>
@@ -95,7 +96,6 @@ async function openDiscover() {
       </MemoryRouter>
     </QueryClientProvider>,
   )
-  // Discover is the default view.
   await screen.findByRole('button', { name: 'Connect' })
 }
 

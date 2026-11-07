@@ -32,7 +32,7 @@ const TOUR: { icon: LucideIcon; name: string; text: string; tone: string }[] = [
   { icon: Home, name: 'Home', text: 'Today’s news, questions and quick links.', tone: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' },
   { icon: Users, name: 'Community', text: 'Your LGA group and people from home.', tone: 'bg-sky-500/15 text-sky-700 dark:text-sky-300' },
   { icon: MessageCircle, name: 'Messages', text: 'Chat and make voice or video calls.', tone: 'bg-violet-500/15 text-violet-700 dark:text-violet-300' },
-  { icon: Handshake, name: 'Connect', text: 'Swipe right to connect, left to skip.', tone: 'bg-pink-500/15 text-pink-700 dark:text-pink-300' },
+  { icon: Handshake, name: 'Connect', text: 'Find people for work, business, friendship and more.', tone: 'bg-pink-500/15 text-pink-700 dark:text-pink-300' },
   { icon: Grid2x2, name: 'More', text: 'Rewards, contests, events and settings.', tone: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' },
 ]
 

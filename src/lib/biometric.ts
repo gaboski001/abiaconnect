@@ -60,7 +60,7 @@ export async function enableBiometric(email: string, password: string): Promise<
   try {
     // Verify once so the user explicitly consents.
     await NativeBiometric.verifyIdentity({
-      reason: 'Enable biometric sign-in for AbiaConnect',
+      reason: 'Turn on fingerprint or face sign-in for AbiaConnect',
       title: 'Confirm it\'s you',
       subtitle: 'Future sign-ins will use your fingerprint or face',
     })

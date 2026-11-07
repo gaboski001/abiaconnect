@@ -66,7 +66,7 @@ const en = {
   'how.dismiss': 'Got it',
   'profile_cta.title': 'Create your Connect profile',
   'profile_cta.body':
-    'Tell members who you are and what you are looking for: business, networking, friendship or a relationship.',
+    'Tell members who you are and why you are here: work, business, services, friendship or a relationship.',
   'profile_cta.button': 'Create my profile',
   'discover.hint': 'Swipe right to connect · Swipe left to skip',
   'tabs.discover': 'Discover',
