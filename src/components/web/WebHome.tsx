@@ -82,7 +82,7 @@ export function WebHome() {
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-muted-foreground">
             <span>
-              {user && firstDay ? 'Glad you’re here. Your first steps are just below.' : 'Here’s what the community is talking about.'}
+              {user && firstDay && !journey.data?.bonus_claimed ? 'Glad you’re here. Your first steps are just below.' : 'Here’s what the community is talking about.'}
             </span>
             <OnlineMembersPill />
           </div>

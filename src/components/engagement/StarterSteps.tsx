@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { CheckCircle2, ChevronRight, Circle, Gift, Loader2, Sparkles, X } from 'lucide-react'
+import { ChevronRight, Circle, Gift, Loader2, Sparkles, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { CollapsibleCard } from '@/components/community/CollapsibleCard'
 import {
   NEWCOMER_DAYS,
   STARTER_BONUS,
@@ -19,7 +20,6 @@ import {
 } from '@/lib/journey'
 import { cn } from '@/lib/utils'
 
-const HIDE_KEY = 'abia.starter-hidden'
 const NOTE_KEY = 'abia.personalise-note-hidden'
 
 function stored(key: string) {
@@ -60,12 +60,12 @@ function stepList(journey: Journey, helloLink: string) {
 
 /**
  * "Your first 5 steps" on the home page: one clear thing to do next, points
- * as you go, and a 50-point bonus plus the New Abian badge at the end.
+ * as you go, and a 50-point bonus plus the New Abian badge at the end. Finished
+ * steps drop off the list, and the card goes away once the bonus is claimed.
  */
 export function StarterSteps({ compact = false }: { compact?: boolean }) {
   const journey = useJourney()
   const refresh = useRefreshJourney()
-  const [hidden, setHidden] = useState(() => stored(HIDE_KEY))
   const [claiming, setClaiming] = useState(false)
   const [helloLink, setHelloLink] = useState('/create-thread')
 
@@ -81,7 +81,7 @@ export function StarterSteps({ compact = false }: { compact?: boolean }) {
     })
   }, [data?.lga_group])
 
-  if (!data || hidden) return null
+  if (!data || data.bonus_claimed) return null
   // Not personalised yet (members from before the welcome screen existed).
   if (!data.onboarded_at) return <PersonaliseNote />
   // For the first weeks after joining, or after personalising.
@@ -106,46 +106,28 @@ export function StarterSteps({ compact = false }: { compact?: boolean }) {
     }
   }
 
-  if (data.bonus_claimed) {
-    return (
-      <section className="flex items-center gap-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4">
-        <span className="text-3xl" aria-hidden>🏅</span>
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold">You're a New Abian!</p>
-          <p className="text-sm text-muted-foreground">All 5 steps done. Keep checking in daily to grow your streak.</p>
-        </div>
-        <button
-          type="button"
-          aria-label="Hide"
-          onClick={() => {
-            store(HIDE_KEY)
-            setHidden(true)
-          }}
-          className="rounded-md p-1 text-muted-foreground hover:bg-muted"
-        >
-          <X className="size-4" />
-        </button>
-      </section>
-    )
-  }
-
   return (
-    <section className={cn('rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.07] via-card to-card p-5', compact && 'p-4')}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+    <CollapsibleCard
+      name="first-steps"
+      className={cn('border-primary/25 bg-gradient-to-br from-primary/[0.07] via-card to-card', compact ? 'p-4' : 'p-5')}
+      titleClassName="flex-col items-start gap-1"
+      title={
+        <>
+          <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
             <Sparkles className="size-3.5" /> Your first 5 steps
-          </p>
-          <h2 className="mt-1 text-lg font-semibold">
+          </span>
+          <span className="text-lg font-semibold leading-snug">
             {all ? 'All done! Claim your bonus' : `${done} of 5 done. Next: ${next?.title.toLowerCase()}`}
-          </h2>
-        </div>
+          </span>
+        </>
+      }
+      action={
         <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
           <Gift className="size-3.5" /> +{STARTER_BONUS}
         </span>
-      </div>
-
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
+      }
+    >
+      <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
         <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${(done / 5) * 100}%` }} />
       </div>
 
@@ -156,38 +138,33 @@ export function StarterSteps({ compact = false }: { compact?: boolean }) {
         </Button>
       ) : (
         <ol className="mt-4 space-y-1.5">
-          {steps.map((step) => {
-            const finished = data.steps[step.id]
-            const isNext = step === next
-            return (
-              <li key={step.id}>
-                <Link
-                  to={step.to}
-                  className={cn(
-                    'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
-                    isNext ? 'bg-primary/10 hover:bg-primary/15' : 'hover:bg-muted/60',
-                    finished && 'pointer-events-none',
-                  )}
-                  aria-disabled={finished}
-                >
-                  {finished ? (
-                    <CheckCircle2 className="size-5 shrink-0 text-emerald-600" />
-                  ) : (
+          {steps
+            .filter((step) => !data.steps[step.id])
+            .map((step) => {
+              const isNext = step === next
+              return (
+                <li key={step.id}>
+                  <Link
+                    to={step.to}
+                    className={cn(
+                      'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
+                      isNext ? 'bg-primary/10 hover:bg-primary/15' : 'hover:bg-muted/60',
+                    )}
+                  >
                     <Circle className={cn('size-5 shrink-0', isNext ? 'text-primary' : 'text-muted-foreground/50')} />
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className={cn('block text-sm font-medium', finished && 'text-muted-foreground line-through')}>{step.title}</span>
-                    {!finished && !compact ? <span className="block text-xs text-muted-foreground">{step.hint}</span> : null}
-                  </span>
-                  {step.points && !finished ? <span className="text-xs font-semibold text-amber-600">{step.points}</span> : null}
-                  {!finished ? <ChevronRight className="size-4 shrink-0 text-muted-foreground" /> : null}
-                </Link>
-              </li>
-            )
-          })}
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium">{step.title}</span>
+                      {compact ? null : <span className="block text-xs text-muted-foreground">{step.hint}</span>}
+                    </span>
+                    {step.points ? <span className="text-xs font-semibold text-amber-600">{step.points}</span> : null}
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                  </Link>
+                </li>
+              )
+            })}
         </ol>
       )}
-    </section>
+    </CollapsibleCard>
   )
 }
 
