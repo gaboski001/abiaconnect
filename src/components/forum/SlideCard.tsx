@@ -55,7 +55,7 @@ export function SlideCard({ slide, compact }: { slide: HeroSlideLike; compact?: 
 
   return (
     <div
-      className={`relative w-full h-full rounded-[32px] overflow-hidden border-2 border-secondary/20 ${compact ? 'min-h-[240px] md:min-h-[260px]' : 'min-h-[380px] md:min-h-[460px]'} flex flex-col items-center justify-center px-6 py-10 md:py-16 text-center`}
+      className={`relative w-full h-full rounded-[32px] overflow-hidden border-2 border-secondary/20 max-sm:rounded-[20px] max-sm:h-[172px] max-sm:min-h-0 ${compact ? 'sm:min-h-[240px] md:min-h-[260px]' : 'sm:min-h-[380px] md:min-h-[460px]'} flex flex-col items-center justify-center px-6 py-10 md:py-16 text-center`}
       style={bgStyle}
     >
       {/* The slide's picture shows what it is about; the shade over it keeps the words readable. */}
@@ -89,14 +89,14 @@ export function SlideCard({ slide, compact }: { slide: HeroSlideLike; compact?: 
         </>
       )}
 
-      <div className="relative z-10 max-w-2xl mx-auto space-y-4">
+      <div className="relative z-10 max-w-2xl mx-auto space-y-4 max-sm:space-y-1 max-sm:pb-3">
         {slide.badge_text && (
-          <div className="inline-flex items-center px-4 py-1.5 rounded-full border border-secondary/40 bg-secondary/10 text-secondary text-xs font-semibold uppercase tracking-wider">
+          <div className="max-sm:hidden inline-flex items-center px-4 py-1.5 rounded-full border border-secondary/40 bg-secondary/10 text-secondary text-xs font-semibold uppercase tracking-wider">
             {slide.badge_text}
           </div>
         )}
 
-        <h2 className={compact ? 'text-2xl md:text-3xl font-bold leading-tight' : 'text-3xl md:text-5xl font-bold leading-tight'}>
+        <h2 className={`font-bold leading-tight max-sm:text-lg max-sm:line-clamp-2 ${compact ? 'text-2xl md:text-3xl' : 'text-3xl md:text-5xl'}`}>
           {slide.isDefault ? (
             <>
               <span className="text-white">{slide.title}</span>
@@ -115,21 +115,21 @@ export function SlideCard({ slide, compact }: { slide: HeroSlideLike; compact?: 
         </h2>
 
         {slide.body && (
-          <p className="text-white/80 text-base md:text-lg max-w-xl mx-auto leading-relaxed">
+          <p className="text-white/80 text-base md:text-lg max-w-xl mx-auto leading-relaxed max-sm:text-xs max-sm:leading-snug max-sm:line-clamp-2">
             {slide.body}
           </p>
         )}
 
         {!slide.isDefault && slide.subtitle && (
-          <p className="text-secondary font-semibold text-sm md:text-base">{slide.subtitle}</p>
+          <p className="text-secondary font-semibold text-sm md:text-base max-sm:hidden">{slide.subtitle}</p>
         )}
 
         {(slide.cta_label || slide.cta_label_2) && (
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2 max-sm:gap-2 max-sm:pt-1">
             {slide.cta_label && slide.cta_url && (
               <SlideLink
                 href={slide.cta_url}
-                className="px-6 py-2.5 rounded-xl font-semibold text-sm bg-gold text-black hover:opacity-90 transition-opacity shadow-[0_8px_30px_-8px_rgba(245,200,80,0.7)]"
+                className="px-6 py-2.5 rounded-xl font-semibold text-sm max-sm:px-3 max-sm:py-1.5 max-sm:text-xs bg-gold text-black hover:opacity-90 transition-opacity shadow-[0_8px_30px_-8px_rgba(245,200,80,0.7)]"
               >
                 {slide.cta_label}
               </SlideLink>
@@ -137,7 +137,7 @@ export function SlideCard({ slide, compact }: { slide: HeroSlideLike; compact?: 
             {slide.cta_label_2 && slide.cta_url_2 && (
               <SlideLink
                 href={slide.cta_url_2}
-                className="px-6 py-2.5 rounded-xl font-semibold text-sm border border-white/30 text-white hover:bg-white/10 transition-colors"
+                className="px-6 py-2.5 rounded-xl font-semibold text-sm max-sm:px-3 max-sm:py-1.5 max-sm:text-xs border border-white/30 text-white hover:bg-white/10 transition-colors"
               >
                 {slide.cta_label_2}
               </SlideLink>
@@ -146,7 +146,7 @@ export function SlideCard({ slide, compact }: { slide: HeroSlideLike; compact?: 
         )}
 
         {!slide.isDefault && (
-          <p className="text-white/30 text-[10px] uppercase tracking-widest mt-2">
+          <p className="text-white/30 text-[10px] uppercase tracking-widest mt-2 max-sm:mt-0 max-sm:text-[8px] max-sm:text-white/60">
             Advertisement
           </p>
         )}
@@ -155,16 +155,13 @@ export function SlideCard({ slide, compact }: { slide: HeroSlideLike; compact?: 
   )
 }
 
-/** A designed banner image, shown in full; wide image on computers, portrait on phones. */
+/** A designed banner image, shown in full. Phones also use the wide picture, as a tall one fills the screen. */
 function BannerSlide({ slide }: { slide: HeroSlideLike }) {
   const picture = (
-    <picture>
-      {slide.mobile_image_url && <source media="(max-width: 767px)" srcSet={slide.mobile_image_url} />}
-      <img src={slide.image_url ?? ''} alt={slide.title} className="block h-full w-full object-cover" />
-    </picture>
+    <img src={slide.image_url ?? ''} alt={slide.title} className="block h-full w-full object-cover max-sm:object-contain" />
   )
   const cls =
-    'relative block w-full h-full rounded-[32px] overflow-hidden border-2 border-secondary/20 bg-[#0f3326] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary'
+    'relative block w-full h-full rounded-[32px] max-sm:rounded-[20px] max-sm:h-[172px] overflow-hidden border-2 border-secondary/20 bg-[#0f3326] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary'
   return slide.cta_url ? (
     <SlideLink href={slide.cta_url} className={cls}>
       {picture}

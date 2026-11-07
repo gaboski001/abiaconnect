@@ -162,7 +162,7 @@ function HeroCarousel({ slides, compact }: { slides: HeroSlideLike[]; compact?: 
       aria-label="Hero announcements"
       className="relative w-full"
     >
-      <div ref={emblaRef} className="overflow-hidden rounded-[32px]">
+      <div ref={emblaRef} className="overflow-hidden rounded-[32px] max-sm:rounded-[20px]">
         <div className="flex">
           {slides.map((slide, idx) => (
             <div
@@ -194,7 +194,7 @@ function HeroCarousel({ slides, compact }: { slides: HeroSlideLike[]; compact?: 
         <ChevronRight className="w-5 h-5" />
       </button>
 
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5">
+      <div className="absolute bottom-4 max-sm:bottom-1.5 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5">
         {slides.map((_, index) => (
           <button
             key={index}
@@ -206,15 +206,15 @@ function HeroCarousel({ slides, compact }: { slides: HeroSlideLike[]; compact?: 
             }}
             className={`transition-all duration-300 rounded-full ${
               index === selectedIndex
-                ? 'w-6 h-2 bg-secondary'
-                : 'w-2 h-2 bg-white/40 hover:bg-white/70'
+                ? 'w-6 h-2 max-sm:w-4 max-sm:h-1.5 bg-secondary'
+                : 'w-2 h-2 max-sm:w-1.5 max-sm:h-1.5 bg-white/40 hover:bg-white/70'
             }`}
             aria-label={`Go to slide ${index + 1}`}
           />
         ))}
       </div>
 
-      <div className="absolute top-4 right-4 z-10 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1 text-xs text-white/80 font-medium">
+      <div className="max-sm:hidden absolute top-4 right-4 z-10 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1 text-xs text-white/80 font-medium">
         {selectedIndex + 1} / {slides.length}
       </div>
     </section>

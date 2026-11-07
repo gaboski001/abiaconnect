@@ -625,7 +625,7 @@ export default function HeroSlidesSection() {
             </Field>
 
             {form.full_image && (
-              <Field label="Mobile banner image URL (portrait, for phones)" hint="Optional. Best size 1080 x 1350. Phones use the wide image if empty.">
+              <Field label="Mobile banner image URL (not used for now)" hint="Phones now show the wide banner image in a short strip, so this is ignored. Make the wide image easy to read at phone size.">
                 <Input value={form.mobile_image_url} onChange={(e) => setForm({ ...form, mobile_image_url: e.target.value })} />
               </Field>
             )}
