@@ -217,8 +217,11 @@ export function ThreadEditor({
   // What is active where the cursor is; the toolbar redraws only when one of these changes.
   const at = useEditorState({
     editor,
-    selector: ({ editor: e }) =>
-      e && {
+    // Reads the current editor, not the one passed in: a page still loading can get its
+    // unshown editor shut down, and the snapshot keeps that one until the next keystroke.
+    selector: () => {
+      const e = editor && !editor.isDestroyed ? editor : null
+      return e && {
         empty: e.isEmpty,
         style: (e.isActive('heading', { level: 2 }) ? 'h2' : e.isActive('heading', { level: 3 }) ? 'h3' : 'paragraph') as TextStyle,
         bold: e.isActive('bold'),
@@ -231,7 +234,8 @@ export function ThreadEditor({
         canUndo: e.can().undo(),
         canRedo: e.can().redo(),
         ...readingStats(e.getText()),
-      },
+      }
+    },
   })
 
   const toggleMenu = (menu: NonNullable<typeof openMenu>) => (open: boolean) => {

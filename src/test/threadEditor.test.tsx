@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { ThreadEditor } from '@/components/thread/ThreadEditor'
@@ -34,5 +35,22 @@ describe('ThreadEditor', () => {
       'Say the kind of answer that would help: a contact, a price, steps to follow.',
     ])
     expect(screen.queryByText('Not sure how to begin? Pick a layout:')).toBeNull()
+  })
+
+  // Tapping through to the page: a sibling still loading keeps the page from
+  // showing, the library shuts down the unshown editor, then the page shows.
+  it('survives the editor being shut down while the page is still loading', async () => {
+    const Slow = lazy(async () => {
+      await new Promise((r) => setTimeout(r, 30))
+      return { default: () => <p>Loaded</p> }
+    })
+    render(
+      <Suspense fallback={<p>Loading</p>}>
+        <ThreadEditor value="" onChange={() => {}} />
+        <Slow />
+      </Suspense>,
+    )
+    await screen.findByText('Loaded')
+    await screen.findByRole('toolbar', { name: 'Formatting' })
   })
 })
