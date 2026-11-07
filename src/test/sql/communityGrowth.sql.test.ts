@@ -49,6 +49,7 @@ beforeAll(async () => {
   `)
   await db.exec(migration('20261107120000_connect_professional.sql'))
   await db.exec(migration('20261107140000_community_growth.sql'))
+  await db.exec(migration('20261107160000_best_answer_no_second_link.sql'))
 }, 60_000)
 
 const asMember = <T>(user: string, fn: () => Promise<T>) =>
@@ -261,5 +262,13 @@ describe('jobs and services board', () => {
     const ids = rows.map((x) => x.user_id)
     expect(ids).toContain(worker)
     expect(ids).not.toContain(dating)
+  })
+
+  it('keeps one link between discussions and replies, so reply counts can load', async () => {
+    const { rows } = await db.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM pg_constraint
+        WHERE contype = 'f' AND conrelid = 'public.threads'::regclass AND confrelid = 'public.replies'::regclass`,
+    )
+    expect(rows[0].n).toBe(0)
   })
 })

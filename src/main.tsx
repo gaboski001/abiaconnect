@@ -1,3 +1,4 @@
+import { keepDatabaseReadsFresh } from '@/lib/freshDatabaseReads'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -20,6 +21,8 @@ import '@fontsource/nunito-sans/400.css'
 import '@fontsource/nunito-sans/600.css'
 import '@fontsource/nunito-sans/700.css'
 import './index.css'
+
+keepDatabaseReadsFresh()
 
 // App-only styling hook (Tailwind `native:` variant). index.html sets it early;
 // this is the fallback if Capacitor wasn't ready then.
