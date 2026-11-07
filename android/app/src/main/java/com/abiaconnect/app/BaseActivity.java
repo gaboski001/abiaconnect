@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.media.AudioAttributes;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -38,6 +39,18 @@ public class BaseActivity extends BridgeActivity {
 
     public static boolean isAppInForeground() {
         return sAppInForeground;
+    }
+
+    // The status bar is dark green (or navy at night), so its icons are always white.
+    private void useLightStatusBarIcons() {
+        WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView())
+            .setAppearanceLightStatusBars(false);
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        useLightStatusBarIcons();
     }
 
     @Override
@@ -104,6 +117,8 @@ public class BaseActivity extends BridgeActivity {
             getWindow().setStatusBarColor(ContextCompat.getColor(this, R.color.status_bar_color));
             getWindow().setNavigationBarColor(ContextCompat.getColor(this, R.color.navigationBarColor));
         }
+        // Queued so it runs after the SystemBars plugin's own queued setup.
+        new Handler(getMainLooper()).post(this::useLightStatusBarIcons);
 
         if (getBridge() != null && getBridge().getWebView() != null) {
             // Same colour as the splash, so there is never a white flash.
