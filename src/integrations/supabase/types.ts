@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      abia_this_week_emails: {
+        Row: {
+          last_sent_at: string | null
+          opted_out_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          last_sent_at?: string | null
+          opted_out_at?: string | null
+          token?: string
+          user_id: string
+        }
+        Update: {
+          last_sent_at?: string | null
+          opted_out_at?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       achievements: {
         Row: {
           created_at: string
@@ -167,6 +188,30 @@ export type Database = {
         }
         Relationships: []
       }
+      app_tester_invites: {
+        Row: {
+          attempts: number
+          last_sent_at: string | null
+          opted_out_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          last_sent_at?: string | null
+          opted_out_at?: string | null
+          token?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          last_sent_at?: string | null
+          opted_out_at?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bookmarks: {
         Row: {
           created_at: string
@@ -283,6 +328,45 @@ export type Database = {
           count?: number
           scope?: string
           window_start?: string
+        }
+        Relationships: []
+      }
+      connect_follows: {
+        Row: {
+          created_at: string
+          followed_id: string
+          follower_id: string
+        }
+        Insert: {
+          created_at?: string
+          followed_id: string
+          follower_id: string
+        }
+        Update: {
+          created_at?: string
+          followed_id?: string
+          follower_id?: string
+        }
+        Relationships: []
+      }
+      connect_photo_likes: {
+        Row: {
+          created_at: string
+          liker_id: string
+          owner_id: string
+          photo_url: string
+        }
+        Insert: {
+          created_at?: string
+          liker_id: string
+          owner_id: string
+          photo_url: string
+        }
+        Update: {
+          created_at?: string
+          liker_id?: string
+          owner_id?: string
+          photo_url?: string
         }
         Relationships: []
       }
@@ -1201,6 +1285,45 @@ export type Database = {
           key?: string
           updated_at?: string
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      member_invite_codes: {
+        Row: {
+          code: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      member_invites: {
+        Row: {
+          created_at: string
+          invitee_id: string
+          inviter_id: string
+          rewarded_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          invitee_id: string
+          inviter_id: string
+          rewarded_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          invitee_id?: string
+          inviter_id?: string
+          rewarded_at?: string | null
         }
         Relationships: []
       }
@@ -2403,6 +2526,7 @@ export type Database = {
       relationship_profiles: {
         Row: {
           about: string | null
+          business_name: string | null
           created_at: string
           current_location: string | null
           dob: string | null
@@ -2417,12 +2541,15 @@ export type Database = {
           marital_status: string | null
           occupation: string | null
           photos: string[]
+          services: string | null
           sex: string | null
           updated_at: string
           user_id: string
+          work_experience: string | null
         }
         Insert: {
           about?: string | null
+          business_name?: string | null
           created_at?: string
           current_location?: string | null
           dob?: string | null
@@ -2437,12 +2564,15 @@ export type Database = {
           marital_status?: string | null
           occupation?: string | null
           photos?: string[]
+          services?: string | null
           sex?: string | null
           updated_at?: string
           user_id: string
+          work_experience?: string | null
         }
         Update: {
           about?: string | null
+          business_name?: string | null
           created_at?: string
           current_location?: string | null
           dob?: string | null
@@ -2457,9 +2587,11 @@ export type Database = {
           marital_status?: string | null
           occupation?: string | null
           photos?: string[]
+          services?: string | null
           sex?: string | null
           updated_at?: string
           user_id?: string
+          work_experience?: string | null
         }
         Relationships: []
       }
@@ -2994,6 +3126,32 @@ export type Database = {
         }
         Relationships: []
       }
+      thread_follows: {
+        Row: {
+          created_at: string
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          thread_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "thread_follows_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       thread_votes: {
         Row: {
           created_at: string
@@ -3033,6 +3191,7 @@ export type Database = {
         Row: {
           allow_replies: boolean
           author_id: string | null
+          best_reply_id: string | null
           category_id: string | null
           content: string | null
           created_at: string
@@ -3054,6 +3213,7 @@ export type Database = {
         Insert: {
           allow_replies?: boolean
           author_id?: string | null
+          best_reply_id?: string | null
           category_id?: string | null
           content?: string | null
           created_at?: string
@@ -3075,6 +3235,7 @@ export type Database = {
         Update: {
           allow_replies?: boolean
           author_id?: string | null
+          best_reply_id?: string | null
           category_id?: string | null
           content?: string | null
           created_at?: string
@@ -3127,6 +3288,39 @@ export type Database = {
             columns: ["topic_id"]
             isOneToOne: false
             referencedRelation: "subgroup_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trusted_members: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trusted_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trusted_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3429,6 +3623,24 @@ export type Database = {
       }
     }
     Functions: {
+      abia_this_week_claim: {
+        Args: { _limit?: number }
+        Returns: {
+          email: string
+          name: string
+          token: string
+          user_id: string
+        }[]
+      }
+      abia_this_week_opt_out: { Args: { _token: string }; Returns: boolean }
+      abia_this_week_posts: {
+        Args: { _limit?: number }
+        Returns: {
+          id: string
+          replies: number
+          title: string
+        }[]
+      }
       add_default_topics: { Args: { _group: string }; Returns: undefined }
       admin_ai_usage: {
         Args: { _days?: number }
@@ -3485,6 +3697,16 @@ export type Database = {
           _user: string
         }
         Returns: string
+      }
+      admin_list_trusted: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          created_at: string
+          display_name: string
+          user_id: string
+          username: string
+        }[]
       }
       admin_list_users: {
         Args: {
@@ -3550,6 +3772,10 @@ export type Database = {
         Args: { _enabled: boolean }
         Returns: undefined
       }
+      admin_set_trusted: {
+        Args: { _on: boolean; _user: string }
+        Returns: undefined
+      }
       admin_wallet_adjust: {
         Args: { _amount: number; _reason: string; _user: string }
         Returns: {
@@ -3573,6 +3799,20 @@ export type Database = {
         }
       }
       alert_unanswered_posts: { Args: never; Returns: number }
+      app_tester_invite_claim: {
+        Args: { _limit?: number }
+        Returns: {
+          email: string
+          name: string
+          token: string
+          user_id: string
+        }[]
+      }
+      app_tester_invite_opt_out: { Args: { _token: string }; Returns: boolean }
+      app_tester_invite_retry: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
       award_points: {
         Args: { _amount: number; _reason: string; _ref: string; _user: string }
         Returns: number
@@ -3589,6 +3829,7 @@ export type Database = {
       }
       check_badges: { Args: { _user: string }; Returns: undefined }
       claim_daily_reward: { Args: never; Returns: Json }
+      claim_invite: { Args: { _code: string }; Returns: boolean }
       claim_moderation_queue: {
         Args: { _limit?: number }
         Returns: {
@@ -3603,9 +3844,53 @@ export type Database = {
         Args: { _conversation_id: string }
         Returns: number
       }
+      community_can_read_thread: { Args: { _thread: string }; Returns: boolean }
+      community_member_page: { Args: { _user: string }; Returns: Json }
+      community_member_visible: { Args: { _owner: string }; Returns: boolean }
       community_today: { Args: never; Returns: string }
       complete_welcome: {
         Args: { _groups: string[]; _interests: string[] }
+        Returns: Json
+      }
+      connect_account_ok: { Args: never; Returns: boolean }
+      connect_member_posts: {
+        Args: { _limit?: number; _user: string }
+        Returns: {
+          created_at: string
+          id: string
+          place: string
+          title: string
+          total: number
+        }[]
+      }
+      connect_member_visible: { Args: { _owner: string }; Returns: boolean }
+      connect_my_people: {
+        Args: { _kind: string; _limit?: number; _offset?: number }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          happened_at: string
+          headline: string
+          looking_for: string
+          photo_url: string
+          user_id: string
+          username: string
+        }[]
+      }
+      connect_notify: {
+        Args: { _action: string; _owner: string; _type: string }
+        Returns: undefined
+      }
+      connect_profile_summary: { Args: { _user: string }; Returns: Json }
+      connect_search: {
+        Args: { _q: string }
+        Returns: {
+          user_id: string
+        }[]
+      }
+      connect_toggle_follow: { Args: { _target: string }; Returns: Json }
+      connect_toggle_photo_like: {
+        Args: { _owner: string; _photo: string }
         Returns: Json
       }
       connections_blocked_with: { Args: { _owner: string }; Returns: boolean }
@@ -3969,6 +4254,7 @@ export type Database = {
         Args: { _display: string; _text: string }
         Returns: string
       }
+      invite_reward: { Args: { _member: string }; Returns: undefined }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_displayed_storage_object: {
         Args: { _bucket: string; _name: string }
@@ -3984,6 +4270,16 @@ export type Database = {
         Returns: boolean
       }
       lga_group_for: { Args: { _lga: string }; Returns: string }
+      lga_of_the_month: {
+        Args: never
+        Returns: {
+          best_answers: number
+          lga: string
+          new_members: number
+          replies: number
+          score: number
+        }[]
+      }
       log_monetization_event: {
         Args: { _event: string; _metadata?: Json; _uid: string }
         Returns: undefined
@@ -3996,7 +4292,16 @@ export type Database = {
       mark_message_read: { Args: { _message_id: string }; Returns: undefined }
       mask_payment_secret: { Args: { _value: string }; Returns: string }
       member_email_enabled: { Args: { _key: string }; Returns: boolean }
+      member_labels: {
+        Args: { _ids: string[] }
+        Returns: {
+          level: number
+          trusted: boolean
+          user_id: string
+        }[]
+      }
       member_message_privacy: { Args: { _uid: string }; Returns: string }
+      my_invite: { Args: never; Returns: Json }
       my_thread_ids: {
         Args: never
         Returns: {
@@ -4016,6 +4321,23 @@ export type Database = {
           content: string
           thread_id: string
           title: string
+        }[]
+      }
+      opportunities_board: {
+        Args: { _kind?: string; _lga?: string; _limit?: number }
+        Returns: {
+          avatar_url: string
+          business_name: string
+          display_name: string
+          headline: string
+          lga: string
+          looking_for: string
+          occupation: string
+          services: string
+          updated_at: string
+          user_id: string
+          username: string
+          work_experience: string
         }[]
       }
       payment_apply_refund: {
@@ -4075,6 +4397,10 @@ export type Database = {
       }
       points_daily_cap: { Args: { _reason: string }; Returns: number }
       points_level: { Args: { _points: number }; Returns: number }
+      post_doing_well_note: {
+        Args: { _thread: string; _what: string }
+        Returns: undefined
+      }
       post_question_of_the_day: { Args: never; Returns: string }
       posts_waiting_for_reply: {
         Args: { _limit?: number }
@@ -4128,6 +4454,10 @@ export type Database = {
       }
       send_daily_nudges: { Args: never; Returns: number }
       send_newcomer_nudges: { Args: never; Returns: number }
+      set_best_answer: {
+        Args: { _reply: string; _thread: string }
+        Returns: undefined
+      }
       set_conversation_archived: {
         Args: { _archived: boolean; _conversation_id: string }
         Returns: undefined
@@ -4166,7 +4496,9 @@ export type Database = {
       }
       support_appeal_opt_out: { Args: { _token: string }; Returns: boolean }
       sync_reputation: { Args: { _user: string }; Returns: undefined }
+      thread_community_state: { Args: { _thread: string }; Returns: Json }
       thread_share_path: { Args: { _thread_id: string }; Returns: string }
+      toggle_thread_follow: { Args: { _thread: string }; Returns: boolean }
       track_monetization_event: {
         Args: { _event: string; _metadata?: Json }
         Returns: undefined
