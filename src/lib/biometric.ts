@@ -12,11 +12,16 @@
  */
 import { Capacitor } from '@capacitor/core'
 
-import { NativeBiometric } from '@capgo/capacitor-native-biometric'
+import { AuthenticationStrength, BiometryType, NativeBiometric } from '@capgo/capacitor-native-biometric'
 
 const SERVER = 'com.abiaconnect.app'
 const ENABLED_KEY = 'abia:biometric-enabled'
 const DECLINED_KEY = 'abia:biometric-declined'
+
+// The plugin's screen always uses a secure key, and Android closes the app if
+// that screen also allows "weak" unlock methods. FINGERPRINT asks for strong
+// ones only. Phones with only a weak face unlock count as having none.
+const STRONG_ONLY = { allowedBiometryTypes: [BiometryType.FINGERPRINT] }
 
 export function hasDeclinedBiometric(): boolean {
   try {
@@ -41,7 +46,7 @@ export async function isBiometricAvailable(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return false
   try {
     const res = await NativeBiometric.isAvailable()
-    return res.isAvailable
+    return res.isAvailable && res.authenticationStrength === AuthenticationStrength.STRONG
   } catch {
     return false
   }
@@ -60,6 +65,7 @@ export async function enableBiometric(email: string, password: string): Promise<
   try {
     // Verify once so the user explicitly consents.
     await NativeBiometric.verifyIdentity({
+      ...STRONG_ONLY,
       reason: 'Turn on fingerprint or face sign-in for AbiaConnect',
       title: 'Confirm it\'s you',
       subtitle: 'Future sign-ins will use your fingerprint or face',
@@ -113,7 +119,7 @@ export async function getBiometricCredentials(): Promise<BiometricResult> {
   // "no fingerprint enrolled" from a user cancellation.
   try {
     const avail = await NativeBiometric.isAvailable()
-    if (!avail.isAvailable) {
+    if (!avail.isAvailable || avail.authenticationStrength !== AuthenticationStrength.STRONG) {
       return {
         ok: false,
         error: {
@@ -147,6 +153,7 @@ export async function getBiometricCredentials(): Promise<BiometricResult> {
   // Verify identity with the biometric prompt.
   try {
     await NativeBiometric.verifyIdentity({
+      ...STRONG_ONLY,
       reason: 'Sign in to AbiaConnect',
       title: 'Confirm it\'s you',
     })
