@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Fingerprint, Lock, ShieldCheck, X } from 'lucide-react'
+import { Fingerprint, Lock, ShieldCheck, ToggleRight } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import {
   AlertDialog,
@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { enableBiometric } from '@/lib/biometric'
+import { APP_HEADER_GRADIENT } from '@/lib/mobileBrand'
 
 interface Props {
   open: boolean
@@ -19,6 +20,12 @@ interface Props {
   password: string
   onClose: (enabled: boolean) => void
 }
+
+const POINTS = [
+  { icon: Lock, text: 'Your sign-in stays locked on this phone only.' },
+  { icon: ShieldCheck, text: 'We never see your fingerprint or face.' },
+  { icon: ToggleRight, text: 'Turn it off any time in Settings.' },
+]
 
 /**
  * Native-only opt-in dialog. Explains exactly how biometrics will be used
@@ -33,10 +40,10 @@ export function BiometricOptInDialog({ open, email, password, onClose }: Props) 
     try {
       const ok = await enableBiometric(email, password)
       if (ok) {
-        toast.success('Biometric sign-in enabled')
+        toast.success('Fingerprint or face sign-in is on')
         onClose(true)
       } else {
-        toast.error('Could not enable biometric sign-in')
+        toast.error('Could not turn on fingerprint or face sign-in')
         onClose(false)
       }
     } finally {
@@ -46,55 +53,40 @@ export function BiometricOptInDialog({ open, email, password, onClose }: Props) 
 
   return (
     <AlertDialog open={open} onOpenChange={(v) => !v && !busy && onClose(false)}>
-      <AlertDialogContent className="max-w-md">
-        <AlertDialogHeader>
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-primary-foreground mb-2">
-            <Fingerprint className="size-7" />
+      <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-md gap-0 overflow-hidden rounded-[28px] border-0 p-0">
+        <div className="px-6 pb-6 pt-7 text-center text-white" style={{ background: APP_HEADER_GRADIENT }}>
+          <div className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-300 to-orange-500 text-black shadow-lg">
+            <Fingerprint className="size-9" />
           </div>
-          <AlertDialogTitle className="text-center">
-            Enable biometric sign-in?
-          </AlertDialogTitle>
-          <AlertDialogDescription className="text-center">
-            Skip typing your password next time — unlock AbiaConnect with your
-            fingerprint or face.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+          <AlertDialogHeader className="mt-4 space-y-1.5">
+            <AlertDialogTitle className="text-center text-2xl font-extrabold text-white">
+              Sign in with one touch
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-[15px] text-white/85">
+              Use your fingerprint or face next time, instead of typing your password.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+        </div>
 
-        <ul className="space-y-3 my-2 text-sm">
-          <li className="flex gap-3">
-            <Lock className="size-5 text-primary shrink-0 mt-0.5" />
-            <span>
-              Your email and password are stored only on this device, inside
-              the secure keystore (Android Keystore / iOS Keychain).
-            </span>
-          </li>
-          <li className="flex gap-3">
-            <ShieldCheck className="size-5 text-primary shrink-0 mt-0.5" />
-            <span>
-              AbiaConnect never sees your biometric data — the device verifies
-              you and unlocks the saved credentials.
-            </span>
-          </li>
-          <li className="flex gap-3">
-            <X className="size-5 text-primary shrink-0 mt-0.5" />
-            <span>
-              You can turn this off anytime in Settings, or by signing out.
-            </span>
-          </li>
+        <ul className="space-y-3.5 px-6 pt-5 text-[15px] text-foreground">
+          {POINTS.map(({ icon: Icon, text }) => (
+            <li key={text} className="flex items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                <Icon className="size-5" />
+              </span>
+              {text}
+            </li>
+          ))}
         </ul>
 
-        <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
-          <AlertDialogAction
-            onClick={handleEnable}
-            disabled={busy}
-            className="w-full"
-          >
-            {busy ? 'Enabling…' : 'Enable biometric sign-in'}
+        <AlertDialogFooter className="flex-col gap-2 p-6 sm:flex-col sm:space-x-0">
+          <AlertDialogAction onClick={handleEnable} disabled={busy} className="h-13 w-full rounded-full text-base font-bold">
+            {busy ? 'Turning on…' : 'Turn on'}
           </AlertDialogAction>
           <AlertDialogCancel
             onClick={() => onClose(false)}
             disabled={busy}
-            className="w-full mt-0"
+            className="mt-0 h-12 w-full rounded-full border-0 bg-transparent text-base shadow-none"
           >
             Not now
           </AlertDialogCancel>

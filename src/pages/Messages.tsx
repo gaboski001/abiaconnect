@@ -1563,7 +1563,7 @@ function ConversationView({
     <>
       <div
         className={cn(
-          'sticky top-0 z-10 border-b backdrop-blur-xl backdrop-saturate-150 shadow-[0_1px_0_0_hsl(var(--border))]',
+          'sticky top-0 z-10 border-b border-border backdrop-blur-xl backdrop-saturate-150 shadow-[0_1px_0_0_hsl(var(--border))]',
           native
             ? 'bg-card pt-[max(0,env(safe-area-inset-top))]'
             : 'bg-background/85 supports-[backdrop-filter]:bg-background/70',
@@ -2066,7 +2066,7 @@ function ConversationView({
       <form
         onSubmit={handleSend}
         className={cn(
-          'sticky bottom-0 z-10 p-3 border-t backdrop-blur-xl space-y-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+          'sticky bottom-0 z-10 p-3 border-t border-border backdrop-blur-xl space-y-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
           native
             ? 'bg-card'
             : 'bg-background/85 supports-[backdrop-filter]:bg-background/70 shadow-[0_-1px_0_0_hsl(var(--border))]',
@@ -2171,7 +2171,7 @@ function ConversationView({
         </div>
         {native && (
           // While recording a voice note, its controls take the whole row.
-          <div className="flex items-center justify-between gap-1 [&:has([role=status])>*:not([role=status])]:hidden">
+          <div className="flex items-center justify-between gap-1 [.kb-open_&]:hidden [&:has([role=status])>*:not([role=status])]:hidden">
             {toolButtons}
             {other?.id && (
               <>

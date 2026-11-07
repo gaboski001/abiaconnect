@@ -101,7 +101,7 @@ export const BiometricLoginButton = ({ onSuccess, onFallbackToPassword }: Props)
         className="h-[52px] w-full gap-2.5 rounded-xl border-white/12 bg-white/[0.04] text-[15px] font-semibold text-slate-50 hover:bg-white/[0.07]"
       >
         <Fingerprint className="size-5 text-amber-300" />
-        {loading ? 'Verifying…' : 'Sign in with biometrics'}
+        {loading ? 'Verifying…' : 'Sign in with fingerprint or face'}
       </Button>
 
       <BiometricRecoveryDialog

@@ -49,6 +49,7 @@ android {
 // Local .aar files should be included using implementation files() or fileTree() if needed.
 
 dependencies {
+    implementation 'androidx.browser:browser:1.8.0'
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "com.google.android.material:material:$materialVersion"

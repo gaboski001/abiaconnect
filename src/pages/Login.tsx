@@ -12,7 +12,7 @@ import { useSignedUrl } from '@/hooks/useSignedUrl'
 import { AuthField, AuthSubmit, NativeAuthLayout, isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { WebAuthLayout } from '@/components/web/WebAuthLayout'
 import { BiometricLoginButton } from '@/components/auth/BiometricLoginButton'
-import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
+import { GoogleSignInButton, googleSignInAvailable } from '@/components/auth/GoogleSignInButton'
 import { BiometricOptInDialog } from '@/components/auth/BiometricOptInDialog'
 import {
   isBiometricAvailable,
@@ -133,12 +133,6 @@ export default function Login() {
               <AuthSubmit loading={loading} loadingText="Signing in…">Sign in</AuthSubmit>
             </div>
 
-            <div className="flex items-center gap-3 py-1" aria-hidden>
-              <span className="h-px flex-1 bg-white/10" />
-              <span className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400/80">or</span>
-              <span className="h-px flex-1 bg-white/10" />
-            </div>
-
             <BiometricLoginButton
               onSuccess={() => navigate(afterSignIn)}
               onFallbackToPassword={() => {
@@ -152,6 +146,21 @@ export default function Login() {
                 }, 50)
               }}
             />
+
+            {googleSignInAvailable() && (
+              <>
+                <div className="flex items-center gap-3 py-1" aria-hidden>
+                  <span className="h-px flex-1 bg-white/10" />
+                  <span className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400/80">or</span>
+                  <span className="h-px flex-1 bg-white/10" />
+                </div>
+                <GoogleSignInButton
+                  afterSignIn={afterSignIn}
+                  disabled={loading}
+                  className="h-[52px] w-full gap-2.5 rounded-xl border-white/12 bg-white/[0.04] text-[15px] font-semibold text-white hover:bg-white/10 hover:text-white"
+                />
+              </>
+            )}
           </form>
         </NativeAuthLayout>
         <BiometricOptInDialog

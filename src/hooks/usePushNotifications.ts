@@ -1,10 +1,13 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { PushNotifications } from '@capacitor/push-notifications'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { playNotificationChime } from '@/lib/notificationSound'
 import { toast } from '@/lib/toast'
+
+/** Fired after the member answers the notifications question. */
+export const PUSH_PERMISSION_EVENT = 'abia-push-permission-changed'
 
 /**
  * Registers the device for FCM/APNs push notifications when running inside the
@@ -13,6 +16,13 @@ import { toast } from '@/lib/toast'
  */
 export function usePushNotifications() {
   const { user } = useAuth()
+  const [permissionChanges, setPermissionChanges] = useState(0)
+
+  useEffect(() => {
+    const onChange = () => setPermissionChanges((n) => n + 1)
+    window.addEventListener(PUSH_PERMISSION_EVENT, onChange)
+    return () => window.removeEventListener(PUSH_PERMISSION_EVENT, onChange)
+  }, [])
 
   useEffect(() => {
     if (!user) return
@@ -42,13 +52,9 @@ export function usePushNotifications() {
           }
         }
 
-        // 2) Android 13+ requires runtime POST_NOTIFICATIONS permission.
-        //    requestPermissions() triggers the system dialog on Android 13+
-        //    and is a no-op on older Android versions.
-        let perm = await PushNotifications.checkPermissions()
-        if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') {
-          perm = await PushNotifications.requestPermissions()
-        }
+        // 2) The first-run welcome explains notifications and asks the question,
+        //    so it never pops up over something else. Nothing to do until then.
+        const perm = await PushNotifications.checkPermissions()
         if (perm.receive !== 'granted') return
 
         await PushNotifications.register()
@@ -118,5 +124,5 @@ export function usePushNotifications() {
     return () => {
       removeListeners?.()
     }
-  }, [user])
+  }, [user, permissionChanges])
 }

@@ -7,6 +7,10 @@ import android.media.AudioManager;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
+import android.content.ActivityNotFoundException;
+import android.net.Uri;
+import androidx.browser.customtabs.CustomTabsIntent;
+import org.json.JSONException;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -19,11 +23,14 @@ import org.json.JSONObject;
 public class MainActivity extends BaseActivity {
 
     private BroadcastReceiver hangupReceiver;
+    private volatile String pendingGoogleReturn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         installCallJsBridge();
+        installAuthJsBridge();
+        handleGoogleReturn(getIntent());
         registerHangupReceiver();
         handleNotificationIntent(getIntent());
     }
@@ -32,6 +39,7 @@ public class MainActivity extends BaseActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        handleGoogleReturn(intent);
         handleNotificationIntent(intent);
     }
 
@@ -140,6 +148,57 @@ public class MainActivity extends BaseActivity {
      * so the WebRTC code can start the foreground call service when a call
      * actually connects (outgoing calls) and stop it when the call ends.
      */
+    private void installAuthJsBridge() {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        getBridge().getWebView().addJavascriptInterface(new AuthJsBridge(), "AbiaAuthBridge");
+    }
+
+    /** Keeps what the browser tab handed back until the web app collects it. */
+    private void handleGoogleReturn(Intent intent) {
+        if (intent == null || intent.getData() == null) return;
+        Uri data = intent.getData();
+        if (!"com.abiaconnect.app".equals(data.getScheme()) || !"google-return".equals(data.getHost())) return;
+        try {
+            JSONObject result = new JSONObject();
+            for (String key : new String[]{"n", "at", "rt", "err"}) {
+                String value = intent.getStringExtra(key);
+                if (value != null) result.put(key, value);
+            }
+            pendingGoogleReturn = result.toString();
+        } catch (JSONException e) {
+            return;
+        } finally {
+            intent.setData(null);
+        }
+        if (getBridge() != null && getBridge().getWebView() != null) {
+            getBridge().getWebView().post(() -> getBridge().getWebView().evaluateJavascript(
+                "window.dispatchEvent(new Event('abia-google-return'))", null));
+        }
+    }
+
+    private class AuthJsBridge {
+        @JavascriptInterface
+        public void openGoogle(String url) {
+            Uri uri = Uri.parse(url);
+            if (!"https".equals(uri.getScheme()) || !"abiaconnect.com".equals(uri.getHost())) return;
+            if (uri.getPath() == null || !uri.getPath().startsWith("/~oauth/")) return;
+            runOnUiThread(() -> {
+                try {
+                    new CustomTabsIntent.Builder().build().launchUrl(MainActivity.this, uri);
+                } catch (ActivityNotFoundException ignored) {
+                    // No browser on the phone: nothing can be opened.
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public String takeGoogleReturn() {
+            String result = pendingGoogleReturn;
+            pendingGoogleReturn = null;
+            return result;
+        }
+    }
+
     private void installCallJsBridge() {
         if (getBridge() == null || getBridge().getWebView() == null) return;
         getBridge().getWebView().addJavascriptInterface(new CallJsBridge(this), "AbiaCallBridge");

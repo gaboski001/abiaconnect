@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Back to AbiaConnect</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0B3D1E; color: #fff; font-family: system-ui, sans-serif; text-align: center; padding: 24px; box-sizing: border-box; }
+  a { display: inline-block; margin-top: 20px; padding: 14px 28px; border-radius: 999px; background: #F8C301; color: #10240f; font-weight: 700; text-decoration: none; }
+  p { opacity: .85; line-height: 1.5; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Going back to AbiaConnect…</h1>
+  <p>If nothing happens, tap the button below.</p>
+  <a id="back" href="#">Open AbiaConnect</a>
+</main>
+<script>
+  // Sends the Google sign-in back to the installed app, and only to that app:
+  // the link below names the app's package, so no other app can receive it.
+  (function () {
+    var hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+    var query = new URLSearchParams(location.search);
+    var get = function (k) { return hash.get(k) || query.get(k) || ''; };
+    var extras = { n: query.get('n') || '', at: get('access_token'), rt: get('refresh_token'), err: get('error') };
+    if (!extras.at && !extras.err) extras.err = 'no_session';
+    history.replaceState(null, '', location.pathname);
+    var link = 'intent://google-return#Intent;scheme=com.abiaconnect.app;package=com.abiaconnect.app;';
+    Object.keys(extras).forEach(function (k) {
+      if (extras[k]) link += 'S.' + k + '=' + encodeURIComponent(extras[k]) + ';';
+    });
+    link += 'end';
+    document.getElementById('back').href = link;
+    location.replace(link);
+  })();
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { CallProvider } from '@/components/call/CallProvider'
 import { NativeOnboardingGate } from '@/components/mobile/NativeOnboardingGate'
-import { BatteryOptimizationPrompt } from '@/components/mobile/BatteryOptimizationPrompt'
+import { FirstRunWelcome } from '@/components/mobile/FirstRunWelcome'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { useReportNativeInstall } from '@/hooks/useReportNativeInstall'
@@ -114,7 +114,7 @@ export default function App() {
       {isNativeApp() && (
         <>
           <CallProvider />
-          <BatteryOptimizationPrompt />
+          <FirstRunWelcome />
         </>
       )}
 

@@ -7,7 +7,8 @@ import { Capacitor } from '@capacitor/core'
  * On native (iOS/Android via Capacitor), listens to the on-screen keyboard
  * lifecycle and writes its height into the `--kb-inset` CSS variable on
  * <html>. The composer and message scroller read that variable to stay above
- * the keyboard without fighting the WebView's own resize behavior.
+ * the keyboard without fighting the WebView's own resize behavior, and adds
+ * `kb-open` to <html> while the keyboard is up.
  *
  * On the web the Visual Viewport API is used as a graceful fallback so the
  * behavior is consistent when testing in mobile Chrome/Safari.
@@ -15,6 +16,16 @@ import { Capacitor } from '@capacitor/core'
  * `onShow` fires whenever the keyboard opens or grows — the chat page uses it
  * to snap the transcript back to the newest message.
  */
+/**
+ * How much of the page the keyboard still covers. Some phones already shrink
+ * the screen for the keyboard, and adding its height again left a big empty gap.
+ */
+export function keyboardOverlap(keyboardHeight: number, fullHeight: number, currentHeight: number) {
+  if (keyboardHeight <= 0) return 0
+  const alreadyShrunk = fullHeight - currentHeight > 80
+  return alreadyShrunk ? 0 : keyboardHeight
+}
+
 export function useKeyboardInset(onShow?: () => void) {
   useEffect(() => {
     const root = document.documentElement
@@ -29,24 +40,34 @@ export function useKeyboardInset(onShow?: () => void) {
     if (isNative) {
       let cleanup = () => {}
       let cancelled = false
+      let keyboardHeight = 0
+      let fullHeight = window.innerHeight
+      const apply = () => {
+        if (!keyboardHeight) fullHeight = Math.max(fullHeight, window.innerHeight)
+        setInset(keyboardOverlap(keyboardHeight, fullHeight, window.innerHeight))
+        root.classList.toggle('kb-open', keyboardHeight > 0)
+      }
+      const onResize = () => {
+        apply()
+        if (keyboardHeight) onShow?.()
+      }
+      window.addEventListener('resize', onResize)
       ;(async () => {
         try {
           const { Keyboard } = await import('@capacitor/keyboard')
           if (cancelled) return
-          const willShow = await Keyboard.addListener('keyboardWillShow', (info) => {
-            setInset(info.keyboardHeight)
-          })
           const didShow = await Keyboard.addListener('keyboardDidShow', (info) => {
-            setInset(info.keyboardHeight)
+            keyboardHeight = info.keyboardHeight
+            apply()
             onShow?.()
           })
-          const willHide = await Keyboard.addListener('keyboardWillHide', () => setInset(0))
-          const didHide = await Keyboard.addListener('keyboardDidHide', () => setInset(0))
+          const willHide = await Keyboard.addListener('keyboardWillHide', () => {
+            keyboardHeight = 0
+            apply()
+          })
           cleanup = () => {
-            willShow.remove()
             didShow.remove()
             willHide.remove()
-            didHide.remove()
           }
         } catch {
           // Plugin unavailable — fall through to viewport fallback.
@@ -55,6 +76,8 @@ export function useKeyboardInset(onShow?: () => void) {
       return () => {
         cancelled = true
         cleanup()
+        window.removeEventListener('resize', onResize)
+        root.classList.remove('kb-open')
         setInset(0)
       }
     }

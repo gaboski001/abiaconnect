@@ -4,6 +4,13 @@ import { Button } from '@/components/ui/button'
 import { toast } from '@/lib/toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { lovable } from '@/integrations/lovable/index'
+import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
+import {
+  GOOGLE_RETURN_EVENT,
+  canUseNativeGoogle,
+  finishNativeGoogle,
+  startNativeGoogle,
+} from '@/lib/nativeGoogle'
 
 /**
  * "Continue with Google".
@@ -17,6 +24,11 @@ import { lovable } from '@/integrations/lovable/index'
 /** Where the member wanted to go is parked between leaving and coming back. */
 export const GOOGLE_RETURN_KEY = 'abia_google_return'
 const MAX_AGE_MS = 10 * 60 * 1000
+
+/** False only in older installed apps, where Google would refuse the sign-in. */
+export function googleSignInAvailable() {
+  return !isNativeApp() || canUseNativeGoogle()
+}
 
 function isSafePath(path: unknown): path is string {
   return typeof path === 'string' && path.startsWith('/') && !path.startsWith('//')
@@ -104,6 +116,11 @@ export function GoogleSignInButton({
     if (busy) return
     setBusy(true)
     rememberGoogleReturnTo(afterSignIn)
+    if (isNativeApp()) {
+      startNativeGoogle()
+      setBusy(false)
+      return
+    }
     try {
       const result = await lovable.auth.signInWithOAuth('google', {
         // Always a public same-origin URL: Google sends the member back here,
@@ -126,6 +143,8 @@ export function GoogleSignInButton({
     }
   }
 
+  if (!googleSignInAvailable()) return null
+
   return (
     <Button type="button" variant="outline" className={className} disabled={disabled || busy} onClick={onClick}>
       <GoogleMark />
@@ -141,6 +160,18 @@ export function GoogleSignInButton({
 export function GoogleSignInLanding() {
   const { session, loading } = useAuth()
   const navigate = useNavigate()
+
+  // The installed app: pick up a sign-in the browser handed back.
+  useEffect(() => {
+    if (!canUseNativeGoogle()) return
+    const finish = async () => {
+      const result = await finishNativeGoogle()
+      if (result === 'failed') toast.error('Google sign-in didn’t work. Please try again.')
+    }
+    void finish()
+    window.addEventListener(GOOGLE_RETURN_EVENT, finish)
+    return () => window.removeEventListener(GOOGLE_RETURN_EVENT, finish)
+  }, [])
 
   useEffect(() => {
     if (loading || !session) return
