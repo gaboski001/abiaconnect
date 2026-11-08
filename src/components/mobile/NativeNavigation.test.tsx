@@ -90,6 +90,21 @@ describe('app navigation', () => {
     expect(internal).not.toContain('/donate')
   })
 
+  it('explains items in plain words and lets members search the menu', () => {
+    renderApp()
+    fireEvent.click(screen.getByRole('button', { name: 'More' }))
+    expect(screen.getByText('Listen to or join live voice chats')).toBeInTheDocument()
+    expect(collectHrefs()).toEqual(expect.arrayContaining(['/live', '/opportunities']))
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search the menu' }), { target: { value: 'job' } })
+    const results = screen.getByRole('heading', { name: 'Results' }).parentElement!
+    expect(within(results).getByRole('link', { name: /Jobs and services/ })).toHaveAttribute('href', '/opportunities')
+    expect(screen.queryByRole('link', { name: /Help centre/ })).toBeNull()
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search the menu' }), { target: { value: 'zzzz' } })
+    expect(screen.getByText(/Nothing found/)).toBeInTheDocument()
+  })
+
   it('offers sign-in to visitors instead of account items', () => {
     auth.user = null
     auth.isAdmin = false

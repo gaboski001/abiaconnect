@@ -13,7 +13,7 @@ import { getMemberPage, useFollowingIds, useMemberLabels } from '@/lib/community
 import { startConversationWith } from '@/lib/relationship'
 import { isValidHttpUrl } from '@/lib/images'
 import { APP_HEADER_GRADIENT } from '@/lib/mobileBrand'
-import { UserAvatar } from '@/components/ui/UserAvatar'
+import { ViewableAvatar } from '@/components/ui/ViewableAvatar'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ReasonBadge } from '@/components/connect/ReasonBadge'
@@ -108,7 +108,7 @@ export default function MemberPage() {
         <div className="h-24 md:h-32" style={{ backgroundImage: APP_HEADER_GRADIENT }} />
         <div className="px-4 pb-4 md:px-6">
           <div className="-mt-12 flex items-end justify-between gap-3">
-            <UserAvatar avatarUrl={profile.avatar_url} displayName={name} size="xl" className="size-24 border-4 border-card" />
+            <ViewableAvatar avatarUrl={profile.avatar_url} displayName={name} size="xl" className="size-24 border-4 border-card" />
             <Button size="icon" variant="ghost" className="rounded-full" aria-label="Share this page" onClick={share}>
               <Share2 className="size-5" />
             </Button>

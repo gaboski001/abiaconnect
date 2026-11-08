@@ -24,7 +24,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { SEO } from '@/components/SEO'
-import { UserAvatar } from '@/components/ui/UserAvatar'
+import { ViewableAvatar } from '@/components/ui/ViewableAvatar'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -243,7 +243,7 @@ export default function RelationshipProfilePage() {
           <CoverImage rawCover={photos[0] ?? null} name={name} />
         </div>
         <div className="px-4 pb-4 sm:px-6">
-          <UserAvatar avatarUrl={card.avatar_url} displayName={name} size="xl" className="relative -mt-10 border-4 border-card" />
+          <ViewableAvatar avatarUrl={card.avatar_url} displayName={name} size="xl" className="border-4 border-card" buttonClassName="relative -mt-10" />
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <h1 className="break-words text-xl font-extrabold leading-tight sm:text-2xl">
               {name}{age ? `, ${age}` : ''}

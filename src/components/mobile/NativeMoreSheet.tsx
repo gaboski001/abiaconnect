@@ -19,6 +19,8 @@ import {
   Moon,
   PenSquare,
   Phone,
+  Radio,
+  Search,
   ScrollText,
   ShieldCheck,
   ShoppingBag,
@@ -34,7 +36,7 @@ import {
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
-import { UserAvatar } from '@/components/ui/UserAvatar'
+import { ViewableAvatar } from '@/components/ui/ViewableAvatar'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useProfile } from '@/hooks/useProfile'
@@ -51,6 +53,8 @@ import { cn } from '@/lib/utils'
 
 interface Row {
   label: string
+  /** One short line in plain words, so new members know what they'll find. */
+  hint?: string
   to: string
   icon: LucideIcon
   external?: boolean
@@ -73,6 +77,7 @@ export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenC
   const navigate = useNavigate()
   const location = useLocation()
   const [callsOn, setCallsOn] = useState(() => areCallsEnabled())
+  const [find, setFind] = useState('')
 
   useEffect(() => subscribeCallsEnabled(setCallsOn), [])
   useEffect(() => {
@@ -84,6 +89,11 @@ export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenC
     onOpenChange(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname])
+
+  // Start each time with the full menu, not the last search.
+  useEffect(() => {
+    if (!open) setFind('')
+  }, [open])
 
   const member = !!user && role !== 'guest'
   const displayName = profile?.display_name || profile?.username || user?.email || 'Member'
@@ -102,45 +112,56 @@ export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenC
       ]
 
   const community: Row[] = [
-    ...(member ? [{ label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard }] : []),
-    ...(user ? [{ label: 'Start a discussion', to: '/create-thread', icon: PenSquare }] : []),
-    ...(user ? [{ label: 'Events', to: '/events', icon: CalendarDays }] : []),
-    { label: 'Member spotlight', to: '/member-spotlight', icon: Star },
-    ...(user ? [{ label: 'Success stories', to: '/success-stories', icon: Award }] : []),
+    ...(member ? [{ label: 'My dashboard', hint: 'Your activity, groups and points in one place', to: '/dashboard', icon: LayoutDashboard }] : []),
+    ...(user ? [{ label: 'Start a discussion', hint: 'Ask a question or share news', to: '/create-thread', icon: PenSquare }] : []),
+    { label: 'Live rooms', hint: 'Listen to or join live voice chats', to: '/live', icon: Radio },
+    { label: 'Jobs and services', hint: 'Find work, or offer what you do', to: '/opportunities', icon: Briefcase },
+    ...(user ? [{ label: 'Events', hint: 'Meetings and gatherings coming up', to: '/events', icon: CalendarDays }] : []),
+    { label: 'Member spotlight', hint: 'Meet members doing great things', to: '/member-spotlight', icon: Star },
+    ...(user ? [{ label: 'Success stories', hint: 'Good news from Abians', to: '/success-stories', icon: Award }] : []),
   ]
 
   const about: Row[] = [
-    { label: 'About AbiaConnect', to: '/about', icon: Info },
+    { label: 'About AbiaConnect', hint: 'What this app is and who it is for', to: '/about', icon: Info },
     { label: 'Our mission', to: '/mission', icon: Target },
     { label: 'Our team', to: '/team', icon: UsersRound },
-    { label: 'Careers', to: '/careers', icon: Briefcase },
+    { label: 'Careers', hint: 'Work or volunteer with us', to: '/careers', icon: Briefcase },
     ...(settings.store_link ? [{ label: 'Store', to: settings.store_link, icon: ShoppingBag, external: true }] : []),
     ...(canDonateHere() ? [{ label: 'Donate', to: '/donate', icon: HandHeart, highlight: true }] : []),
   ]
 
   const help: Row[] = [
-    { label: 'Help centre', to: '/help', icon: CircleHelp },
-    { label: 'Report a problem', to: '/report-issue', icon: Flag },
-    { label: 'Community standards', to: '/community-standards', icon: ShieldCheck },
-    { label: 'Forum guidelines', to: '/forum-guidelines', icon: BookOpen },
+    { label: 'Help centre', hint: 'How-to guides and answers to common questions', to: '/help', icon: CircleHelp },
+    { label: 'Report a problem', hint: 'Something not working? Tell us', to: '/report-issue', icon: Flag },
+    { label: 'Community standards', hint: 'How we treat each other here', to: '/community-standards', icon: ShieldCheck },
+    { label: 'Forum guidelines', hint: 'What you can and cannot post', to: '/forum-guidelines', icon: BookOpen },
     { label: 'Privacy policy', to: '/privacy-policy', icon: ScrollText },
     { label: 'Terms of service', to: '/terms-of-service', icon: ScrollText },
   ]
 
   const admin: Row[] = isAdmin
     ? [
-        { label: 'Admin portal', to: '/admin/dashboard', icon: ShieldCheck },
-        { label: 'Moderation', to: '/admin/moderation', icon: Flag },
+        { label: 'Admin portal', hint: 'Manage members, posts and settings', to: '/admin/dashboard', icon: ShieldCheck },
+        { label: 'Moderation', hint: 'Posts members reported', to: '/admin/moderation', icon: Flag },
         { label: 'Donations', to: '/admin/donations', icon: Wallet },
       ]
     : []
 
   const appRows: Row[] = [
-    ...(user ? [{ label: 'Devices & security', to: '/settings/devices', icon: Smartphone }] : []),
-    { label: 'App version & updates', to: '/version', icon: Download, dot: hasUpdate },
+    ...(user ? [{ label: 'Devices & security', hint: 'Where you are signed in', to: '/settings/devices', icon: Smartphone }] : []),
+    { label: 'App version & updates', hint: hasUpdate ? 'A new version is ready' : undefined, to: '/version', icon: Download, dot: hasUpdate },
   ]
 
   const close = () => onOpenChange(false)
+
+  // Search across every item in the menu.
+  const term = find.trim().toLowerCase()
+  const matches = term
+    ? [...quick, ...community, ...admin, ...appRows, ...about, ...help].filter(
+        (r, i, all) =>
+          `${r.label} ${r.hint ?? ''}`.toLowerCase().includes(term) && all.findIndex((x) => x.to === r.to) === i,
+      )
+    : []
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -160,20 +181,18 @@ export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenC
         <div className="space-y-6 px-5 pb-4">
           {/* Account */}
           {user ? (
-            <Link
-              to="/profile"
-              onClick={close}
-              className="flex items-center gap-3.5 rounded-2xl border border-white/10 bg-white/[0.04] p-4 active:bg-white/[0.08]"
-            >
-              <UserAvatar avatarUrl={profile?.avatar_url} displayName={displayName} size="md" className="h-12 w-12" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[16px] font-semibold text-white">{displayName}</p>
-                <p className="truncate text-[13px] text-slate-400">
-                  {profile?.username ? `@${profile.username} · ` : ''}View your profile
-                </p>
-              </div>
-              <ChevronRight className="size-5 text-slate-500" />
-            </Link>
+            <div className="flex items-center gap-3.5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              {/* Tap the photo to see it full size; tap the name to open the profile. */}
+              <ViewableAvatar avatarUrl={profile?.avatar_url} displayName={displayName} size="md" className="h-14 w-14" />
+              <Link to="/profile" onClick={close} className="flex min-w-0 flex-1 items-center gap-2 active:opacity-80">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[16px] font-semibold text-white">{displayName}</span>
+                  {profile?.username ? <span className="block truncate text-[13px] text-slate-400">@{profile.username}</span> : null}
+                  <span className="block text-[13px] font-medium text-amber-300">View or edit your profile</span>
+                </span>
+                <ChevronRight className="size-5 text-slate-500" />
+              </Link>
+            </div>
           ) : (
             <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
               <p className="text-[16px] font-semibold text-white">Join the community</p>
@@ -198,6 +217,30 @@ export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenC
             </div>
           )}
 
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-slate-500" />
+            <input
+              type="search"
+              value={find}
+              onChange={(e) => setFind(e.target.value)}
+              placeholder="What are you looking for?"
+              aria-label="Search the menu"
+              className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.06] pl-11 pr-4 text-[15px] text-white placeholder:text-slate-500 focus:border-amber-300/50 focus:outline-none"
+            />
+          </div>
+
+          {term ? (
+            matches.length ? (
+              <Section title="Results">
+                {matches.map((r) => <MenuRow key={r.to} row={r} onClick={close} />)}
+              </Section>
+            ) : (
+              <p className="rounded-2xl bg-white/[0.04] p-4 text-center text-[14px] text-slate-400">
+                Nothing found for “{find}”. Try another word, or open the Help centre.
+              </p>
+            )
+          ) : (
+          <>
           {/* Quick actions */}
           <div className={cn('grid gap-2.5', { 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4' }[quick.length])}>
             {quick.map((q) => (
@@ -215,7 +258,7 @@ export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenC
             ))}
           </div>
 
-          <Section title="Community">
+          <Section title="Take part">
             {community.map((r) => <MenuRow key={r.to} row={r} onClick={close} />)}
           </Section>
 
@@ -243,9 +286,11 @@ export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenC
             {about.map((r) => <MenuRow key={r.to} row={r} onClick={close} />)}
           </Section>
 
-          <Section title="Help & policies">
+          <Section title="Help & rules">
             {help.map((r) => <MenuRow key={r.to} row={r} onClick={close} />)}
           </Section>
+          </>
+          )}
 
           {user ? (
             <button
@@ -291,8 +336,11 @@ function MenuRow({ row, onClick }: { row: Row; onClick: () => void }) {
       >
         <row.icon className={cn('size-[18px]', row.highlight ? 'text-amber-300' : 'text-slate-300')} />
       </span>
-      <span className={cn('flex-1 text-[15px]', row.highlight ? 'font-semibold text-amber-200' : 'text-slate-100')}>
-        {row.label}
+      <span className="min-w-0 flex-1 py-2">
+        <span className={cn('block text-[15px]', row.highlight ? 'font-semibold text-amber-200' : 'text-slate-100')}>
+          {row.label}
+        </span>
+        {row.hint ? <span className="block text-[12.5px] leading-snug text-slate-400">{row.hint}</span> : null}
       </span>
       {row.dot ? <span className="size-2 rounded-full bg-red-500" aria-label="Update available" /> : null}
       <ChevronRight className="size-[18px] text-slate-600" />

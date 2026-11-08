@@ -15,7 +15,7 @@ import { supabase } from '@/lib/supabase'
 import { saveProfile, SEX_OPTIONS, MARITAL_STATUS_OPTIONS } from '@/lib/profileUpdate'
 import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
-import { UserAvatar } from '@/components/ui/UserAvatar'
+import { ViewableAvatar } from '@/components/ui/ViewableAvatar'
 
 const SEX_LABELS: Record<string, string> = {
   male: 'Male',
@@ -222,7 +222,7 @@ export default function Profile() {
       )}
       <section className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-start gap-4">
-          <UserAvatar avatarUrl={profile.avatar_url} displayName={name} size="xl" className="h-24 w-24" />
+          <ViewableAvatar avatarUrl={profile.avatar_url} displayName={name} size="xl" className="h-24 w-24" />
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div>
