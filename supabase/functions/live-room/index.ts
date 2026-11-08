@@ -5,11 +5,12 @@
 // as the signed-in member), so the rules live in one place. Only then is the
 // live service told.
 //
-// Needs these project secrets, from the live service's project settings:
+// The live service's address and keys come from Admin -> Live rooms (kept in
+// Vault), or from these project secrets, which win when set:
 //   LIVEKIT_URL         e.g. wss://abiaconnect-xxxx.livekit.cloud
 //   LIVEKIT_API_KEY
 //   LIVEKIT_API_SECRET
-// Without them every action answers "not_set_up" and nothing else happens.
+// Without either, every action answers "not_set_up" and nothing else happens.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { AccessToken, RoomServiceClient, TrackSource } from 'npm:livekit-server-sdk@2.19.2'
@@ -23,9 +24,9 @@ const cors = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const LIVE_URL = Deno.env.get('LIVEKIT_URL') ?? ''
-const LIVE_KEY = Deno.env.get('LIVEKIT_API_KEY') ?? ''
-const LIVE_SECRET = Deno.env.get('LIVEKIT_API_SECRET') ?? ''
+const ENV_URL = Deno.env.get('LIVEKIT_URL') ?? ''
+const ENV_KEY = Deno.env.get('LIVEKIT_API_KEY') ?? ''
+const ENV_SECRET = Deno.env.get('LIVEKIT_API_SECRET') ?? ''
 
 // A pass lasts a little longer than the longest room.
 const PASS_SECONDS = 5 * 60 * 60
@@ -76,9 +77,18 @@ Deno.serve(async (req) => {
   const uid = claims?.claims?.sub as string | undefined
   if (claimErr || !uid) return json({ error: 'unauthorized' }, 401)
 
-  if (!LIVE_URL || !LIVE_KEY || !LIVE_SECRET) return json({ error: 'not_set_up' }, 503)
-
   const service = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } })
+  let liveUrl = ENV_URL
+  let liveKey = ENV_KEY
+  let liveSecret = ENV_SECRET
+  if (!liveUrl || !liveKey || !liveSecret) {
+    const { data: saved } = await service.rpc('get_live_service_config')
+    liveUrl = saved?.url ?? ''
+    liveKey = saved?.api_key ?? ''
+    liveSecret = saved?.secret ?? ''
+  }
+  if (!liveUrl || !liveKey || !liveSecret) return json({ error: 'not_set_up' }, 503)
+
   if (!(await withinRateLimit(service, `uid:${uid}`, 'live-room', 240, 3600))) {
     return json({ error: 'slow_down' }, 429)
   }
@@ -94,7 +104,7 @@ Deno.serve(async (req) => {
   const target = body.user_id ? String(body.user_id) : ''
   if (target && !/^[0-9a-f-]{36}$/i.test(target)) return json({ error: 'bad request' }, 400)
 
-  const rooms = new RoomServiceClient(LIVE_URL.replace(/^ws/, 'http'), LIVE_KEY, LIVE_SECRET)
+  const rooms = new RoomServiceClient(liveUrl.replace(/^ws/, 'http'), liveKey, liveSecret)
 
   switch (body.action) {
     case 'join': {
@@ -105,13 +115,13 @@ Deno.serve(async (req) => {
         await quietly(rooms.createRoom({ name: roomId, emptyTimeout: 300, departureTimeout: 60 }))
       }
       const { data: profile } = await service.from('profiles').select('display_name, username').eq('id', uid).maybeSingle()
-      const pass = new AccessToken(LIVE_KEY, LIVE_SECRET, {
+      const pass = new AccessToken(liveKey, liveSecret, {
         identity: uid,
         name: profile?.display_name || profile?.username || 'Member',
         ttl: PASS_SECONDS,
       })
       pass.addGrant({ room: roomId, roomJoin: true, ...permission(String(role)) })
-      return json({ url: LIVE_URL, token: await pass.toJwt(), role })
+      return json({ url: liveUrl, token: await pass.toJwt(), role })
     }
 
     case 'set_role': {

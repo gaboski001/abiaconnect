@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { formatDistanceToNow } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { Loader2, X } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { supabase } from '@/lib/supabase'
@@ -107,6 +107,7 @@ export function LiveRoomsSection() {
 
   return (
     <div className="space-y-6">
+      <LiveServiceKeys />
       <section className="rounded-2xl border bg-card p-5">
         <h2 className="font-bold">Live rooms</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -380,5 +381,166 @@ function MemberPicker({ label, onPick }: { label: string; onPick: (userId: strin
         </ul>
       ) : null}
     </div>
+  )
+}
+
+interface ServiceStatus {
+  url: string
+  api_key: string
+  secret_preview: string
+  updated_at: string
+}
+
+/**
+ * The live service (LiveKit) connection: project URL, API key and secret, from
+ * the LiveKit dashboard (Settings -> General and Settings -> API keys). The
+ * secret goes into the database's locked store and is never shown again.
+ */
+function LiveServiceKeys() {
+  const qc = useQueryClient()
+  const q = useQuery({
+    queryKey: ['admin-live-service'],
+    queryFn: async () => {
+      const { data, error } = await sb.rpc('admin_live_service_status')
+      if (error) return undefined
+      return (data ?? null) as ServiceStatus | null
+    },
+  })
+  const saved = q.data ?? null
+  const [editing, setEditing] = useState(false)
+  const [url, setUrl] = useState('')
+  const [key, setKey] = useState('')
+  const [secret, setSecret] = useState('')
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const { error } = await sb.rpc('admin_set_live_service', { _url: url, _api_key: key, _secret: secret })
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: () => {
+      setSecret('')
+      setEditing(false)
+      toast.success('Live service saved')
+      qc.invalidateQueries({ queryKey: ['admin-live-service'] })
+    },
+    onError: (e: Error) => toast.error('Could not save', { description: e.message }),
+  })
+  const clear = useMutation({
+    mutationFn: async () => {
+      const { error } = await sb.rpc('admin_clear_live_service')
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: () => {
+      toast.success('Live service keys removed')
+      qc.invalidateQueries({ queryKey: ['admin-live-service'] })
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  // Not applied yet: the Live rooms section below already explains.
+  if (q.data === undefined && !q.isLoading) return null
+
+  const startEditing = () => {
+    setUrl(saved?.url ?? '')
+    setKey(saved?.api_key ?? '')
+    setSecret('')
+    setEditing(true)
+  }
+
+  return (
+    <section className="rounded-2xl border bg-card p-5">
+      <h2 className="font-bold">Live service (LiveKit)</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        From your LiveKit Cloud project: the Project URL is under Settings → General, the API key and secret under Settings →
+        API keys. LiveKit shows a secret only once, when the key is made; if you no longer have it, make a new key there.
+      </p>
+      {saved && !editing ? (
+        <div className="mt-3 space-y-1.5 text-sm">
+          <p>
+            Project URL: <code className="rounded bg-muted px-1.5 py-0.5">{saved.url}</code>
+          </p>
+          <p>
+            API key: <code className="rounded bg-muted px-1.5 py-0.5">{saved.api_key}</code>
+          </p>
+          <p>
+            API secret: <code className="rounded bg-muted px-1.5 py-0.5" aria-label="API secret (hidden)">{saved.secret_preview}</code>
+          </p>
+          <p className="text-[12px] text-muted-foreground">Saved {format(new Date(saved.updated_at), 'dd MMM yyyy HH:mm')}</p>
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={startEditing} className="rounded-xl border px-3 py-1.5 text-sm font-medium">
+              Change
+            </button>
+            <button
+              type="button"
+              disabled={clear.isPending}
+              onClick={() => clear.mutate()}
+              className="rounded-xl px-3 py-1.5 text-sm text-rose-600 hover:underline"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      ) : saved || editing || q.data === null ? (
+        <form
+          className="mt-3 space-y-3"
+          autoComplete="off"
+          onSubmit={(e) => {
+            e.preventDefault()
+            save.mutate()
+          }}
+        >
+          <label className="block text-sm">
+            <span className="font-medium">Project URL</span>
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="abiaconnect-xxxx.livekit.cloud"
+              autoComplete="off"
+              spellCheck={false}
+              className="mt-1"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="font-medium">API key</span>
+            <Input
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="APIxxxxxxxx"
+              autoComplete="off"
+              spellCheck={false}
+              className="mt-1"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="font-medium">API secret</span>
+            <Input
+              type="password"
+              value={secret}
+              onChange={(e) => setSecret(e.target.value)}
+              placeholder={saved ? 'Leave empty to keep the saved secret' : 'Paste the secret'}
+              autoComplete="new-password"
+              spellCheck={false}
+              className="mt-1"
+            />
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={save.isPending || !url.trim() || !key.trim() || (!saved && !secret.trim())}
+              className="h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {save.isPending ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
+            </button>
+            {saved ? (
+              <button type="button" onClick={() => setEditing(false)} className="h-10 rounded-xl border px-4 text-sm">
+                Cancel
+              </button>
+            ) : null}
+          </div>
+        </form>
+      ) : (
+        <div className="mt-3 h-10 animate-pulse rounded-xl bg-muted" />
+      )}
+    </section>
   )
 }

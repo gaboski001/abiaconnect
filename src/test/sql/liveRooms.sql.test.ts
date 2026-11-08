@@ -64,6 +64,7 @@ beforeAll(async () => {
   db = await createMonetizationDb()
   await db.exec(EXTRAS)
   await db.exec(readFileSync(resolve(__dirname, '../../../supabase/migrations/20261108100000_live_rooms.sql'), 'utf8'))
+  await db.exec(readFileSync(resolve(__dirname, '../../../supabase/migrations/20261108110000_live_service_keys.sql'), 'utf8'))
 }, 60_000)
 
 beforeEach(async () => {
@@ -316,5 +317,40 @@ describe('follower alerts', () => {
     await startRoom(a.id, a.group)
     const n = await db.one<{ link: string }>(`SELECT link FROM public.notifications WHERE user_id = $1`, [fan])
     expect(n.link).toMatch(/^\/live\//)
+  })
+})
+
+describe('live service keys from the admin screen', () => {
+  const SECRET = 'abcdEFGHijklMNOPqrstUVWXyz0123456789'
+
+  it('saves the keys for admins only, and never shows the secret back', async () => {
+    await db.as(await tester())
+    await fails(`SELECT public.admin_set_live_service('x.livekit.cloud', 'APIabc123', $1)`, [SECRET], /Forbidden/)
+    await db.as(await db.addUser({ admin: true }))
+    const r = await one<{ s: Record<string, string> }>(
+      `SELECT public.admin_set_live_service('https://abiaconnect-ab12.livekit.cloud/', 'APIabc123', $1) AS s`,
+      [SECRET],
+    )
+    expect(r.s.url).toBe('wss://abiaconnect-ab12.livekit.cloud')
+    expect(r.s.secret_preview).toBe('abcd…6789')
+    expect(JSON.stringify(r.s)).not.toContain(SECRET)
+    await fails(`SELECT public.get_live_service_config()`, [], /permission denied/)
+    const full = await db.one<{ c: { secret: string } }>(`SELECT public.get_live_service_config() AS c`)
+    expect(full.c.secret).toBe(SECRET)
+  })
+
+  it('keeps the saved secret when only the address or key changes', async () => {
+    await db.as(await db.addUser({ admin: true }))
+    await live(`SELECT public.admin_set_live_service('a.livekit.cloud', 'APIone111', $1)`, [SECRET])
+    await live(`SELECT public.admin_set_live_service('wss://b.livekit.cloud', 'APItwo222', '')`)
+    const full = await db.one<{ c: { url: string; api_key: string; secret: string } }>(`SELECT public.get_live_service_config() AS c`)
+    expect(full.c).toEqual({ url: 'wss://b.livekit.cloud', api_key: 'APItwo222', secret: SECRET })
+  })
+
+  it('turns away things that are not keys', async () => {
+    await db.as(await db.addUser({ admin: true }))
+    await fails(`SELECT public.admin_set_live_service('not a url', 'APIabc123', $1)`, [SECRET], /project URL/)
+    await fails(`SELECT public.admin_set_live_service('a.livekit.cloud', 'has space', $1)`, [SECRET], /API key/)
+    await fails(`SELECT public.admin_set_live_service('a.livekit.cloud', 'APIabc123', 'short')`, [], /API secret/)
   })
 })
