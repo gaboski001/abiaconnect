@@ -52,13 +52,16 @@ export default function LiveRoom() {
   const [picked, setPicked] = useState<LivePerson | null>(null)
   const [reporting, setReporting] = useState<{ userId: string | null; name: string } | null>(null)
 
+  // The member's id, not the user object: sign-in refreshes (e.g. on coming back to the tab)
+  // give a new object, and the room must not be left and rejoined each time.
+  const uid = user?.id
   const room = detail.data
   const myRole = room?.my_role ?? null
   const live = room?.status === 'live'
 
   // Join the live audio once, when the room is open.
   useEffect(() => {
-    if (!user || !live) return
+    if (!uid || !live) return
     let cancelled = false
     const lk = new Room({ adaptiveStream: true, dynacast: true })
     roomRef.current = lk
@@ -88,6 +91,7 @@ export default function LiveRoom() {
       if (cancelled) return
       setConnection('left')
       if (reason === DisconnectReason.PARTICIPANT_REMOVED) toast.error('You were removed from this room.')
+      if (reason === DisconnectReason.DUPLICATE_IDENTITY) toast.error('You joined this room from another tab or device, so this one stopped.')
       if (reason === DisconnectReason.ROOM_DELETED) qc.invalidateQueries({ queryKey: ['live-room', roomId] })
     })
     ;(async () => {
@@ -120,11 +124,11 @@ export default function LiveRoom() {
       roomRef.current = null
       lk.disconnect()
     }
-  }, [user, live, roomId, qc])
+  }, [uid, live, roomId, qc])
 
   // Changes to the people and comments show up straight away.
   useEffect(() => {
-    if (!user || !roomId) return
+    if (!uid || !roomId) return
     const channel = supabase
       .channel(`live-${roomId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'live_room_people', filter: `room_id=eq.${roomId}` }, () =>
@@ -140,7 +144,7 @@ export default function LiveRoom() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [user, roomId, qc])
+  }, [uid, roomId, qc])
 
   // Tell the server we are still here every minute; it keeps the room open
   // while the host is in it and counts the minutes towards the free amount.
