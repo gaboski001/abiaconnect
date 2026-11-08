@@ -78,6 +78,8 @@ const DatingPremium = lazy(() => import('@/pages/DatingPremium'))
 const DatingPaymentCallback = lazy(() => import('@/pages/DatingPaymentCallback'))
 const DeviceNotifications = lazy(() => import('@/pages/DeviceNotifications'))
 const Download = lazy(() => import('@/pages/Download'))
+const LiveRooms = lazy(() => import('@/pages/LiveRooms'))
+const LiveRoom = lazy(() => import('@/pages/LiveRoom'))
 
 
 const RouteFallback = () => (
@@ -199,6 +201,8 @@ export default function App() {
                   <Route path="relationship/payment/callback" element={<DatingPaymentCallback />} />
                   <Route path="relationship/:userId" element={<RelationshipProfilePage />} />
                   <Route path="settings/devices" element={<DeviceNotifications />} />
+                  <Route path="live" element={<LiveRooms />} />
+                  <Route path="live/:roomId" element={<LiveRoom />} />
 
                   <Route element={<AdminRoute />}>
                     <Route path="admin/dashboard" element={<AdminDashboard />} />

@@ -24,6 +24,7 @@ import { WaitingForReplyCard } from '@/components/engagement/WaitingForReplyCard
 import { CommunityFeed } from '@/components/community/CommunityFeed'
 import { InviteCard, JoinInTodayCard, LgaOfTheMonthCard, OpportunitiesCard } from '@/components/community/CommunityCards'
 import { shownCount } from '@/lib/quietNumbers'
+import { LiveNowStrip } from '@/components/live/LiveNowStrip'
 
 /** Topics shown before "Show all topics". */
 const TOPICS_SHOWN = 6
@@ -106,6 +107,7 @@ export function WebHome() {
           </div>
         )}
       </section>
+      {user ? <LiveNowStrip /> : null}
       {user ? <StarterSteps /> : null}
       {user ? <BirthdayGreeting /> : null}
       {user ? <AddBirthdayPrompt /> : null}

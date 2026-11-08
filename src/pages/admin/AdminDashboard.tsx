@@ -1,6 +1,7 @@
 import { AiProviderSection } from '@/components/admin/AiProviderSection'
 import { NewcomerFunnelSection } from '@/components/admin/NewcomerFunnelSection'
 import { ChampionsSection } from '@/components/admin/ChampionsSection'
+import { LiveRoomsSection } from '@/components/admin/LiveRoomsSection'
 import { TrustedMembersSection } from '@/components/admin/TrustedMembersSection'
 import { useEffect, useMemo, useState } from 'react'
 import { toWebP } from '@/lib/image'
@@ -54,7 +55,7 @@ import { HandHelping } from 'lucide-react'
 import NewsdeskSection from '@/components/admin/NewsdeskSection'
 import { Newspaper } from 'lucide-react'
 import DatingMonetizationSection from '@/components/admin/DatingMonetizationSection'
-import { HeartHandshake } from 'lucide-react'
+import { HeartHandshake, Radio } from 'lucide-react'
 import { Download as DownloadIcon, BellRing, Cake, Award, BadgeCheck } from 'lucide-react'
 import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
@@ -78,6 +79,7 @@ type SectionId =
   | 'problem-reports'
   | 'volunteers'
   | 'monetization'
+  | 'live'
 
 const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'overview', label: 'Overview', Icon: BarChart3 },
@@ -99,6 +101,7 @@ const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
   { id: 'problem-reports', label: 'Problem Reports', Icon: Flag },
   { id: 'volunteers', label: 'Volunteer Applications', Icon: HandHelping },
   { id: 'monetization', label: 'Relationship & Premium', Icon: HeartHandshake },
+  { id: 'live', label: 'Live rooms', Icon: Radio },
 ]
 
 export default function AdminDashboard() {
@@ -166,6 +169,7 @@ export default function AdminDashboard() {
           {section === 'problem-reports' && <IssueReportsSection />}
           {section === 'volunteers' && <VolunteerApplicationsSection />}
           {section === 'monetization' && <DatingMonetizationSection />}
+          {section === 'live' && <LiveRoomsSection />}
         </main>
       </div>
     </div>

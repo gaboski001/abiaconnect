@@ -24,6 +24,7 @@ import { QuickPollCard } from '@/components/engagement/QuickPollCard'
 import { QuestionOfTheDayCard } from '@/components/engagement/QuestionOfTheDayCard'
 import { WaitingForReplyCard } from '@/components/engagement/WaitingForReplyCard'
 import { feedFilter, useNewsdeskAuthor } from '@/lib/feed'
+import { LiveNowStrip } from '@/components/live/LiveNowStrip'
 
 interface Category {
   id: string
@@ -305,6 +306,8 @@ export function NativeHome() {
           </div>
         </section>
       ) : null}
+
+      {user ? <LiveNowStrip className="px-4" /> : null}
 
       {/* Announcements and promotions (managed by admins) */}
       <section className="px-4">

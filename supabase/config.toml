@@ -27,6 +27,8 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = false
   [functions.call-ice-servers]
     verify_jwt = false
+  [functions.live-room]
+    verify_jwt = false
   [functions.notify-new-device]
     verify_jwt = false
   [functions.handle-email-events]
