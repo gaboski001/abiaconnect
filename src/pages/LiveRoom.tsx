@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DisconnectReason, Room, RoomEvent, Track, type Participant } from 'livekit-client'
 import { Flag, Hand, Loader2, LogOut, Mic, MicOff, Pin, Send, Trash2, Volume2, X } from 'lucide-react'
 import { SEO } from '@/components/SEO'
+import { LiveAvatar } from '@/components/live/LiveAvatar'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { toast } from '@/lib/toast'
@@ -43,6 +44,8 @@ export default function LiveRoom() {
   const [failure, setFailure] = useState('')
   const [needsTap, setNeedsTap] = useState(false)
   const [micOn, setMicOn] = useState(false)
+  // Who has their mic on right now (by member id), from the live service.
+  const [micsOn, setMicsOn] = useState<Set<string>>(new Set())
   const [talking, setTalking] = useState<Set<string>>(new Set())
   const [picked, setPicked] = useState<LivePerson | null>(null)
   const [reporting, setReporting] = useState<{ userId: string | null; name: string } | null>(null)
@@ -57,13 +60,21 @@ export default function LiveRoom() {
     let cancelled = false
     const lk = new Room({ adaptiveStream: true, dynacast: true })
     roomRef.current = lk
-    const syncMic = () => setMicOn(lk.localParticipant.isMicrophoneEnabled)
+    const syncMic = () => {
+      setMicOn(lk.localParticipant.isMicrophoneEnabled)
+      const everyone = [lk.localParticipant, ...lk.remoteParticipants.values()]
+      setMicsOn(new Set(everyone.filter((p) => p.isMicrophoneEnabled).map((p) => p.identity)))
+    }
     lk.on(RoomEvent.TrackSubscribed, (track) => {
       if (track.kind !== Track.Kind.Audio) return
       const el = track.attach()
       audioRef.current?.appendChild(el)
     })
     lk.on(RoomEvent.TrackUnsubscribed, (track) => track.detach().forEach((el) => el.remove()))
+    lk.on(RoomEvent.TrackPublished, syncMic)
+    lk.on(RoomEvent.TrackUnpublished, syncMic)
+    lk.on(RoomEvent.ParticipantConnected, syncMic)
+    lk.on(RoomEvent.ParticipantDisconnected, syncMic)
     lk.on(RoomEvent.AudioPlaybackStatusChanged, () => setNeedsTap(!lk.canPlaybackAudio))
     lk.on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => setTalking(new Set(speakers.map((s) => s.identity))))
     lk.on(RoomEvent.LocalTrackPublished, syncMic)
@@ -79,12 +90,20 @@ export default function LiveRoom() {
     })
     ;(async () => {
       try {
-        const pass = await liveAction<{ url: string; token: string }>({ action: 'join', room_id: roomId })
+        const pass = await liveAction<{ url: string; token: string; role: LiveRole }>({ action: 'join', room_id: roomId })
         if (cancelled) return
         await lk.connect(pass.url, pass.token)
         if (cancelled) return lk.disconnect()
         setConnection('connected')
         setNeedsTap(!lk.canPlaybackAudio)
+        syncMic()
+        // The host starts talking straight away, as in other live audio apps.
+        if (pass.role === 'host') {
+          lk.localParticipant
+            .setMicrophoneEnabled(true)
+            .catch(() => toast.error('Could not use your microphone. Please allow microphone access, then tap Mic.'))
+            .finally(syncMic)
+        }
         qc.invalidateQueries({ queryKey: ['live-room', roomId] })
       } catch (e) {
         if (cancelled) return
@@ -138,11 +157,18 @@ export default function LiveRoom() {
     return () => window.clearInterval(t)
   }, [connection, roomId, qc])
 
-  // Off the stage: make sure the microphone is off.
+  // Off the stage: make sure the microphone is off. Tell members when they are moved.
+  const lastRole = useRef<LiveRole | null>(null)
   useEffect(() => {
     if (myRole === 'listener' && roomRef.current?.localParticipant.isMicrophoneEnabled) {
       roomRef.current.localParticipant.setMicrophoneEnabled(false).catch(() => {})
     }
+    const before = lastRole.current
+    lastRole.current = myRole
+    if (!before || !myRole || before === myRole) return
+    if (before === 'listener' && myRole !== 'listener') toast.success('You are on stage now. Tap Mic to talk.')
+    else if (myRole === 'listener') toast('You are back with the listeners.')
+    else if (myRole === 'moderator') toast.success('You are now a moderator of this room.')
   }, [myRole])
 
   const act = useMutation({
@@ -205,6 +231,7 @@ export default function LiveRoom() {
             <span className="size-2 animate-pulse rounded-full bg-rose-600" /> Live{room.group_name ? ` · ${room.group_name}` : ''}
           </p>
           <h1 className="text-xl font-bold">{room.title}</h1>
+          <p className="text-[13px] text-muted-foreground">{people.length} in the room</p>
         </div>
         <button
           type="button"
@@ -239,9 +266,20 @@ export default function LiveRoom() {
         <h2 className="mb-2 text-[13px] font-semibold text-muted-foreground">On stage</h2>
         <ul className="grid grid-cols-3 gap-3 sm:grid-cols-5">
           {stage.map((p) => (
-            <PersonTile key={p.user_id} person={p} talking={talking.has(p.user_id)} onPick={() => setPicked(p)} />
+            <PersonTile
+              key={p.user_id}
+              person={p}
+              talking={talking.has(p.user_id)}
+              mic={connection === 'connected' ? micsOn.has(p.user_id) : undefined}
+              onPick={() => setPicked(p)}
+            />
           ))}
         </ul>
+        {connection === 'connected' && !stage.some((p) => micsOn.has(p.user_id)) ? (
+          <p className="mt-2 text-[13px] text-muted-foreground">
+            {onStage ? 'Your mic is off. Tap Mic below so people can hear you.' : 'Waiting for someone on stage to turn on their mic.'}
+          </p>
+        ) : null}
       </section>
 
       {runsRoom && hands.length ? (
@@ -250,7 +288,10 @@ export default function LiveRoom() {
           <ul className="mt-2 space-y-2">
             {hands.map((p) => (
               <li key={p.user_id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="truncate">✋ {p.name}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <LiveAvatar path={p.avatar} name={p.name} className="size-8 text-[13px]" />
+                  <span className="truncate">✋ {p.name}</span>
+                </span>
                 <span className="flex shrink-0 gap-1.5">
                   <button
                     type="button"
@@ -288,7 +329,7 @@ export default function LiveRoom() {
       </details>
 
       {/* Controls stay at the bottom of the screen. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center gap-2">
           <button type="button" onClick={leave} className="inline-flex h-11 items-center gap-1.5 rounded-xl border px-3 font-medium">
             <LogOut className="size-4" /> Leave
@@ -354,22 +395,40 @@ export default function LiveRoom() {
   )
 }
 
-function Avatar({ person, size }: { person: LivePerson; size: string }) {
-  return person.avatar ? (
-    <img src={person.avatar} alt="" className={cn(size, 'rounded-full object-cover')} />
-  ) : (
-    <span className={cn(size, 'flex items-center justify-center rounded-full bg-primary/10 font-semibold text-primary')}>
-      {person.name.slice(0, 1).toUpperCase()}
-    </span>
-  )
-}
-
-function PersonTile({ person, talking, small, onPick }: { person: LivePerson; talking?: boolean; small?: boolean; onPick: () => void }) {
+function PersonTile({
+  person,
+  talking,
+  mic,
+  small,
+  onPick,
+}: {
+  person: LivePerson
+  talking?: boolean
+  mic?: boolean
+  small?: boolean
+  onPick: () => void
+}) {
   return (
     <li>
       <button type="button" onClick={onPick} className="flex w-full flex-col items-center gap-1 text-center">
-        <span className={cn('rounded-full p-0.5', talking ? 'ring-2 ring-emerald-500' : 'ring-2 ring-transparent')}>
-          <Avatar person={person} size={small ? 'size-11' : 'size-16'} />
+        <span className={cn('relative rounded-full p-0.5', talking ? 'ring-2 ring-emerald-500' : 'ring-2 ring-transparent')}>
+          <LiveAvatar path={person.avatar} name={person.name} className={small ? 'size-11' : 'size-16 text-xl'} />
+          {mic !== undefined ? (
+            <span
+              aria-label={mic ? 'Mic on' : 'Mic off'}
+              className={cn(
+                'absolute -bottom-0.5 -right-0.5 flex size-6 items-center justify-center rounded-full border-2 border-background',
+                mic ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground',
+              )}
+            >
+              {mic ? <Mic className="size-3" /> : <MicOff className="size-3" />}
+            </span>
+          ) : null}
+          {small && person.hand_raised ? (
+            <span aria-label="Hand raised" className="absolute -right-1 -top-1 text-[15px]">
+              ✋
+            </span>
+          ) : null}
         </span>
         <span className="w-full truncate text-[12px] font-medium">{person.name}</span>
         {!small ? <span className="text-[11px] text-muted-foreground">{ROLE_LABEL[person.role]}</span> : null}
@@ -406,7 +465,7 @@ function PersonSheet({
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
       <div className="w-full max-w-sm space-y-2 rounded-t-2xl bg-background p-4 sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3">
-          <Avatar person={person} size="size-12" />
+          <LiveAvatar path={person.avatar} name={person.name} className="size-12" />
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{person.name}</p>
             <p className="text-[13px] text-muted-foreground">{ROLE_LABEL[person.role]}</p>

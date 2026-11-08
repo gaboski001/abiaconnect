@@ -45,7 +45,9 @@ export function MainLayout() {
   // The app has no website footer: its links all live in the More menu.
   const hideFooter = isAuthPage || native
   const hideTopBar = isAuthPage || immersiveChat
-  const hideBottomNav = isAuthPage || immersiveChat
+  // A live room has its own controls bar at the bottom (mic, raise hand, leave).
+  const inLiveRoom = /^\/live\/[^/]+/.test(location.pathname)
+  const hideBottomNav = isAuthPage || immersiveChat || inLiveRoom
 
   return (
     <div data-site-theme={siteTheme} className="min-h-screen flex flex-col">

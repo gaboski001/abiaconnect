@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNowStrict } from 'date-fns'
 import { Headphones, Loader2, Mic, Radio, Users } from 'lucide-react'
 import { SEO } from '@/components/SEO'
+import { LiveAvatar } from '@/components/live/LiveAvatar'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from '@/lib/toast'
 import { startLiveRoom, useLiveRooms, useLiveStatus, liveReason, type LiveRoomSummary } from '@/lib/live'
@@ -92,13 +93,7 @@ export function LiveRoomCard({ room }: { room: LiveRoomSummary }) {
   return (
     <Link to={`/live/${room.id}`} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 active:bg-muted">
       <span className="relative shrink-0">
-        {room.host_avatar ? (
-          <img src={room.host_avatar} alt="" className="size-12 rounded-full object-cover" />
-        ) : (
-          <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
-            {room.host_name.slice(0, 1).toUpperCase()}
-          </span>
-        )}
+        <LiveAvatar path={room.host_avatar} name={room.host_name} className="size-12" />
         <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-rose-600 px-1.5 text-[10px] font-bold uppercase text-white">
           Live
         </span>
