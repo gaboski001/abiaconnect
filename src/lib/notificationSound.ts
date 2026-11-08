@@ -2,6 +2,8 @@
 // Modes: 'sound' | 'vibrate' | 'muted'. Persisted to user profile + localStorage cache.
 
 import { supabase } from '@/integrations/supabase/client'
+// AbiaConnect's own tune; the Android app plays the same one (res/raw/abia_chime.wav).
+import chimeUrl from '@/assets/sounds/abia-chime.wav'
 
 const MODE_KEY = 'abia:notification-mode'
 const LEGACY_MUTE_KEY = 'abia:notification-sound-muted'
@@ -116,7 +118,25 @@ function vibrate(pattern: number | number[]) {
   }
 }
 
+let tune: HTMLAudioElement | null = null
+
 function playChime() {
+  try {
+    if (typeof Audio !== 'undefined') {
+      tune ??= new Audio(chimeUrl)
+      tune.volume = 0.7
+      tune.currentTime = 0
+      const played = tune.play()
+      if (played && typeof played.catch === 'function') played.catch(() => playBeep())
+      return
+    }
+  } catch {
+    // fall back to the simple beep below
+  }
+  playBeep()
+}
+
+function playBeep() {
   const ac = getCtx()
   if (!ac) return
   if (ac.state === 'suspended') ac.resume().catch(() => {})

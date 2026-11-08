@@ -10,6 +10,67 @@ import { Input } from '@/components/ui/input'
 
 const sb = supabase as any
 
+// What LiveKit's free (Build) plan includes each calendar month.
+export const LIVEKIT_FREE_MINUTES = 5000
+const LIVEKIT_FREE_DATA_GB = 50
+
+/** Free monthly amount used and left. LiveKit's free plan does not let apps read its figures, so minutes are our own count. */
+export function FreePlanUsage({ used, stopAt, now = new Date() }: { used: number; stopAt: number; now?: Date }) {
+  const left = Math.max(0, LIVEKIT_FREE_MINUTES - used)
+  const pct = Math.min(100, Math.round((used / LIVEKIT_FREE_MINUTES) * 100))
+  const stopPct = Math.min(100, (stopAt / LIVEKIT_FREE_MINUTES) * 100)
+  const resets = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const tone = used >= stopAt ? 'bg-rose-600' : pct >= 75 ? 'bg-amber-500' : 'bg-emerald-600'
+  return (
+    <section className="rounded-2xl border bg-card p-5" aria-label="Free plan usage">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-bold">Free plan usage this month</h2>
+        <span className="text-[13px] text-muted-foreground">Starts again on {format(resets, 'd MMMM')}</span>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border p-4">
+          <p className="text-[13px] text-muted-foreground">Live minutes</p>
+          <p className="mt-1 text-2xl font-bold">
+            {left.toLocaleString()} <span className="text-base font-medium text-muted-foreground">left</span>
+          </p>
+          <p className="text-[13px] text-muted-foreground">
+            {used.toLocaleString()} used of {LIVEKIT_FREE_MINUTES.toLocaleString()} free
+          </p>
+          <div className="relative mt-3 h-2.5 rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={LIVEKIT_FREE_MINUTES} aria-valuenow={used}>
+            <div className={`h-full rounded-full ${tone}`} style={{ width: `${pct}%` }} />
+            <span className="absolute -top-[3px] h-4 w-0.5 bg-foreground/60" style={{ left: `${stopPct}%` }} title="Rooms stop here" />
+          </div>
+          <p className="mt-2 text-[12px] text-muted-foreground">
+            One person in a room for one minute counts as one minute. New rooms stop at {stopAt.toLocaleString()} (the line), so the free amount is
+            never passed and nothing is charged.
+          </p>
+        </div>
+
+        <div className="rounded-xl border p-4">
+          <p className="text-[13px] text-muted-foreground">Data (GB)</p>
+          <p className="mt-1 text-2xl font-bold">
+            {LIVEKIT_FREE_DATA_GB} GB <span className="text-base font-medium text-muted-foreground">free a month</span>
+          </p>
+          <p className="mt-2 text-[12px] text-muted-foreground">
+            Voice uses very little data: all {LIVEKIT_FREE_MINUTES.toLocaleString()} free minutes come to roughly 1–2 GB, so the minutes always run
+            out long before the data. LiveKit only shows the exact GB on its own site.
+          </p>
+          <a
+            href="https://cloud.livekit.io/"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-block rounded-lg border px-3 py-1.5 text-[13px] font-medium hover:bg-muted"
+          >
+            See exact figures on LiveKit ↗
+          </a>
+          <p className="mt-1 text-[11px] text-muted-foreground">Sign in, open the project, then Settings → Billing.</p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 interface Overview {
   settings: {
     enabled: boolean
@@ -107,6 +168,7 @@ export function LiveRoomsSection() {
 
   return (
     <div className="space-y-6">
+      <FreePlanUsage used={used} stopAt={s.monthly_minutes} />
       <LiveServiceKeys />
       <section className="rounded-2xl border bg-card p-5">
         <h2 className="font-bold">Live rooms</h2>
@@ -137,13 +199,6 @@ export function LiveRoomsSection() {
             </button>
           ) : null}
         </div>
-        <p className="mt-3 text-sm">
-          Minutes used this month: <span className="font-semibold">{used.toLocaleString()}</span> of {s.monthly_minutes.toLocaleString()}
-          <span className="block text-[13px] text-muted-foreground">
-            One person in a room for one minute counts as one. When the month's minutes are used up, nobody can start a room
-            until next month, so the live service's free plan is never passed.
-          </span>
-        </p>
         <Limits settings={s} busy={call.isPending} onSave={save} />
       </section>
 

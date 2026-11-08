@@ -26,7 +26,9 @@ import com.getcapacitor.WebViewListener;
 
 @SuppressWarnings("deprecation")
 public class BaseActivity extends BridgeActivity {
-    public static final String CHANNEL_ID = "abia_default";
+    // A channel's sound can't be changed once made, so the AbiaConnect tune needs a new channel.
+    public static final String CHANNEL_ID = "abia_alerts";
+    private static final String OLD_CHANNEL_ID = "abia_default";
     public static final String CALL_CHANNEL_ID = "abia_calls";
 
     /**
@@ -132,7 +134,7 @@ public class BaseActivity extends BridgeActivity {
         }
 
         showLaunchOverlay();
-        createNotificationChannels();
+        createNotificationChannels(this);
     }
 
     /**
@@ -192,24 +194,34 @@ public class BaseActivity extends BridgeActivity {
         });
     }
 
-    private void createNotificationChannels() {
+    /** Also called by the notification service, so the channels exist before the app is first opened. */
+    static void createNotificationChannels(android.content.Context ctx) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
 
-        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        NotificationManager notificationManager = ctx.getSystemService(NotificationManager.class);
         if (notificationManager == null) return;
 
         NotificationChannel defaultChannel = new NotificationChannel(
             CHANNEL_ID,
-            getString(R.string.push_default_channel_name),
+            ctx.getString(R.string.push_default_channel_name),
             NotificationManager.IMPORTANCE_HIGH
         );
-        defaultChannel.setDescription(getString(R.string.push_default_channel_description));
+        defaultChannel.setDescription(ctx.getString(R.string.push_default_channel_description));
+        defaultChannel.setSound(
+            Uri.parse("android.resource://" + ctx.getPackageName() + "/" + R.raw.abia_chime),
+            new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+        );
         defaultChannel.enableLights(true);
-        defaultChannel.setLightColor(ContextCompat.getColor(this, R.color.notification_color));
+        defaultChannel.setLightColor(ContextCompat.getColor(ctx, R.color.notification_color));
         defaultChannel.enableVibration(true);
         defaultChannel.setShowBadge(true);
         defaultChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         notificationManager.createNotificationChannel(defaultChannel);
+        // The old channel with the phone's standard sound is no longer used.
+        notificationManager.deleteNotificationChannel(OLD_CHANNEL_ID);
 
         Uri ringtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
         AudioAttributes audioAttributes = new AudioAttributes.Builder()
@@ -219,12 +231,12 @@ public class BaseActivity extends BridgeActivity {
 
         NotificationChannel callChannel = new NotificationChannel(
             CALL_CHANNEL_ID,
-            getString(R.string.push_call_channel_name),
+            ctx.getString(R.string.push_call_channel_name),
             NotificationManager.IMPORTANCE_HIGH
         );
-        callChannel.setDescription(getString(R.string.push_call_channel_description));
+        callChannel.setDescription(ctx.getString(R.string.push_call_channel_description));
         callChannel.enableLights(true);
-        callChannel.setLightColor(ContextCompat.getColor(this, R.color.notification_color));
+        callChannel.setLightColor(ContextCompat.getColor(ctx, R.color.notification_color));
         callChannel.enableVibration(true);
         callChannel.setVibrationPattern(new long[]{0, 800, 600, 800, 600, 800});
         callChannel.setShowBadge(false);

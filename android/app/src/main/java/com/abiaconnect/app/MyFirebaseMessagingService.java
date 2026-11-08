@@ -104,8 +104,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private void showStandardNotification(String title, String body, String type, String url, String callId) {
         int notificationId = (int) System.currentTimeMillis();
         PendingIntent contentIntent = buildContentIntent(notificationId, type, url, callId, null, notificationId, "open");
-        Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+        // AbiaConnect's own tune (older Android versions use this; newer ones take it from the channel).
+        Uri sound = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.abia_chime);
 
+        BaseActivity.createNotificationChannels(this);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_abiaconnect)
             .setColor(ContextCompat.getColor(this, R.color.notification_color))
@@ -146,6 +148,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         PendingIntent fullScreenIntent = buildContentIntent(notificationId, "call", url, callId, callerName, notificationId, "open");
         Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
 
+        BaseActivity.createNotificationChannels(this);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CALL_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_abiaconnect)
             .setColor(ContextCompat.getColor(this, R.color.notification_color))

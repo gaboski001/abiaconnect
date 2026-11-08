@@ -6,7 +6,7 @@ import { TrustedMembersSection } from '@/components/admin/TrustedMembersSection'
 import { useEffect, useMemo, useState } from 'react'
 import { toWebP } from '@/lib/image'
 import { useAuth } from '@/contexts/AuthContext'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
 import { AlertTriangle, BarChart3, Ban, CheckCircle2, Flag, FolderTree, Inbox, Loader2, Mail, MessageSquare, Pencil, Plus, Save, Search, Settings, Shield, Star, Trash2, Users, Vote, Bot } from 'lucide-react'
@@ -81,68 +81,212 @@ type SectionId =
   | 'monetization'
   | 'live'
 
-const SECTIONS: { id: SectionId; label: string; Icon: any }[] = [
-  { id: 'overview', label: 'Overview', Icon: BarChart3 },
-  { id: 'users', label: 'User Management', Icon: Users },
-  { id: 'champions', label: 'LGA Champions', Icon: Award },
-  { id: 'trusted', label: 'Trusted members', Icon: BadgeCheck },
-  { id: 'categories', label: 'Categories', Icon: FolderTree },
-  { id: 'moderation', label: 'Moderation Queue', Icon: Flag },
-  { id: 'polls', label: 'Polls Management', Icon: Vote },
-  { id: 'subgroups', label: 'Subgroups', Icon: Shield },
-  { id: 'settings', label: 'Site Settings', Icon: Settings },
-  { id: 'slides', label: 'Hero Slider', Icon: ImageIcon },
-  { id: 'email', label: 'Email Settings', Icon: Mail },
-  { id: 'native-apps', label: 'Native Apps', Icon: DownloadIcon },
-  { id: 'test-push', label: 'Test Push', Icon: BellRing },
-  { id: 'birthdays', label: 'Birthdays Today', Icon: Cake },
-  { id: 'newsdesk', label: 'Newsdesk Bot', Icon: Newspaper },
-  { id: 'ai', label: 'AI Provider', Icon: Bot },
-  { id: 'problem-reports', label: 'Problem Reports', Icon: Flag },
-  { id: 'volunteers', label: 'Volunteer Applications', Icon: HandHelping },
-  { id: 'monetization', label: 'Relationship & Premium', Icon: HeartHandshake },
-  { id: 'live', label: 'Live rooms', Icon: Radio },
+type NavItem = { id: SectionId; label: string; hint: string; Icon: any }
+
+// Grouped by the job an admin is doing, each with a one-line plain explanation.
+export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
+  {
+    title: 'Start here',
+    items: [{ id: 'overview', label: 'Today', hint: 'What needs your attention and how the site is doing.', Icon: BarChart3 }],
+  },
+  {
+    title: 'Keep the site safe',
+    items: [
+      { id: 'moderation', label: 'Reported posts', hint: 'Posts and comments members reported. Keep or remove them.', Icon: Flag },
+      { id: 'problem-reports', label: 'Problem reports', hint: 'Bugs and problems members told us about.', Icon: AlertTriangle },
+    ],
+  },
+  {
+    title: 'Members',
+    items: [
+      { id: 'users', label: 'All members', hint: 'Find a member, change their role, or block them.', Icon: Users },
+      { id: 'champions', label: 'LGA Champions', hint: 'Members who lead each Local Government Area group.', Icon: Award },
+      { id: 'trusted', label: 'Trusted members', hint: 'Members whose posts go up without waiting for review.', Icon: BadgeCheck },
+      { id: 'volunteers', label: 'Volunteer applications', hint: 'People who offered to help. Approve or decline.', Icon: HandHelping },
+      { id: 'birthdays', label: 'Birthdays today', hint: 'Members celebrating today, and the greeting they get.', Icon: Cake },
+    ],
+  },
+  {
+    title: 'Content',
+    items: [
+      { id: 'slides', label: 'Home page slides', hint: 'The big pictures at the top of the home page.', Icon: ImageIcon },
+      { id: 'categories', label: 'Forum categories', hint: 'The topics discussions are sorted into.', Icon: FolderTree },
+      { id: 'subgroups', label: 'Groups', hint: 'Community groups, their owners and members.', Icon: Shield },
+      { id: 'polls', label: 'Polls', hint: 'Create, close or remove polls.', Icon: Vote },
+      { id: 'newsdesk', label: 'Newsdesk bot', hint: 'Automatic news posts: sources and timing.', Icon: Newspaper },
+    ],
+  },
+  {
+    title: 'Live, app & notifications',
+    items: [
+      { id: 'live', label: 'Live rooms', hint: 'Turn Live on or off, see free minutes left, handle reports.', Icon: Radio },
+      { id: 'native-apps', label: 'Mobile app', hint: 'App versions and download links.', Icon: DownloadIcon },
+      { id: 'test-push', label: 'Test a notification', hint: 'Send yourself a test notification to check it works.', Icon: BellRing },
+    ],
+  },
+  {
+    title: 'Money',
+    items: [{ id: 'monetization', label: 'Relationship & Premium', hint: 'Plans, prices and paid features.', Icon: HeartHandshake }],
+  },
+  {
+    title: 'Settings',
+    items: [
+      { id: 'settings', label: 'Site settings', hint: 'Site name, look, and features you can switch on or off.', Icon: Settings },
+      { id: 'email', label: 'Emails', hint: 'Which emails members get and how they are sent.', Icon: Mail },
+      { id: 'ai', label: 'Writing assistant', hint: 'The service that helps write posts and replies.', Icon: Bot },
+    ],
+  },
 ]
 
+const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items.map((i) => ({ ...i, group: g.title })))
+
+function isSectionId(v: string | null): v is SectionId {
+  return !!v && ALL_ITEMS.some((i) => i.id === v)
+}
+
+/** Things waiting for an admin, shown as numbers in the menu and on the Today page. */
+export function useAdminTodo() {
+  return useQuery({
+    queryKey: ['admin-todo'],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const count = async (q: PromiseLike<{ count: number | null }>) => {
+        try {
+          return (await q).count ?? 0
+        } catch {
+          return 0
+        }
+      }
+      const db = supabase as any
+      const [reports, problems, volunteers] = await Promise.all([
+        count(supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending')),
+        count(db.from('issue_reports').select('*', { count: 'exact', head: true }).neq('status', 'resolved')),
+        count(db.from('volunteer_applications').select('*', { count: 'exact', head: true }).eq('status', 'pending')),
+      ])
+      return { moderation: reports, 'problem-reports': problems, volunteers } as Partial<Record<SectionId, number>>
+    },
+  })
+}
+
 export default function AdminDashboard() {
-  const [section, setSection] = useState<SectionId>('overview')
-  return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex flex-col lg:flex-row gap-6">
-        <aside className="lg:w-64 shrink-0">
-          <div className="rounded-2xl border bg-card p-3 sticky top-24">
-            <p className="px-3 pt-2 pb-3 text-xs uppercase tracking-wide text-muted-foreground">
-              Admin Portal
-            </p>
-            <nav className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:flex lg:flex-col">
-              {SECTIONS.map((s) => {
-                const active = s.id === section
-                return (
+  // The open section is kept in the address (?section=live), so refresh and Back work.
+  const [params, setParams] = useSearchParams()
+  const fromUrl = params.get('section')
+  const section: SectionId = isSectionId(fromUrl) ? fromUrl : 'overview'
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [find, setFind] = useState('')
+  const todo = useAdminTodo()
+  const current = ALL_ITEMS.find((i) => i.id === section)!
+
+  const go = (id: SectionId) => {
+    setParams(id === 'overview' ? {} : { section: id })
+    setMenuOpen(false)
+    setFind('')
+    window.scrollTo({ top: 0 })
+  }
+
+  const term = find.trim().toLowerCase()
+  const groups = NAV_GROUPS.map((g) => ({
+    ...g,
+    items: term ? g.items.filter((i) => `${i.label} ${i.hint}`.toLowerCase().includes(term)) : g.items,
+  })).filter((g) => g.items.length)
+
+  const menu = (
+    <nav aria-label="Admin sections" className="space-y-4">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={find}
+          onChange={(e) => setFind(e.target.value)}
+          placeholder="Find a section…"
+          aria-label="Find a section"
+          className="h-9 pl-8 text-sm"
+        />
+      </div>
+      {groups.map((g) => (
+        <div key={g.title}>
+          <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{g.title}</p>
+          <ul className="space-y-0.5">
+            {g.items.map((s) => {
+              const active = s.id === section
+              const waiting = todo.data?.[s.id] ?? 0
+              return (
+                <li key={s.id}>
                   <button
-                    key={s.id}
-                    onClick={() => setSection(s.id)}
+                    type="button"
+                    onClick={() => go(s.id)}
+                    aria-current={active ? 'page' : undefined}
+                    title={s.hint}
                     className={cn(
-                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors',
-                      active
-                        ? 'bg-secondary/10 text-secondary border-l-4 border-secondary'
-                        : 'hover:bg-muted/60 border-l-4 border-transparent',
+                      'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors',
+                      active ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-muted/70',
                     )}
                   >
-                    <s.Icon className="h-4 w-4" />
-                    {s.label}
+                    <s.Icon className="h-4 w-4 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{s.label}</span>
+                    {waiting > 0 ? (
+                      <span className="rounded-full bg-rose-600 px-1.5 text-[11px] font-bold leading-5 text-white" aria-label={`${waiting} waiting`}>
+                        {waiting > 99 ? '99+' : waiting}
+                      </span>
+                    ) : null}
                   </button>
-                )
-              })}
-            </nav>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      ))}
+      {!groups.length ? <p className="px-2 text-sm text-muted-foreground">Nothing matches “{find}”.</p> : null}
+    </nav>
+  )
+
+  return (
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <aside className="shrink-0 lg:w-64">
+          {/* Phones: one button that opens the menu, instead of a wall of buttons. */}
+          <div className="lg:hidden">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-expanded={menuOpen}
+              className="flex w-full items-center gap-3 rounded-2xl border bg-card p-3 text-left"
+            >
+              <current.Icon className="h-5 w-5 text-primary" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[11px] uppercase tracking-wide text-muted-foreground">Admin · {current.group}</span>
+                <span className="block font-semibold">{current.label}</span>
+              </span>
+              <span className="text-sm font-medium text-primary">{menuOpen ? 'Close' : 'Menu'}</span>
+            </button>
+            {menuOpen ? <div className="mt-2 rounded-2xl border bg-card p-3">{menu}</div> : null}
+          </div>
+          <div className="sticky top-24 hidden max-h-[calc(100vh-7rem)] overflow-y-auto rounded-2xl border bg-card p-3 lg:block">
+            <p className="px-2 pb-3 text-sm font-bold">Admin</p>
+            {menu}
           </div>
         </aside>
 
-        <main className="flex-1 min-w-0 space-y-4">
+        <main className="min-w-0 flex-1 space-y-4">
+          {section !== 'overview' ? (
+            <header className="rounded-2xl border bg-card px-5 py-4">
+              <p className="text-[12px] text-muted-foreground">
+                <button type="button" onClick={() => go('overview')} className="hover:underline">
+                  Admin
+                </button>{' '}
+                › {current.group}
+              </p>
+              <h1 className="mt-0.5 flex items-center gap-2 text-xl font-bold">
+                <current.Icon className="h-5 w-5 text-primary" /> {current.label}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">{current.hint}</p>
+            </header>
+          ) : null}
 
           {section === 'overview' && (
             <>
               <HeroSlidesExpiryAlert />
-              <OverviewSection />
+              <OverviewSection onOpen={go} />
               <NewcomerFunnelSection />
             </>
           )}
@@ -182,17 +326,20 @@ function SectionShell({
   description,
   children,
   actions,
+  showTitle = false,
 }: {
   title: string
   description?: string
   children: React.ReactNode
   actions?: React.ReactNode
+  /** The page header above already names the section; only Today shows its own title. */
+  showTitle?: boolean
 }) {
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">{title}</h1>
+          <h2 className={showTitle ? 'text-2xl font-bold' : 'sr-only'}>{title}</h2>
           {description && (
             <p className="text-sm text-muted-foreground mt-1">{description}</p>
           )}
@@ -222,7 +369,8 @@ function Spinner() {
 }
 
 // ---------- 1. OVERVIEW ----------
-function OverviewSection() {
+function OverviewSection({ onOpen }: { onOpen: (id: SectionId) => void }) {
+  const todo = useAdminTodo()
   const statsQ = useQuery({
     queryKey: ['admin-overview-stats'],
     queryFn: async () => {
@@ -275,14 +423,70 @@ function OverviewSection() {
   })
 
   const stats = [
-    { label: 'Total Users', value: statsQ.data?.users ?? 0, Icon: Users },
-    { label: 'Total Threads', value: statsQ.data?.threads ?? 0, Icon: MessageSquare },
-    { label: 'Active Today', value: statsQ.data?.active ?? 0, Icon: BarChart3 },
-    { label: 'Pending Reports', value: statsQ.data?.reports ?? 0, Icon: Flag },
+    { label: 'Members', value: statsQ.data?.users ?? 0, Icon: Users },
+    { label: 'Discussions', value: statsQ.data?.threads ?? 0, Icon: MessageSquare },
+    { label: 'New discussions (24 hours)', value: statsQ.data?.active ?? 0, Icon: BarChart3 },
+    { label: 'Reports waiting', value: statsQ.data?.reports ?? 0, Icon: Flag },
+  ]
+
+  const waiting: { id: SectionId; count: number; text: string; action: string }[] = [
+    { id: 'moderation' as SectionId, count: todo.data?.moderation ?? 0, text: 'reported posts to review', action: 'Review' },
+    { id: 'problem-reports' as SectionId, count: todo.data?.['problem-reports'] ?? 0, text: 'problem reports not yet solved', action: 'Open' },
+    { id: 'volunteers' as SectionId, count: todo.data?.volunteers ?? 0, text: 'volunteer applications waiting', action: 'Decide' },
+  ].filter((w) => w.count > 0)
+
+  const shortcuts: { id: SectionId; label: string; Icon: any }[] = [
+    { id: 'users', label: 'Find a member', Icon: Users },
+    { id: 'slides', label: 'Change home page slides', Icon: ImageIcon },
+    { id: 'live', label: 'Live rooms & free minutes', Icon: Radio },
+    { id: 'test-push', label: 'Test a notification', Icon: BellRing },
   ]
 
   return (
-    <SectionShell title="Admin Portal" description="System overview and recent activity">
+    <SectionShell title="Today" description="What needs your attention, and how AbiaConnect is doing." showTitle>
+      <section className="rounded-2xl border bg-card p-4" aria-label="Needs your attention">
+        <h2 className="font-semibold">Needs your attention</h2>
+        {todo.isLoading ? (
+          <p className="mt-2 text-sm text-muted-foreground">Checking…</p>
+        ) : waiting.length === 0 ? (
+          <p className="mt-2 flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+            <CheckCircle2 className="h-4 w-4" /> All clear. Nothing is waiting for you.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {waiting.map((w) => (
+              <li key={w.id} className="flex items-center justify-between gap-3 rounded-xl border p-3 text-sm">
+                <span>
+                  <span className="mr-1.5 inline-flex min-w-6 justify-center rounded-full bg-rose-600 px-1.5 text-[12px] font-bold leading-6 text-white">
+                    {w.count}
+                  </span>
+                  {w.text}
+                </span>
+                <Button size="sm" onClick={() => onOpen(w.id)}>
+                  {w.action}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-label="Shortcuts">
+        <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Shortcuts</h2>
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {shortcuts.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onOpen(c.id)}
+              className="flex items-center gap-2 rounded-xl border bg-card p-3 text-left text-sm font-medium hover:bg-muted/60"
+            >
+              <c.Icon className="h-4 w-4 shrink-0 text-primary" /> {c.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((s) => (
           <div key={s.label} className="rounded-2xl border bg-card p-4">
@@ -298,11 +502,11 @@ function OverviewSection() {
 
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="rounded-2xl border bg-card p-4">
-          <h3 className="font-semibold mb-3">Recent Registrations</h3>
+          <h3 className="font-semibold mb-3">Newest members</h3>
           {recentUsersQ.isLoading ? (
             <Spinner />
           ) : (recentUsersQ.data ?? []).length === 0 ? (
-            <EmptyState icon={Users} message="No users yet" />
+            <EmptyState icon={Users} message="No members yet" />
           ) : (
             <ul className="space-y-2">
               {recentUsersQ.data!.map((u) => (
@@ -324,11 +528,16 @@ function OverviewSection() {
         </div>
 
         <div className="rounded-2xl border bg-card p-4">
-          <h3 className="font-semibold mb-3">Recent Reports</h3>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="font-semibold">Latest reports</h3>
+            <button type="button" onClick={() => onOpen('moderation')} className="text-sm font-medium text-primary hover:underline">
+              See all
+            </button>
+          </div>
           {recentReportsQ.isLoading ? (
             <Spinner />
           ) : (recentReportsQ.data ?? []).length === 0 ? (
-            <EmptyState icon={Flag} message="No reports filed" />
+            <EmptyState icon={Flag} message="No one has reported anything." />
           ) : (
             <ul className="space-y-2">
               {recentReportsQ.data!.map((r) => (

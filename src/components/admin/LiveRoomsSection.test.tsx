@@ -58,3 +58,14 @@ describe('Live service keys', () => {
     expect(screen.queryByPlaceholderText('Paste the secret')).toBeNull()
   })
 })
+
+describe('Free plan usage', () => {
+  it('shows minutes left out of the free 5,000 and when they start again', async () => {
+    const { FreePlanUsage } = await import('./LiveRoomsSection')
+    render(<FreePlanUsage used={1250} stopAt={4500} now={new Date(2026, 10, 8)} />)
+    expect(screen.getByText(/3,750/)).toBeTruthy()
+    expect(screen.getByText('1,250 used of 5,000 free')).toBeTruthy()
+    expect(screen.getByText('Starts again on 1 December')).toBeTruthy()
+    expect(screen.getByRole('link', { name: /exact figures on LiveKit/ })).toBeTruthy()
+  })
+})
