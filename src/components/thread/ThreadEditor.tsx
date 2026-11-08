@@ -42,6 +42,23 @@ const TEXT_STYLES = [
 ] as const
 type TextStyle = (typeof TEXT_STYLES)[number]['id']
 
+/** Toolbar state while the editor is still starting: nothing written, nothing selected. */
+const EDITOR_STARTING = {
+  empty: true,
+  style: 'paragraph' as TextStyle,
+  bold: false,
+  italic: false,
+  underline: false,
+  bullet: false,
+  numbered: false,
+  quote: false,
+  link: false,
+  canUndo: false,
+  canRedo: false,
+  words: 0,
+  minutes: 1,
+}
+
 /** A typed address with "https://" added when the member left it out, or null if it is not a web address. */
 function webAddress(raw: string, allowMail = false): string | null {
   const text = raw.trim()
@@ -221,19 +238,26 @@ export function ThreadEditor({
     // unshown editor shut down, and the snapshot keeps that one until the next keystroke.
     selector: () => {
       const e = editor && !editor.isDestroyed ? editor : null
-      return e && {
-        empty: e.isEmpty,
-        style: (e.isActive('heading', { level: 2 }) ? 'h2' : e.isActive('heading', { level: 3 }) ? 'h3' : 'paragraph') as TextStyle,
-        bold: e.isActive('bold'),
-        italic: e.isActive('italic'),
-        underline: e.isActive('underline'),
-        bullet: e.isActive('bulletList'),
-        numbered: e.isActive('orderedList'),
-        quote: e.isActive('blockquote'),
-        link: e.isActive('link'),
-        canUndo: e.can().undo(),
-        canRedo: e.can().redo(),
-        ...readingStats(e.getText()),
+      if (!e) return null
+      // While the editor is still starting up its content can be missing, and reading it
+      // throws mid-draw (error screen). Show the empty toolbar until it is ready.
+      try {
+        return {
+          empty: e.isEmpty,
+          style: (e.isActive('heading', { level: 2 }) ? 'h2' : e.isActive('heading', { level: 3 }) ? 'h3' : 'paragraph') as TextStyle,
+          bold: e.isActive('bold'),
+          italic: e.isActive('italic'),
+          underline: e.isActive('underline'),
+          bullet: e.isActive('bulletList'),
+          numbered: e.isActive('orderedList'),
+          quote: e.isActive('blockquote'),
+          link: e.isActive('link'),
+          canUndo: e.can().undo(),
+          canRedo: e.can().redo(),
+          ...readingStats(e.getText()),
+        }
+      } catch {
+        return EDITOR_STARTING
       }
     },
   })

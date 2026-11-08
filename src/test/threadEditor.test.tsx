@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { Editor } from '@tiptap/core'
 import { ThreadEditor } from '@/components/thread/ThreadEditor'
 
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }))
@@ -52,5 +53,17 @@ describe('ThreadEditor', () => {
     )
     await screen.findByText('Loaded')
     await screen.findByRole('toolbar', { name: 'Formatting' })
+  })
+
+  // Seen on the live site: the toolbar read the text while the editor was still starting
+  // ("Cannot read properties of null (reading 'nodes')") and the page fell to the error screen.
+  it('shows the toolbar even if the editor cannot be read while it starts', async () => {
+    const read = vi.spyOn(Editor.prototype, 'getText').mockImplementation(() => {
+      throw new TypeError("Cannot read properties of null (reading 'nodes')")
+    })
+    render(<ThreadEditor value="" onChange={() => {}} />)
+    await screen.findByRole('toolbar', { name: 'Formatting' })
+    expect(read).toHaveBeenCalled()
+    read.mockRestore()
   })
 })
