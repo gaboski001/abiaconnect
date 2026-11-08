@@ -95,6 +95,8 @@ public class BaseActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
 
         if (getBridge() != null) {
+            // Our own offline screen, and no app close when the page engine stops.
+            getBridge().setWebViewClient(new AppWebViewClient(getBridge(), this));
             getBridge().addWebViewListener(new WebViewListener() {
                 @Override
                 public void onPageLoaded(WebView webView) {

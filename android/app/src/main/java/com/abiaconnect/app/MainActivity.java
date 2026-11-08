@@ -300,6 +300,17 @@ public class MainActivity extends BaseActivity {
             }
         }
 
+        /** Keeps the screen from going to sleep while in a live room. */
+        @JavascriptInterface
+        public void setKeepScreenOn(boolean on) {
+            MainActivity a = activity.get();
+            if (a == null) return;
+            a.runOnUiThread(() -> {
+                if (on) a.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                else a.getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            });
+        }
+
         private static String clip(String s, int max) {
             return s == null || s.length() <= max ? s : s.substring(0, max);
         }

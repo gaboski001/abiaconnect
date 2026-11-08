@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import { WifiOff } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Navbar } from './Navbar'
 import { Footer } from './Footer'
@@ -12,6 +13,7 @@ import { IOSInstallPrompt } from '@/components/pwa/IOSInstallPrompt'
 import { UpdateAvailablePrompt } from '@/components/pwa/UpdateAvailablePrompt'
 import { ModerationBlockedDialog } from '@/components/moderation/ModerationBlockedDialog'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { toast } from '@/lib/toast'
 import { CommunityPresence, PointsToaster } from '@/components/engagement/LiveCommunity'
 import { StarterNextBar } from '@/components/engagement/StarterSteps'
 
@@ -26,7 +28,10 @@ export function MainLayout() {
   )
 
   useEffect(() => {
-    const on = () => setOnline(true)
+    const on = () => {
+      setOnline(true)
+      toast.success('You are back online.', { id: 'no-network' })
+    }
     const off = () => setOnline(false)
     window.addEventListener('online', on)
     window.addEventListener('offline', off)
@@ -57,8 +62,12 @@ export function MainLayout() {
       </div>
 
       {!online && (
-        <div className="bg-yellow-400/90 text-yellow-950 text-sm text-center py-2 px-4">
-          You are offline. Some features may be unavailable.
+        <div role="status" className="flex items-center justify-center gap-2.5 bg-neutral-900 px-4 py-2.5 text-white dark:bg-neutral-800">
+          <WifiOff className="size-4 shrink-0 text-amber-300" aria-hidden />
+          <p className="text-[13px] leading-snug">
+            <span className="font-semibold">No internet connection.</span>{' '}
+            <span className="text-white/80">Check your Wi-Fi or mobile data. We'll reconnect when you're back online.</span>
+          </p>
         </div>
       )}
 

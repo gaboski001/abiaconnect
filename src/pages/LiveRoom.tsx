@@ -165,6 +165,58 @@ export default function LiveRoom() {
     return () => window.clearInterval(t)
   }, [connection, roomId, qc])
 
+  // While in the room: keep the phone awake and, in the Android app, keep the app
+  // running with the screen off (the same ongoing notification as calls), so the
+  // audio does not stop and Android does not close the app.
+  const roomTitle = detail.data?.title ?? ''
+  useEffect(() => {
+    if (connection !== 'connected') return
+    const bridge = window.AbiaCallBridge as
+      | (NonNullable<Window['AbiaCallBridge']> & { setKeepScreenOn?: (on: boolean) => void })
+      | undefined
+    const callId = `live-${roomId}`
+    try {
+      bridge?.startCall(`Live: ${roomTitle || 'AbiaConnect'}`, callId)
+      bridge?.setKeepScreenOn?.(true)
+    } catch {
+      /* older app: nothing to keep alive */
+    }
+
+    let lock: { release: () => Promise<void> } | null = null
+    const wake = async () => {
+      try {
+        const api = (navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } }).wakeLock
+        if (api && document.visibilityState === 'visible') lock = await api.request('screen')
+      } catch {
+        /* not allowed here: the screen may sleep */
+      }
+    }
+    void wake()
+    // The browser lets go of the lock when the page is hidden; take it again on return.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void wake()
+    }
+    // "Hang up" on the ongoing notification leaves the room.
+    const onHangup = (e: Event) => {
+      if ((e as CustomEvent<{ callId?: string }>).detail?.callId !== callId) return
+      roomRef.current?.disconnect()
+      navigate('/live')
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('abiaconnect-native-call-hangup', onHangup)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('abiaconnect-native-call-hangup', onHangup)
+      lock?.release().catch(() => {})
+      try {
+        bridge?.setKeepScreenOn?.(false)
+        bridge?.endCall()
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [connection, roomId, roomTitle, navigate])
+
   // Off the stage: make sure the microphone is off. Tell members when they are moved.
   const lastRole = useRef<LiveRole | null>(null)
   useEffect(() => {

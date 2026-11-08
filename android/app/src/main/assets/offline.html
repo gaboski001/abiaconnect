@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>No internet connection</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px; text-align: center; background: #0B1220; color: #F4F6F8;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .brand { position: absolute; top: max(24px, env(safe-area-inset-top)); font-weight: 800; font-size: 18px; letter-spacing: .2px; }
+  .brand span { color: #F5B700; }
+  .icon { width: 84px; height: 84px; border-radius: 50%; background: rgba(255,255,255,.06); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+  h1 { font-size: 21px; margin: 0 0 8px; }
+  p { margin: 0; max-width: 320px; font-size: 15px; line-height: 1.5; color: rgba(244,246,248,.72); }
+  ul { margin: 18px 0 0; padding: 0; list-style: none; font-size: 14px; color: rgba(244,246,248,.72); text-align: left; }
+  li { margin: 6px 0; padding-left: 22px; position: relative; }
+  li::before { content: ""; position: absolute; left: 6px; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: #2FA866; }
+  button {
+    margin-top: 28px; min-width: 200px; height: 48px; border: 0; border-radius: 14px;
+    background: #1F8A4C; color: #fff; font-size: 16px; font-weight: 700;
+  }
+  button:active { background: #187040; }
+  .status { margin-top: 14px; min-height: 20px; font-size: 13px; color: rgba(244,246,248,.55); }
+</style>
+</head>
+<body>
+  <div class="brand">Abia<span>Connect</span></div>
+  <div class="icon" aria-hidden="true">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F5B700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 20h.01"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/><path d="M5 12.86a10 10 0 0 1 5.17-2.69"/><path d="M19 12.86a10 10 0 0 0-2-1.5"/><path d="M2 8.82a15 15 0 0 1 4.18-2.65"/><path d="M22 8.82a15 15 0 0 0-11.29-3.76"/><path d="m2 2 20 20"/>
+    </svg>
+  </div>
+  <h1>No internet connection</h1>
+  <p>AbiaConnect needs the internet to load. Please check your connection and try again.</p>
+  <ul>
+    <li>Turn on mobile data or Wi-Fi</li>
+    <li>Turn off Airplane mode</li>
+    <li>Move to a place with better signal</li>
+  </ul>
+  <button id="retry" type="button">Try again</button>
+  <div class="status" id="status"></div>
+<script>
+  // The page that failed to open; the app fills this in.
+  var target = "__RETURN_URL__";
+  if (target.indexOf("https://abiaconnect.com") !== 0) target = "https://abiaconnect.com/";
+  var status = document.getElementById("status");
+  function retry() {
+    if (navigator.onLine === false) {
+      status.textContent = "Still offline. We'll open AbiaConnect as soon as you're connected.";
+      return;
+    }
+    status.textContent = "Connecting…";
+    window.location.replace(target);
+  }
+  document.getElementById("retry").addEventListener("click", retry);
+  // Open the app by itself when the connection comes back.
+  window.addEventListener("online", retry);
+</script>
+</body>
+</html>

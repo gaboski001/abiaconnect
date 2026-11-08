@@ -29,6 +29,18 @@ const PATTERNS: Array<[RegExp, string]> = [
   [/\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g, '[ip]'],
 ]
 
+/** What members see when a request failed because there is no internet. */
+export const NO_NETWORK_MESSAGE = 'No internet connection. Check your network and try again.'
+
+// Browser and app wordings for "the request never reached the server".
+const NETWORK_FAILURE =
+  /failed to fetch|networkerror|network request failed|network error|load failed|fetch failed|net::err_|err_internet_disconnected|err_name_not_resolved|err_connection|failed to send a request to the edge function|the internet connection appears to be offline/i
+
+export function isNetworkFailure(value: unknown): boolean {
+  const s = value instanceof Error ? `${value.name} ${value.message}` : String(value ?? '')
+  return NETWORK_FAILURE.test(s)
+}
+
 export function redact(value: unknown): string {
   if (value == null) return ''
   let s: string
@@ -37,6 +49,7 @@ export function redact(value: unknown): string {
   else {
     try { s = JSON.stringify(value) } catch { s = String(value) }
   }
+  if (NETWORK_FAILURE.test(s)) return NO_NETWORK_MESSAGE
   for (const [re, rep] of PATTERNS) s = s.replace(re, rep)
   // Collapse whitespace introduced by removed stack frames
   s = s.replace(/[ \t]{2,}/g, ' ').replace(/\s*\n\s*\n+/g, '\n').trim()
