@@ -1447,6 +1447,36 @@ export type Database = {
         }
         Relationships: []
       }
+      live_service_config: {
+        Row: {
+          api_key: string
+          id: boolean
+          secret_preview: string
+          secret_vault_id: string
+          updated_at: string
+          updated_by: string | null
+          url: string
+        }
+        Insert: {
+          api_key: string
+          id?: boolean
+          secret_preview: string
+          secret_vault_id: string
+          updated_at?: string
+          updated_by?: string | null
+          url: string
+        }
+        Update: {
+          api_key?: string
+          id?: boolean
+          secret_preview?: string
+          secret_vault_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
       live_settings: {
         Row: {
           enabled: boolean
@@ -3916,6 +3946,7 @@ export type Database = {
         }[]
       }
       admin_clear_ai_key: { Args: { _provider: string }; Returns: undefined }
+      admin_clear_live_service: { Args: never; Returns: undefined }
       admin_clear_payment_secret: {
         Args: { _name: string }
         Returns: undefined
@@ -3986,6 +4017,7 @@ export type Database = {
         Returns: undefined
       }
       admin_live_overview: { Args: never; Returns: Json }
+      admin_live_service_status: { Args: never; Returns: Json }
       admin_live_settings: {
         Args: {
           _enabled: boolean
@@ -4028,6 +4060,10 @@ export type Database = {
       admin_set_group_champion: {
         Args: { _on: boolean; _subgroup: string; _user: string }
         Returns: undefined
+      }
+      admin_set_live_service: {
+        Args: { _api_key: string; _secret: string; _url: string }
+        Returns: Json
       }
       admin_set_member_dob: {
         Args: { _dob: string; _user_id: string }
@@ -4389,6 +4425,7 @@ export type Database = {
           username: string
         }[]
       }
+      get_live_service_config: { Args: never; Returns: Json }
       get_my_dating_entitlements: { Args: never; Returns: Json }
       get_my_journey: { Args: never; Returns: Json }
       get_my_privacy: { Args: never; Returns: Json }
