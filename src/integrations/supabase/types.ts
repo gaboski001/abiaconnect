@@ -331,6 +331,72 @@ export type Database = {
         }
         Relationships: []
       }
+      community_events: {
+        Row: {
+          created_at: string
+          description: string
+          ends_at: string | null
+          id: string
+          lga: string | null
+          online_link: string | null
+          place: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          starts_at: string
+          status: string
+          submitted_by: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          ends_at?: string | null
+          id?: string
+          lga?: string | null
+          online_link?: string | null
+          place?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          starts_at: string
+          status?: string
+          submitted_by?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          ends_at?: string | null
+          id?: string
+          lga?: string | null
+          online_link?: string | null
+          place?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          starts_at?: string
+          status?: string
+          submitted_by?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_events_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_events_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connect_follows: {
         Row: {
           created_at: string
@@ -1606,6 +1672,54 @@ export type Database = {
         }
         Relationships: []
       }
+      member_spotlights: {
+        Row: {
+          about: string
+          created_at: string
+          created_by: string | null
+          headline: string
+          id: string
+          member_id: string
+          month: string
+          quote: string | null
+        }
+        Insert: {
+          about: string
+          created_at?: string
+          created_by?: string | null
+          headline: string
+          id?: string
+          member_id: string
+          month: string
+          quote?: string | null
+        }
+        Update: {
+          about?: string
+          created_at?: string
+          created_by?: string | null
+          headline?: string
+          id?: string
+          member_id?: string
+          month?: string
+          quote?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_spotlights_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_spotlights_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_stats: {
         Row: {
           current_streak: number
@@ -1894,6 +2008,42 @@ export type Database = {
           processed_at?: string | null
           ref_id?: string
           status?: string
+        }
+        Relationships: []
+      }
+      moderator_actions: {
+        Row: {
+          action: string
+          created_at: string
+          excerpt: string | null
+          id: string
+          moderator_id: string
+          report_id: string | null
+          target_id: string
+          target_type: string
+          undone_at: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          moderator_id: string
+          report_id?: string | null
+          target_id: string
+          target_type: string
+          undone_at?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          moderator_id?: string
+          report_id?: string | null
+          target_id?: string
+          target_type?: string
+          undone_at?: string | null
         }
         Relationships: []
       }
@@ -3056,6 +3206,62 @@ export type Database = {
         }
         Relationships: []
       }
+      spotlight_nominations: {
+        Row: {
+          created_at: string
+          id: string
+          nominated_by: string | null
+          nominee_id: string
+          reason: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nominated_by?: string | null
+          nominee_id: string
+          reason: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nominated_by?: string | null
+          nominee_id?: string
+          reason?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spotlight_nominations_nominated_by_fkey"
+            columns: ["nominated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spotlight_nominations_nominated_by_fkey"
+            columns: ["nominated_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spotlight_nominations_nominee_id_fkey"
+            columns: ["nominee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spotlight_nominations_nominee_id_fkey"
+            columns: ["nominee_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subgroup_invites: {
         Row: {
           created_at: string
@@ -3359,6 +3565,63 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      success_stories: {
+        Row: {
+          created_at: string
+          id: string
+          person_name: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          story: string
+          submitted_by: string | null
+          tag: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          person_name?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          story: string
+          submitted_by?: string | null
+          tag: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          person_name?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          story?: string
+          submitted_by?: string | null
+          tag?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "success_stories_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "success_stories_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       support_appeals: {
         Row: {
@@ -3738,6 +4001,7 @@ export type Database = {
           location: string
           motivation: string
           phone: string | null
+          powers_granted_at: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           role: string
@@ -3759,6 +4023,7 @@ export type Database = {
           location: string
           motivation: string
           phone?: string | null
+          powers_granted_at?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           role: string
@@ -3780,6 +4045,7 @@ export type Database = {
           location?: string
           motivation?: string
           phone?: string | null
+          powers_granted_at?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           role?: string
@@ -3787,6 +4053,52 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      volunteer_team: {
+        Row: {
+          added_by: string | null
+          application_id: string | null
+          created_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          application_id?: string | null
+          created_at?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          application_id?: string | null
+          created_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_team_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "volunteer_team_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "volunteer_team_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wallet_transactions: {
         Row: {
@@ -4085,6 +4397,22 @@ export type Database = {
         Args: { _on: boolean; _user: string }
         Returns: undefined
       }
+      admin_set_volunteer_role: {
+        Args: { _role: string; _user: string }
+        Returns: undefined
+      }
+      admin_volunteer_team: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          created_at: string
+          display_name: string
+          from_application: boolean
+          role: string
+          user_id: string
+          username: string
+        }[]
+      }
       admin_wallet_adjust: {
         Args: { _amount: number; _reason: string; _user: string }
         Returns: {
@@ -4127,6 +4455,7 @@ export type Database = {
         Returns: number
       }
       birthday_is_today: { Args: { _dob: string }; Returns: boolean }
+      can_review_community: { Args: { _user_id: string }; Returns: boolean }
       can_view_contest: {
         Args: { _contest: string; _uid: string }
         Returns: boolean
@@ -4149,6 +4478,7 @@ export type Database = {
         }[]
       }
       claim_starter_bonus: { Args: never; Returns: number }
+      claim_volunteer_powers: { Args: never; Returns: string }
       clear_conversation: {
         Args: { _conversation_id: string }
         Returns: number
@@ -4156,6 +4486,8 @@ export type Database = {
       community_can_read_thread: { Args: { _thread: string }; Returns: boolean }
       community_member_page: { Args: { _user: string }; Returns: Json }
       community_member_visible: { Args: { _owner: string }; Returns: boolean }
+      community_require_member: { Args: never; Returns: string }
+      community_review_queue: { Args: never; Returns: Json }
       community_today: { Args: never; Returns: string }
       complete_welcome: {
         Args: { _groups: string[]; _interests: string[] }
@@ -4547,6 +4879,10 @@ export type Database = {
           upvotes: number
         }[]
       }
+      grant_volunteer_powers: {
+        Args: { _app_id: string; _by: string; _user: string }
+        Returns: string
+      }
       group_welcome_thread: { Args: { _subgroup: string }; Returns: string }
       has_role: {
         Args: {
@@ -4570,6 +4906,7 @@ export type Database = {
         Args: { _bucket: string; _name: string }
         Returns: boolean
       }
+      is_moderator: { Args: { _user_id: string }; Returns: boolean }
       is_public_subgroup: { Args: { _subgroup_id: string }; Returns: boolean }
       is_subgroup_admin: {
         Args: { _subgroup_id: string; _user_id: string }
@@ -4588,6 +4925,47 @@ export type Database = {
           new_members: number
           replies: number
           score: number
+        }[]
+      }
+      list_member_spotlights: {
+        Args: never
+        Returns: {
+          about: string
+          avatar_url: string
+          display_name: string
+          headline: string
+          id: string
+          lga: string
+          member_id: string
+          member_since: string
+          month: string
+          quote: string
+          username: string
+        }[]
+      }
+      list_success_stories: {
+        Args: { _limit?: number }
+        Returns: {
+          id: string
+          person_name: string
+          published_at: string
+          story: string
+          tag: string
+          title: string
+        }[]
+      }
+      list_upcoming_events: {
+        Args: never
+        Returns: {
+          description: string
+          ends_at: string
+          id: string
+          lga: string
+          online_link: string
+          organiser_name: string
+          place: string
+          starts_at: string
+          title: string
         }[]
       }
       live_allowed: { Args: { _uid: string }; Returns: boolean }
@@ -4687,6 +5065,54 @@ export type Database = {
         }[]
       }
       member_message_privacy: { Args: { _uid: string }; Returns: string }
+      mod_decide: {
+        Args: { _action: string; _report: string }
+        Returns: string
+      }
+      mod_plain: { Args: { _html: string; _len?: number }; Returns: string }
+      mod_queue: {
+        Args: never
+        Returns: {
+          author_id: string
+          author_name: string
+          excerpt: string
+          reason: string
+          report_id: string
+          reported_at: string
+          reports_on_post: number
+          target_id: string
+          target_type: string
+          thread_id: string
+          title: string
+        }[]
+      }
+      mod_recent_actions: {
+        Args: { _limit?: number }
+        Returns: {
+          action: string
+          created_at: string
+          excerpt: string
+          id: string
+          moderator_id: string
+          moderator_name: string
+          target_id: string
+          target_type: string
+          thread_id: string
+          undone_at: string
+        }[]
+      }
+      mod_undo: { Args: { _action: string }; Returns: undefined }
+      my_community_submissions: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          kind: string
+          review_note: string
+          status: string
+          title: string
+        }[]
+      }
       my_invite: { Args: never; Returns: Json }
       my_thread_ids: {
         Args: never
@@ -4694,6 +5120,7 @@ export type Database = {
           id: string
         }[]
       }
+      my_volunteer_powers: { Args: never; Returns: Json }
       newcomer_funnel: { Args: { _days?: number }; Returns: Json }
       newsdesk_author_id: { Args: never; Returns: string }
       newsdesk_cleanup: { Args: never; Returns: number }
@@ -4811,6 +5238,16 @@ export type Database = {
       prune_email_short_links: { Args: never; Returns: undefined }
       prune_issue_report_contact_emails: { Args: never; Returns: undefined }
       prune_search_rate_limits: { Args: never; Returns: undefined }
+      publish_member_spotlight: {
+        Args: {
+          _about: string
+          _headline: string
+          _member: string
+          _nomination?: string
+          _quote?: string
+        }
+        Returns: string
+      }
       queue_popular_threads_for_facebook: {
         Args: {
           _daily_cap?: number
@@ -4821,9 +5258,14 @@ export type Database = {
       }
       redeem_subgroup_invite: { Args: { _token: string }; Returns: string }
       relationship_plans_enabled: { Args: never; Returns: boolean }
+      remove_member_spotlight: { Args: { _id: string }; Returns: undefined }
       resolve_username_to_email: {
         Args: { _username: string }
         Returns: string
+      }
+      review_community_item: {
+        Args: { _decision: string; _id: string; _kind: string; _note?: string }
+        Returns: undefined
       }
       review_contest: {
         Args: { _approve: boolean; _contest: string; _note?: string }
@@ -4860,6 +5302,18 @@ export type Database = {
         Args: { _thread_id: string }
         Returns: string
       }
+      submit_community_event: {
+        Args: {
+          _description: string
+          _ends?: string
+          _lga?: string
+          _link?: string
+          _place?: string
+          _starts: string
+          _title: string
+        }
+        Returns: string
+      }
       submit_moderation_appeal: {
         Args: {
           _categories: string[]
@@ -4869,6 +5323,14 @@ export type Database = {
           _surface: string
           _user_note: string
         }
+        Returns: string
+      }
+      submit_spotlight_nomination: {
+        Args: { _reason: string; _username: string }
+        Returns: string
+      }
+      submit_success_story: {
+        Args: { _person?: string; _story: string; _tag: string; _title: string }
         Returns: string
       }
       support_appeal_claim: {
@@ -4918,6 +5380,7 @@ export type Database = {
           location: string
           motivation: string
           phone: string | null
+          powers_granted_at: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           role: string
