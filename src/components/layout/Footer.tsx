@@ -189,7 +189,7 @@ export function Footer() {
           size="icon"
           aria-label="Back to top"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg"
+          className="fixed bottom-[5.5rem] right-6 z-50 rounded-full shadow-lg"
         >
           <ChevronUp />
         </Button>

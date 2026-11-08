@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Gift,
   CircleHelp,
+  MessageCircleQuestion,
   Download,
   Flag,
   HandHeart,
@@ -133,6 +134,7 @@ export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenC
   ]
 
   const help: Row[] = [
+    { label: 'Ask a question', hint: 'Get an instant answer from our Help Centre', to: '/help?ask=1', icon: MessageCircleQuestion },
     { label: 'Help centre', hint: 'How-to guides and answers to common questions', to: '/help', icon: CircleHelp },
     { label: 'Report a problem', hint: 'Something not working? Tell us', to: '/report-issue', icon: Flag },
     { label: 'Community standards', hint: 'How we treat each other here', to: '/community-standards', icon: ShieldCheck },

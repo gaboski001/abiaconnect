@@ -82,7 +82,7 @@ describe('app navigation', () => {
     const internal = hrefs.filter((h) => h.startsWith('/'))
     const dupes = internal.filter((h, i) => internal.indexOf(h) !== i && h !== '/')
     expect(dupes).toEqual([])
-    for (const h of internal) expect(isKnownRoute(h), `${h} is not a route`).toBe(true)
+    for (const h of internal) expect(isKnownRoute(h.split('?')[0]), `${h} is not a route`).toBe(true)
     // Key features are reachable.
     for (const h of ['/subgroups', '/messages', '/relationship', '/notifications', '/profile', '/dashboard', '/polls', '/admin/dashboard']) {
       expect(internal).toContain(h)
