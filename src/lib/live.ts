@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
+import { canPurchaseHere } from '@/lib/monetization/api'
 
 // The live tables and functions are newer than the generated types.
 const sb = supabase as any
@@ -91,6 +92,8 @@ const REASONS: Record<string, string> = {
 export function liveReason(code: string | null | undefined): string {
   if (!code) return 'Something went wrong. Please try again.'
   const key = code.replace(/^cannot_host:/, '')
+  // The Android app must not point members to paid plans (Google Play payment rules).
+  if (key === 'level_or_plan' && !canPurchaseHere()) return 'Reach Level 5 (Influencer) to host.'
   return REASONS[key] ?? 'Something went wrong. Please try again.'
 }
 

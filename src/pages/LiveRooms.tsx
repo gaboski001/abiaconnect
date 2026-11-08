@@ -7,6 +7,7 @@ import { SEO } from '@/components/SEO'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from '@/lib/toast'
 import { startLiveRoom, useLiveRooms, useLiveStatus, liveReason, type LiveRoomSummary } from '@/lib/live'
+import { canPurchaseHere } from '@/lib/monetization/api'
 
 export const LIVE_ROOM_RULES = [
   'Be respectful. The community rules apply here too.',
@@ -76,7 +77,7 @@ export default function LiveRooms() {
           <h2 className="font-semibold">Want to host your own room?</h2>
           <p className="mt-1 text-muted-foreground">{liveReason(status.data.host_blocker)}</p>
           <p className="mt-2 text-muted-foreground">
-            Hosts are members at Level 5 (Influencer) or on Premium or VIP, who run a group that is active.{' '}
+            Hosts are members at Level 5 (Influencer){canPurchaseHere() ? ' or on Premium or VIP' : ''}, who run a group that is active.{' '}
             <Link to="/rewards" className="font-medium text-primary hover:underline">
               See your level
             </Link>
