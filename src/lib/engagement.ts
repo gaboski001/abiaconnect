@@ -174,12 +174,61 @@ export interface ContestDetail {
   ends_at: string
   review_note: string | null
   is_manager: boolean
-  candidates: Array<{ id: string; name: string; bio: string | null; photo_url: string | null }>
+  signed_in: boolean
+  members_before_open: boolean
+  min_account_days: number
+  is_public: boolean
+  created_at: string
+  positions: ContestPosition[]
+  candidates: Array<{ id: string; position_id: string; name: string; bio: string | null; photo_url: string | null }>
   has_voted: boolean
   eligible_by_group: boolean
+  /** Why this person can't vote through the group, or null when they can. */
+  group_block: GroupBlock | null
   turnout: number
-  results: Array<{ candidate_id: string; votes: number }> | null
+  /** How many group members may vote (when group members can vote). */
+  eligible_members: number | null
+  results: Array<{ candidate_id: string; position_id: string; votes: number }> | null
+  results_announced_at: string | null
   codes: { total: number; used: number } | null
+}
+
+export interface ContestPosition {
+  id: string
+  title: string
+  max_choices: number
+}
+
+export type GroupBlock = 'sign_in' | 'no_group_voting' | 'not_member' | 'joined_too_late' | 'account_too_new'
+
+/** Plain words for why someone can't vote through the group. */
+export const GROUP_BLOCK_TEXT: Record<GroupBlock, string> = {
+  sign_in: 'Sign in to vote.',
+  no_group_voting: 'This vote uses voter codes. Enter the code the organiser gave you.',
+  not_member: 'Only members of this group can vote here.',
+  joined_too_late: 'Only people who were already members of the group when this contest was created can vote. This keeps the vote fair.',
+  account_too_new: 'Your account is too new to vote in this contest. This keeps the vote fair.',
+}
+
+/**
+ * Who won each position. With "vote for up to N", the top N win. A tie at the
+ * last winning place is flagged so nobody is wrongly declared the winner.
+ */
+export function positionWinners(
+  candidateIds: string[],
+  votesFor: (id: string) => number,
+  maxChoices: number,
+): { winners: string[]; tie: boolean } {
+  const sorted = [...candidateIds].sort((a, b) => votesFor(b) - votesFor(a))
+  if (!sorted.length || votesFor(sorted[0]) === 0) return { winners: [], tie: false }
+  const seats = Math.min(maxChoices, sorted.length)
+  const cutoff = votesFor(sorted[seats - 1])
+  const next = sorted[seats] !== undefined ? votesFor(sorted[seats]) : -1
+  if (cutoff > 0 && next === cutoff) {
+    // Everyone above the tied mark wins; the tied ones need a decision.
+    return { winners: sorted.filter((id) => votesFor(id) > cutoff), tie: true }
+  }
+  return { winners: sorted.slice(0, seats).filter((id) => votesFor(id) > 0), tie: false }
 }
 
 export function contestPhase(c: Pick<ContestSummary, 'status' | 'starts_at' | 'ends_at'>, now = Date.now()): ContestPhase {
@@ -206,6 +255,7 @@ export async function getContest(id: string): Promise<ContestDetail> {
   return {
     ...d,
     turnout: Number(d.turnout ?? 0),
+    eligible_members: d.eligible_members == null ? null : Number(d.eligible_members),
     results: d.results ? d.results.map((r) => ({ ...r, votes: Number(r.votes) })) : null,
     codes: d.codes ? { total: Number(d.codes.total), used: Number(d.codes.used) } : null,
   }
@@ -237,6 +287,52 @@ export async function createContest(c: NewContest): Promise<string> {
   })
   if (error) throw error
   return data as string
+}
+
+export interface NewElection {
+  title: string
+  description: string
+  subgroupId: string | null
+  allowGroupVoters: boolean
+  allowCodeVoters: boolean
+  resultsVisibility: 'live' | 'after_close'
+  startsAt: Date
+  endsAt: Date
+  membersBeforeOpen: boolean
+  minAccountDays: number
+  isPublic: boolean
+  positions: Array<{ title: string; max_choices: number; candidates: Array<{ name: string; bio?: string }> }>
+}
+
+export async function createElection(c: NewElection): Promise<string> {
+  const { data, error } = await rpc('create_election', {
+    _c: {
+      title: c.title,
+      description: c.description,
+      subgroup_id: c.subgroupId,
+      allow_group_voters: c.allowGroupVoters,
+      allow_code_voters: c.allowCodeVoters,
+      results_visibility: c.resultsVisibility,
+      starts_at: c.startsAt.toISOString(),
+      ends_at: c.endsAt.toISOString(),
+      members_before_open: c.membersBeforeOpen,
+      min_account_days: c.minAccountDays,
+      is_public: c.isPublic,
+      positions: c.positions,
+    },
+  })
+  if (error) throw error
+  return data as string
+}
+
+export async function castContestBallot(id: string, candidateIds: string[], code?: string) {
+  const { error } = await rpc('cast_contest_ballot', { _contest: id, _choices: candidateIds, _code: code || null })
+  if (error) throw error
+}
+
+/** Sends the "Results are out" notifications if nobody has yet. Safe to repeat. */
+export async function announceContestResults(id: string) {
+  await rpc('announce_contest_results', { _contest: id })
 }
 
 export async function reviewContest(id: string, approve: boolean, note?: string) {
@@ -286,6 +382,16 @@ export function engagementErrorText(err: unknown): string {
     too_many_codes: 'This contest already has the maximum number of codes.',
     already_reviewed: 'This contest has already been reviewed.',
     cannot_cancel: 'This contest can no longer be cancelled.',
+    too_many_choices: 'You picked more people than allowed for one of the positions.',
+    choose_someone: 'Choose at least one candidate before submitting.',
+    joined_too_late: 'Only people who were already members of the group when this contest was created can vote.',
+    account_too_new: 'Your account is too new to vote in this contest.',
+    need_1_to_15_positions: 'Add between 1 and 15 positions.',
+    position_title_required: 'Give every position a name.',
+    position_needs_candidates: 'Every position needs at least one candidate.',
+    bad_max_choices: 'For each position, “vote for up to” can’t be more than the number of candidates.',
+    need_2_to_100_candidates: 'Add between 2 and 100 candidates in total.',
+    dates_required: 'Choose when voting opens and closes.',
   }
   for (const [code, text] of Object.entries(map)) if (msg.includes(code)) return text
   return 'Something went wrong. Please try again.'

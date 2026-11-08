@@ -35,3 +35,14 @@ describe('intentOf', () => {
     expect(intentOf('how do I post')).toBeNull()
   })
 })
+
+describe('contest questions', () => {
+  it('finds the contest and election answers', () => {
+    expect(top('difference between poll and contest')).toBe('What is the difference between a poll and a contest?')
+    expect(top('can anyone see who I voted for')).toBe('Is my contest vote secret?')
+    expect(top('why cant i vote')).toBe('Why can’t I vote in a contest?')
+    expect(top('what is a voter code')).toBe('What is a voter code?')
+    expect(top('how do I run an election for my group')).toBe('How do I run an election or award for my group?')
+    expect(top('when are the results announced')).toBe('How are contest results announced?')
+  })
+})

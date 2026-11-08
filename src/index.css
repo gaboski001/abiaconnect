@@ -473,3 +473,22 @@ html:not(.native-app) footer .web-serif {
   background-clip: text;
   color: transparent;
 }
+
+/* Printing a results certificate or voter-code slips (PrintSheet). */
+.print-sheet {
+  display: none;
+}
+@media print {
+  body.printing > *:not(.print-sheet) {
+    display: none !important;
+  }
+  body.printing[data-printing='certificate'] .print-sheet[data-sheet='certificate'],
+  body.printing[data-printing='slips'] .print-sheet[data-sheet='slips'] {
+    display: block !important;
+    color: #000;
+    background: #fff;
+  }
+  @page {
+    margin: 14mm;
+  }
+}

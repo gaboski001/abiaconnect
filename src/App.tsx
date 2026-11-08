@@ -173,6 +173,8 @@ export default function App() {
                 <Route path="download" element={<Download />} />
                 {/* Visitors can look around before joining; taking part asks them to join. */}
                 <Route path="polls" element={<Polls />} />
+                {/* Public so anyone with the link can follow a contest; the page itself checks who may see it. */}
+                <Route path="contests/:contestId" element={<ContestDetail />} />
                 <Route path="subgroups" element={<Subgroups />} />
                 <Route path="subgroups/:subgroupId" element={<SubgroupDetail />} />
 
@@ -188,7 +190,6 @@ export default function App() {
                   <Route path="leaderboard" element={<Leaderboard />} />
                   <Route path="contests" element={<Contests />} />
                   <Route path="contests/new" element={<ContestNew />} />
-                  <Route path="contests/:contestId" element={<ContestDetail />} />
                   <Route path="subgroups/invite/:token" element={<SubgroupInvite />} />
                   <Route path="notifications" element={<Notifications />} />
                   <Route path="create-thread" element={<CreateThread />} />

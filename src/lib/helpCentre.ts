@@ -54,6 +54,21 @@ export const HELP_SECTIONS: { title: string; items: QA[] }[] = [
     ],
   },
   {
+    title: 'Polls, Contests and Elections',
+    items: [
+      { q: 'What is the difference between a poll and a contest?', a: 'A poll is a quick question to the whole community, like “Which topic should we talk about next?”. You tap an answer and see how everyone voted. A contest is a proper vote with a winner, like electing your town union’s officers or choosing Business of the Year. Contests use a secret ballot, have an opening and closing time, and only the right people can vote.', link: { label: 'See contests', to: '/contests' } },
+      { q: 'How do I vote in a contest or election?', a: 'Open the contest from Contests in the menu, or from the notification or link you were sent. For each position, tap the person you want. Some positions let you pick more than one, and the page tells you how many. Then tap “Cast my vote”, check your choices and tap “Submit vote”. You can leave a position blank if you don’t want to vote for it.', link: { label: 'See contests', to: '/contests' } },
+      { q: 'Is my contest vote secret?', a: 'Yes. AbiaConnect only records that you have voted, and separately what was voted, with nothing linking the two. Nobody can see who you voted for: not the organiser, not other members and not our admins.' },
+      { q: 'Can I change my contest vote?', a: 'No. Like a paper ballot, once you submit, your vote is final. That is why we show you your choices one more time before you submit.' },
+      { q: 'Why can’t I vote in a contest?', a: 'The page tells you the reason. The usual ones are: you are not a member of the group running it; you joined the group after the contest was created (organisers can switch this on so nobody brings in outsiders at the last minute); your account is too new; or voting has not opened yet or has already closed. If you were given a voter code, enter it on the contest page and you can vote with that.' },
+      { q: 'What is a voter code?', a: 'A voter code is like a ballot paper. It is a short code such as K7QM-2XPA that the organiser gives you, often printed on a slip at a meeting. Open the contest, make your choices, type the code and submit. Each code works only once. You still need an AbiaConnect account to use it.' },
+      { q: 'Can people outside the group follow an election?', a: 'Yes, if the organiser turned on “Anyone with the link can follow”. Then anyone, at home or abroad, can open the link to see who is standing, how many people have voted and, when allowed, the results. Only people allowed to vote can vote.' },
+      { q: 'How are contest results announced?', a: 'When voting closes, everyone in the group, everyone who voted and the organiser get a notification that the results are out. The contest page shows the official result for each position. On the website you can print it as a certificate or save it as a PDF, and anyone can share the results link. If two people tie for a place, the page says so and the organiser decides how to settle it.' },
+      { q: 'How do I run an election or award for my group?', a: 'If you created a group, open Contests and tap “New”. Pick a ready-made template, for example a town union election, women’s or youth wing leaders, Business of the Year or Diaspora Abian of the Year, or fill in the form yourself. Add the people standing for each position, choose who can vote and when voting opens and closes. An admin checks your contest before it goes live, and your group gets a notification when it does.', link: { label: 'Start a contest', to: '/contests/new' } },
+      { q: 'How do members at a meeting vote if they are not in the app group?', a: 'When you create the contest, tick “People with a voter code”. On the contest page, under Organiser tools, create as many codes as you need. On the website you can print them as ballot slips and hand one to each person. Each code works once, and the page shows how many have been used.' },
+    ],
+  },
+  {
     title: 'Volunteering',
     items: [
       { q: 'How do I volunteer with AbiaConnect?', a: 'Open Volunteer (at the bottom of the website, or in the app under More, then Careers), choose a role and answer a few short questions. We email you when we have looked at your application.', link: { label: 'Apply to volunteer', to: '/volunteer' } },

@@ -30,6 +30,9 @@ const SAME: Record<string, string> = {
   nominate: 'nominate', nomination: 'nominate', spotlight: 'month', motm: 'month',
   event: 'event', events: 'event', meeting: 'event', gathering: 'event', calendar: 'calendar',
   indigene: 'abia', state: 'abia',
+  election: 'election', elections: 'election', elect: 'election', vote: 'vote', voting: 'vote', voted: 'vote', votes: 'vote', ballot: 'vote',
+  contest: 'contest', contests: 'contest', award: 'contest', awards: 'contest', poll: 'poll', polls: 'poll',
+  secret: 'secret', anonymous: 'secret', code: 'code', codes: 'code', result: 'result', results: 'result', winner: 'result', won: 'result',
 }
 
 function stem(w: string): string {
