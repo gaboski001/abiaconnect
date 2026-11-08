@@ -46,6 +46,8 @@ export default function LiveRoom() {
   const [micOn, setMicOn] = useState(false)
   // Who has their mic on right now (by member id), from the live service.
   const [micsOn, setMicsOn] = useState<Set<string>>(new Set())
+  // 'asking' while the browser's allow-microphone pop-up is open; 'blocked' when it was refused.
+  const [micAccess, setMicAccess] = useState<'ok' | 'asking' | 'blocked'>('ok')
   const [talking, setTalking] = useState<Set<string>>(new Set())
   const [picked, setPicked] = useState<LivePerson | null>(null)
   const [reporting, setReporting] = useState<{ userId: string | null; name: string } | null>(null)
@@ -99,9 +101,11 @@ export default function LiveRoom() {
         syncMic()
         // The host starts talking straight away, as in other live audio apps.
         if (pass.role === 'host') {
+          setMicAccess('asking')
           lk.localParticipant
             .setMicrophoneEnabled(true)
-            .catch(() => toast.error('Could not use your microphone. Please allow microphone access, then tap Mic.'))
+            .then(() => setMicAccess('ok'))
+            .catch(() => setMicAccess('blocked'))
             .finally(syncMic)
         }
         qc.invalidateQueries({ queryKey: ['live-room', roomId] })
@@ -207,11 +211,14 @@ export default function LiveRoom() {
   const toggleMic = async () => {
     const lk = roomRef.current
     if (!lk) return
+    const turningOn = !lk.localParticipant.isMicrophoneEnabled
+    if (turningOn) setMicAccess('asking')
     try {
-      await lk.localParticipant.setMicrophoneEnabled(!lk.localParticipant.isMicrophoneEnabled)
+      await lk.localParticipant.setMicrophoneEnabled(turningOn)
       setMicOn(lk.localParticipant.isMicrophoneEnabled)
+      setMicAccess('ok')
     } catch {
-      toast.error('Could not use your microphone. Please allow microphone access and try again.')
+      setMicAccess('blocked')
     }
   }
 
@@ -260,6 +267,17 @@ export default function LiveRoom() {
         >
           <Volume2 className="size-4" /> Tap to hear the room
         </button>
+      ) : null}
+
+      {onStage && micAccess === 'asking' ? (
+        <p className="flex items-center gap-2 rounded-xl bg-amber-400/15 p-3 text-sm">
+          <Mic className="size-4 shrink-0" /> Your browser is asking to use your microphone. Press Allow so people can hear you.
+        </p>
+      ) : onStage && micAccess === 'blocked' ? (
+        <p className="rounded-xl bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-300">
+          Your microphone is blocked. Allow it for abiaconnect.com (in the browser, tap the icon left of the web address; in the app, in your
+          phone's settings), then tap Mic again.
+        </p>
       ) : null}
 
       <section>
