@@ -38,10 +38,30 @@ const SECTIONS: { title: string; items: QA[] }[] = [
     ],
   },
   {
+    title: 'Success Stories, Member of the Month and Events',
+    items: [
+      { q: 'How do I share a success story?', a: 'Open Success Stories (in the app’s More menu, or at the bottom of the website) and tap "Share a success story". Give it a headline, choose a topic and tell the story in your own words. Please only share true stories. Our team reads every story before it goes live, and you get a notification when it is published.' },
+      { q: 'How do I nominate someone for Member of the Month?', a: 'Open Member Spotlight (in the app’s More menu, or at the bottom of the website). Under "Nominate a member", type their username (you can find it on their profile, under their name) and say why they deserve it. You cannot nominate yourself. The team reads every nomination, and the member chosen gets a notification.' },
+      { q: 'How do I add an event to the Events Calendar?', a: 'Open Events (in the app’s More menu, or at the bottom of the website) and tap "Add an event". Give the name, date, start time, where it happens (or an online link starting with https://) and what happens there. The team checks every event before it is listed, and you get a notification when it is.' },
+      { q: 'How do I know if my story or event was published?', a: 'You get a notification when the team publishes it or decides not to. On the Success Stories, Member Spotlight and Events pages you will also see "What you sent in", with where each one stands and any note from the team.' },
+      { q: 'Can I add an event to my phone calendar?', a: 'Yes. Under each event on the Events page, tap "Add to my calendar". It works with Google, Apple and Outlook calendars.' },
+    ],
+  },
+  {
+    title: 'Volunteering',
+    items: [
+      { q: 'How do I volunteer with AbiaConnect?', a: 'Open Volunteer (at the bottom of the website, or in the app under More, then Careers), choose a role and answer a few short questions. We email you when we have looked at your application.' },
+      { q: 'My application was approved. What happens next?', a: 'Your volunteer tools switch on by themselves, and you get a notification and an email saying what you can now do and where to find it. If you did not have an account yet, create one with the same email you applied with, and your tools switch on the first time you sign in.' },
+      { q: 'Where do I find my volunteer tools?', a: 'Community Moderators and the content team will find "Moderator tools" in the app’s More menu, or under their profile picture on the website. Moderators review reported posts there; moderators and the content team review the success stories, events and Member of the Month nominations that members send in. Community Connectors become the champion of their LGA group and get an alert when someone new says hello there.' },
+      { q: 'What can volunteer moderators do?', a: 'They can hide a reported post that breaks the Community Standards, or keep it if it is fine. Hidden posts are never deleted and can be put back. Every decision is recorded, and our admins can undo any of them. Volunteers cannot change settings, money or anyone’s account.' },
+    ],
+  },
+  {
     title: 'Safety and Reporting',
     items: [
       { q: 'How do I report a post or user?', a: "Click the three-dot menu on any post or the flag icon on a user's profile. Select a reason and add details. Our team reviews every report within 24 hours." },
-      { q: 'What happens after I report someone?', a: 'Our moderation team reviews the report. If a violation is confirmed, action is taken ranging from a warning to a permanent ban. Reports are confidential.' },
+      { q: 'What happens after I report someone?', a: 'Our moderation team, which includes trained volunteer moderators, reviews the report. A post that breaks the Community Standards is hidden, and the person who wrote it gets a notification saying why. Serious or repeated problems can lead to a warning or a ban. Reports are confidential.' },
+      { q: 'One of my posts was hidden. What can I do?', a: 'You will have a notification explaining that a moderator hid it. Hidden posts are not deleted: you can still see your own post, but other members cannot. If you think it was a mistake, tell us through Report a problem in the menu. If the team agrees, the post is put back and you get a notification.' },
       { q: 'I am being harassed by another member. What should I do?', a: 'Report the posts using the Report button. You can also block the user from your profile settings. For severe harassment, email moderation@abiaconnect.com with screenshots.' },
     ],
   },
