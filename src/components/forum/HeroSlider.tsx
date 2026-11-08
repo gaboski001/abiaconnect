@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
+import { isAndroidApp, isPaymentLink } from '@/lib/storePolicy'
 import { SlideCard, type HeroSlideLike } from './SlideCard'
 
 /** `compact` is a shorter banner, for the dashboard and other busy screens. */
@@ -63,11 +64,16 @@ export function HeroSlider({ compact }: { compact?: boolean }) {
 
   // Client-side safety filter for expiry
   const now = new Date()
-  const activeFetched = (fetched ?? []).filter((s) => {
-    if (!s.is_active) return false
-    if (!s.expires_at) return true
-    return new Date(s.expires_at) > now
-  })
+  const android = isAndroidApp()
+  const activeFetched = (fetched ?? [])
+    .filter((s) => {
+      if (!s.is_active) return false
+      // Google Play: no donate or Premium banners inside the Android app.
+      if (android && isPaymentLink(s.cta_url)) return false
+      if (!s.expires_at) return true
+      return new Date(s.expires_at) > now
+    })
+    .map((s) => (android && isPaymentLink(s.cta_url_2) ? { ...s, cta_label_2: null, cta_url_2: null } : s))
 
   // Slides with order 0 or less (e.g. a launch banner) come before the welcome slide.
   const pinned = activeFetched.filter((s) => (s.order ?? 1) <= 0)

@@ -15,3 +15,10 @@ export function isAndroidApp(): boolean {
 
 /** Donations are offered on the website and iOS web, not inside the Android app. */
 export const canDonateHere = () => !isAndroidApp()
+
+/** A link to the donate or Premium page (on this site or abiaconnect.com). */
+export function isPaymentLink(url: string | null | undefined): boolean {
+  if (!url) return false
+  const path = url.trim().replace(/^https?:\/\/(www\.)?abiaconnect\.com/i, '')
+  return /^\/(donate|relationship\/premium)(\/|\?|#|$)/i.test(path)
+}
