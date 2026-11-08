@@ -47,6 +47,11 @@ if (typeof window !== 'undefined') {
   (window as any).Capacitor = Capacitor;
 }
 
+// The app only resumes, so it would keep showing an old version after we publish.
+if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) {
+  void import('./lib/freshBuild').then((m) => m.watchForNewBuilds());
+}
+
 // Implement a robust cache-clearing routine that runs on every load to prevent
 // any previously cached offline/PWA assets from persisting.
 if (typeof window !== 'undefined') {
