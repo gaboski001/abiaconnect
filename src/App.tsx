@@ -43,6 +43,7 @@ const EmailDns = lazy(() => import('@/pages/admin/EmailDns'))
 const AdminDonations = lazy(() => import('@/pages/admin/Donations'))
 const BirthdayPreview = lazy(() => import('@/pages/admin/BirthdayPreview'))
 const ModerationLog = lazy(() => import('@/pages/admin/ModerationLog'))
+const ModeratorTools = lazy(() => import('@/pages/ModeratorTools'))
 const Donate = lazy(() => import('@/pages/Donate'))
 const DonationCallback = lazy(() => import('@/pages/DonationCallback'))
 const LgasGuide = lazy(() => import('@/pages/LgasGuide'))
@@ -203,6 +204,7 @@ export default function App() {
                   <Route path="settings/devices" element={<DeviceNotifications />} />
                   <Route path="live" element={<LiveRooms />} />
                   <Route path="live/:roomId" element={<LiveRoom />} />
+                  <Route path="moderate" element={<ModeratorTools />} />
 
                   <Route element={<AdminRoute />}>
                     <Route path="admin/dashboard" element={<AdminDashboard />} />

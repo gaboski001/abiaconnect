@@ -14,6 +14,10 @@ interface Props {
   role?: string
   /** Optional personal note from the admin who reviewed the application. */
   note?: string
+  /** The stored role id, e.g. "moderator", for the role-specific powers. */
+  roleId?: string
+  /** True when their account already has the tools; false when they switch on at sign-in. */
+  toolsOn?: boolean
 }
 
 const hello = (name?: string) => (name ? `Dear ${name},` : 'Hello,')
@@ -67,38 +71,91 @@ const ReceivedEmail = ({ name, role }: Props) => (
   </BrandLayout>
 )
 
-const ApprovedEmail = ({ name, role, note }: Props) => (
-  <BrandLayout preview="Your volunteer application has been approved." transactional>
-    <h1 style={h1 as any}>Welcome to the team 🎉</h1>
+// What each role can do once approved, and where to find it.
+const POWERS: Record<string, { can: string; where: string; link: string; button: string }> = {
+  moderator: {
+    can: 'review posts that members report, hide posts that break our rules (a hidden post can always be put back), and review the success stories, events and Member of the Month nominations members send in.',
+    where: 'Open the menu and tap Moderator tools.',
+    link: 'https://abiaconnect.com/moderate',
+    button: 'Open Moderator tools',
+  },
+  writer: {
+    can: 'review and publish the success stories, events and Member of the Month nominations members send in.',
+    where: 'Open the menu and tap Moderator tools.',
+    link: 'https://abiaconnect.com/moderate',
+    button: 'Open Moderator tools',
+  },
+  social: {
+    can: 'review and publish the success stories, events and Member of the Month nominations members send in.',
+    where: 'Open the menu and tap Moderator tools.',
+    link: 'https://abiaconnect.com/moderate',
+    button: 'Open Moderator tools',
+  },
+  connector: {
+    can: 'look after the group for your Local Government Area as its champion. You will get an alert when someone new says hello there, so you can welcome them.',
+    where: 'Open Groups and choose your LGA group.',
+    link: 'https://abiaconnect.com/subgroups',
+    button: 'Open Groups',
+  },
+}
 
-    <Text style={text}>{hello(name)}</Text>
+const ApprovedEmail = ({ name, role, roleId, note, toolsOn }: Props) => {
+  const powers = roleId ? POWERS[roleId] : undefined
+  return (
+    <BrandLayout preview="Your volunteer application has been approved." transactional>
+      <h1 style={h1 as any}>Welcome to the team 🎉</h1>
 
-    <Text style={text}>
-      We are delighted to tell you that your application to volunteer with AbiaConnect{roleText(role)} has
-      been <strong>approved</strong>. Thank you for choosing to serve our community.
-    </Text>
+      <Text style={text}>{hello(name)}</Text>
 
-    <AdminNote note={note} />
-
-    <div style={infoBox}>
-      <Text style={infoLabel as any}>Your next steps</Text>
-      <Text style={infoText as any}>
-        1. A member of our team will contact you within a few days, by email or WhatsApp, to arrange a short
-        introduction.
-        <br />
-        2. Please read our Community Standards, which guide everything we do.
-        <br />
-        3. If you do not have an AbiaConnect account yet, please create one with this email address.
+      <Text style={text}>
+        We are delighted to tell you that your application to volunteer with AbiaConnect{roleText(role)} has
+        been <strong>approved</strong>. Thank you for choosing to serve our community.
       </Text>
-    </div>
 
-    <CtaButton href="https://abiaconnect.com/community-standards">Read the Community Standards</CtaButton>
+      <AdminNote note={note} />
 
-    <Text style={text}>If you have any question before then, write to support@abiaconnect.com.</Text>
+      {powers ? (
+        <div style={infoBox}>
+          <Text style={infoLabel as any}>What you can now do</Text>
+          <Text style={infoText as any}>
+            You can {powers.can}
+            <br />
+            <br />
+            {toolsOn
+              ? `Your tools are already switched on. ${powers.where}`
+              : `Your tools switch on by themselves the first time you sign in to AbiaConnect with this email address. If you do not have an account yet, please create one with this email. Then: ${powers.where.charAt(0).toLowerCase()}${powers.where.slice(1)}`}
+          </Text>
+        </div>
+      ) : null}
 
-    <Signature />
-  </BrandLayout>
-)
+      <div style={infoBox}>
+        <Text style={infoLabel as any}>Your next steps</Text>
+        <Text style={infoText as any}>
+          1. Please read our Community Standards, which guide every decision the team makes.
+          <br />
+          2. A member of our team will contact you within a few days, by email, to welcome you and answer your
+          questions.
+          {!toolsOn ? (
+            <>
+              <br />
+              3. If you do not have an AbiaConnect account yet, please create one with this email address.
+            </>
+          ) : null}
+        </Text>
+      </div>
+
+      {powers ? (
+        <CtaButton href={powers.link}>{powers.button}</CtaButton>
+      ) : (
+        <CtaButton href="https://abiaconnect.com/community-standards">Read the Community Standards</CtaButton>
+      )}
+
+      <Text style={text}>If you have any question before then, write to support@abiaconnect.com.</Text>
+
+      <Signature />
+    </BrandLayout>
+  )
+}
 
 const DeclinedEmail = ({ name, role, note }: Props) => (
   <BrandLayout preview="An update on your volunteer application." transactional>

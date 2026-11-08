@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, Link } from 'react-router-dom'
 import { MainLayout } from './MainLayout'
 
 // Minimal mocks for layout children that depend on app context.
+vi.mock('@/components/community/VolunteerPowersClaimer', () => ({ VolunteerPowersClaimer: () => null }))
 vi.mock('./Navbar', () => ({ Navbar: () => <nav data-testid="navbar" /> }))
 vi.mock('@/components/engagement/LiveCommunity', () => ({ CommunityPresence: () => null, PointsToaster: () => null }))
 vi.mock('@/components/engagement/StarterSteps', () => ({ StarterNextBar: () => null }))

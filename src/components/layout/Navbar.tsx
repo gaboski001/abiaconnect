@@ -193,7 +193,7 @@ function MoreMenu({ items, pathname }: { items: NavItem[]; pathname: string }) {
 function UserMenu() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const { user, signOut } = useAuth()
+  const { user, signOut, isAdmin } = useAuth()
   const { data: profile } = useProfile()
   const { account, admin } = useNavSections()
   const [open, setOpen] = useState(false)
@@ -251,7 +251,7 @@ function UserMenu() {
         {admin.length > 0 && (
           <>
             <Separator className="my-1.5" />
-            <p className="px-2.5 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Admin</p>
+            <p className="px-2.5 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{isAdmin ? 'Admin' : 'Volunteer team'}</p>
             {admin.map(menuLink)}
           </>
         )}

@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { MainLayout } from './MainLayout'
 
+vi.mock('@/components/community/VolunteerPowersClaimer', () => ({ VolunteerPowersClaimer: () => null }))
 vi.mock('./Navbar', () => ({ Navbar: () => <nav data-testid="navbar">desktop nav</nav> }))
 vi.mock('@/components/engagement/LiveCommunity', () => ({ CommunityPresence: () => null, PointsToaster: () => null }))
 vi.mock('@/components/engagement/StarterSteps', () => ({ StarterNextBar: () => null }))

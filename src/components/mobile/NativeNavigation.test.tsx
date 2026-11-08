@@ -11,6 +11,7 @@ const auth = vi.hoisted(() => ({
   signOut: vi.fn(),
 }))
 
+vi.mock('@/lib/volunteerTeam', () => ({ useVolunteerPowers: () => ({ data: undefined }) }))
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => true, getPlatform: () => 'android' } }))
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }))
 vi.mock('@/contexts/ThemeContext', () => ({ useTheme: () => ({ theme: 'dark', toggleTheme: vi.fn() }) }))

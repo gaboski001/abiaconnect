@@ -51,7 +51,10 @@ import BirthdaysTodaySection from '@/components/admin/BirthdaysTodaySection'
 import IssueReportsSection from '@/components/admin/IssueReportsSection'
 import MemberEmailsSection from '@/components/admin/MemberEmailsSection'
 import VolunteerApplicationsSection from '@/components/admin/VolunteerApplicationsSection'
-import { HandHelping } from 'lucide-react'
+import VolunteerTeamSection from '@/components/admin/VolunteerTeamSection'
+import CommunityReviewPanel from '@/components/community/CommunityReviewPanel'
+import { fetchReviewQueue, waitingCount } from '@/lib/communityPages'
+import { HandHelping, ShieldCheck, Sparkles } from 'lucide-react'
 import NewsdeskSection from '@/components/admin/NewsdeskSection'
 import { Newspaper } from 'lucide-react'
 import DatingMonetizationSection from '@/components/admin/DatingMonetizationSection'
@@ -78,6 +81,8 @@ type SectionId =
   | 'ai'
   | 'problem-reports'
   | 'volunteers'
+  | 'team'
+  | 'community'
   | 'monetization'
   | 'live'
 
@@ -101,14 +106,16 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { id: 'users', label: 'All members', hint: 'Find a member, change their role, or block them.', Icon: Users },
       { id: 'champions', label: 'LGA Champions', hint: 'Members who lead each Local Government Area group.', Icon: Award },
-      { id: 'trusted', label: 'Trusted members', hint: 'Members whose posts go up without waiting for review.', Icon: BadgeCheck },
+      { id: 'trusted', label: 'Trusted members', hint: 'A check mark for businesses and professionals you have verified.', Icon: BadgeCheck },
       { id: 'volunteers', label: 'Volunteer applications', hint: 'People who offered to help. Approve or decline.', Icon: HandHelping },
+      { id: 'team', label: 'Volunteer team', hint: 'Who has moderator tools. Add or remove in one tap; undo their decisions.', Icon: ShieldCheck },
       { id: 'birthdays', label: 'Birthdays today', hint: 'Members celebrating today, and the greeting they get.', Icon: Cake },
     ],
   },
   {
     title: 'Content',
     items: [
+      { id: 'community', label: 'Community pages', hint: 'Success stories, events and Member of the Month members sent in.', Icon: Sparkles },
       { id: 'slides', label: 'Home page slides', hint: 'The big pictures at the top of the home page.', Icon: ImageIcon },
       { id: 'categories', label: 'Forum categories', hint: 'The topics discussions are sorted into.', Icon: FolderTree },
       { id: 'subgroups', label: 'Groups', hint: 'Community groups, their owners and members.', Icon: Shield },
@@ -158,12 +165,13 @@ export function useAdminTodo() {
         }
       }
       const db = supabase as any
-      const [reports, problems, volunteers] = await Promise.all([
+      const [reports, problems, volunteers, community] = await Promise.all([
         count(supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending')),
         count(db.from('issue_reports').select('*', { count: 'exact', head: true }).neq('status', 'resolved')),
         count(db.from('volunteer_applications').select('*', { count: 'exact', head: true }).eq('status', 'pending')),
+        fetchReviewQueue().then(waitingCount, () => 0),
       ])
-      return { moderation: reports, 'problem-reports': problems, volunteers } as Partial<Record<SectionId, number>>
+      return { moderation: reports, 'problem-reports': problems, volunteers, community } as Partial<Record<SectionId, number>>
     },
   })
 }
@@ -312,6 +320,8 @@ export default function AdminDashboard() {
           {section === 'ai' && <AiProviderSection />}
           {section === 'problem-reports' && <IssueReportsSection />}
           {section === 'volunteers' && <VolunteerApplicationsSection />}
+          {section === 'team' && <VolunteerTeamSection />}
+          {section === 'community' && <CommunityReviewPanel />}
           {section === 'monetization' && <DatingMonetizationSection />}
           {section === 'live' && <LiveRoomsSection />}
         </main>
@@ -435,6 +445,7 @@ function OverviewSection({ onOpen }: { onOpen: (id: SectionId) => void }) {
     { id: 'moderation' as SectionId, count: todo.data?.moderation ?? 0, text: 'reported posts to review', action: 'Review' },
     { id: 'problem-reports' as SectionId, count: todo.data?.['problem-reports'] ?? 0, text: 'problem reports not yet solved', action: 'Open' },
     { id: 'volunteers' as SectionId, count: todo.data?.volunteers ?? 0, text: 'volunteer applications waiting', action: 'Decide' },
+    { id: 'community' as SectionId, count: todo.data?.community ?? 0, text: 'stories, events or nominations to review', action: 'Review' },
   ].filter((w) => w.count > 0)
 
   const shortcuts: { id: SectionId; label: string; Icon: any }[] = [

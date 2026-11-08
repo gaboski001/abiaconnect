@@ -37,6 +37,7 @@ import { confirmModerationWarning, showModerationBlocked } from '@/components/mo
 /** Reply not sent so the member can edit it (Ugo's dialog explains why). */
 const EDIT_REPLY = 'ugo:edit-reply'
 import { useAuth } from '@/contexts/AuthContext'
+import { useVolunteerPowers } from '@/lib/volunteerTeam'
 import { FacebookShareButton } from '@/components/thread/FacebookShareButton'
 import {
   ReactionButton,
@@ -292,6 +293,7 @@ function Thread() {
   const { threadId } = useParams<{ threadId: string }>()
   const navigate = useNavigate()
   const { user, isAdmin } = useAuth()
+  const canModerate = !!useVolunteerPowers().data?.moderate
   const { settings } = useSiteSettings()
   const qc = useQueryClient()
   const [reply, setReply] = useState('')
@@ -928,6 +930,21 @@ function Thread() {
     return <div className="py-16 text-center text-muted-foreground">Thread not found.</div>
   }
 
+  // Hidden by a moderator: only the author and the team can still open it.
+  const hiddenPost = !!(thread as { is_deleted?: boolean }).is_deleted
+  const ownPost = !!user && (thread.user_id === user.id || (thread as { author_id?: string | null }).author_id === user.id)
+  if (hiddenPost && !ownPost && !isAdmin && !canModerate) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center">
+        <p className="font-semibold">This discussion was removed</p>
+        <p className="mt-1 text-sm text-muted-foreground">It went against our Community Standards, so it is no longer shown.</p>
+        <Link to="/" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
+          Back to the forum
+        </Link>
+      </div>
+    )
+  }
+
   const totalReplies = repliesQ.data?.pages[0]?.total ?? replies.length
 
 
@@ -990,6 +1007,13 @@ function Thread() {
             <Eye className="size-3.5" /> {thread.view_count ?? 0} views
           </span>
         </div>
+        {hiddenPost ? (
+          <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+            {ownPost
+              ? 'A moderator hid this discussion, so other members cannot see it. If you think this is a mistake, tell us through Report a problem.'
+              : 'Hidden by a moderator. Only the author and the team can see it.'}
+          </p>
+        ) : null}
         <h1 className="text-3xl font-bold">{thread.title}</h1>
 
         <div className="flex items-start gap-3">

@@ -30,6 +30,7 @@ type Application = {
   admin_note: string | null
   reviewed_at: string | null
   decision_emailed_at: string | null
+  powers_granted_at?: string | null
   created_at: string
 }
 
@@ -104,12 +105,15 @@ export default function VolunteerApplicationsSection() {
         }
         throw new Error(message || 'Could not save the decision. Please try again.')
       }
-      return { decision, emailed: data?.emailed === true }
+      return { decision, emailed: data?.emailed === true, toolsOn: data?.toolsOn === true }
     },
-    onSuccess: ({ decision, emailed }) => {
+    onSuccess: ({ decision, emailed, toolsOn }) => {
       setDeciding(null)
       setNote('')
       qc.invalidateQueries({ queryKey: ['admin-volunteer-applications'] })
+      if (decision === 'approve') {
+        toast.info(toolsOn ? 'Their volunteer tools are switched on now.' : 'They have no account with that email yet. Their tools will switch on when they sign up with it.')
+      }
       if (decision === 'ignore') toast.success('Application ignored. No email was sent.')
       else if (emailed) toast.success(decision === 'approve' ? 'Approved. The applicant has been emailed.' : 'Declined. The applicant has been emailed.')
       else toast.error('The decision is saved, but the email could not be sent. Please email the applicant yourself.')
@@ -197,6 +201,19 @@ export default function VolunteerApplicationsSection() {
                   </div>
                 )}
 
+                {a.status === 'approved' && (
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    {a.powers_granted_at ? (
+                      <>
+                        <MailCheck className="size-3.5" /> Their tools are switched on. See Volunteer team.
+                      </>
+                    ) : (
+                      <>
+                        <MailWarning className="size-3.5" /> Tools switch on when they sign in with {a.email}.
+                      </>
+                    )}
+                  </p>
+                )}
                 {(a.status === 'approved' || a.status === 'declined') && (
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     {a.decision_emailed_at ? (

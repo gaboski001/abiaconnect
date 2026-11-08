@@ -70,7 +70,13 @@ Deno.serve(async (req) => {
   try {
     const outcome = await sendAndLog(db, decision === 'approve' ? 'volunteer-approved' : 'volunteer-declined', app.email, {
       idempotencyKey: `volunteer-${decision}-${app.id}`,
-      templateData: { name: app.full_name, role: ROLE_NAMES[app.role], note: app.admin_note ?? undefined },
+      templateData: {
+        name: app.full_name,
+        role: ROLE_NAMES[app.role],
+        roleId: app.role,
+        note: app.admin_note ?? undefined,
+        toolsOn: !!app.powers_granted_at,
+      },
     })
     emailed = outcome === 'sent'
     if (emailed) {
@@ -80,5 +86,5 @@ Deno.serve(async (req) => {
     console.error('volunteer decision email failed', { message: e instanceof Error ? e.message : String(e) })
   }
 
-  return json({ ok: true, status: app.status, emailed })
+  return json({ ok: true, status: app.status, emailed, toolsOn: !!app.powers_granted_at })
 })

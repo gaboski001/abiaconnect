@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Flag,
   Gift,
   HandHeart,
   Handshake,
@@ -20,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { canDonateHere } from '@/lib/storePolicy'
 import { isNewcomer, useJourney } from '@/lib/journey'
+import { useVolunteerPowers } from '@/lib/volunteerTeam'
 
 export interface NavItem {
   label: string
@@ -44,6 +46,7 @@ export interface NavSection {
  */
 export function useNavSections() {
   const { user, role, isAdmin } = useAuth()
+  const powers = useVolunteerPowers().data
   const { settings } = useSiteSettings()
   const subgroupsEnabled = settings.global_subgroups_enabled !== 'false'
   const storeLink = settings.store_link
@@ -83,16 +86,19 @@ export function useNavSections() {
   const admin: NavItem[] = isAdmin
     ? [
         { label: 'Admin Portal', to: '/admin/dashboard', icon: ShieldCheck },
+        { label: 'Moderator tools', to: '/moderate', icon: Flag },
         { label: 'Donations', to: '/admin/donations', icon: Wallet },
       ]
-    : []
+    : powers?.moderate || powers?.review
+      ? [{ label: 'Moderator tools', to: '/moderate', icon: Flag }]
+      : []
 
   const sections: NavSection[] = [
     { title: 'Explore', items: primary },
     { title: 'Community', items: community },
     { title: 'More', items: more },
     ...(account.length ? [{ title: 'Account', items: account }] : []),
-    ...(admin.length ? [{ title: 'Admin', items: admin }] : []),
+    ...(admin.length ? [{ title: isAdmin ? 'Admin' : 'Volunteer team', items: admin }] : []),
   ]
 
   return { primary, community, more, account, admin, sections }

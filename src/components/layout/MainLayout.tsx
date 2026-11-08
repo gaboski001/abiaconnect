@@ -16,6 +16,7 @@ import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { toast } from '@/lib/toast'
 import { CommunityPresence, PointsToaster } from '@/components/engagement/LiveCommunity'
 import { StarterNextBar } from '@/components/engagement/StarterSteps'
+import { VolunteerPowersClaimer } from '@/components/community/VolunteerPowersClaimer'
 
 
 export function MainLayout() {
@@ -99,6 +100,7 @@ export function MainLayout() {
 
       {/* PWA notices removed by user request */}
       <ModerationBlockedDialog />
+      <VolunteerPowersClaimer />
       {/* Live community: members-online count and "+points" toasts. */}
       <CommunityPresence />
       <PointsToaster />

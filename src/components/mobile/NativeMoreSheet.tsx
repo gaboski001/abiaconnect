@@ -50,6 +50,7 @@ import {
 } from '@/lib/callPreferences'
 import { GOLD_GRADIENT } from '@/lib/mobileBrand'
 import { cn } from '@/lib/utils'
+import { useVolunteerPowers } from '@/lib/volunteerTeam'
 
 interface Row {
   label: string
@@ -70,6 +71,7 @@ interface Row {
  */
 export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { user, role, isAdmin, signOut } = useAuth()
+  const powers = useVolunteerPowers().data
   const { data: profile } = useProfile()
   const { settings } = useSiteSettings()
   const { theme, toggleTheme } = useTheme()
@@ -142,10 +144,13 @@ export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenC
   const admin: Row[] = isAdmin
     ? [
         { label: 'Admin portal', hint: 'Manage members, posts and settings', to: '/admin/dashboard', icon: ShieldCheck },
-        { label: 'Moderation', hint: 'Posts members reported', to: '/admin/moderation', icon: Flag },
+        { label: 'Moderator tools', hint: 'Reported posts, stories and events to review', to: '/moderate', icon: Flag },
+        { label: 'Moderation history', hint: 'Every decision made on reported posts', to: '/admin/moderation', icon: ScrollText },
         { label: 'Donations', to: '/admin/donations', icon: Wallet },
       ]
-    : []
+    : powers?.moderate || powers?.review
+      ? [{ label: 'Moderator tools', hint: powers.moderate ? 'Reported posts, stories and events to review' : 'Stories, events and Member of the Month to review', to: '/moderate', icon: Flag }]
+      : []
 
   const appRows: Row[] = [
     ...(user ? [{ label: 'Devices & security', hint: 'Where you are signed in', to: '/settings/devices', icon: Smartphone }] : []),
@@ -263,7 +268,7 @@ export function NativeMoreSheet({ open, onOpenChange }: { open: boolean; onOpenC
           </Section>
 
           {admin.length ? (
-            <Section title="Admin">
+            <Section title={isAdmin ? 'Admin' : 'Volunteer team'}>
               {admin.map((r) => <MenuRow key={r.to} row={r} onClick={close} />)}
             </Section>
           ) : null}
