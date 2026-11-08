@@ -477,6 +477,7 @@ export type Database = {
           name: string
           photo_url: string | null
           position: number
+          position_id: string | null
         }
         Insert: {
           bio?: string | null
@@ -485,6 +486,7 @@ export type Database = {
           name: string
           photo_url?: string | null
           position?: number
+          position_id?: string | null
         }
         Update: {
           bio?: string | null
@@ -493,10 +495,50 @@ export type Database = {
           name?: string
           photo_url?: string | null
           position?: number
+          position_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "contest_candidates_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "contests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contest_candidates_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "contest_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contest_positions: {
+        Row: {
+          contest_id: string
+          id: string
+          max_choices: number
+          position: number
+          title: string
+        }
+        Insert: {
+          contest_id: string
+          id?: string
+          max_choices?: number
+          position?: number
+          title: string
+        }
+        Update: {
+          contest_id?: string
+          id?: string
+          max_choices?: number
+          position?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contest_positions_contest_id_fkey"
             columns: ["contest_id"]
             isOneToOne: false
             referencedRelation: "contests"
@@ -568,6 +610,10 @@ export type Database = {
           description: string | null
           ends_at: string
           id: string
+          is_public: boolean
+          members_before_open: boolean
+          min_account_days: number
+          results_announced_at: string | null
           results_visibility: string
           review_note: string | null
           reviewed_at: string | null
@@ -585,6 +631,10 @@ export type Database = {
           description?: string | null
           ends_at: string
           id?: string
+          is_public?: boolean
+          members_before_open?: boolean
+          min_account_days?: number
+          results_announced_at?: string | null
           results_visibility?: string
           review_note?: string | null
           reviewed_at?: string | null
@@ -602,6 +652,10 @@ export type Database = {
           description?: string | null
           ends_at?: string
           id?: string
+          is_public?: boolean
+          members_before_open?: boolean
+          min_account_days?: number
+          results_announced_at?: string | null
           results_visibility?: string
           review_note?: string | null
           reviewed_at?: string | null
@@ -4436,6 +4490,8 @@ export type Database = {
         }
       }
       alert_unanswered_posts: { Args: never; Returns: number }
+      announce_contest_results: { Args: { _contest: string }; Returns: boolean }
+      announce_due_contest_results: { Args: never; Returns: number }
       app_tester_invite_claim: {
         Args: { _limit?: number }
         Returns: {
@@ -4461,6 +4517,10 @@ export type Database = {
         Returns: boolean
       }
       cancel_contest: { Args: { _contest: string }; Returns: undefined }
+      cast_contest_ballot: {
+        Args: { _choices: Json; _code?: string; _contest: string }
+        Returns: Json
+      }
       cast_contest_vote: {
         Args: { _candidate: string; _code?: string; _contest: string }
         Returns: Json
@@ -4556,6 +4616,10 @@ export type Database = {
         Returns: string
       }
       contest_code_normalize: { Args: { _code: string }; Returns: string }
+      contest_group_block: {
+        Args: { _contest: string; _uid: string }
+        Returns: string
+      }
       conversation_send_status: {
         Args: { _conversation_id: string }
         Returns: Json
@@ -4574,6 +4638,7 @@ export type Database = {
         }
         Returns: string
       }
+      create_election: { Args: { _c: Json }; Returns: string }
       create_email_short_link: {
         Args: { _purpose?: string; _target_url: string; _ttl_seconds?: number }
         Returns: string
