@@ -82,12 +82,19 @@ export function daysSince(iso: string | null | undefined) {
   return (Date.now() - new Date(iso).getTime()) / 86_400_000
 }
 
-export function useJourney() {
+/** Steps still to do before the starter bonus can be claimed. */
+function stepsOpen(journey: Journey | null | undefined) {
+  return !!journey && !!journey.onboarded_at && !journey.bonus_claimed && Object.values(journey.steps).some((done) => !done)
+}
+
+/** `poll` re-checks every so many milliseconds while steps are still open, so a step done on any page shows up. */
+export function useJourney({ poll }: { poll?: number } = {}) {
   const { user } = useAuth()
   return useQuery({
     queryKey: ['journey', user?.id],
     enabled: !!user,
     staleTime: 30_000,
+    refetchInterval: poll ? (query) => (stepsOpen(query.state.data as Journey | null | undefined) ? poll : false) : false,
     queryFn: async () => {
       const { data, error } = await loose.rpc('get_my_journey')
       // Before the database update is applied this simply returns nothing.

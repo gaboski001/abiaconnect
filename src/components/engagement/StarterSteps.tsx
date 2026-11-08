@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { ChevronRight, Circle, Gift, Loader2, Sparkles, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ArrowRight, CheckCircle2, ChevronRight, Circle, Gift, Loader2, Sparkles, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { CollapsibleCard } from '@/components/community/CollapsibleCard'
@@ -59,12 +59,11 @@ function stepList(journey: Journey, helloLink: string) {
 }
 
 /**
- * "Your first 5 steps" on the home page: one clear thing to do next, points
- * as you go, and a 50-point bonus plus the New Abian badge at the end. Finished
- * steps drop off the list, and the card goes away once the bonus is claimed.
+ * Where a member is on the first 5 steps: nothing to show, the personalise
+ * note, or the steps themselves with the next one and the bonus claim.
  */
-export function StarterSteps({ compact = false }: { compact?: boolean }) {
-  const journey = useJourney()
+function useStarterSteps(poll?: number) {
+  const journey = useJourney({ poll })
   const refresh = useRefreshJourney()
   const [claiming, setClaiming] = useState(false)
   const [helloLink, setHelloLink] = useState('/create-thread')
@@ -81,18 +80,6 @@ export function StarterSteps({ compact = false }: { compact?: boolean }) {
     })
   }, [data?.lga_group])
 
-  if (!data || data.bonus_claimed) return null
-  // Not personalised yet (members from before the welcome screen existed).
-  if (!data.onboarded_at) return <PersonaliseNote />
-  // For the first weeks after joining, or after personalising.
-  const recent = daysSince(data.created_at) < NEWCOMER_DAYS || daysSince(data.onboarded_at) < NEWCOMER_DAYS
-  if (!recent) return null
-
-  const steps = stepList(data, helloLink)
-  const done = steps.filter((s) => data.steps[s.id]).length
-  const next = steps.find((s) => !data.steps[s.id])
-  const all = done === steps.length
-
   async function claim() {
     setClaiming(true)
     try {
@@ -105,6 +92,40 @@ export function StarterSteps({ compact = false }: { compact?: boolean }) {
       setClaiming(false)
     }
   }
+
+  // Not personalised yet (members from before the welcome screen existed).
+  const state: 'none' | 'personalise' | 'steps' =
+    !data || data.bonus_claimed
+      ? 'none'
+      : !data.onboarded_at
+        ? 'personalise'
+        : // For the first weeks after joining, or after personalising.
+          daysSince(data.created_at) < NEWCOMER_DAYS || daysSince(data.onboarded_at) < NEWCOMER_DAYS
+          ? 'steps'
+          : 'none'
+
+  const steps = data ? stepList(data, helloLink) : []
+  const done = data ? steps.filter((s) => data.steps[s.id]).length : 0
+  const next = data ? steps.find((s) => !data.steps[s.id]) : undefined
+  return { data, state, steps, done, next, all: done === steps.length && steps.length > 0, claim, claiming, refresh }
+}
+
+/**
+ * "Your first 5 steps" on the home page: one clear thing to do next, points
+ * as you go, and a 50-point bonus plus the New Abian badge at the end. Finished
+ * steps drop off the list, and the card goes away once the bonus is claimed.
+ */
+export function StarterSteps({ compact = false }: { compact?: boolean }) {
+  const { data, state, steps, done, next, all, claim, claiming, refresh } = useStarterSteps()
+
+  // Steps are often done on other pages; show where things stand on coming home.
+  useEffect(() => {
+    void refresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (!data || state === 'none') return null
+  if (state === 'personalise') return <PersonaliseNote />
 
   return (
     <CollapsibleCard
@@ -196,5 +217,70 @@ function PersonaliseNote() {
         </button>
       </div>
     </section>
+  )
+}
+
+/** Pages the steps send people to. */
+const STEP_PAGES = /^\/(polls|profile|create-thread|subgroups(\/|$)|thread\/)/
+
+/**
+ * A slim "x of 5 done, next: ..." bar on the pages the steps send people to,
+ * so a member who has just voted, joined, said hello or added a photo sees it
+ * counted and knows where to go next, or can claim the bonus right there.
+ */
+export function StarterNextBar() {
+  const { pathname } = useLocation()
+  const onStepPage = STEP_PAGES.test(pathname)
+  const { data, state, steps, done, next, all, claim, claiming, refresh } = useStarterSteps(onStepPage ? 8_000 : undefined)
+
+  useEffect(() => {
+    if (onStepPage) void refresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
+
+  // Say so when a step has just been done.
+  const before = useRef<Journey['steps'] | null>(null)
+  useEffect(() => {
+    const now = data?.steps
+    if (!now) return
+    const was = before.current
+    before.current = now
+    if (!was || state !== 'steps') return
+    const finished = steps.find((step) => now[step.id] && !was[step.id])
+    if (!finished) return
+    toast.success(`Step done: ${finished.title.toLowerCase()} ✓`, {
+      description: all ? 'All 5 done. Claim your 50-point bonus.' : next ? `Next: ${next.title.toLowerCase()}` : undefined,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.steps])
+
+  if (!onStepPage || !data || state !== 'steps') return null
+
+  return (
+    <div className="mx-auto w-full max-w-[1248px] px-4 pt-4 md:px-6 native:px-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-primary/25 bg-primary/[0.06] p-3">
+        <CheckCircle2 className="size-5 shrink-0 text-primary" aria-hidden />
+        <div className="min-w-[10rem] flex-1">
+          <p className="text-sm font-semibold">
+            {all ? 'All 5 steps done!' : `${done} of 5 first steps done`}
+          </p>
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${(done / 5) * 100}%` }} />
+          </div>
+        </div>
+        {all ? (
+          <Button size="sm" className="rounded-full" disabled={claiming} onClick={() => void claim()}>
+            {claiming ? <Loader2 className="size-4 animate-spin" /> : <Gift className="size-4" />}
+            Claim {STARTER_BONUS} points
+          </Button>
+        ) : next ? (
+          <Button asChild size="sm" className="rounded-full">
+            <Link to={next.to}>
+              Next: {next.title} <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        ) : null}
+      </div>
+    </div>
   )
 }

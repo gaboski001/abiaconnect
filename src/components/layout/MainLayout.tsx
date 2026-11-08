@@ -13,6 +13,7 @@ import { UpdateAvailablePrompt } from '@/components/pwa/UpdateAvailablePrompt'
 import { ModerationBlockedDialog } from '@/components/moderation/ModerationBlockedDialog'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { CommunityPresence, PointsToaster } from '@/components/engagement/LiveCommunity'
+import { StarterNextBar } from '@/components/engagement/StarterSteps'
 
 
 export function MainLayout() {
@@ -60,6 +61,8 @@ export function MainLayout() {
       )}
 
       <main className="flex-1">
+        {/* New members: where they are on the first 5 steps, on the pages the steps lead to. */}
+        {!hideTopBar && <StarterNextBar />}
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
