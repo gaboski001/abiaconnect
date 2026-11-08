@@ -1249,6 +1249,255 @@ export type Database = {
         }
         Relationships: []
       }
+      live_host_bans: {
+        Row: {
+          banned_by: string | null
+          created_at: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          banned_by?: string | null
+          created_at?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          banned_by?: string | null
+          created_at?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      live_host_blocks: {
+        Row: {
+          blocked_id: string
+          created_at: string
+          host_id: string
+        }
+        Insert: {
+          blocked_id: string
+          created_at?: string
+          host_id: string
+        }
+        Update: {
+          blocked_id?: string
+          created_at?: string
+          host_id?: string
+        }
+        Relationships: []
+      }
+      live_room_comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          is_deleted: boolean
+          is_pinned: boolean
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          is_deleted?: boolean
+          is_pinned?: boolean
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_deleted?: boolean
+          is_pinned?: boolean
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_room_comments_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "live_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_room_people: {
+        Row: {
+          hand_raised: boolean
+          joined_at: string
+          last_seen: string
+          removed: boolean
+          role: string
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          hand_raised?: boolean
+          joined_at?: string
+          last_seen?: string
+          removed?: boolean
+          role?: string
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          hand_raised?: boolean
+          joined_at?: string
+          last_seen?: string
+          removed?: boolean
+          role?: string
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_room_people_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "live_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_room_reports: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string
+          reported_user_id: string | null
+          reporter_id: string
+          room_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason: string
+          reported_user_id?: string | null
+          reporter_id: string
+          room_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string
+          reported_user_id?: string | null
+          reporter_id?: string
+          room_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_room_reports_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "live_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_rooms: {
+        Row: {
+          ended_at: string | null
+          ended_reason: string | null
+          ends_at: string
+          host_id: string
+          id: string
+          kind: string
+          participant_minutes: number
+          peak_listeners: number
+          started_at: string
+          status: string
+          subgroup_id: string | null
+          title: string
+        }
+        Insert: {
+          ended_at?: string | null
+          ended_reason?: string | null
+          ends_at: string
+          host_id: string
+          id?: string
+          kind?: string
+          participant_minutes?: number
+          peak_listeners?: number
+          started_at?: string
+          status?: string
+          subgroup_id?: string | null
+          title: string
+        }
+        Update: {
+          ended_at?: string | null
+          ended_reason?: string | null
+          ends_at?: string
+          host_id?: string
+          id?: string
+          kind?: string
+          participant_minutes?: number
+          peak_listeners?: number
+          started_at?: string
+          status?: string
+          subgroup_id?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      live_settings: {
+        Row: {
+          enabled: boolean
+          id: boolean
+          max_listeners: number
+          max_rooms_at_once: number
+          monthly_minutes: number
+          room_minutes: number
+          testers_only: boolean
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          id?: boolean
+          max_listeners?: number
+          max_rooms_at_once?: number
+          monthly_minutes?: number
+          room_minutes?: number
+          testers_only?: boolean
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          id?: boolean
+          max_listeners?: number
+          max_rooms_at_once?: number
+          monthly_minutes?: number
+          room_minutes?: number
+          testers_only?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      live_testers: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       member_badges: {
         Row: {
           awarded_at: string
@@ -3732,6 +3981,30 @@ export type Database = {
           username: string
         }[]
       }
+      admin_live_close_reports: {
+        Args: { _room_id: string }
+        Returns: undefined
+      }
+      admin_live_overview: { Args: never; Returns: Json }
+      admin_live_settings: {
+        Args: {
+          _enabled: boolean
+          _max_listeners: number
+          _max_rooms_at_once: number
+          _monthly_minutes: number
+          _room_minutes: number
+          _testers_only: boolean
+        }
+        Returns: undefined
+      }
+      admin_live_stop_host: {
+        Args: { _on: boolean; _reason?: string; _user_id: string }
+        Returns: undefined
+      }
+      admin_live_tester: {
+        Args: { _on: boolean; _user_id: string }
+        Returns: undefined
+      }
       admin_member_email_status: { Args: never; Returns: Json }
       admin_monetization_summary: { Args: never; Returns: Json }
       admin_revoke_subscription: {
@@ -4280,6 +4553,82 @@ export type Database = {
           score: number
         }[]
       }
+      live_allowed: { Args: { _uid: string }; Returns: boolean }
+      live_comment: {
+        Args: { _body: string; _room_id: string }
+        Returns: string
+      }
+      live_end_room: { Args: { _room_id: string }; Returns: undefined }
+      live_heartbeat: { Args: { _room_id: string }; Returns: Json }
+      live_host_blocker: { Args: { _uid: string }; Returns: string }
+      live_host_groups: {
+        Args: { _uid: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
+      live_join_room: { Args: { _room_id: string }; Returns: string }
+      live_minutes_this_month: { Args: never; Returns: number }
+      live_moderate_comment: {
+        Args: { _action: string; _comment_id: string }
+        Returns: undefined
+      }
+      live_present_count: { Args: { _room_id: string }; Returns: number }
+      live_raise_hand: {
+        Args: { _room_id: string; _up: boolean }
+        Returns: undefined
+      }
+      live_remove_person: {
+        Args: { _block?: boolean; _room_id: string; _user_id: string }
+        Returns: undefined
+      }
+      live_report: {
+        Args: { _reason: string; _room_id: string; _user_id: string }
+        Returns: undefined
+      }
+      live_role_of: {
+        Args: { _room_id: string; _uid: string }
+        Returns: string
+      }
+      live_room_comments_list: {
+        Args: { _room_id: string }
+        Returns: {
+          avatar: string
+          body: string
+          created_at: string
+          id: string
+          is_pinned: boolean
+          name: string
+          user_id: string
+        }[]
+      }
+      live_room_detail: { Args: { _room_id: string }; Returns: Json }
+      live_rooms_now: {
+        Args: never
+        Returns: {
+          ends_at: string
+          group_name: string
+          host_avatar: string
+          host_id: string
+          host_name: string
+          id: string
+          listening: number
+          started_at: string
+          subgroup_id: string
+          title: string
+        }[]
+      }
+      live_set_role: {
+        Args: { _role: string; _room_id: string; _user_id: string }
+        Returns: string
+      }
+      live_start_room: {
+        Args: { _accept_rules: boolean; _subgroup_id: string; _title: string }
+        Returns: string
+      }
+      live_status: { Args: never; Returns: Json }
+      live_tidy: { Args: never; Returns: undefined }
       log_monetization_event: {
         Args: { _event: string; _metadata?: Json; _uid: string }
         Returns: undefined
