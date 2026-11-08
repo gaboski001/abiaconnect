@@ -377,10 +377,12 @@ function OverviewSection({ onOpen }: { onOpen: (id: SectionId) => void }) {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
       const [users, threads, active, reports] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('threads').select('*', { count: 'exact', head: true }),
+        // Only the id: some thread columns are private, and asking for them makes the count fail (shows 0).
+        supabase.from('threads').select('id', { count: 'exact', head: true }).eq('is_deleted', false),
         supabase
           .from('threads')
-          .select('*', { count: 'exact', head: true })
+          .select('id', { count: 'exact', head: true })
+          .eq('is_deleted', false)
           .gte('created_at', since),
         supabase
           .from('reports')
