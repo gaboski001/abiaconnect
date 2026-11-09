@@ -4,6 +4,7 @@ import { WifiOff } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Navbar } from './Navbar'
 import { Footer } from './Footer'
+import { isAppPage } from './appPages'
 
 import { MobileTopBar } from '@/components/mobile/MobileTopBar'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
@@ -53,8 +54,9 @@ export function MainLayout() {
   // footer or page padding to scroll the chat header (and its back button)
   // out of view. On phones an open chat also takes the site header's place.
   const webChat = !native && /^\/messages(\/|$)/.test(location.pathname)
-  // The app has no website footer: its links all live in the More menu.
-  const hideFooter = isAuthPage || native || webChat
+  // The app has no website footer: its links all live in the More menu. On the
+  // website, app-style pages (chat, live, groups, polls, forms…) drop it too.
+  const hideFooter = isAuthPage || native || isAppPage(location.pathname)
   const hideTopBar = isAuthPage || immersiveChat || (webChat && isChatDetail)
   // A live room has its own controls bar at the bottom (mic, raise hand, leave).
   const inLiveRoom = /^\/live\/[^/]+/.test(location.pathname)

@@ -374,7 +374,7 @@ export default function SubgroupDetail() {
       return { prevMember, prevCount }
     },
     onSuccess: (action) => {
-      toast.success(action === 'joined' ? 'Joined subgroup' : 'Already a member')
+      toast.success(action === 'joined' ? 'You joined the group' : 'You are already a member')
     },
     onError: (e: any, _v, ctx) => {
       if (ctx) {
@@ -405,7 +405,7 @@ export default function SubgroupDetail() {
       qc.setQueryData(['subgroup-member-count', subgroupId], (c: any) => (typeof c === 'number' ? Math.max(0, c - 1) : c))
       return { prevMember, prevCount }
     },
-    onSuccess: () => toast.success('Left subgroup'),
+    onSuccess: () => toast.success('You left the group'),
     onError: (e: any, _v, ctx) => {
       if (ctx) {
         qc.setQueryData(['subgroup-membership', subgroupId, user?.id], ctx.prevMember)
@@ -501,8 +501,8 @@ export default function SubgroupDetail() {
   if (!groupQ.data) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
-        <p className="text-muted-foreground">Subgroup not found.</p>
-        <Button asChild variant="outline" className="mt-4"><Link to="/subgroups">Back to subgroups</Link></Button>
+        <p className="text-muted-foreground">Group not found.</p>
+        <Button asChild variant="outline" className="mt-4"><Link to="/subgroups">Back to groups</Link></Button>
       </div>
     )
   }
@@ -556,7 +556,7 @@ export default function SubgroupDetail() {
         path={`/subgroups/${subgroupId ?? ''}`}
       />
       <Button asChild variant="ghost" size="sm" className="mb-4 native:hidden">
-        <Link to="/subgroups"><ArrowLeft className="h-4 w-4 mr-1" /> All subgroups</Link>
+        <Link to="/subgroups"><ArrowLeft className="h-4 w-4 mr-1" /> All groups</Link>
       </Button>
 
       <div
@@ -884,7 +884,7 @@ export default function SubgroupDetail() {
         <aside className="space-y-4">
           <Collapsible open={rulesOpen} onOpenChange={setRulesOpen} className="rounded-xl border bg-card">
             <CollapsibleTrigger className="w-full flex items-center justify-between p-4 font-semibold">
-              <span>Subgroup Rules</span>
+              <span>Group rules</span>
               {rulesOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </CollapsibleTrigger>
             <CollapsibleContent className="px-4 pb-4">

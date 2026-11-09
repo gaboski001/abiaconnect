@@ -8,30 +8,51 @@ import { QUICK_WISHES, sendBirthdayWish } from '@/lib/birthday'
 import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 
+type Person = { id: string; name: string }
+
 /**
  * Write or pick a birthday wish. Used on the home card ("Birthdays today") and
  * by admins in Admin -> Birthdays today, where it goes as the team's wish.
+ * Pass several people to send the same wish to everyone celebrating today.
  */
 export function BirthdayWishDialog({
   person,
   asTeam = false,
   onClose,
+  onSent,
 }: {
-  person: { id: string; name: string } | null
+  person: Person | Person[] | null
   asTeam?: boolean
   onClose: () => void
+  /** The people whose wish went through (or who had already been wished). */
+  onSent?: (ids: string[]) => void
 }) {
   const qc = useQueryClient()
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
-  const first = person?.name.split(' ')[0] ?? ''
+  const people = person ? (Array.isArray(person) ? person : [person]) : []
+  const many = people.length > 1
+  const first = many ? 'everyone' : people[0]?.name.split(' ')[0] ?? ''
 
   const send = async () => {
-    if (!person || !text.trim()) return
+    if (!people.length || !text.trim()) return
     setBusy(true)
     try {
-      const sent = await sendBirthdayWish(person.id, text.trim())
-      toast.success(sent ? `Your wishes are on their way to ${first} 🎉` : `You already sent ${first} your wishes today.`)
+      const results = await Promise.allSettled(people.map((p) => sendBirthdayWish(p.id, text.trim())))
+      const done = people.filter((_, i) => results[i].status === 'fulfilled').map((p) => p.id)
+      const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
+      if (!done.length) throw failed?.reason ?? new Error()
+      if (many) {
+        toast.success(
+          done.length === people.length
+            ? `Your wishes are on their way to all ${people.length} of them 🎉`
+            : `Your wishes went to ${done.length} of ${people.length}. Please try the others again.`,
+        )
+      } else {
+        const sent = (results[0] as PromiseFulfilledResult<boolean>).value
+        toast.success(sent ? `Your wishes are on their way to ${first} 🎉` : `You already sent ${first} your wishes today.`)
+      }
+      onSent?.(done)
       qc.invalidateQueries({ queryKey: ['birthdays-today'] })
       setText('')
       onClose()
@@ -43,14 +64,16 @@ export function BirthdayWishDialog({
   }
 
   return (
-    <Dialog open={!!person} onOpenChange={(o) => (!o ? onClose() : undefined)}>
+    <Dialog open={people.length > 0} onOpenChange={(o) => (!o ? onClose() : undefined)}>
       <DialogContent className="max-h-[90dvh] w-[calc(100vw-2rem)] max-w-md overflow-y-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle>🎂 Wish {first} a happy birthday</DialogTitle>
           <DialogDescription>
             {asTeam
               ? 'This goes to them as a wish from the AbiaConnect team.'
-              : 'They get a notification with your name and message.'}
+              : many
+                ? `Your message goes to each of the ${people.length} people celebrating today, with your name.`
+                : 'They get a notification with your name and message.'}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
@@ -74,7 +97,7 @@ export function BirthdayWishDialog({
             aria-label="Your birthday wish"
             value={text}
             onChange={(e) => setText(e.target.value.slice(0, 280))}
-            placeholder={`Write something kind for ${first}…`}
+            placeholder={many ? 'Write something kind for them…' : `Write something kind for ${first}…`}
             rows={3}
           />
           <p className="text-right text-xs text-muted-foreground">{text.length}/280</p>
@@ -84,7 +107,7 @@ export function BirthdayWishDialog({
             Cancel
           </Button>
           <Button onClick={send} disabled={busy || !text.trim()}>
-            <Send className="size-4" /> {busy ? 'Sending…' : 'Send wishes'}
+            <Send className="size-4" /> {busy ? 'Sending…' : many ? `Send to all ${people.length}` : 'Send wishes'}
           </Button>
         </div>
       </DialogContent>

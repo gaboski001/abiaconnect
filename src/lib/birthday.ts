@@ -8,6 +8,12 @@ function lagosToday(now = new Date()): { year: number; month: number; day: numbe
   return { year: Number(parts.year), month: Number(parts.month), day: Number(parts.day) }
 }
 
+/** Today's date in Lagos as YYYY-MM-DD, e.g. to remember a choice for the day. */
+export function lagosDateKey(now = new Date()): string {
+  const t = lagosToday(now)
+  return `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}`
+}
+
 const isLeapYear = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0
 
 /**

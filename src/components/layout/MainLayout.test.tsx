@@ -126,3 +126,29 @@ describe('MainLayout — website chat fills the screen', () => {
     expect(screen.queryByTestId('footer')).not.toBeInTheDocument()
   })
 })
+
+describe('MainLayout — app-style website pages drop the footer', () => {
+  const at = (path: string) =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route element={<MainLayout />}>
+            <Route path="*" element={<h1>Page</h1>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+  it.each(['/live', '/live/room1', '/polls', '/contests/abc', '/subgroups', '/subgroups/abc', '/relationship', '/create-thread', '/thread/abc', '/dashboard', '/admin/dashboard'])(
+    'hides the footer on %s',
+    (path) => {
+      at(path)
+      expect(screen.queryByTestId('footer')).not.toBeInTheDocument()
+    },
+  )
+
+  it.each(['/', '/about', '/help', '/privacy'])('keeps the footer on information page %s', (path) => {
+    at(path)
+    expect(screen.getByTestId('footer')).toBeInTheDocument()
+  })
+})

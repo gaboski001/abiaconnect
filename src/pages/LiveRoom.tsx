@@ -284,9 +284,10 @@ export default function LiveRoom() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 pb-28">
+    <div className="mx-auto max-w-3xl pb-28 lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6">
       <SEO title={room.title} description="A live audio room on AbiaConnect." path={`/live/${room.id}`} />
       <div ref={audioRef} className="hidden" />
+      <div className="min-w-0 space-y-4">
 
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -391,8 +392,6 @@ export default function LiveRoom() {
         </ul>
       </section>
 
-      <Comments roomId={roomId} canModerate={runsRoom} items={comments.data ?? []} inRoom={!!me} />
-
       <details className="rounded-xl border p-3 text-sm">
         <summary className="cursor-pointer font-medium">Room rules</summary>
         <ul className="mt-2 list-disc space-y-0.5 pl-5 text-muted-foreground">
@@ -401,10 +400,15 @@ export default function LiveRoom() {
           ))}
         </ul>
       </details>
+      </div>
+
+      <aside className="mt-4 lg:sticky lg:top-24 lg:mt-0">
+        <Comments roomId={roomId} canModerate={runsRoom} items={comments.data ?? []} inRoom={!!me} />
+      </aside>
 
       {/* Controls stay at the bottom of the screen. */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center gap-2">
+        <div className="mx-auto flex max-w-3xl items-center gap-2 lg:max-w-6xl">
           <button type="button" onClick={leave} className="inline-flex h-11 items-center gap-1.5 rounded-xl border px-3 font-medium">
             <LogOut className="size-4" /> Leave
           </button>
@@ -678,10 +682,16 @@ function Comments({
       .then(() => qc.invalidateQueries({ queryKey: ['live-comments', roomId] }))
       .catch((e: Error) => toast.error(e.message))
   const pinned = items.find((c) => c.is_pinned)
+  // Keep the newest message in view as the chat moves.
+  const listRef = useRef<HTMLUListElement | null>(null)
+  useEffect(() => {
+    const el = listRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [items.length])
 
   return (
     <section className="rounded-2xl border bg-card p-3">
-      <h2 className="text-[13px] font-semibold">Comments</h2>
+      <h2 className="text-[13px] font-semibold">Live chat</h2>
       {pinned ? (
         <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-primary/10 p-2 text-sm">
           <Pin className="mt-0.5 size-3.5 shrink-0" />
@@ -691,7 +701,7 @@ function Comments({
           </span>
         </p>
       ) : null}
-      <ul className="mt-2 max-h-72 space-y-1.5 overflow-y-auto text-sm">
+      <ul ref={listRef} className="mt-2 max-h-72 space-y-1.5 overflow-y-auto text-sm lg:h-[calc(100dvh-22rem)] lg:max-h-none">
         {items.map((c) => (
           <li key={c.id} className="group flex items-start gap-2">
             <span className="min-w-0 flex-1 break-words">
@@ -710,7 +720,7 @@ function Comments({
             ) : null}
           </li>
         ))}
-        {!items.length ? <li className="text-muted-foreground">No comments yet.</li> : null}
+        {!items.length ? <li className="text-muted-foreground">No messages yet. Say hello!</li> : null}
       </ul>
       {inRoom ? (
         <form

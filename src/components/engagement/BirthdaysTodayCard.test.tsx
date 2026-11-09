@@ -51,11 +51,67 @@ describe('Birthdays today card', () => {
     )
   })
 
-  it('shows “Wished” once a member has sent their wish', async () => {
+  it('leaves out people the member already wished, and hides when all are wished', async () => {
     rpc.mockResolvedValue({ data: [{ id: 'u1', name: 'Chidi', username: null, avatar_url: null, wishes: 1, wished: true }], error: null })
+    const { container } = wrap(<BirthdaysTodayCard />)
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith('birthdays_today', undefined))
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('takes a person off the card straight after the member wishes them', async () => {
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'birthdays_today'
+        ? {
+            data: [
+              { id: 'u1', name: 'Chidi Okafor', username: null, avatar_url: null, wishes: 0, wished: false },
+              { id: 'u2', name: 'Ngozi Eze', username: null, avatar_url: null, wishes: 0, wished: false },
+            ],
+            error: null,
+          }
+        : { data: { ok: true, already: false }, error: null },
+    )
     wrap(<BirthdaysTodayCard />)
-    expect(await screen.findByText('Wished')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Send wishes' })).toBeNull()
+    expect(await screen.findByText('2 birthdays today')).toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Send wishes' })[0])
+    fireEvent.click(await screen.findByRole('button', { name: /Ụbọchị ọmụmụ ọma/ }))
+    fireEvent.click(screen.getAllByRole('button', { name: /Send wishes/ }).at(-1)!)
+    await waitFor(() => expect(screen.queryByText(/Chidi Okafor/)).toBeNull())
+    expect(screen.getByText(/Ngozi Eze/)).toBeInTheDocument()
+  })
+
+  it('wishes everyone celebrating at once', async () => {
+    rpc.mockImplementation(async (fn: string) =>
+      fn === 'birthdays_today'
+        ? {
+            data: [
+              { id: 'u1', name: 'Chidi Okafor', username: null, avatar_url: null, wishes: 0, wished: false },
+              { id: 'u2', name: 'Ngozi Eze', username: null, avatar_url: null, wishes: 3, wished: false },
+            ],
+            error: null,
+          }
+        : { data: { ok: true, already: false }, error: null },
+    )
+    const { container } = wrap(<BirthdaysTodayCard />)
+    fireEvent.click(await screen.findByRole('button', { name: /Wish all 2/ }))
+    fireEvent.click(await screen.findByRole('button', { name: /Ụbọchị ọmụmụ ọma/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Send to all 2/ }))
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith('send_birthday_wish', expect.objectContaining({ _to: 'u1' })))
+    expect(rpc).toHaveBeenCalledWith('send_birthday_wish', expect.objectContaining({ _to: 'u2' }))
+    await waitFor(() => expect(container.querySelector('section')).toBeNull())
+  })
+
+  it('can be closed for the rest of the day without wishing', async () => {
+    localStorage.clear()
+    rpc.mockResolvedValue({ data: [{ id: 'u1', name: 'Chidi', username: null, avatar_url: null, wishes: 0, wished: false }], error: null })
+    const first = wrap(<BirthdaysTodayCard />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Close birthdays for today' }))
+    expect(first.container).toBeEmptyDOMElement()
+    first.unmount()
+    // Still closed when they come back later today.
+    const again = wrap(<BirthdaysTodayCard />)
+    await waitFor(() => expect(rpc).toHaveBeenCalled())
+    expect(again.container).toBeEmptyDOMElement()
+    localStorage.clear()
   })
 })
 

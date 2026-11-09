@@ -151,7 +151,7 @@ export default function Subgroups() {
       return action
     },
     onSuccess: (action) => {
-      toast.success(action === 'joined' ? 'Joined subgroup' : 'Already a member')
+      toast.success(action === 'joined' ? 'You joined the group' : 'You are already a member')
       qc.invalidateQueries({ queryKey: ['my-subgroups'] })
       qc.invalidateQueries({ queryKey: ['subgroups'] })
     },
@@ -169,7 +169,7 @@ export default function Subgroups() {
       if (error) throw error
     },
     onSuccess: () => {
-      toast.success('Left subgroup')
+      toast.success('You left the group')
       qc.invalidateQueries({ queryKey: ['my-subgroups'] })
       qc.invalidateQueries({ queryKey: ['subgroups'] })
     },
@@ -202,7 +202,7 @@ export default function Subgroups() {
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="h-4 w-4 mr-2" /> Create Subgroup
+                <Plus className="h-4 w-4 mr-2" /> Create group
               </Button>
             </DialogTrigger>
             <CreateSubgroupDialog
@@ -224,7 +224,7 @@ export default function Subgroups() {
       <div className="relative max-w-md mb-6">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search subgroups..."
+          placeholder="Search groups..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
@@ -239,7 +239,7 @@ export default function Subgroups() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
-          No subgroups found.
+          No groups found.
         </div>
       ) : (
         (() => {
@@ -279,7 +279,7 @@ export default function Subgroups() {
                       <div className="flex-1">
                         <div className="font-semibold text-base">{category}</div>
                         <div className="text-xs text-muted-foreground">
-                          {items.length} subgroup{items.length === 1 ? '' : 's'}
+                          {items.length} group{items.length === 1 ? '' : 's'}
                         </div>
                       </div>
                     </div>
@@ -295,7 +295,7 @@ export default function Subgroups() {
                           >
                             <Link to={`/subgroups/${s.id}`} className="block">
                               <div
-                                className={`h-28 bg-gradient-to-br ${gradientFor(s.name)} relative`}
+                                className={`h-16 bg-gradient-to-br ${gradientFor(s.name)} relative`}
                                 style={
                                   s.cover_image_url
                                     ? {
@@ -326,10 +326,10 @@ export default function Subgroups() {
                               </p>
                               <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
-                                  <Users className="h-3.5 w-3.5" /> {s.member_count} members
+                                  <Users className="h-3.5 w-3.5" /> {s.member_count} {s.member_count === 1 ? 'member' : 'members'}
                                 </span>
                                 <span className="flex items-center gap-1">
-                                  <MessageSquare className="h-3.5 w-3.5" /> {s.thread_count} threads
+                                  <MessageSquare className="h-3.5 w-3.5" /> {s.thread_count} {s.thread_count === 1 ? 'discussion' : 'discussions'}
                                 </span>
                               </div>
                               <div className="mt-4">
@@ -491,11 +491,11 @@ function CreateSubgroupDialog({
           .from('subgroup_members')
           .upsert({ subgroup_id: data.id, user_id: user.id }, SUBGROUP_MEMBERS_UPSERT_OPTIONS)
       }
-      toast.success('Subgroup created')
+      toast.success('Group created')
       onCreated()
       onClose()
     } catch (e: any) {
-      toast.error(e.message || 'Failed to create subgroup')
+      toast.error(e.message || 'Could not create the group. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -504,7 +504,7 @@ function CreateSubgroupDialog({
   return (
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Create a Subgroup</DialogTitle>
+        <DialogTitle>Create a group</DialogTitle>
         <DialogDescription>
           Build a smaller community around a shared interest.
         </DialogDescription>
@@ -563,7 +563,7 @@ function CreateSubgroupDialog({
           Cancel
         </Button>
         <Button onClick={submit} disabled={saving}>
-          {saving ? 'Creating...' : 'Create Subgroup'}
+          {saving ? 'Creating…' : 'Create group'}
         </Button>
       </DialogFooter>
     </DialogContent>
