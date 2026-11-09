@@ -64,10 +64,10 @@ export default function ContestDetail() {
     queryKey: key,
     queryFn: () => getContest(contestId!),
     enabled: !loading && !!contestId,
-    // Live totals refresh while voting is open.
+    // Live totals refresh while voting is open (paused while the page is in the background).
     refetchInterval: (query) => {
       const d = query.state.data as Detail | undefined
-      return d && d.phase === 'open' ? 15_000 : false
+      return d && d.phase === 'open' ? 30_000 : false
     },
   })
   const [choices, setChoices] = useState<Record<string, string[]>>({})

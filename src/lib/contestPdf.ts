@@ -58,7 +58,8 @@ async function toPdf(pages: HTMLCanvasElement[]): Promise<Blob> {
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
   pages.forEach((p, i) => {
     if (i) pdf.addPage()
-    pdf.addImage(p.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297)
+    // Black text on white compresses well; this keeps each page small.
+    pdf.addImage(p.toDataURL('image/jpeg', 0.72), 'JPEG', 0, 0, 210, 297, undefined, 'FAST')
   })
   return pdf.output('blob')
 }
@@ -215,6 +216,14 @@ export async function savePdf(pages: HTMLCanvasElement[], filename: string): Pro
   const { data, error: signErr } = await supabase.storage.from(BUCKET).createSignedUrl(path, 600)
   if (signErr || !data?.signedUrl) throw signErr ?? new Error('no_link')
   await openExternal(data.signedUrl)
+  // The phone's viewer has the file once the member comes back to the app, so
+  // remove it then: nothing stays in storage.
+  const cleanUp = () => {
+    if (document.visibilityState !== 'visible') return
+    document.removeEventListener('visibilitychange', cleanUp)
+    window.setTimeout(() => void clearContestPrints(uid).catch(() => undefined), 3000)
+  }
+  document.addEventListener('visibilitychange', cleanUp)
 }
 
 /** Removes a member's earlier PDFs, so ballot codes don't sit in storage. */

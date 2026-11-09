@@ -17,7 +17,7 @@ import { toast } from '@/lib/toast'
 import { CommunityPresence, PointsToaster } from '@/components/engagement/LiveCommunity'
 import { StarterNextBar } from '@/components/engagement/StarterSteps'
 import { VolunteerPowersClaimer } from '@/components/community/VolunteerPowersClaimer'
-import { SupportChat } from '@/components/support/SupportChat'
+import { SupportChatLauncher } from '@/components/support/SupportChatLauncher'
 
 
 export function MainLayout() {
@@ -102,7 +102,7 @@ export function MainLayout() {
       {/* PWA notices removed by user request */}
       <ModerationBlockedDialog />
       <VolunteerPowersClaimer />
-      {!isAuthPage && <SupportChat />}
+      {!isAuthPage && <SupportChatLauncher />}
       {/* Live community: members-online count and "+points" toasts. */}
       <CommunityPresence />
       <PointsToaster />

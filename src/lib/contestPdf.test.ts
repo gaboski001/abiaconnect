@@ -57,3 +57,17 @@ describe('contest PDFs', () => {
     expect(openExternal).toHaveBeenCalledWith('https://x.supabase.co/signed.pdf')
   })
 })
+
+describe('contest PDFs leave nothing behind', () => {
+  it('removes the file when the member comes back to the app', async () => {
+    vi.useFakeTimers()
+    native = true
+    await savePdf([fakePage], 'slips.pdf')
+    remove.mockClear()
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+    await vi.advanceTimersByTimeAsync(3500)
+    expect(remove).toHaveBeenCalledWith(['me/old.pdf'])
+    vi.useRealTimers()
+  })
+})

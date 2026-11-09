@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/accordion'
 import StaticPage from '@/components/layout/StaticPage'
 import { HELP_SECTIONS as SECTIONS } from '@/lib/helpCentre'
-import { openSupportChat } from '@/components/support/SupportChat'
+import { openSupportChat } from '@/components/support/SupportChatLauncher'
 
 export default function Help() {
   const [query, setQuery] = useState('')

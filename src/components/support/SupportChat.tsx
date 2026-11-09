@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { ArrowRight, HelpCircle, Mail, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,13 +8,6 @@ import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { SUPPORT_EMAIL, type QA } from '@/lib/helpCentre'
 import { findAnswers, intentOf } from '@/lib/helpMatch'
 import { cn } from '@/lib/utils'
-
-const OPEN_EVENT = 'abia:open-support-chat'
-
-/** Opens the support chat from anywhere (the More menu, the Help page). */
-export function openSupportChat() {
-  window.dispatchEvent(new Event(OPEN_EVENT))
-}
 
 type Msg =
   | { from: 'me'; text: string }
@@ -46,28 +39,15 @@ function reply(text: string): Msg {
   return { from: 'bot', text: best.item.a, answer: best.item, more: rest.map((m) => m.item) }
 }
 
-// Pages where a floating button would get in the way.
-const NO_BUTTON = [/^\/login/, /^\/register/, /^\/messages\/[^/]+/, /^\/live\/[^/]+/, /^\/call/]
-
-export function SupportChat() {
-  const location = useLocation()
-  const [open, setOpen] = useState(false)
+/**
+ * The chat window. Loaded only when someone opens it (see SupportChatLauncher),
+ * so the Help Centre text isn't downloaded on every page.
+ */
+export function SupportChat({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const [msgs, setMsgs] = useState<Msg[]>([GREETING])
   const [text, setText] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
   const native = isNativeApp()
-  const showButton = !native && !NO_BUTTON.some((re) => re.test(location.pathname))
-
-  useEffect(() => {
-    const onOpen = () => setOpen(true)
-    window.addEventListener(OPEN_EVENT, onOpen)
-    return () => window.removeEventListener(OPEN_EVENT, onOpen)
-  }, [])
-
-  // A link with ?ask=1 (the app's More menu) opens the chat; following a link in an answer closes it.
-  useEffect(() => {
-    setOpen(new URLSearchParams(location.search).get('ask') === '1')
-  }, [location.pathname, location.search])
 
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ block: 'end' })
@@ -87,16 +67,6 @@ export function SupportChat() {
 
   return (
     <>
-      {showButton && !open ? (
-        <Button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 h-12 gap-2 rounded-full px-4 shadow-lg"
-          aria-label="Open the help chat"
-        >
-          <HelpCircle className="size-5" /> Help
-        </Button>
-      ) : null}
-
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side={native ? 'bottom' : 'right'}
