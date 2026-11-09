@@ -118,14 +118,11 @@ export default function App() {
     <>
       <ScrollToTop />
       <InviteClaimer />
+      {/* Voice and video calls, on the website and in the app: places calls and rings for incoming ones. */}
+      <CallProvider />
       {/* Native-only enhancements */}
       <NativeOnboardingGate />
-      {isNativeApp() && (
-        <>
-          <CallProvider />
-          <FirstRunWelcome />
-        </>
-      )}
+      {isNativeApp() && <FirstRunWelcome />}
 
       <Routes>
       <Route element={<MainLayout />}>
