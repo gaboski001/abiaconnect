@@ -59,7 +59,40 @@ describe('SupportChat', () => {
     expect(screen.queryByRole('button', { name: 'Open the help chat' })).toBeNull()
   })
 
-  it.each(['/welcome', '/create-thread', '/contests/new', '/relationship/edit'])(
+  it('shows on the welcome steps, where it can be dragged out of the way', () => {
+    native = false
+    renderAt('/welcome')
+    expect(screen.getByRole('button', { name: 'Open the help chat' })).toBeInTheDocument()
+  })
+
+  it('moves when dragged, remembers the spot, and does not open the chat on that drag', () => {
+    native = false
+    localStorage.clear()
+    renderAt('/')
+    const button = screen.getByRole('button', { name: 'Open the help chat' })
+    button.setPointerCapture = () => {}
+    // The test browser's pointer events carry no position; give them a mouse event's.
+    class TestPointerEvent extends MouseEvent {
+      pointerId: number
+      constructor(type: string, init: PointerEventInit = {}) {
+        super(type, init)
+        this.pointerId = init.pointerId ?? 1
+      }
+    }
+    vi.stubGlobal('PointerEvent', TestPointerEvent)
+    fireEvent.pointerDown(button, { button: 0, clientX: 500, clientY: 500, pointerId: 1 })
+    fireEvent.pointerMove(button, { clientX: 400, clientY: 300, pointerId: 1 })
+    fireEvent.pointerUp(button, { pointerId: 1 })
+    fireEvent.click(button)
+    expect(button.style.right).toBe('124px')
+    expect(button.style.bottom).toBe('224px')
+    expect(JSON.parse(localStorage.getItem('abia:help-button-spot') ?? '{}')).toEqual({ right: 124, bottom: 224 })
+    expect(screen.queryByLabelText('Your question')).toBeNull()
+    localStorage.clear()
+    vi.unstubAllGlobals()
+  })
+
+  it.each(['/create-thread', '/contests/new', '/relationship/edit'])(
     'stays off step-by-step and form pages so it cannot cover Next or Post (%s)',
     (path) => {
       native = false
