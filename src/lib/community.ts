@@ -150,6 +150,8 @@ export function useFollowingIds(userId: string | null | undefined) {
     enabled: !!userId,
     staleTime: 60_000,
     queryFn: async (): Promise<string[]> => {
+      const all = await sb.rpc('my_following_ids')
+      if (!all.error) return (all.data ?? []) as string[]
       const { data, error } = await sb.rpc('connect_my_people', { _kind: 'following', _limit: 50 })
       if (error) return []
       return ((data ?? []) as Array<{ user_id: string }>).map((p) => p.user_id)

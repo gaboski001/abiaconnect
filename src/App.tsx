@@ -23,6 +23,7 @@ const Thread = lazy(() => import('@/pages/Thread'))
 const CreateThread = lazy(() => import('@/pages/CreateThread'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const MemberPage = lazy(() => import('@/pages/MemberPage'))
+const MemberFollows = lazy(() => import('@/pages/MemberFollows'))
 const Opportunities = lazy(() => import('@/pages/Opportunities'))
 const Welcome = lazy(() => import('@/pages/Welcome'))
 const Profile = lazy(() => import('@/pages/Profile'))
@@ -185,6 +186,7 @@ export default function App() {
                   <Route path="welcome" element={<Welcome />} />
                   <Route path="profile" element={<Profile />} />
                   <Route path="member/:userId" element={<MemberPage />} />
+                  <Route path="member/:userId/follows" element={<MemberFollows />} />
                   <Route path="opportunities" element={<Opportunities />} />
                   <Route path="rewards" element={<Rewards />} />
                   <Route path="leaderboard" element={<Leaderboard />} />

@@ -11,6 +11,7 @@ import { shownCount } from '@/lib/quietNumbers'
 import type { FeedPost, MemberLabel } from '@/lib/community'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { cn } from '@/lib/utils'
+import { FollowConfirm } from './FollowConfirm'
 
 const sb = supabase as any
 
@@ -43,28 +44,40 @@ export function FollowMemberButton({
   className?: string
 }) {
   const qc = useQueryClient()
+  const [asking, setAsking] = useState(false)
   const follow = useMutation({
     mutationFn: () => toggleFollow(memberId),
     onSuccess: (r) => {
       if (r.status !== 'ok') toast.error('You can’t follow this member right now.')
       qc.invalidateQueries({ queryKey: ['my-following-ids'] })
-      qc.invalidateQueries({ queryKey: ['member-summary', memberId] })
+      qc.invalidateQueries({ queryKey: ['member-summary'] })
+      qc.invalidateQueries({ queryKey: ['follow-list'] })
     },
     onError: () => toast.error('That didn’t work. Please try again.'),
   })
   return (
-    <button
-      type="button"
-      onClick={() => follow.mutate()}
-      disabled={follow.isPending}
-      className={cn(
-        'shrink-0 rounded-full border px-3 py-1 text-xs font-bold transition-colors disabled:opacity-60',
-        following ? 'border-border text-muted-foreground' : 'border-primary/40 text-primary hover:bg-primary/10',
-        className,
-      )}
-    >
-      {following ? 'Following' : 'Follow'}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => (following ? setAsking(true) : follow.mutate())}
+        disabled={follow.isPending}
+        className={cn(
+          'shrink-0 rounded-full border px-3 py-1 text-xs font-bold transition-colors disabled:opacity-60',
+          following ? 'border-border text-muted-foreground' : 'border-primary/40 text-primary hover:bg-primary/10',
+          className,
+        )}
+      >
+        {following ? 'Following' : 'Follow'}
+      </button>
+      <FollowConfirm
+        open={asking}
+        title="Unfollow this member?"
+        description="Their posts will stop showing in your Following feed. You can follow them again any time."
+        confirmLabel="Unfollow"
+        onConfirm={() => follow.mutate()}
+        onClose={() => setAsking(false)}
+      />
+    </>
   )
 }
 

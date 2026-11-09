@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { SEO } from '@/components/SEO'
 import { ReasonBadge } from '@/components/connect/ReasonBadge'
+import { FollowList } from '@/components/community/FollowList'
 import { useAuth } from '@/contexts/AuthContext'
 import { getMyPeople, type PeopleKind } from '@/lib/connect'
 import { isValidHttpUrl } from '@/lib/images'
@@ -83,7 +84,7 @@ export default function ConnectPeople() {
         </TabsList>
         {TABS.map((t) => (
           <TabsContent key={t.id} value={t.id}>
-            <People kind={t.id} empty={t.empty} />
+            {user && t.id !== 'photo_likes' ? <FollowList userId={user.id} kind={t.id} /> : <People kind={t.id} empty={t.empty} />}
           </TabsContent>
         ))}
       </Tabs>

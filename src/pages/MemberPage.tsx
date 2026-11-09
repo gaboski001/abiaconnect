@@ -147,8 +147,8 @@ export default function MemberPage() {
                   <span className="block text-[11px] text-muted-foreground">{s.label}</span>
                 </>
               )
-              return isSelf && (s.label === 'Followers' || s.label === 'Following') ? (
-                <Link key={s.label} to={`/relationship/people?tab=${s.label.toLowerCase()}`}>
+              return user && (s.label === 'Followers' || s.label === 'Following') ? (
+                <Link key={s.label} to={`/member/${userId}/follows?tab=${s.label.toLowerCase()}`} className="hover:opacity-80">
                   {body}
                 </Link>
               ) : (
