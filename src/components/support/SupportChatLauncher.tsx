@@ -15,7 +15,7 @@ export function openSupportChat() {
 }
 
 // Pages where a floating button would get in the way.
-const NO_BUTTON = [/^\/login/, /^\/register/, /^\/messages\/[^/]+/, /^\/live\/[^/]+/, /^\/call/]
+const NO_BUTTON = [/^\/login/, /^\/register/, /^\/messages/, /^\/live\/[^/]+/, /^\/call/]
 
 /** The Help button, and the chat once someone has opened it. */
 export function SupportChatLauncher() {

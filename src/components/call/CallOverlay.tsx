@@ -151,7 +151,7 @@ export function CallOverlay({ state }: { state: CallState }) {
         autoPlay
         playsInline
         muted
-        className={cn('absolute inset-0 h-full w-full object-cover', !showRemoteVideo && 'hidden')}
+        className={cn('absolute inset-0 h-full w-full object-cover md:object-contain', !showRemoteVideo && 'hidden')}
       />
       {showLocalFull ? (
         <video
@@ -269,7 +269,7 @@ export function CallOverlay({ state }: { state: CallState }) {
             playsInline
             muted
             className={cn(
-              'absolute right-4 top-[calc(max(env(safe-area-inset-top),1.25rem)+3.5rem)] h-40 w-28 rounded-2xl border border-white/20 object-cover shadow-2xl',
+              'absolute right-4 top-[calc(max(env(safe-area-inset-top),1.25rem)+3.5rem)] h-40 w-28 rounded-2xl border border-white/20 object-cover shadow-2xl md:right-6 md:h-44 md:w-72',
               state.facing === 'user' && '-scale-x-100',
             )}
           />
@@ -279,7 +279,7 @@ export function CallOverlay({ state }: { state: CallState }) {
 
         {/* Controls */}
         {state.status === 'ringing' ? (
-          <div className="px-8">
+          <div className="px-8 md:mx-auto md:w-full md:max-w-sm">
             <div className="flex items-start justify-between">
               <Control label="Decline" danger big onClick={() => callManager.reject()}>
                 <PhoneOff className="size-7" />
@@ -299,7 +299,7 @@ export function CallOverlay({ state }: { state: CallState }) {
             ) : null}
           </div>
         ) : inCall ? (
-          <div className="mx-4 rounded-[28px] bg-black/30 px-3 pb-4 pt-5 backdrop-blur-xl">
+          <div className="mx-4 rounded-[28px] bg-black/30 px-3 pb-4 pt-5 backdrop-blur-xl md:mx-auto md:w-full md:max-w-md">
             <div className="flex items-start justify-around">
               {speakerSwitchable ? (
                 <Control label="Speaker" active={state.speakerOn} onClick={() => callManager.setSpeaker(!state.speakerOn)}>

@@ -99,3 +99,30 @@ describe('MainLayout — no click-blocking overlay on route transitions', () => 
     expect(button).toBeInTheDocument()
   })
 })
+
+describe('MainLayout — website chat fills the screen', () => {
+  const at = (path: string) =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route element={<MainLayout />}>
+            <Route path="/messages" element={<h1>Inbox</h1>} />
+            <Route path="/messages/:id" element={<h1>Chat</h1>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+  it('drops the footer on the inbox but keeps the site header', () => {
+    at('/messages')
+    expect(screen.queryByTestId('footer')).not.toBeInTheDocument()
+    expect(screen.getByTestId('mobile-top-bar')).toBeInTheDocument()
+  })
+
+  it('gives an open chat the whole phone screen, so its own back button stays in view', () => {
+    at('/messages/abc')
+    expect(screen.getByText('Chat')).toBeInTheDocument()
+    expect(screen.queryByTestId('mobile-top-bar')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('footer')).not.toBeInTheDocument()
+  })
+})

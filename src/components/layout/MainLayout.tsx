@@ -49,9 +49,13 @@ export function MainLayout() {
   const isChatDetail = /^\/messages\/[^/]+/.test(location.pathname)
   const native = isNativeApp()
   const immersiveChat = isChatDetail && native
+  // Website chat fills the screen under the site header like an inbox app: no
+  // footer or page padding to scroll the chat header (and its back button)
+  // out of view. On phones an open chat also takes the site header's place.
+  const webChat = !native && /^\/messages(\/|$)/.test(location.pathname)
   // The app has no website footer: its links all live in the More menu.
-  const hideFooter = isAuthPage || native
-  const hideTopBar = isAuthPage || immersiveChat
+  const hideFooter = isAuthPage || native || webChat
+  const hideTopBar = isAuthPage || immersiveChat || (webChat && isChatDetail)
   // A live room has its own controls bar at the bottom (mic, raise hand, leave).
   const inLiveRoom = /^\/live\/[^/]+/.test(location.pathname)
   const hideBottomNav = isAuthPage || immersiveChat || inLiveRoom
@@ -75,10 +79,11 @@ export function MainLayout() {
 
       <main className="flex-1">
         {/* New members: where they are on the first 5 steps, on the pages the steps lead to. */}
-        {!hideTopBar && <StarterNextBar />}
+        {!hideTopBar && !webChat && <StarterNextBar />}
         <AnimatePresence mode="wait">
           <motion.div
-            key={location.pathname}
+            // Switching chats keeps the inbox in place instead of fading the whole page.
+            key={webChat ? '/messages' : location.pathname}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
@@ -86,7 +91,9 @@ export function MainLayout() {
             className={
               immersiveChat
                 ? 'h-[calc(100dvh-var(--kb-inset,0px))] transition-[height] duration-150'
-                : 'mx-auto max-w-[1248px] px-4 md:px-6 py-6 md:py-10 native:px-4 native:pb-[calc(7rem+env(safe-area-inset-bottom))] native:pt-4'
+                : webChat
+                  ? 'mx-auto w-full max-w-[1248px] md:px-6 md:py-4'
+                  : 'mx-auto max-w-[1248px] px-4 md:px-6 py-6 md:py-10 native:px-4 native:pb-[calc(7rem+env(safe-area-inset-bottom))] native:pt-4'
             }
           >
             <Outlet />

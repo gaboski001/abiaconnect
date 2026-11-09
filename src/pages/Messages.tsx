@@ -1,10 +1,11 @@
-import { FormEvent, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, lazy, type ReactNode, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { APP_HEADER_GRADIENT, GOLD_GRADIENT } from '@/lib/mobileBrand'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
 import {
   ArrowLeft,
+  MessageCircle,
   MessageSquarePlus,
   Search,
   Send,
@@ -285,9 +286,14 @@ function ConversationRow({
   return (
     <div
       className={cn(
-        'group relative flex items-start gap-3 px-3 py-3 border-l-4 hover:bg-muted/50 transition-colors',
-        'native:mx-3 native:mb-2.5 native:items-center native:rounded-2xl native:border-l-0 native:bg-card native:p-3 native:shadow-sm',
-        active ? 'border-secondary bg-secondary/5' : 'border-transparent',
+        'group relative flex gap-3 transition-colors',
+        native
+          ? cn(
+              'items-start px-3 py-3 border-l-4 hover:bg-muted/50',
+              'native:mx-3 native:mb-2.5 native:items-center native:rounded-2xl native:border-l-0 native:bg-card native:p-3 native:shadow-sm',
+              active ? 'border-secondary bg-secondary/5' : 'border-transparent',
+            )
+          : cn('mx-2 mb-0.5 items-center rounded-xl px-2.5 py-2.5', active ? 'bg-primary/10' : 'hover:bg-muted/70'),
       )}
     >
       <Link
@@ -297,7 +303,7 @@ function ConversationRow({
       />
       <div className="relative z-[1] pointer-events-none">
         <Avatar profile={c.other_user} size={native ? 'lg' : 'md'} />
-        {native && !!c.unread_count && (
+        {!!c.unread_count && (
           <span className="absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white ring-2 ring-card">
             {c.unread_count > 99 ? '99+' : c.unread_count}
           </span>
@@ -305,24 +311,18 @@ function ConversationRow({
       </div>
       <div className="relative z-[1] min-w-0 flex-1 pointer-events-none">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-semibold truncate flex items-center gap-1 native:text-[16px] native:font-bold">
+          <span className={cn('text-sm truncate flex items-center gap-1 native:text-[16px] native:font-bold', native || c.unread_count ? 'font-semibold' : 'font-medium')}>
             {pinned && <Pin className="h-3 w-3 text-muted-foreground shrink-0" />}
             {c.other_user?.display_name || c.other_user?.username || 'User'}
           </span>
-          <span className="text-[10px] text-muted-foreground shrink-0 native:text-[12px] native:font-medium">
-            {c.last_message_at &&
-              (native ? listTime(c.last_message_at) : formatDistanceToNow(new Date(c.last_message_at), { addSuffix: false }))}
+          <span className={cn('text-[11px] shrink-0 native:text-[12px] native:font-medium', !native && c.unread_count ? 'font-semibold text-primary' : 'text-muted-foreground')}>
+            {c.last_message_at && listTime(c.last_message_at)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <p className={cn('text-xs text-muted-foreground truncate native:mt-0.5 native:text-[14px]', !!c.unread_count && 'native:font-semibold native:text-foreground')}>
+          <p className={cn('text-[13px] text-muted-foreground truncate mt-0.5 native:text-[14px]', !!c.unread_count && 'font-semibold text-foreground')}>
             {previewText(c.last_message)}
           </p>
-          {!native && !!c.unread_count && (
-            <span className="text-[10px] font-bold bg-secondary text-secondary-foreground rounded-full px-1.5 min-w-[18px] text-center">
-              {c.unread_count}
-            </span>
-          )}
         </div>
       </div>
       <Popover open={menuOpen} onOpenChange={setMenuOpen}>
@@ -614,6 +614,10 @@ export default function Messages() {
   )
 
   const native = isNativeApp()
+  const unreadTotal = useMemo(
+    () => (convosQ.data ?? []).reduce((n, c) => n + (c.archived_at ? 0 : c.unread_count || 0), 0),
+    [convosQ.data],
+  )
   const newMessage = (
     <Dialog open={newOpen} onOpenChange={setNewOpen}>
       <DialogTrigger asChild>
@@ -627,8 +631,9 @@ export default function Messages() {
             <MessageSquarePlus className="size-6" />
           </button>
         ) : (
-          <Button size="icon" variant="ghost" aria-label="New message">
-            <MessageSquarePlus className="h-5 w-5" />
+          <Button size="sm" className="shrink-0 gap-1.5 rounded-full" aria-label="New message">
+            <MessageSquarePlus className="size-4" />
+            New
           </Button>
         )}
       </DialogTrigger>
@@ -639,14 +644,26 @@ export default function Messages() {
   return (
     <>
       <SEO title="Your Messages" description="View and manage your private conversations on AbiaConnect." path="/messages" />
-    <div className={cn('container mx-auto px-0 md:px-4 py-0 md:py-6', isNativeApp() && conversationId && 'h-full max-w-full p-0', isNativeApp() && !conversationId && '-mx-4 -mt-4 -mb-28 !w-auto !max-w-none')}>
-      <div className={cn('md:rounded-2xl md:border md:bg-card overflow-hidden flex bg-gradient-to-b from-background to-muted/30 transition-[height] duration-150', isNativeApp() && conversationId ? 'h-full md:h-[calc(100vh-8rem)]' : isNativeApp() ? 'h-[calc(100dvh-var(--kb-inset,0px)-7.5rem-env(safe-area-inset-bottom))]' : 'h-[calc(100dvh-var(--kb-inset,0px)-3.5rem)] md:h-[calc(100vh-8rem)]')}>
+    <div className={cn(native ? 'container mx-auto px-0 md:px-4 py-0 md:py-6' : 'w-full', native && conversationId && 'h-full max-w-full p-0', native && !conversationId && '-mx-4 -mt-4 -mb-28 !w-auto !max-w-none')}>
+      <div
+        className={cn(
+          'overflow-hidden flex transition-[height] duration-150',
+          native
+            ? cn('md:rounded-2xl md:border md:bg-card bg-gradient-to-b from-background to-muted/30', conversationId ? 'h-full md:h-[calc(100vh-8rem)]' : 'h-[calc(100dvh-var(--kb-inset,0px)-7.5rem-env(safe-area-inset-bottom))]')
+            : cn(
+                // Website: an inbox that exactly fills the screen under the site header.
+                'bg-card md:rounded-2xl md:border md:shadow-sm md:h-[calc(100dvh-6rem)]',
+                conversationId ? 'h-[calc(100dvh-var(--kb-inset,0px))]' : 'h-[calc(100dvh-3.5rem)]',
+              ),
+        )}
+      >
 
 
         {/* LEFT */}
         <aside
           className={cn(
-            'relative w-full md:w-80 border-r flex-col bg-background native:border-r-0',
+            'relative w-full flex-col bg-background native:border-r-0',
+            native ? 'md:w-80 border-r' : 'md:w-[340px] lg:w-[380px] md:border-r md:bg-muted/20',
             conversationId ? 'hidden md:flex' : 'flex',
           )}
         >
@@ -675,23 +692,48 @@ export default function Messages() {
               ))}
             </div>
           ) : (
-            <div className="p-4 border-b flex items-center justify-between gap-2">
-              <h1 className="text-lg font-bold">Messages</h1>
-              {newMessage}
+            <div className="space-y-3 px-4 pb-3 pt-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <h1 className="text-xl font-bold tracking-tight">Messages</h1>
+                  <p className="text-xs text-muted-foreground">
+                    {unreadTotal > 0 ? `${unreadTotal} unread` : 'Chats and calls with members'}
+                  </p>
+                </div>
+                {newMessage}
+              </div>
+              <div role="tablist" aria-label="Messages and calls" className="grid grid-cols-2 rounded-xl bg-muted p-1">
+                {(['chats', 'calls'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    role="tab"
+                    aria-selected={listTab === tab}
+                    onClick={() => setListTab(tab)}
+                    className={cn(
+                      'flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-sm font-medium transition-colors',
+                      listTab === tab ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {tab === 'chats' ? <MessageCircle className="size-4" /> : <Phone className="size-4" />}
+                    {tab === 'chats' ? 'Chats' : 'Calls'}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {listTab === 'calls' ? (
             <CallHistory conversations={convosQ.data ?? []} loading={convosQ.isLoading} />
           ) : (
             <>
-          <div className="p-3 border-b space-y-2 native:border-b-0">
+          <div className={cn('space-y-2', native ? 'p-3 border-b native:border-b-0' : 'px-4 pb-2')}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search conversations..."
-                className="pl-9 native:h-11 native:rounded-full native:border-0 native:bg-card native:shadow-sm"
+                className={cn('pl-9 native:h-11 native:rounded-full native:border-0 native:bg-card native:shadow-sm', !native && 'h-10 rounded-full border-0 bg-muted focus-visible:ring-1')}
               />
             </div>
             {archivedList.length > 0 && (
@@ -709,13 +751,9 @@ export default function Messages() {
           </div>
           <div className="flex-1 overflow-y-auto native:pb-24">
             {convosQ.isLoading ? (
-              native ? (
-                <ListSkeleton />
-              ) : (
-                <div className="p-4 text-sm text-muted-foreground">Loading…</div>
-              )
+              <ListSkeleton />
             ) : filteredConvos.length === 0 ? (
-              native && !showArchived && !search.trim() ? (
+              !showArchived && !search.trim() ? (
                 <div className="px-8 py-12 text-center">
                   <span className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-amber-500/15 text-amber-600 dark:text-amber-300">
                     <MessageSquarePlus className="size-8" />
@@ -758,11 +796,17 @@ export default function Messages() {
         >
           {!conversationId ? (
             <div className="flex-1 flex items-center justify-center text-center px-6">
-              <div>
-                <MessageSquarePlus className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                <p className="text-muted-foreground">
-                  Select a conversation to start messaging
+              <div className="max-w-sm">
+                <span className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+                  <MessageCircle className="size-8" />
+                </span>
+                <p className="mt-4 text-lg font-bold">Your messages</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Pick a chat on the left, or start a new one. You can also make voice and video calls from any chat.
                 </p>
+                <Button className="mt-5 gap-1.5 rounded-full" onClick={() => setNewOpen(true)}>
+                  <MessageSquarePlus className="size-4" /> New message
+                </Button>
               </div>
             </div>
           ) : (
@@ -1476,7 +1520,10 @@ function ConversationView({
 
   const native = isNativeApp()
   const otherName = other?.display_name || other?.username || 'user'
-  const toolClass = (tone: string) => (native ? cn('h-11 w-11 rounded-2xl transition-transform active:scale-90', tone) : undefined)
+  const toolClass = (tone: string) =>
+    native
+      ? cn('h-11 w-11 rounded-2xl transition-transform active:scale-90', tone)
+      : 'shrink-0 rounded-full text-muted-foreground hover:text-foreground'
   const toolButtons = (
     <>
           <input
@@ -1562,11 +1609,14 @@ function ConversationView({
         <Button
           variant="ghost"
           size="icon"
-          className={'md:hidden -ml-1 rounded-full'}
+          className={native ? 'md:hidden -ml-1 rounded-full' : '-ml-1 shrink-0 rounded-full'}
           onClick={onBack}
+          aria-label="Back to chats"
+          title="Back to chats"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
+        <HeaderIdentity to={!native && other?.id ? `/member/${other.id}` : null}>
         <Avatar profile={other} size="sm" />
         <div className="min-w-0 flex-1 leading-tight">
           <p className={'font-semibold text-sm truncate flex items-center gap-1.5 native:text-[16px] native:font-bold'}>
@@ -1586,6 +1636,31 @@ function ConversationView({
             <p className={cn('text-[11px] truncate', 'text-muted-foreground')}>@{other.username}</p>
           ) : null}
         </div>
+        </HeaderIdentity>
+        {!native && other?.id && (
+          <div className="flex shrink-0 items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full text-primary hover:bg-primary/10 hover:text-primary"
+              aria-label={`Voice call ${otherName}`}
+              title="Voice call"
+              onClick={() => startCallWith(other, conversationId, false)}
+            >
+              <Phone className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full text-primary hover:bg-primary/10 hover:text-primary"
+              aria-label={`Video call ${otherName}`}
+              title="Video call"
+              onClick={() => startCallWith(other, conversationId, true)}
+            >
+              <Video className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
         {other?.id && (
           <Popover>
             <PopoverTrigger asChild>
@@ -1831,12 +1906,13 @@ function ConversationView({
 
 
 
-      {native && <ChatSafetyNote />}
+      <ChatSafetyNote />
 
       <div
         ref={scrollRef}
         className={cn(
           'flex-1 overflow-y-auto px-3 md:px-4 py-4 space-y-5',
+          !native && 'bg-muted/30 md:px-6',
         )}
       >
 
@@ -1860,8 +1936,6 @@ function ConversationView({
                 const hasAttachment = !!(m.attachment_path || m.attachment_url)
                 const callInfo = parseCallLog(m.content)
                 if (callInfo) {
-                  // Hide call activity entirely on the web project.
-                  if (!isNativeApp()) return null
                   return (
                     <CallLogRow
                       key={m.id}
@@ -2132,7 +2206,12 @@ function ConversationView({
             />
           </div>
         )}
-        <div className="flex items-end gap-1.5">
+        <div
+          className={cn(
+            'flex items-end',
+            native ? 'gap-1.5' : 'gap-0.5 rounded-3xl border bg-background p-1.5 shadow-sm focus-within:ring-1 focus-within:ring-ring',
+          )}
+        >
           {!native && toolButtons}
           <Textarea
             ref={textareaRef}
@@ -2146,17 +2225,26 @@ function ConversationView({
             }}
             placeholder="Write a message..."
             rows={1}
-            className="native:min-h-[46px] native:rounded-3xl native:border-0 native:bg-muted native:px-4 native:py-3 native:text-[15px] resize-none min-h-[40px] max-h-32 rounded-2xl bg-background text-foreground placeholder:text-muted-foreground border border-input focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+            className={cn(
+              'native:min-h-[46px] native:rounded-3xl native:border-0 native:bg-muted native:px-4 native:py-3 native:text-[15px] resize-none min-h-[40px] max-h-32 rounded-2xl bg-background text-foreground placeholder:text-muted-foreground border border-input focus-visible:bg-background focus-visible:ring-1 focus-visible:ring-ring transition-colors',
+              !native && 'border-0 bg-transparent px-2 py-2.5 shadow-none focus-visible:bg-transparent focus-visible:ring-0',
+            )}
           />
           <Button
             type="submit"
             size="icon"
             disabled={!canSend}
-            className="native:size-[46px] native:bg-[#14532D] native:text-white rounded-full shadow-md active:scale-95 transition-transform disabled:opacity-40"
+            aria-label="Send message"
+            className="native:size-[46px] native:bg-[#14532D] native:text-white shrink-0 rounded-full shadow-md active:scale-95 transition-transform disabled:opacity-40"
           >
             <Send className="h-4 w-4" />
           </Button>
         </div>
+        {!native && (
+          <p className="hidden px-3 text-[11px] text-muted-foreground md:block">
+            Press Enter to send, Shift + Enter for a new line.
+          </p>
+        )}
         {native && (
           // While recording a voice note, its controls take the whole row.
           <div className="flex items-center justify-between gap-1 [.kb-open_&]:hidden [&:has([role=status])>*:not([role=status])]:hidden">
@@ -2355,6 +2443,20 @@ export function describeCall(info: CallLogInfo, mine: boolean) {
   }
 }
 
+/** Chat header name and photo; on the website they link to the member's profile. */
+function HeaderIdentity({ to, children }: { to: string | null; children: ReactNode }) {
+  if (!to) return <>{children}</>
+  return (
+    <Link
+      to={to}
+      title="View profile"
+      className="-my-1 flex min-w-0 flex-1 items-center gap-2 rounded-xl py-1 pr-2 transition-colors hover:bg-muted/60"
+    >
+      {children}
+    </Link>
+  )
+}
+
 async function startCallWith(other: Profile, conversationId: string, video: boolean) {
   try {
     await callManager.startCall(
@@ -2403,13 +2505,13 @@ function CallHistory({ conversations, loading }: { conversations: Conversation[]
           <Phone className="size-8" />
         </span>
         <p className="mt-4 text-[17px] font-bold">No calls yet</p>
-        <p className="mt-1 text-[14px] text-muted-foreground">Open a chat and tap the phone or video button to call.</p>
+        <p className="mt-1 text-[14px] text-muted-foreground">Open a chat and press the phone or video button to call.</p>
       </div>
     )
   }
 
   return (
-    <ul className="flex-1 space-y-2.5 overflow-y-auto px-3 pb-24 pt-3">
+    <ul className="flex-1 space-y-2.5 overflow-y-auto px-3 pb-4 pt-3 native:pb-24">
       {callsQ.data.map((row) => {
         const info = parseCallLog(row.content)
         const convo = conversations.find((c) => c.id === row.conversation_id)
@@ -2641,6 +2743,7 @@ function MessageBubble({
         }}
         className={cn(
           'relative max-w-[78%] rounded-2xl px-3.5 py-2 text-sm space-y-1.5 shadow-sm ring-1 select-none',
+          !native && 'md:max-w-[65%]',
           native
             ? mine
               ? 'bg-gradient-to-br from-[#1F7A45] to-[#14532D] text-white rounded-br-md ring-transparent text-[15px]'
