@@ -46,11 +46,24 @@ describe('SupportChat', () => {
     expect(screen.getAllByText('How do I change my profile picture?').length).toBeGreaterThan(1)
   })
 
-  it('has no floating button in the app, and opens from the More menu link', async () => {
+  it('opens from the More menu link in the app', async () => {
     native = true
     renderAt('/help?ask=1')
-    expect(screen.queryByRole('button', { name: 'Open the help chat' })).toBeNull()
     expect(await screen.findByLabelText('Your question')).toBeInTheDocument()
+  })
+
+  it('shows the movable button in the app too, starting above the bottom menu bar', () => {
+    native = true
+    localStorage.clear()
+    renderAt('/')
+    const button = screen.getByRole('button', { name: 'Open the help chat' })
+    expect(button.style.bottom).toBe('92px')
+  })
+
+  it('keeps out of the way in app chats', () => {
+    native = true
+    renderAt('/messages/abc')
+    expect(screen.queryByRole('button', { name: 'Open the help chat' })).toBeNull()
   })
 
   it('keeps out of the way in chats', async () => {

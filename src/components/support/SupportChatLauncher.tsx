@@ -34,7 +34,8 @@ export function SupportChatLauncher() {
   const [open, setOpen] = useState(false)
   // Once loaded, the chat stays mounted so the conversation is kept between opens.
   const [loaded, setLoaded] = useState(false)
-  const showButton = !isNativeApp() && !NO_BUTTON.some((re) => re.test(location.pathname))
+  const native = isNativeApp()
+  const showButton = !NO_BUTTON.some((re) => re.test(location.pathname))
 
   const show = (v: boolean) => {
     if (v) setLoaded(true)
@@ -59,11 +60,12 @@ export function SupportChatLauncher() {
 
   return (
     <>
-      {showButton ? (
+      {showButton && !native ? (
         // Room at the end of the page, so the last button can always scroll clear of Help.
+        // (App pages already leave room at the bottom for the menu bar.)
         <div aria-hidden className="h-20" />
       ) : null}
-      {showButton && !open ? <MovableHelpButton onOpen={() => show(true)} /> : null}
+      {showButton && !open ? <MovableHelpButton native={native} onOpen={() => show(true)} /> : null}
       {loaded ? (
         <Suspense fallback={null}>
           <SupportChat open={open} setOpen={show} />
@@ -80,14 +82,15 @@ const DRAG_START = 6 // Pixels a finger or mouse must move before it counts as a
 
 type Spot = { right: number; bottom: number }
 
-function readSpot(): Spot {
+function readSpot(native: boolean): Spot {
   try {
     const saved = JSON.parse(localStorage.getItem(SPOT_KEY) ?? 'null') as Spot | null
     if (saved && typeof saved.right === 'number' && typeof saved.bottom === 'number') return saved
   } catch {
     // Storage blocked: start in the usual corner.
   }
-  return { right: 24, bottom: 24 }
+  // In the app it starts just above the bottom menu bar, clear of its tabs.
+  return native ? { right: 16, bottom: 92 } : { right: 24, bottom: 24 }
 }
 
 /** Keeps the whole button on screen, e.g. after the window gets smaller. */
@@ -105,9 +108,9 @@ function clampSpot(spot: Spot, el: HTMLElement | null): Spot {
  * moves it anywhere on the screen, so it never has to sit on top of a button
  * the member needs. The spot is remembered on this device.
  */
-function MovableHelpButton({ onOpen }: { onOpen: () => void }) {
+function MovableHelpButton({ native, onOpen }: { native: boolean; onOpen: () => void }) {
   const ref = useRef<HTMLButtonElement | null>(null)
-  const [spot, setSpot] = useState<Spot>(readSpot)
+  const [spot, setSpot] = useState<Spot>(() => readSpot(native))
   const [dragging, setDragging] = useState(false)
   const drag = useRef<{ x: number; y: number; start: Spot; moved: boolean } | null>(null)
   // The click that ends a drag must not open the chat.
