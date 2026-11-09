@@ -112,7 +112,7 @@ export type Db = PGlite & {
   one: <T = Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<T>
   addUser: (opts?: { dating?: boolean; banned?: boolean; admin?: boolean }) => Promise<string>
   /** Run fn as a database role (e.g. 'authenticated'), always resetting afterwards. */
-  asRole: <T>(role: 'anon' | 'authenticated', fn: () => Promise<T>) => Promise<T>
+  asRole: <T>(role: 'anon' | 'authenticated' | 'service_role', fn: () => Promise<T>) => Promise<T>
 }
 
 export async function createMonetizationDb(): Promise<Db> {

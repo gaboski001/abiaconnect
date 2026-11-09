@@ -49,6 +49,7 @@ import AppReleasesSection from '@/components/admin/AppReleasesSection'
 import TestPushSection from '@/components/admin/TestPushSection'
 import BirthdaysTodaySection from '@/components/admin/BirthdaysTodaySection'
 import HelperRepliesSection from '@/components/admin/HelperRepliesSection'
+import BackupsSection from '@/components/admin/BackupsSection'
 import IssueReportsSection from '@/components/admin/IssueReportsSection'
 import MemberEmailsSection from '@/components/admin/MemberEmailsSection'
 import VolunteerApplicationsSection from '@/components/admin/VolunteerApplicationsSection'
@@ -80,6 +81,7 @@ type SectionId =
   | 'birthdays'
   | 'newsdesk'
   | 'helper-replies'
+  | 'backups'
   | 'ai'
   | 'problem-reports'
   | 'volunteers'
@@ -144,6 +146,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { id: 'settings', label: 'Site settings', hint: 'Site name, look, and features you can switch on or off.', Icon: Settings },
       { id: 'email', label: 'Emails', hint: 'Which emails members get and how they are sent.', Icon: Mail },
       { id: 'ai', label: 'Writing assistant', hint: 'The service that helps write posts and replies.', Icon: Bot },
+      { id: 'backups', label: 'Backups', hint: 'Nightly copies of the site in your own Cloudflare storage.', Icon: Save },
     ],
   },
 ]
@@ -320,6 +323,7 @@ export default function AdminDashboard() {
           {section === 'test-push' && <TestPushSection />}
           {section === 'birthdays' && <BirthdaysTodaySection />}
           {section === 'helper-replies' && <HelperRepliesSection />}
+          {section === 'backups' && <BackupsSection />}
           {section === 'newsdesk' && <NewsdeskSection />}
           {section === 'ai' && <AiProviderSection />}
           {section === 'problem-reports' && <IssueReportsSection />}

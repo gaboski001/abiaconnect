@@ -53,3 +53,5 @@ project_id = "tnwgnowjmrbjugheorkv"
     verify_jwt = false
   [functions.volunteer-decide]
     verify_jwt = true
+  [functions.offsite-backup]
+    verify_jwt = false

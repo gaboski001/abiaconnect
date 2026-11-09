@@ -27,7 +27,7 @@
       (function () {
         try {
           var host = window.location.hostname;
-          if (host.endsWith('.lovable.app') || host === 'www.abiaconnect.com') {
+          if (/\.app$/.test(host) || host === 'www.abiaconnect.com') {
             var target = 'https://abiaconnect.com' + window.location.pathname + window.location.search + window.location.hash;
             window.location.replace(target);
           }
