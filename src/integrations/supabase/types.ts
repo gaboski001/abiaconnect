@@ -212,6 +212,84 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_file_state: {
+        Row: {
+          bucket_id: string
+          copied_updated_at: string
+          name: string
+        }
+        Insert: {
+          bucket_id: string
+          copied_updated_at: string
+          name: string
+        }
+        Update: {
+          bucket_id?: string
+          copied_updated_at?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      backup_runs: {
+        Row: {
+          db_snapshot: string | null
+          error: string | null
+          files_copied: number
+          files_left: number | null
+          finished_at: string | null
+          id: number
+          ok: boolean | null
+          rows_saved: number
+          started_at: string
+          tables_saved: number
+        }
+        Insert: {
+          db_snapshot?: string | null
+          error?: string | null
+          files_copied?: number
+          files_left?: number | null
+          finished_at?: string | null
+          id?: number
+          ok?: boolean | null
+          rows_saved?: number
+          started_at?: string
+          tables_saved?: number
+        }
+        Update: {
+          db_snapshot?: string | null
+          error?: string | null
+          files_copied?: number
+          files_left?: number | null
+          finished_at?: string | null
+          id?: number
+          ok?: boolean | null
+          rows_saved?: number
+          started_at?: string
+          tables_saved?: number
+        }
+        Relationships: []
+      }
+      backup_settings: {
+        Row: {
+          enabled: boolean
+          id: boolean
+          skip_buckets: string[]
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          id?: boolean
+          skip_buckets?: string[]
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          id?: boolean
+          skip_buckets?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       birthday_wishes: {
         Row: {
           birthday_user: string
@@ -1278,6 +1356,104 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      helper_replies: {
+        Row: {
+          created_at: string
+          line_id: number | null
+          reply_id: string | null
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          line_id?: number | null
+          reply_id?: string | null
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          line_id?: number | null
+          reply_id?: string | null
+          thread_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "helper_replies_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      helper_reply_accounts: {
+        Row: {
+          added_at: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "helper_reply_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "helper_reply_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      helper_reply_lines: {
+        Row: {
+          id: number
+          line: string
+        }
+        Insert: {
+          id?: number
+          line: string
+        }
+        Update: {
+          id?: number
+          line?: string
+        }
+        Relationships: []
+      }
+      helper_reply_settings: {
+        Row: {
+          enabled: boolean
+          id: boolean
+          per_hour: number
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          id?: boolean
+          per_hour?: number
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          id?: boolean
+          per_hour?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       hero_slides: {
         Row: {
@@ -2382,6 +2558,8 @@ export type Database = {
       }
       newsdesk_settings: {
         Row: {
+          alternate_author_id: string | null
+          alternate_next: boolean
           author_id: string | null
           daily_total: number
           default_forum_limit: number
@@ -2396,6 +2574,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          alternate_author_id?: string | null
+          alternate_next?: boolean
           author_id?: string | null
           daily_total?: number
           default_forum_limit?: number
@@ -2410,6 +2590,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          alternate_author_id?: string | null
+          alternate_next?: boolean
           author_id?: string | null
           daily_total?: number
           default_forum_limit?: number
@@ -2424,6 +2606,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "newsdesk_settings_alternate_author_id_fkey"
+            columns: ["alternate_author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsdesk_settings_alternate_author_id_fkey"
+            columns: ["alternate_author_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "newsdesk_settings_author_id_fkey"
             columns: ["author_id"]
@@ -4327,6 +4523,7 @@ export type Database = {
           provider: string
         }[]
       }
+      admin_backup_status: { Args: never; Returns: Json }
       admin_birthday_coverage: { Args: never; Returns: Json }
       admin_birthdays_today: {
         Args: never
@@ -4373,6 +4570,11 @@ export type Database = {
           _user: string
         }
         Returns: string
+      }
+      admin_helper_replies: { Args: never; Returns: Json }
+      admin_helper_reply_account: {
+        Args: { _add: boolean; _user_id: string }
+        Returns: undefined
       }
       admin_list_trusted: {
         Args: never
@@ -4455,6 +4657,10 @@ export type Database = {
       }
       admin_set_group_champion: {
         Args: { _on: boolean; _subgroup: string; _user: string }
+        Returns: undefined
+      }
+      admin_set_helper_replies: {
+        Args: { _enabled: boolean; _per_hour?: number }
         Returns: undefined
       }
       admin_set_live_service: {
@@ -4540,6 +4746,31 @@ export type Database = {
         Args: { _amount: number; _reason: string; _ref: string; _user: string }
         Returns: number
       }
+      backup_auth_users: {
+        Args: { _limit?: number; _offset: number }
+        Returns: Json
+      }
+      backup_files_to_copy: {
+        Args: { _limit?: number }
+        Returns: {
+          bucket_id: string
+          mimetype: string
+          name: string
+          size: number
+          updated_at: string
+          waiting: number
+        }[]
+      }
+      backup_last_snapshot: { Args: never; Returns: string }
+      backup_mark_copied: {
+        Args: { _bucket: string; _name: string; _updated_at: string }
+        Returns: undefined
+      }
+      backup_table_page: {
+        Args: { _limit?: number; _offset: number; _table: string }
+        Returns: Json
+      }
+      backup_tables: { Args: never; Returns: string[] }
       birthday_ids_today: {
         Args: never
         Returns: {
@@ -4995,6 +5226,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      helper_replies_resting: { Args: never; Returns: boolean }
       html_text: { Args: { _s: string }; Returns: string }
       increment_thread_view: {
         Args: { _thread_id: string }
@@ -5153,6 +5385,12 @@ export type Database = {
         Returns: undefined
       }
       looks_like_intro: { Args: { _text: string }; Returns: boolean }
+      main_accounts_to_follow: {
+        Args: never
+        Returns: {
+          id: string
+        }[]
+      }
       mark_conversation_read: {
         Args: { _conversation_id: string }
         Returns: number
@@ -5160,6 +5398,25 @@ export type Database = {
       mark_message_read: { Args: { _message_id: string }; Returns: undefined }
       mask_payment_secret: { Args: { _value: string }; Returns: string }
       member_email_enabled: { Args: { _key: string }; Returns: boolean }
+      member_follow_list: {
+        Args: {
+          _kind: string
+          _limit?: number
+          _offset?: number
+          _q?: string
+          _user: string
+        }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          followed_at: string
+          follows_me: boolean
+          headline: string
+          i_follow: boolean
+          user_id: string
+          username: string
+        }[]
+      }
       member_labels: {
         Args: { _ids: string[] }
         Returns: {
@@ -5218,6 +5475,7 @@ export type Database = {
           title: string
         }[]
       }
+      my_following_ids: { Args: never; Returns: string[] }
       my_invite: { Args: never; Returns: Json }
       my_thread_ids: {
         Args: never
@@ -5363,6 +5621,7 @@ export type Database = {
       }
       redeem_subgroup_invite: { Args: { _token: string }; Returns: string }
       relationship_plans_enabled: { Args: never; Returns: boolean }
+      remove_follower: { Args: { _user: string }; Returns: boolean }
       remove_member_spotlight: { Args: { _id: string }; Returns: undefined }
       resolve_username_to_email: {
         Args: { _username: string }
@@ -5376,6 +5635,7 @@ export type Database = {
         Args: { _approve: boolean; _contest: string; _note?: string }
         Returns: undefined
       }
+      run_helper_replies: { Args: never; Returns: number }
       search_public_profiles: {
         Args: { _limit?: number; _term: string }
         Returns: {
