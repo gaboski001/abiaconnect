@@ -12,6 +12,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar'
 import { APP_HEADER_GRADIENT, GOLD_GRADIENT, GOLD_SHADOW } from '@/lib/mobileBrand'
 import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
 import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
+import { BirthdaysTodayCard } from '@/components/engagement/BirthdaysTodayCard'
 import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
 import { StarterSteps, useWelcomeRedirect } from '@/components/engagement/StarterSteps'
 import { daysSince, useJourney } from '@/lib/journey'
@@ -334,6 +335,7 @@ export function NativeHome() {
       {user ? (
         <section className="space-y-2 px-4 empty:hidden">
           <BirthdayGreeting />
+          <BirthdaysTodayCard />
           <AddBirthdayPrompt />
           <StarterSteps compact />
           <WaitingForReplyCard compact />

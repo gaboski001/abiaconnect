@@ -10,6 +10,7 @@ import { APP_HEADER_GRADIENT } from '@/lib/mobileBrand'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
+import { BirthdaysTodayCard } from '@/components/engagement/BirthdaysTodayCard'
 import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
 import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
 import { WaitingForReplyCard } from '@/components/engagement/WaitingForReplyCard'
@@ -112,6 +113,7 @@ export function NativeDashboard({ profile, stats, chartData, recentThreads }: Na
 
       <div className="space-y-2 px-3 empty:hidden">
         <BirthdayGreeting />
+        <BirthdaysTodayCard />
         <AddBirthdayPrompt />
       </div>
 

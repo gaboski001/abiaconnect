@@ -16,6 +16,7 @@ import { saveProfile, SEX_OPTIONS, MARITAL_STATUS_OPTIONS } from '@/lib/profileU
 import { BioField } from '@/components/profile/BioField'
 import { useAuth } from '@/contexts/AuthContext'
 import { ViewableAvatar } from '@/components/ui/ViewableAvatar'
+import { BirthdayShareSwitch } from '@/components/engagement/BirthdayShareSwitch'
 
 const SEX_LABELS: Record<string, string> = {
   male: 'Male',
@@ -220,26 +221,27 @@ export default function Profile() {
           Viewing <strong>{name}</strong>'s profile. You're not editing your own account.
         </div>
       )}
-      <section className="rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-start gap-4">
-          <ViewableAvatar avatarUrl={profile.avatar_url} displayName={name} size="xl" className="h-24 w-24" />
+      <section className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+        {/* On phones the photo sits on top so the details and the form get the full width. */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          <ViewableAvatar avatarUrl={profile.avatar_url} displayName={name} size="xl" className="h-24 w-24 shrink-0" />
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h1 className="text-2xl font-bold">{name}</h1>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h1 className="break-words text-2xl font-bold">{name}</h1>
                 {profile.username && (
                   <p className="text-sm text-muted-foreground">@{profile.username}</p>
                 )}
               </div>
               {isSelf && !editing && (
-                <Button asChild size="sm" variant="ghost">
-                  <Link to={`/member/${viewedId}`}>View my public page</Link>
-                </Button>
-              )}
-              {isSelf && !editing && (
-                <Button size="sm" variant="outline" onClick={startEdit}>
-                  <Pencil className="size-4" /> Edit Profile
-                </Button>
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+                  <Button size="sm" variant="outline" onClick={startEdit}>
+                    <Pencil className="size-4" /> Edit profile
+                  </Button>
+                  <Button asChild size="sm" variant="ghost">
+                    <Link to={`/member/${viewedId}`}>View public page</Link>
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -393,6 +395,12 @@ export default function Profile() {
                       onChange={(e) => setForm({ ...form, dob: e.target.value })}
                     />
                     <p className="text-xs text-muted-foreground">So AbiaConnect can wish you a happy birthday.</p>
+                    {isSelf && viewedId ? (
+                      <BirthdayShareSwitch
+                        userId={viewedId}
+                        initial={(profile as { share_birthday?: boolean }).share_birthday !== false}
+                      />
+                    ) : null}
                   </div>
                   <div className="space-y-1.5">
                     <Label>Sex</Label>
@@ -421,9 +429,9 @@ export default function Profile() {
                     </Select>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:flex">
                   <Button onClick={save}>Save</Button>
-                  <Button variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
+                  <Button variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
                 </div>
               </div>
             )}

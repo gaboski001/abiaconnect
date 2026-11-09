@@ -72,6 +72,7 @@ import { contestPhase, listContests } from '@/lib/engagement'
 import { useJourney } from '@/lib/journey'
 import { APP_HEADER_GRADIENT } from '@/lib/mobileBrand'
 import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
+import { BirthdaysTodayCard } from '@/components/engagement/BirthdaysTodayCard'
 import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
 import { deleteAttachmentPaths, extractAttachmentPaths } from '@/lib/threadAttachments'
 
@@ -400,6 +401,7 @@ function Overview({ userId, displayName, profile, stats, followers, chartData, r
         </section>
 
         <BirthdayGreeting />
+        <BirthdaysTodayCard />
         <AddBirthdayPrompt />
 
         {/* Announcements and promotions (managed by admins) */}

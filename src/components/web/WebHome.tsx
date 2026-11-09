@@ -8,6 +8,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar'
 import { HeroSlider } from '@/components/forum/HeroSlider'
 import { DailyRewardCard } from '@/components/engagement/DailyRewardCard'
 import { BirthdayGreeting } from '@/components/engagement/BirthdayGreeting'
+import { BirthdaysTodayCard } from '@/components/engagement/BirthdaysTodayCard'
 import { AddBirthdayPrompt } from '@/components/engagement/AddBirthdayPrompt'
 import { StarterSteps, useWelcomeRedirect } from '@/components/engagement/StarterSteps'
 import { OnlineMembersPill } from '@/components/engagement/LiveCommunity'
@@ -110,6 +111,7 @@ export function WebHome() {
       {user ? <LiveNowStrip /> : null}
       {user ? <StarterSteps /> : null}
       {user ? <BirthdayGreeting /> : null}
+      {user ? <BirthdaysTodayCard /> : null}
       {user ? <AddBirthdayPrompt /> : null}
 
       {/* Announcements and advertisements (managed by admins) */}

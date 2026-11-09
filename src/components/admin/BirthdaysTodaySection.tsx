@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { BirthdayWishDialog } from '@/components/engagement/BirthdayWishDialog'
 
 /** The server's reason for a refused request, e.g. "Too many runs, try again later". */
 async function functionErrorMessage(err: unknown): Promise<string> {
@@ -73,6 +74,7 @@ export default function BirthdaysTodaySection() {
     onError: (e: Error) => toast.error('Could not send greetings', { description: e.message }),
   })
 
+  const [wishing, setWishing] = useState<{ id: string; name: string } | null>(null)
   const rows = today.data ?? []
   const pending = rows.filter((r) => !r.greeted).length
 
@@ -99,6 +101,8 @@ export default function BirthdaysTodaySection() {
         <p className="text-sm text-muted-foreground">
           Greetings go out automatically at 07:00, 08:00 and 09:00, and straight away when a member saves a birthday that is
           today. "Send greetings now" only greets members who haven't been greeted yet; nobody is greeted twice.
+          Their followers are told it's their birthday, and everyone sees "Birthdays today" on their home screen to send
+          wishes. Your own wish shows first, as a wish from the AbiaConnect team.
         </p>
 
         {today.isLoading ? (
@@ -144,6 +148,14 @@ export default function BirthdaysTodaySection() {
                     {r.emailed ? <Mail className="size-3" /> : <MailX className="size-3" />}
                     {!r.has_email ? 'No email on file' : r.emailed ? 'Email sent' : 'Email not sent'}
                   </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() => setWishing({ id: r.user_id, name: r.display_name || r.username || 'Member' })}
+                  >
+                    🎂 Send the team’s wishes
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -157,6 +169,8 @@ export default function BirthdaysTodaySection() {
           </p>
         )}
       </section>
+
+      <BirthdayWishDialog person={wishing} asTeam onClose={() => setWishing(null)} />
 
       <SetMemberBirthday
         onSaved={() => {
