@@ -183,6 +183,13 @@
       "when": 1794207523320,
       "tag": "0025_contest_speed",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794207534626,
+      "tag": "0026_contest_prints_pdf_only",
+      "breakpoints": true
     }
   ]
 }
