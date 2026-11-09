@@ -212,6 +212,33 @@ export type Database = {
         }
         Relationships: []
       }
+      birthday_wishes: {
+        Row: {
+          birthday_user: string
+          created_at: string
+          from_team: boolean
+          from_user: string
+          message: string
+          year: number
+        }
+        Insert: {
+          birthday_user: string
+          created_at?: string
+          from_team?: boolean
+          from_user: string
+          message: string
+          year: number
+        }
+        Update: {
+          birthday_user?: string
+          created_at?: string
+          from_team?: boolean
+          from_user?: string
+          message?: string
+          year?: number
+        }
+        Relationships: []
+      }
       bookmarks: {
         Row: {
           created_at: string
@@ -2874,6 +2901,7 @@ export type Database = {
           reputation: number
           role: string | null
           sex: string | null
+          share_birthday: boolean
           updated_at: string
           username: string | null
         }
@@ -2903,6 +2931,7 @@ export type Database = {
           reputation?: number
           role?: string | null
           sex?: string | null
+          share_birthday?: boolean
           updated_at?: string
           username?: string | null
         }
@@ -2932,6 +2961,7 @@ export type Database = {
           reputation?: number
           role?: string | null
           sex?: string | null
+          share_birthday?: boolean
           updated_at?: string
           username?: string | null
         }
@@ -4510,7 +4540,15 @@ export type Database = {
         Args: { _amount: number; _reason: string; _ref: string; _user: string }
         Returns: number
       }
+      birthday_ids_today: {
+        Args: never
+        Returns: {
+          id: string
+        }[]
+      }
       birthday_is_today: { Args: { _dob: string }; Returns: boolean }
+      birthday_year_now: { Args: never; Returns: number }
+      birthdays_today: { Args: never; Returns: Json }
       can_review_community: { Args: { _user_id: string }; Returns: boolean }
       can_view_contest: {
         Args: { _contest: string; _uid: string }
@@ -4854,6 +4892,7 @@ export type Database = {
           reputation: number
           role: string | null
           sex: string | null
+          share_birthday: boolean
           updated_at: string
           username: string | null
         }[]
@@ -5167,6 +5206,7 @@ export type Database = {
         }[]
       }
       mod_undo: { Args: { _action: string }; Returns: undefined }
+      my_birthday_wishes: { Args: never; Returns: Json }
       my_community_submissions: {
         Args: never
         Returns: {
@@ -5345,6 +5385,10 @@ export type Database = {
           username: string
         }[]
       }
+      send_birthday_wish: {
+        Args: { _message: string; _to: string }
+        Returns: Json
+      }
       send_daily_nudges: { Args: never; Returns: number }
       send_newcomer_nudges: { Args: never; Returns: number }
       set_best_answer: {
@@ -5363,6 +5407,7 @@ export type Database = {
         Args: { _incognito?: boolean; _message_privacy?: string }
         Returns: Json
       }
+      set_share_birthday: { Args: { _on: boolean }; Returns: boolean }
       share_thread_to_facebook: {
         Args: { _thread_id: string }
         Returns: string
