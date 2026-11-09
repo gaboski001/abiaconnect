@@ -169,6 +169,13 @@
       "when": 1794205738142,
       "tag": "0023_contest_results_no_job",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794205766217,
+      "tag": "0024_contest_prints_bucket",
+      "breakpoints": true
     }
   ]
 }
