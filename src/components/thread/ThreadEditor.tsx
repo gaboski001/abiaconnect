@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
@@ -83,7 +83,7 @@ function webAddress(raw: string, allowMail = false): string | null {
  * - Session upload paths are auto-purged if the composer is discarded or an
  *   image is removed from the doc (matches the existing thread-attachments flow).
  */
-export function ThreadEditor({
+function ThreadEditorInner({
   value, onChange, placeholder = 'Start writing here…',
   minHeight = 320, autoFocus,
 }: Props) {
@@ -557,4 +557,64 @@ function Sep() {
 }
 
 // Expose editor ref for future callers if needed
+/**
+ * The story editor, with its own safety net. If the editor ever fails while it
+ * is starting (it has, on slow phones), it quietly starts again instead of the
+ * whole page falling to the error screen. The member's text is kept, because
+ * the page holds it, not the editor.
+ */
+export function ThreadEditor(props: Props) {
+  const [attempt, setAttempt] = useState(0)
+  return (
+    <EditorSafetyNet
+      attempt={attempt}
+      onRetry={() => setAttempt((n) => n + 1)}
+      minHeight={props.minHeight}
+    >
+      <ThreadEditorInner key={attempt} {...props} />
+    </EditorSafetyNet>
+  )
+}
+
+class EditorSafetyNet extends Component<
+  { attempt: number; onRetry: () => void; minHeight?: number; children: ReactNode },
+  { failedAt: number | null }
+> {
+  state = { failedAt: null as number | null }
+
+  static getDerivedStateFromError() {
+    return { failedAt: -1 }
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('Story editor error', error)
+    const { attempt, onRetry } = this.props
+    this.setState({ failedAt: attempt })
+    // First failures: start the editor again straight away.
+    if (attempt < 2) window.setTimeout(onRetry, 50)
+  }
+
+  componentDidUpdate(prev: { attempt: number }) {
+    if (prev.attempt !== this.props.attempt && this.state.failedAt !== null) this.setState({ failedAt: null })
+  }
+
+  render() {
+    if (this.state.failedAt === null) return this.props.children
+    if (this.props.attempt < 2) {
+      return <div className="rounded-2xl border border-input bg-card animate-pulse" style={{ minHeight: this.props.minHeight ?? 320 }} />
+    }
+    return (
+      <div
+        className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-input bg-card p-6 text-center text-sm"
+        style={{ minHeight: this.props.minHeight ?? 320 }}
+      >
+        <p className="text-muted-foreground">The writing box didn’t load properly. Your text is safe.</p>
+        <button type="button" onClick={this.props.onRetry} className="rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground">
+          Try again
+        </button>
+      </div>
+    )
+  }
+}
+
 export type { Editor }

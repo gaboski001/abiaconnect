@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNowStrict } from 'date-fns'
@@ -6,6 +6,7 @@ import {
   Award,
   CheckCircle2,
   Copy,
+  FileDown,
   Globe,
   KeyRound,
   Lock,
@@ -34,8 +35,8 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
 import { PrintSheet, printSheet } from '@/components/contests/PrintSheet'
+import { certificatePages, clearContestPrints, pdfName, savePdf, slipPages } from '@/lib/contestPdf'
 import {
-  announceContestResults,
   cancelContest,
   castContestBallot,
   engagementErrorText,
@@ -89,15 +90,12 @@ export default function ContestDetail() {
     onError: (e) => toast.error(engagementErrorText(e)),
   })
 
-  // Voting has closed: make sure the group hears about the results.
-  const announced = useRef(false)
   const d = q.data
+  // In the app, ballot-slip PDFs are kept only briefly: tidy any left from last time.
+  const managing = !!d?.is_manager
   useEffect(() => {
-    if (d && d.phase === 'closed' && !d.results_announced_at && !announced.current) {
-      announced.current = true
-      void announceContestResults(d.id).catch(() => undefined)
-    }
-  }, [d])
+    if (managing && user && isNativeApp()) void clearContestPrints(user.id).catch(() => undefined)
+  }, [managing, user])
 
   if (loading || q.isLoading) return <div className="mx-auto h-64 max-w-3xl animate-pulse rounded-2xl bg-muted" />
   if (q.isError || !d) {
@@ -476,9 +474,13 @@ function Certificate({
       <div className="mt-3 flex flex-wrap gap-2">
         {!native ? (
           <Button size="sm" variant="outline" className="h-9 rounded-xl" onClick={() => printSheet('certificate')}>
-            <Printer className="size-4" /> Print or save certificate
+            <Printer className="size-4" /> Print certificate
           </Button>
         ) : null}
+        <PdfButton
+          label="Save certificate as PDF"
+          make={() => savePdf(certificatePages(c, groups, votesFor), pdfName(c.title, 'results'))}
+        />
         <Button size="sm" variant="outline" className="h-9 rounded-xl" onClick={onShare}>
           <Share2 className="size-4" /> Share results
         </Button>
@@ -532,6 +534,27 @@ function Certificate({
         </div>
       </PrintSheet>
     </section>
+  )
+}
+
+/** Makes a PDF. In the app it opens in the phone's PDF viewer to save, print or share. */
+function PdfButton({ label, make, size = 'sm' }: { label: string; make: () => Promise<void>; size?: 'sm' | 'default' }) {
+  const [busy, setBusy] = useState(false)
+  const go = async () => {
+    setBusy(true)
+    try {
+      await make()
+      if (isNativeApp()) toast.success('Opening your PDF. From there you can save, print or share it.')
+    } catch {
+      toast.error('Could not make the PDF. Please try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Button size={size} variant="outline" className={cn('rounded-xl', size === 'sm' ? 'h-9' : 'h-10')} onClick={go} disabled={busy}>
+      <FileDown className="size-4" /> {busy ? 'Making PDF…' : label}
+    </Button>
   )
 }
 
@@ -660,6 +683,11 @@ function ManagerTools({ c, onChange }: { c: Detail; onChange: () => void }) {
                     <Printer className="size-4" /> Print ballot slips
                   </Button>
                 ) : null}
+                <PdfButton
+                  label="Save slips as PDF"
+                  size="default"
+                  make={() => savePdf(slipPages(c, codes), pdfName(c.title, 'ballot-slips'))}
+                />
               </div>
               <PrintSheet id="slips">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, fontFamily: 'Arial, sans-serif' }}>

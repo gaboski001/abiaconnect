@@ -123,6 +123,7 @@ const MIGRATIONS = [
   '20261001210000_security_review_fixes.sql',
   '20261002100000_restrict_member_stats_badges.sql',
   '20261109100000_contests_elections.sql',
+  '20261109120000_contest_results_no_job.sql',
 ]
 
 export type ForumDb = PGlite & {

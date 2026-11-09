@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from '@/lib/supabase'
 import { toast } from '@/lib/toast'
+import { openExternal } from '@/lib/openExternal'
 
 export type DownloadStatus =
   | 'idle'
@@ -43,35 +44,6 @@ const initial: DownloadState = {
   error: null,
   installFilename: null,
   permissionRequired: false,
-}
-
-async function openExternal(url: string) {
-  if (Capacitor.isNativePlatform()) {
-    try {
-      const mod = '@capacitor/' + 'browser'
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const m: any = await new Function('x', 'return import(x)')(mod)
-      if (m?.Browser?.open) {
-        await m.Browser.open({ url })
-        return
-      }
-    } catch {
-      /* fall through */
-    }
-    try {
-      const w = window.open(url, '_system')
-      if (w) return
-    } catch {
-      /* fall through */
-    }
-  }
-  const a = document.createElement('a')
-  a.href = url
-  a.target = '_blank'
-  a.rel = 'noopener noreferrer'
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
 }
 
 function triggerBlobDownload(blob: Blob, filename: string) {

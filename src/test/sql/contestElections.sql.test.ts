@@ -191,6 +191,18 @@ describe('contest elections', () => {
     expect(await db.asMember(member, () => db.one<{ ok: boolean }>(`SELECT announce_contest_results($1) AS ok`, [id]))).toEqual({ ok: false })
   })
 
+  it('opening a closed contest announces the results straight away, once', async () => {
+    const id = await create(admin)
+    const c = await view(member, id)
+    await ballot(member, id, ['Ada'], c)
+    await db.query(`UPDATE contests SET ends_at = now() - interval '1 minute' WHERE id = $1`, [id])
+    const opened = await view(outsider, id).catch(() => view(member, id))
+    expect(opened.results_announced_at).toBeTruthy()
+    await view(member, id)
+    const told = await db.one<{ n: number }>(`SELECT count(*)::int AS n FROM notifications WHERE user_id = $1 AND message LIKE 'Results are out%'`, [member])
+    expect(told.n).toBe(1)
+  })
+
   it('old contests keep working as one position', async () => {
     const id = await db
       .asMember(admin, () =>

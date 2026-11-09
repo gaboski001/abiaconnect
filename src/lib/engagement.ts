@@ -330,11 +330,6 @@ export async function castContestBallot(id: string, candidateIds: string[], code
   if (error) throw error
 }
 
-/** Sends the "Results are out" notifications if nobody has yet. Safe to repeat. */
-export async function announceContestResults(id: string) {
-  await rpc('announce_contest_results', { _contest: id })
-}
-
 export async function reviewContest(id: string, approve: boolean, note?: string) {
   const { error } = await rpc('review_contest', { _contest: id, _approve: approve, _note: note ?? null })
   if (error) throw error

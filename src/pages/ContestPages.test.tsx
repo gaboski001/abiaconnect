@@ -27,6 +27,14 @@ vi.mock('@/contexts/AuthContext', () => ({
 vi.mock('@/components/SEO', () => ({ SEO: () => null }))
 vi.mock('@/components/mobile/NativeAuthLayout', () => ({ isNativeApp: () => false }))
 vi.mock('@/lib/toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+const savePdf = vi.fn(async () => {})
+vi.mock('@/lib/contestPdf', async (orig) => ({
+  ...(await orig<typeof import('@/lib/contestPdf')>()),
+  certificatePages: () => ['page'],
+  slipPages: () => ['page'],
+  savePdf: (...a: unknown[]) => savePdf(...(a as [])),
+  clearContestPrints: async () => {},
+}))
 
 import ContestDetail from './ContestDetail'
 import ContestNew from './ContestNew'
@@ -146,7 +154,7 @@ describe('Contest page', () => {
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login')
   })
 
-  it('shows the official result and announces it when voting has closed', async () => {
+  it('shows the official result, with print and PDF, when voting has closed', async () => {
     rpc.mockImplementation(async (fn: string) =>
       fn === 'get_contest'
         ? {
@@ -168,8 +176,9 @@ describe('Contest page', () => {
     expect(await screen.findByText('Official result')).toBeInTheDocument()
     expect(screen.getByText('Ada (9)')).toBeInTheDocument()
     expect(screen.getByText(/Obi \(7\) · tie to settle/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Print or save certificate/ })).toBeInTheDocument()
-    await waitFor(() => expect(rpc).toHaveBeenCalledWith('announce_contest_results', { _contest: 'c1' }))
+    expect(screen.getByRole('button', { name: /Print certificate/ })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Save certificate as PDF/ }))
+    await waitFor(() => expect(savePdf).toHaveBeenCalledWith(['page'], 'bende-union-executive-2026-results.pdf'))
   })
 })
 
