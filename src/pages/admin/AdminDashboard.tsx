@@ -48,6 +48,7 @@ import { Image as ImageIcon } from 'lucide-react'
 import AppReleasesSection from '@/components/admin/AppReleasesSection'
 import TestPushSection from '@/components/admin/TestPushSection'
 import BirthdaysTodaySection from '@/components/admin/BirthdaysTodaySection'
+import HelperRepliesSection from '@/components/admin/HelperRepliesSection'
 import IssueReportsSection from '@/components/admin/IssueReportsSection'
 import MemberEmailsSection from '@/components/admin/MemberEmailsSection'
 import VolunteerApplicationsSection from '@/components/admin/VolunteerApplicationsSection'
@@ -78,6 +79,7 @@ type SectionId =
   | 'test-push'
   | 'birthdays'
   | 'newsdesk'
+  | 'helper-replies'
   | 'ai'
   | 'problem-reports'
   | 'volunteers'
@@ -121,6 +123,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { id: 'subgroups', label: 'Groups', hint: 'Community groups, their owners and members.', Icon: Shield },
       { id: 'polls', label: 'Polls', hint: 'Create, close or remove polls.', Icon: Vote },
       { id: 'newsdesk', label: 'Newsdesk bot', hint: 'Automatic news posts: sources and timing.', Icon: Newspaper },
+      { id: 'helper-replies', label: 'Helper replies', hint: 'Your own accounts reply to new posts to get conversations going. Turn off any time.', Icon: MessageSquare },
     ],
   },
   {
@@ -316,6 +319,7 @@ export default function AdminDashboard() {
           {section === 'native-apps' && <AppReleasesSection />}
           {section === 'test-push' && <TestPushSection />}
           {section === 'birthdays' && <BirthdaysTodaySection />}
+          {section === 'helper-replies' && <HelperRepliesSection />}
           {section === 'newsdesk' && <NewsdeskSection />}
           {section === 'ai' && <AiProviderSection />}
           {section === 'problem-reports' && <IssueReportsSection />}
