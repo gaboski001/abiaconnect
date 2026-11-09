@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { toast } from '@/lib/toast'
 import { useAuth } from '@/contexts/AuthContext'
@@ -160,13 +160,17 @@ export function GoogleSignInButton({
 export function GoogleSignInLanding() {
   const { session, loading } = useAuth()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const [appSignedIn, setAppSignedIn] = useState(false)
 
   // The installed app: pick up a sign-in the browser handed back.
   useEffect(() => {
     if (!canUseNativeGoogle()) return
     const finish = async () => {
       const result = await finishNativeGoogle()
-      if (result === 'failed') toast.error('Google sign-in didn’t work. Please try again.')
+      if (result === 'signed-in') setAppSignedIn(true)
+      else if (result === 'failed') toast.error('Google sign-in didn’t work. Please try again.')
+      else if (result === 'rejected') toast.error('That Google sign-in took too long. Please tap “Continue with Google” again.')
     }
     void finish()
     window.addEventListener(GOOGLE_RETURN_EVENT, finish)
@@ -175,9 +179,13 @@ export function GoogleSignInLanding() {
 
   useEffect(() => {
     if (loading || !session) return
+    // In the app the sign-in finishes on the login screen itself (the website
+    // comes back to the home page instead), so it must move the member on.
+    const onAuthPage = /^\/(login|register)(\/|$)/.test(pathname)
     const path = takeGoogleReturnTo()
-    if (path && path !== '/') navigate(path, { replace: true })
-  }, [loading, session, navigate])
+    if (path && (path !== '/' || onAuthPage)) navigate(path, { replace: true })
+    else if (!path && appSignedIn && onAuthPage) navigate('/', { replace: true })
+  }, [loading, session, navigate, pathname, appSignedIn])
 
   return null
 }

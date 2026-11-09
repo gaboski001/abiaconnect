@@ -14,8 +14,19 @@ export function openSupportChat() {
   window.dispatchEvent(new Event(OPEN_EVENT))
 }
 
-// Pages where a floating button would get in the way.
-const NO_BUTTON = [/^\/login/, /^\/register/, /^\/messages/, /^\/live\/[^/]+/, /^\/call/]
+// Pages where a floating button would get in the way: chats, live rooms and
+// step-by-step forms whose Next / Post buttons sit at the bottom of the screen.
+const NO_BUTTON = [
+  /^\/login/,
+  /^\/register/,
+  /^\/messages/,
+  /^\/live\/[^/]+/,
+  /^\/call/,
+  /^\/welcome/,
+  /^\/create-thread/,
+  /^\/contests\/new/,
+  /^\/relationship\/edit/,
+]
 
 /** The Help button, and the chat once someone has opened it. */
 export function SupportChatLauncher() {
@@ -48,13 +59,20 @@ export function SupportChatLauncher() {
 
   return (
     <>
+      {showButton ? (
+        // Room at the end of the page, so the last button can always scroll clear of Help.
+        <div aria-hidden className="h-20" />
+      ) : null}
       {showButton && !open ? (
         <Button
           onClick={() => show(true)}
-          className="fixed bottom-6 right-6 z-50 h-12 gap-2 rounded-full px-4 shadow-lg"
+          // Below pop-up windows (z-50), so it never covers their buttons; a
+          // small round button on phones, with its label on wider screens.
+          className="fixed bottom-4 right-4 z-40 size-12 gap-2 rounded-full p-0 shadow-lg sm:bottom-6 sm:right-6 sm:w-auto sm:px-4"
           aria-label="Open the help chat"
+          title="Help"
         >
-          <HelpCircle className="size-5" /> Help
+          <HelpCircle className="size-5" /> <span className="hidden sm:inline">Help</span>
         </Button>
       ) : null}
       {loaded ? (

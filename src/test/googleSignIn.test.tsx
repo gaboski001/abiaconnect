@@ -32,6 +32,7 @@ function renderAuth(ui: React.ReactNode, initialPath = '/') {
         <Route path="/" element={<Where />} />
         <Route path="/dashboard" element={<Where />} />
         <Route path="/welcome" element={<Where />} />
+        <Route path="/login" element={<Where />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -105,6 +106,20 @@ describe('returning from Google', () => {
     const { getByTestId } = renderAuth(<GoogleSignInLanding />)
     await waitFor(() => expect(getByTestId('where').textContent).toBe('/dashboard'))
     expect(sessionStorage.getItem(GOOGLE_RETURN_KEY)).toBeNull()
+  })
+
+  it('moves the member off the login screen when Google signs them in there (the app)', async () => {
+    auth.session = { user: { id: 'u1' } }
+    rememberGoogleReturnTo('/')
+    const { getByTestId } = renderAuth(<GoogleSignInLanding />, '/login')
+    await waitFor(() => expect(getByTestId('where').textContent).toBe('/'))
+  })
+
+  it('leaves a signed-in member on the login screen alone when no Google sign-in is under way', async () => {
+    auth.session = { user: { id: 'u1' } }
+    const { getByTestId } = renderAuth(<GoogleSignInLanding />, '/login')
+    await new Promise((r) => setTimeout(r, 30))
+    expect(getByTestId('where').textContent).toBe('/login')
   })
 
   it('waits while no session exists yet', async () => {

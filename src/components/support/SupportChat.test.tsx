@@ -58,4 +58,13 @@ describe('SupportChat', () => {
     renderAt('/messages/abc')
     expect(screen.queryByRole('button', { name: 'Open the help chat' })).toBeNull()
   })
+
+  it.each(['/welcome', '/create-thread', '/contests/new', '/relationship/edit'])(
+    'stays off step-by-step and form pages so it cannot cover Next or Post (%s)',
+    (path) => {
+      native = false
+      renderAt(path)
+      expect(screen.queryByRole('button', { name: 'Open the help chat' })).toBeNull()
+    },
+  )
 })
