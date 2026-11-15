@@ -3,12 +3,7 @@ import { Button } from '@/components/ui/button'
 import StaticPage from '@/components/layout/StaticPage'
 
 const TEAM = [
-  { name: 'Okechukwu Gabriel E.', role: 'Founder and Platform Lead', lga: 'Abia State', bio: 'Gabriel has spent 12 years in software product development across Lagos and London. He returned his skills to his roots by founding AbiaConnect in 2024.' },
-  { name: 'Adaeze Nwosu', role: 'Community Manager', lga: 'Aba South', bio: 'Ada oversees community health, member support, and moderation policy. She previously managed online communities for two Nigerian media companies.' },
-  { name: 'Ikechukwu Eze', role: 'Lead Developer', lga: 'Bende', bio: 'Ike architected the AbiaConnect platform infrastructure. He is a full-stack engineer with experience at startups in Lagos and Nairobi.' },
-  { name: 'Ngozi Obi', role: 'Content and Communications', lga: 'Ohafia', bio: "Ngozi leads editorial strategy, ensuring AbiaConnect's voice is warm, credible, and authentically Abian." },
-  { name: 'Obinna Kalu', role: 'Partnerships and Business', lga: 'Arochukwu', bio: 'Obinna connects AbiaConnect with businesses, NGOs, and government agencies to bring real opportunities to the community.' },
-  { name: 'Chioma Iheme', role: 'Design Lead', lga: 'Isiala Ngwa North', bio: "Chioma is responsible for AbiaConnect's visual identity — every pixel reflects her commitment to an interface that feels both modern and deeply Nigerian." },
+  { name: 'Okechukwu Gabriel E.', role: 'Founder and CEO', lga: 'Abia State', bio: 'Gabriel founded AbiaConnect, registered in Nigeria in 2021, and designed and built the platform himself: the website, the Android app and the community tools. He also built AbiaConnect Store and FlowSocial.' },
 ]
 
 export default function Team() {
@@ -19,10 +14,9 @@ export default function Team() {
       subtitle="The people committed to building and maintaining this community."
     >
       <p>
-        AbiaConnect is powered by a passionate team of Abia indigenes who volunteered their skills,
-        time, and resources to build something lasting for our people. We come from different LGAs,
-        different professions, and different parts of the world — united by a shared love for Abia
-        State.
+        AbiaConnect was founded and built by Okechukwu Gabriel E. and is growing with the help of
+        Abians who give their time and skills to build something lasting for our people. If you
+        share that love for Abia State, there is a place for you on the team.
       </p>
 
       <div className="not-prose grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-8">
