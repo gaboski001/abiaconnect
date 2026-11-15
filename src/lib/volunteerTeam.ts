@@ -128,6 +128,9 @@ export interface TeamMember {
   role: TeamRole
   created_at: string
   from_application: boolean
+  /** The intro on the public Team page; null means the role's own line is used. */
+  intro: string | null
+  show_on_team: boolean
 }
 
 export async function fetchTeam(): Promise<TeamMember[]> {
@@ -142,6 +145,42 @@ export async function setTeamRole(userId: string, role: TeamRole | null) {
   if (error) throw new Error(teamError(error))
 }
 
+/** The intro shown on /team until an admin writes one. Same lines as team_default_intro in the database. */
+export const TEAM_DEFAULT_INTRO: Record<TeamRole, string> = {
+  moderator: 'Keeps our discussions friendly and safe by reviewing reported posts.',
+  writer: "Helps share members' success stories, events and Member of the Month.",
+  social: "Helps tell the AbiaConnect story on social media and shares members' success stories.",
+  connector: 'Welcomes new members and helps their local group grow.',
+  developer: 'Helps build and improve the AbiaConnect website and app.',
+  other: 'Gives time and skills to help the AbiaConnect community grow.',
+}
+
+export const TEAM_INTRO_MAX = 300
+
+/** Admin: the intro on /team (empty uses the role's line) and whether they show there. */
+export async function setTeamProfile(userId: string, intro: string, show: boolean) {
+  const { error } = await sb.rpc('admin_set_team_profile', { _user: userId, _intro: intro, _show: show })
+  if (error) throw new Error(teamError(error))
+}
+
+// ---- Public: the Team page ----
+
+export interface PublicTeamMember {
+  display_name: string
+  username: string | null
+  avatar_url: string | null
+  role: TeamRole
+  intro: string
+  joined_at: string
+}
+
+/** The volunteers shown on /team. Before the database update runs, nobody. */
+export async function fetchPublicTeam(): Promise<PublicTeamMember[]> {
+  const { data, error } = await sb.rpc('public_team')
+  if (error) return []
+  return (data ?? []) as PublicTeamMember[]
+}
+
 const MESSAGES: Record<string, string> = {
   not_allowed: 'This is only for the volunteer team.',
   not_admin: 'Only admins can do this.',
@@ -151,6 +190,7 @@ const MESSAGES: Record<string, string> = {
   already_undone: 'This was already put back.',
   not_found: 'This post or report no longer exists.',
   role_invalid: 'Unknown role.',
+  intro_too_long: 'Please keep the intro to 300 characters.',
 }
 
 export function teamError(error: { message?: string } | null | undefined): string {

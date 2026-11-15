@@ -1,12 +1,38 @@
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
+import { UserAvatar } from '@/components/ui/UserAvatar'
 import StaticPage from '@/components/layout/StaticPage'
+import { fetchPublicTeam, TEAM_ROLE_NAMES } from '@/lib/volunteerTeam'
 
-const TEAM = [
-  { name: 'Okechukwu Gabriel E.', role: 'Founder and CEO', lga: 'Abia State', bio: 'Gabriel founded AbiaConnect, registered in Nigeria in 2021, and designed and built the platform himself: the website, the Android app and the community tools. He also built AbiaConnect Store and FlowSocial.' },
+interface Card {
+  name: string
+  role: string
+  tag: string
+  bio: string
+  avatarUrl?: string | null
+  username?: string | null
+}
+
+const FOUNDER: Card[] = [
+  { name: 'Okechukwu Gabriel E.', role: 'Founder and CEO', tag: 'Abia State', bio: 'Gabriel founded AbiaConnect, registered in Nigeria in 2021, and designed and built the platform himself: the website, the Android app and the community tools. He also built AbiaConnect Store and FlowSocial.' },
 ]
 
 export default function Team() {
+  // Approved volunteers appear here as soon as they join; removed ones disappear.
+  const volunteers = useQuery({ queryKey: ['public-team'], queryFn: fetchPublicTeam, staleTime: 5 * 60_000 })
+  const team: Card[] = [
+    ...FOUNDER,
+    ...(volunteers.data ?? []).map((v) => ({
+      name: v.display_name,
+      role: TEAM_ROLE_NAMES[v.role] ?? 'Volunteer',
+      tag: 'Volunteer',
+      bio: v.intro,
+      avatarUrl: v.avatar_url,
+      username: v.username,
+    })),
+  ]
+
   return (
     <StaticPage
       badge="The People"
@@ -20,19 +46,23 @@ export default function Team() {
       </p>
 
       <div className="not-prose grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-8">
-        {TEAM.map((m) => (
-          <div key={m.name} className="bg-card border border-border rounded-2xl p-6 hover:border-secondary/40 transition-colors">
+        {team.map((m) => (
+          <div key={`${m.tag}-${m.username ?? m.name}`} className="bg-card border border-border rounded-2xl p-6 hover:border-secondary/40 transition-colors">
             <div className="flex items-center gap-3 mb-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-secondary font-bold text-xl">
-                {m.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
-              </div>
+              {m.avatarUrl ? (
+                <UserAvatar avatarUrl={m.avatarUrl} displayName={m.name} size="lg" />
+              ) : (
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-secondary font-bold text-xl">
+                  {m.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
+                </div>
+              )}
               <div>
                 <h2 className="font-semibold text-foreground leading-tight">{m.name}</h2>
                 <p className="text-sm text-muted-foreground">{m.role}</p>
               </div>
             </div>
             <span className="inline-block text-xs font-medium bg-secondary/15 text-secondary border border-secondary/30 px-2 py-0.5 rounded-full mb-3">
-              {m.lga}
+              {m.tag}
             </span>
             <p className="text-sm text-muted-foreground leading-relaxed">{m.bio}</p>
           </div>

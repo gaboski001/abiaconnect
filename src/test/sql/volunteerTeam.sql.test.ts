@@ -88,6 +88,7 @@ beforeAll(async () => {
   await db.exec(EXTRAS)
   await db.exec(migration('20261013090000_volunteer_applications.sql'))
   await db.exec(migration('20261109090000_volunteer_team_and_community_pages.sql'))
+  await db.exec(migration('20261115120000_public_team_page.sql'))
   admin = await db.addUser({ admin: true, dating: false })
 }, 60_000)
 
@@ -289,5 +290,51 @@ describe('community pages', () => {
     expect(spots.map((s) => s.member_id)).toEqual([star])
     expect((await db.one<{ status: string }>(`SELECT status FROM public.spotlight_nominations WHERE id = $1`, [id])).status).toBe('featured')
     expect((await lastNote(star)).message).toContain('Member of the Month')
+  })
+})
+
+describe('the public Team page', () => {
+  type Row = { display_name: string; role: string; intro: string }
+  const publicTeam = () => db.asRole('anon', async () => (await db.query<Row>(`SELECT * FROM public.public_team()`)).rows)
+
+  it('shows an approved volunteer at once, with a friendly line for their role', async () => {
+    const ada = await user('ada@example.com')
+    await db.query(`UPDATE public.profiles SET display_name = 'Ada Nwosu' WHERE id = $1`, [ada])
+    expect(await publicTeam()).toEqual([])
+
+    await decide(await apply('moderator', 'ada@example.com', { user: ada }))
+    const team = await publicTeam()
+    expect(team).toHaveLength(1)
+    expect(team[0]).toMatchObject({ display_name: 'Ada Nwosu', role: 'moderator', intro: expect.stringContaining('reported posts') })
+    // Never private details from the application.
+    expect(Object.keys(team[0]).sort()).toEqual(['avatar_url', 'display_name', 'intro', 'joined_at', 'role', 'username'])
+  })
+
+  it('uses the intro an admin writes, and lets an admin hide someone', async () => {
+    const ada = await user('ada@example.com')
+    await decide(await apply('writer', 'ada@example.com', { user: ada }))
+
+    await asUser(admin, () => db.query(`SELECT public.admin_set_team_profile($1, '  Runs our   Success Stories page. ', true)`, [ada]))
+    expect((await publicTeam())[0].intro).toBe('Runs our Success Stories page.')
+    const list = await asUser(admin, async () => (await db.query<{ intro: string; show_on_team: boolean }>(`SELECT * FROM public.admin_volunteer_team()`)).rows)
+    expect(list[0]).toMatchObject({ intro: 'Runs our Success Stories page.', show_on_team: true })
+
+    await asUser(admin, () => db.query(`SELECT public.admin_set_team_profile($1, 'Runs our Success Stories page.', false)`, [ada]))
+    expect(await publicTeam()).toEqual([])
+    await expect(asUser(admin, () => db.query(`SELECT public.admin_set_team_profile($1, $2, true)`, [ada, 'x'.repeat(301)]))).rejects.toThrow(/intro_too_long/)
+  })
+
+  it('takes a removed volunteer off the page', async () => {
+    const ada = await user('ada@example.com')
+    await decide(await apply('connector', 'ada@example.com', { user: ada, lga: 'Nowhere' }))
+    expect(await publicTeam()).toHaveLength(1)
+    await asUser(admin, () => db.query(`SELECT public.admin_set_volunteer_role($1, NULL)`, [ada]))
+    expect(await publicTeam()).toEqual([])
+  })
+
+  it('lets only admins change the page', async () => {
+    const ada = await user()
+    await asUser(admin, () => db.query(`SELECT public.admin_set_volunteer_role($1, 'other')`, [ada]))
+    await expect(asUser(ada, () => db.query(`SELECT public.admin_set_team_profile($1, 'Me!', true)`, [ada]))).rejects.toThrow(/not_admin/)
   })
 })
