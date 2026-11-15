@@ -4339,21 +4339,27 @@ export type Database = {
           added_by: string | null
           application_id: string | null
           created_at: string
+          intro: string | null
           role: string
+          show_on_team: boolean
           user_id: string
         }
         Insert: {
           added_by?: string | null
           application_id?: string | null
           created_at?: string
+          intro?: string | null
           role: string
+          show_on_team?: boolean
           user_id: string
         }
         Update: {
           added_by?: string | null
           application_id?: string | null
           created_at?: string
+          intro?: string | null
           role?: string
+          show_on_team?: boolean
           user_id?: string
         }
         Relationships: [
@@ -4683,6 +4689,10 @@ export type Database = {
         Args: { _enabled: boolean }
         Returns: undefined
       }
+      admin_set_team_profile: {
+        Args: { _intro: string; _show: boolean; _user: string }
+        Returns: undefined
+      }
       admin_set_trusted: {
         Args: { _on: boolean; _user: string }
         Returns: undefined
@@ -4698,7 +4708,9 @@ export type Database = {
           created_at: string
           display_name: string
           from_application: boolean
+          intro: string
           role: string
+          show_on_team: boolean
           user_id: string
           username: string
         }[]
@@ -5601,6 +5613,17 @@ export type Database = {
       prune_email_short_links: { Args: never; Returns: undefined }
       prune_issue_report_contact_emails: { Args: never; Returns: undefined }
       prune_search_rate_limits: { Args: never; Returns: undefined }
+      public_team: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          display_name: string
+          intro: string
+          joined_at: string
+          role: string
+          username: string
+        }[]
+      }
       publish_member_spotlight: {
         Args: {
           _about: string
@@ -5714,6 +5737,7 @@ export type Database = {
       }
       support_appeal_opt_out: { Args: { _token: string }; Returns: boolean }
       sync_reputation: { Args: { _user: string }; Returns: undefined }
+      team_default_intro: { Args: { _role: string }; Returns: string }
       thread_community_state: { Args: { _thread: string }; Returns: Json }
       thread_share_path: { Args: { _thread_id: string }; Returns: string }
       toggle_thread_follow: { Args: { _thread: string }; Returns: boolean }
