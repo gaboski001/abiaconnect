@@ -14,7 +14,6 @@ import {
   Trophy,
   Globe,
   MapPin,
-  Landmark,
   Code2,
   Wrench,
   Rocket,
@@ -49,7 +48,7 @@ const CREDENTIALS = [
   { icon: Wrench, label: 'Software Engineer' },
   { icon: Users, label: 'Community Builder' },
   { icon: Rocket, label: 'Tech Entrepreneur' },
-  { icon: MapPin, label: 'Bende LGA, Abia State' },
+  { icon: MapPin, label: 'Abia State, Nigeria' },
 ]
 
 function FounderSection() {
@@ -87,12 +86,6 @@ function FounderSection() {
 
           <div className="flex flex-wrap gap-2 mb-6">
             <span className="inline-flex items-center gap-1 text-xs font-medium bg-secondary/15 text-secondary border border-secondary/30 px-3 py-1 rounded-full">
-              <MapPin className="size-3" /> Eluama Lodu-Imenyi
-            </span>
-            <span className="inline-flex items-center gap-1 text-xs font-medium bg-secondary/15 text-secondary border border-secondary/30 px-3 py-1 rounded-full">
-              <Landmark className="size-3" /> Bende LGA
-            </span>
-            <span className="inline-flex items-center gap-1 text-xs font-medium bg-secondary/15 text-secondary border border-secondary/30 px-3 py-1 rounded-full">
               <Globe className="size-3" /> Abia State, Nigeria
             </span>
           </div>
@@ -104,8 +97,8 @@ function FounderSection() {
               for community empowerment and cultural preservation.
             </p>
             <p>
-              Born into the family of the late Sup Ap Okechukwu W. Obialor, and hailing from
-              Eluama Lodu-Imenyi in Bende Local Government Area of Abia State, Okechukwu carries
+              Born into the family of the late Sup Ap Okechukwu W. Obialor, and hailing from Abia
+              State, Okechukwu carries
               the values of his heritage — resilience, community, and purpose — into everything
               he builds.
             </p>
