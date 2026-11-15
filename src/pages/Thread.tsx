@@ -263,28 +263,13 @@ const ReplyItem = memo(function ReplyItem({
   )
 })
 
+// Public discussions are open to read for everyone, so visitors and search
+// engines see the real conversation; joining is needed to reply, react or vote.
+// Threads in private groups stay hidden by the database (RLS) as before.
 export default function ThreadPage() {
-  const { user, loading } = useAuth()
+  const { loading } = useAuth()
   if (loading) {
     return <div className="p-8 text-sm text-muted-foreground">Loading…</div>
-  }
-  if (!user) {
-    return (
-      <div className="max-w-xl mx-auto mt-16 rounded-2xl border border-border bg-card p-8 text-center space-y-4">
-        <h1 className="text-2xl font-bold">Sign in to view this thread</h1>
-        <p className="text-muted-foreground">
-          Join AbiaConnect to read full discussions, vote, and participate in the conversation.
-        </p>
-        <div className="flex justify-center gap-3 pt-2">
-          <Link to="/login" className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-5 py-2 text-sm font-semibold hover:opacity-90">
-            Sign in
-          </Link>
-          <Link to="/register" className="inline-flex items-center justify-center rounded-md border border-border px-5 py-2 text-sm font-semibold hover:bg-muted">
-            Create account
-          </Link>
-        </div>
-      </div>
-    )
   }
   return <Thread />
 }
@@ -1248,11 +1233,19 @@ function Thread() {
             <p className="text-sm text-muted-foreground">Commenting is currently disabled.</p>
           )
         ) : (
-          <div className="rounded-2xl border border-border bg-muted/40 p-4 text-center text-sm">
-            <Link to="/login" className="text-primary font-medium hover:underline">
-              Sign in
-            </Link>{' '}
-            to reply.
+          <div className="rounded-2xl border border-border bg-muted/40 p-5 text-center space-y-3">
+            <p className="text-sm font-semibold text-foreground">Join the conversation</p>
+            <p className="text-sm text-muted-foreground">
+              Create a free AbiaConnect account to reply, react and vote, and to meet Abians at home and abroad.
+            </p>
+            <div className="flex justify-center gap-3">
+              <Link to="/register" className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-5 py-2 text-sm font-semibold hover:opacity-90">
+                Join free
+              </Link>
+              <Link to="/login" className="inline-flex items-center justify-center rounded-md border border-border px-5 py-2 text-sm font-semibold hover:bg-muted">
+                Sign in
+              </Link>
+            </div>
           </div>
         )}
       </section>

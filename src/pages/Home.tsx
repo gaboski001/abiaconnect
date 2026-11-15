@@ -7,8 +7,8 @@ export default function Home() {
   return (
     <>
       <SEO
-        title="AbiaConnect — Connecting Abians Worldwide"
-        description="Community forum for Abians worldwide. Join discussions on culture, news, events, polls, and subgroups across all 17 LGAs of Abia State."
+        title="AbiaConnect: Abia State & Igbo Community Forum Online"
+        description="The online community for Abia State and Igbo people in Nigeria and abroad: news from Aba, Umuahia and all 17 LGAs, culture, business, jobs and more."
         path="/"
       />
       {/* The app and the website each have their own home design. */}
