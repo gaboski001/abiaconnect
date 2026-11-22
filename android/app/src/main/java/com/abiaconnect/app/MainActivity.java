@@ -6,7 +6,11 @@ import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.app.PictureInPictureParams;
+import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.os.Build;
+import android.util.Rational;
 import android.content.ActivityNotFoundException;
 import android.net.Uri;
 import androidx.browser.customtabs.CustomTabsIntent;
@@ -24,6 +28,8 @@ public class MainActivity extends BaseActivity {
 
     private BroadcastReceiver hangupReceiver;
     private volatile String pendingGoogleReturn;
+    /** A video call is on: leaving the app shrinks it to a floating window (like WhatsApp). */
+    private volatile boolean videoCallActive = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +56,62 @@ public class MainActivity extends BaseActivity {
             hangupReceiver = null;
         }
         super.onDestroy();
+    }
+
+    // ── Picture-in-picture for video calls ──────────────────────────────────
+
+    private boolean canUsePip() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+            && getPackageManager().hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE);
+    }
+
+    /** Portrait window; on Android 12+ the phone shrinks the call by itself when the member leaves. */
+    private void applyPipParams() {
+        if (!canUsePip()) return;
+        try {
+            PictureInPictureParams.Builder b = new PictureInPictureParams.Builder()
+                .setAspectRatio(new Rational(9, 16));
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                b.setAutoEnterEnabled(videoCallActive);
+                b.setSeamlessResizeEnabled(false);
+            }
+            setPictureInPictureParams(b.build());
+        } catch (Exception ignored) {
+            // Some phones turn picture-in-picture off; the call still carries on.
+        }
+    }
+
+    void setVideoCallActive(boolean active) {
+        runOnUiThread(() -> {
+            videoCallActive = active;
+            applyPipParams();
+            // Call over while floating: close the little window, like WhatsApp.
+            if (!active && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode()) {
+                moveTaskToBack(false);
+            }
+        });
+    }
+
+    /** Android 8–11: shrink to the floating window when the member presses Home. */
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        if (!videoCallActive || !canUsePip() || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return;
+        try {
+            enterPictureInPictureMode(new PictureInPictureParams.Builder()
+                .setAspectRatio(new Rational(9, 16)).build());
+        } catch (Exception ignored) {
+            // Not allowed on this phone: the call keeps going in the background.
+        }
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean isInPip, Configuration newConfig) {
+        super.onPictureInPictureModeChanged(isInPip, newConfig);
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        final String script = "window.dispatchEvent(new CustomEvent('abiaconnect-pip', { detail: { active: "
+            + (isInPip ? "true" : "false") + " } }));";
+        getBridge().getWebView().post(() -> getBridge().getWebView().evaluateJavascript(script, null));
     }
 
     private void handleNotificationIntent(Intent intent) {
@@ -298,6 +360,13 @@ public class MainActivity extends BaseActivity {
             } catch (Exception ignored) {
                 // Routing is best effort; never break the call over it.
             }
+        }
+
+        /** The web app says a video call started or stopped (for the floating window). */
+        @JavascriptInterface
+        public void setVideoCall(boolean active) {
+            MainActivity a = activity.get();
+            if (a != null) a.setVideoCallActive(active);
         }
 
         /** Keeps the screen from going to sleep while in a live room. */

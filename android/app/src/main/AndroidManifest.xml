@@ -14,6 +14,10 @@
     <!-- Camera is only for video calls; keep the app installable on devices without one. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+    <!-- The app is used upright, and works on mobile data too: neither is required to install it
+         (otherwise Google Play hides it from tablets, Chromebooks and phones without Wi-Fi). -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -52,6 +56,8 @@
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
+            android:supportsPictureInPicture="true"
+            android:resizeableActivity="true"
             android:exported="true"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density">
             <intent-filter>

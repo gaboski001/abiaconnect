@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
+  ChevronDown,
   Info,
   Lock,
   Mic,
@@ -15,18 +16,10 @@ import {
 } from 'lucide-react'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { callManager, canSwitchAudioRoute, type CallQuality, type CallState } from '@/lib/webrtcCall'
+import { formatCallTime as fmt } from '@/lib/callMini'
 import { startRingtone, stopRingtone } from '@/lib/ringtone'
 import { cn } from '@/lib/utils'
 import { CallDiagnosticsPanel } from './CallDiagnosticsPanel'
-
-function fmt(ms: number) {
-  const total = Math.max(0, Math.floor(ms / 1000))
-  const h = Math.floor(total / 3600)
-  const m = Math.floor((total % 3600) / 60)
-  const s = total % 60
-  const pad = (n: number) => n.toString().padStart(2, '0')
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
-}
 
 const QUALITY_HINT: Partial<Record<CallQuality, string>> = {
   fair: 'Unstable connection',
@@ -73,7 +66,20 @@ function Control({
   )
 }
 
-export function CallOverlay({ state }: { state: CallState }) {
+/**
+ * The full call screen. `onMinimize` shrinks it to the floating window so the
+ * member can use the rest of the app; `pip` is the phone's own small floating
+ * window (picture-in-picture) after they leave the app during a video call.
+ */
+export function CallOverlay({
+  state,
+  onMinimize,
+  pip = false,
+}: {
+  state: CallState
+  onMinimize?: () => void
+  pip?: boolean
+}) {
   const [now, setNow] = useState(Date.now())
   const [showDetails, setShowDetails] = useState(false)
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
@@ -187,31 +193,48 @@ export function CallOverlay({ state }: { state: CallState }) {
         }}
       >
         {/* Top bar */}
-        <div className="flex items-center justify-between px-5">
-          <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-white/70">
-            <Lock className="size-3.5" />
-            End-to-end encrypted
-          </span>
-          {inCall ? (
-            <button
-              type="button"
-              onClick={() => setShowDetails(true)}
-              aria-label="Call details"
-              className="flex size-9 items-center justify-center rounded-full bg-white/10 text-white/80 active:bg-white/20"
-            >
-              <Info className="size-[18px]" />
-            </button>
-          ) : null}
-        </div>
+        {pip ? null : (
+          <div className="flex items-center justify-between gap-2 px-4">
+            {inCall && onMinimize ? (
+              <button
+                type="button"
+                onClick={onMinimize}
+                aria-label="Minimise call and use the app"
+                title="Minimise: keep talking and use the app"
+                className="flex size-9 items-center justify-center rounded-full bg-white/10 text-white/90 active:bg-white/20"
+              >
+                <ChevronDown className="size-5" />
+              </button>
+            ) : (
+              <span className="size-9" />
+            )}
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-white/70">
+              <Lock className="size-3.5" />
+              End-to-end encrypted
+            </span>
+            {inCall ? (
+              <button
+                type="button"
+                onClick={() => setShowDetails(true)}
+                aria-label="Call details"
+                className="flex size-9 items-center justify-center rounded-full bg-white/10 text-white/80 active:bg-white/20"
+              >
+                <Info className="size-[18px]" />
+              </button>
+            ) : (
+              <span className="size-9" />
+            )}
+          </div>
+        )}
 
         {/* Identity */}
-        {showRemoteVideo ? (
+        {showRemoteVideo && pip ? null : showRemoteVideo ? (
           <div className="mt-3 px-5">
             <h2 className="text-xl font-bold drop-shadow">{peer.name}</h2>
             <p className="text-sm text-white/80 drop-shadow">{statusLabel}</p>
           </div>
         ) : (
-          <div className="mt-[12vh] flex flex-col items-center px-6 text-center">
+          <div className={cn('flex flex-col items-center text-center', pip ? 'mt-[18vh] px-2' : 'mt-[12vh] px-6')}>
             <div className="relative">
               {(state.status === 'calling' || state.status === 'ringing') && (
                 <>
@@ -223,11 +246,13 @@ export function CallOverlay({ state }: { state: CallState }) {
                 avatarUrl={peer.avatarUrl}
                 displayName={peer.name}
                 size="xl"
-                className="relative h-28 w-28 border-2 border-white/15"
+                className={cn('relative border-2 border-white/15', pip ? 'h-14 w-14' : 'h-28 w-28')}
               />
             </div>
-            <h2 className="mt-6 text-[28px] font-bold leading-tight tracking-tight drop-shadow">{peer.name}</h2>
-            <p className={cn('mt-1.5 text-base drop-shadow', state.status === 'ended' && state.error ? 'text-rose-200' : 'text-white/75')}>
+            <h2 className={cn('font-bold leading-tight tracking-tight drop-shadow', pip ? 'mt-2 text-sm' : 'mt-6 text-[28px]')}>
+              {peer.name}
+            </h2>
+            <p className={cn('drop-shadow', pip ? 'mt-0.5 text-xs' : 'mt-1.5 text-base', state.status === 'ended' && state.error ? 'text-rose-200' : 'text-white/75')}>
               {statusLabel}
             </p>
             {isVideo && connected && !state.remoteCameraOn ? (
@@ -239,7 +264,7 @@ export function CallOverlay({ state }: { state: CallState }) {
         )}
 
         {/* Status pills */}
-        <div className="mt-4 flex flex-col items-center gap-2 px-6">
+        <div className={cn('mt-4 flex flex-col items-center gap-2 px-6', pip && 'hidden')}>
           {state.notice ? (
             <span className="rounded-full bg-black/40 px-3 py-1.5 text-[13px] text-white/90 backdrop-blur">{state.notice}</span>
           ) : null}
@@ -262,7 +287,7 @@ export function CallOverlay({ state }: { state: CallState }) {
         </div>
 
         {/* Self view during a connected video call */}
-        {showLocalPip ? (
+        {showLocalPip && !pip ? (
           <video
             ref={localVideoRef}
             autoPlay
@@ -278,7 +303,7 @@ export function CallOverlay({ state }: { state: CallState }) {
         <div className="flex-1" />
 
         {/* Controls */}
-        {state.status === 'ringing' ? (
+        {pip ? null : state.status === 'ringing' ? (
           <div className="px-8 md:mx-auto md:w-full md:max-w-sm">
             <div className="flex items-start justify-between">
               <Control label="Decline" danger big onClick={() => callManager.reject()}>
@@ -328,7 +353,7 @@ export function CallOverlay({ state }: { state: CallState }) {
       </div>
 
       {/* Call details (technical info, for troubleshooting) */}
-      {showDetails ? (
+      {showDetails && !pip ? (
         <div className="absolute inset-0 z-10 flex items-end bg-black/50" onClick={() => setShowDetails(false)}>
           <div
             className="max-h-[75vh] w-full overflow-y-auto rounded-t-[28px] bg-[#0E1626] p-5"

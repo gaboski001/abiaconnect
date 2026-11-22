@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { callManager, type CallState } from '@/lib/webrtcCall'
+import { canMinimiseCall } from '@/lib/callMini'
+import { CallMiniWindow } from './CallMiniWindow'
 import { CallOverlay } from './CallOverlay'
 
 // Native Android bridge injected by MainActivity.CallJsBridge.
@@ -10,6 +12,11 @@ declare global {
     AbiaCallBridge?: {
       startCall: (callerName: string, callId: string) => void
       endCall: () => void
+      /**
+       * App 1.1.3+: a video call is on, so leaving the app shrinks it to the
+       * phone's floating window (picture-in-picture). Missing in older apps.
+       */
+      setVideoCall?: (active: boolean) => void
     }
   }
 }
@@ -19,6 +26,10 @@ export function CallProvider() {
   const userId = user?.id ?? null
 
   const [state, setState] = useState<CallState>(() => callManager.getState())
+  // Call shrunk to the floating window so the member can use the app.
+  const [minimized, setMinimized] = useState(false)
+  // The phone shows the app in its own small floating window (Android PiP).
+  const [pip, setPip] = useState(false)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   // Callback ref: fires the instant React attaches (or detaches) the <audio>
@@ -132,12 +143,53 @@ export function CallProvider() {
     }
   }, [])
 
+  // A new call (or a call coming in) always opens full screen.
+  useEffect(() => {
+    if (state.status === 'idle' || (state.status === 'ringing' && state.direction === 'incoming')) {
+      setMinimized(false)
+    }
+  }, [state.status, state.direction])
+
+  // A call that ends while minimised: show "Call ended" in the floating window
+  // briefly, then it disappears with the call (handled by status -> idle).
+
+  // Tell the Android app when a video call is on, so pressing Home turns the
+  // call into a small floating window instead of freezing the video.
+  const videoLive = state.video && (state.status === 'connected' || state.status === 'connecting')
+  useEffect(() => {
+    const bridge = window.AbiaCallBridge
+    if (!bridge || typeof bridge.setVideoCall !== 'function') return
+    try {
+      bridge.setVideoCall(videoLive)
+    } catch {
+      // Older app: nothing to do.
+    }
+  }, [videoLive])
+
+  useEffect(() => {
+    const onPip = (e: Event) => {
+      const active = Boolean((e as CustomEvent<{ active?: boolean }>).detail?.active)
+      setPip(active)
+    }
+    window.addEventListener('abiaconnect-pip', onPip)
+    return () => window.removeEventListener('abiaconnect-pip', onPip)
+  }, [])
+
   if (!userId) return null
+
+  const showCall = state.status !== 'idle' && state.peer
+  const inCall = canMinimiseCall(state.status, state.direction)
 
   return (
     <>
       <audio ref={setAudioNode} autoPlay playsInline />
-      {state.status !== 'idle' && state.peer && <CallOverlay state={state} />}
+      {showCall && pip ? (
+        <CallOverlay state={state} pip />
+      ) : showCall && minimized && (inCall || state.status === 'ended') ? (
+        <CallMiniWindow state={state} onOpen={() => setMinimized(false)} />
+      ) : showCall ? (
+        <CallOverlay state={state} onMinimize={inCall ? () => setMinimized(true) : undefined} />
+      ) : null}
     </>
   )
 }
