@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { useCommunityStats } from '@/hooks/useCommunityStats'
 import { SiteLogo } from './SiteLogo'
+import { Capacitor } from '@capacitor/core'
+import { isAndroidBrowser, playStoreLink } from '@/lib/appRelease'
 
 const LINK_GROUPS: Array<{ title: string; links: Array<{ label: string; href: string }> }> = [
   {
@@ -107,9 +109,16 @@ export function Footer() {
                 variant="outline"
                 className="h-11 rounded-full border-primary-foreground/30 bg-transparent px-5 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
               >
-                <Link to="/download">
-                  <Download className="size-4" /> Get the app
-                </Link>
+                {/* Android phones go straight to Google Play; others see both stores. */}
+                {typeof navigator !== 'undefined' && isAndroidBrowser(navigator.userAgent, Capacitor.isNativePlatform()) ? (
+                  <a href={playStoreLink(settings.play_store_url)} rel="noopener">
+                    <Download className="size-4" /> Get the app
+                  </a>
+                ) : (
+                  <Link to="/download">
+                    <Download className="size-4" /> Get the app
+                  </Link>
+                )}
               </Button>
             </div>
           </div>

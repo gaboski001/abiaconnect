@@ -3,6 +3,7 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { createElement } from 'react'
+import { LATEST_ANDROID_RELEASE } from '@/lib/appRelease'
 
 // ---- Mocks --------------------------------------------------------------
 
@@ -123,10 +124,20 @@ describe('useAppUpdate', () => {
     await waitFor(() => expect(result.current.hasUpdate).toBe(false))
   })
 
-  it('never reports an update on Android (updates come from Google Play)', async () => {
+  it('on Android, offers the version live on Google Play when the app is older', async () => {
     mockPlatform = 'android'
     const { result } = renderHook(() => useAppUpdate(), { wrapper })
     await waitFor(() => expect(result.current.currentVersion).toBe('1.0.0'))
+    await waitFor(() => expect(result.current.hasUpdate).toBe(true))
+    expect(result.current.release?.version).toBe(LATEST_ANDROID_RELEASE.version)
+    expect(result.current.release?.file_path).toBe('') // never a downloaded APK
+  })
+
+  it('on Android, stays quiet once the app is up to date', async () => {
+    mockPlatform = 'android'
+    installedVersion = LATEST_ANDROID_RELEASE.version
+    const { result } = renderHook(() => useAppUpdate(), { wrapper })
+    await waitFor(() => expect(result.current.currentVersion).toBe(LATEST_ANDROID_RELEASE.version))
     await new Promise((r) => setTimeout(r, 50))
     expect(result.current.hasUpdate).toBe(false)
     expect(result.current.release).toBeNull()

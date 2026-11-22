@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { CallProvider } from '@/components/call/CallProvider'
+import { AppNotices } from '@/components/pwa/AppNotices'
 import { NativeOnboardingGate } from '@/components/mobile/NativeOnboardingGate'
 import { FirstRunWelcome } from '@/components/mobile/FirstRunWelcome'
 import { isNativeApp } from '@/components/mobile/NativeAuthLayout'
@@ -120,6 +121,8 @@ export default function App() {
       <InviteClaimer />
       {/* Voice and video calls, on the website and in the app: places calls and rings for incoming ones. */}
       <CallProvider />
+      {/* Get the app (Android browsers), app update from Google Play, and "Reload" after a site update. */}
+      <AppNotices />
       {/* Native-only enhancements */}
       <NativeOnboardingGate />
       {isNativeApp() && <FirstRunWelcome />}

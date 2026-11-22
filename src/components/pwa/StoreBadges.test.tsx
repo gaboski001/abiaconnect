@@ -53,13 +53,15 @@ describe('store links', () => {
 describe('Get the app card', () => {
   beforeEach(() => toastFn.mockReset())
 
-  it('before the app is on the stores: both badges say Coming soon and the uploaded APK is offered', async () => {
+  it('with no saved link: Google Play still links to the app page (it is live), App Store says Coming soon', async () => {
     settings.current = {}
     releases.current = [apk]
     renderCard()
-    expect(screen.getAllByText('Coming soon')).toHaveLength(2)
-    expect(await screen.findByText('Or download directly')).toBeInTheDocument()
-    expect(screen.getByText('Android v1.0.3')).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: /Get it on Google Play/ })
+    expect(link).toHaveAttribute('href', 'https://play.google.com/store/apps/details?id=com.abiaconnect.app')
+    expect(screen.getAllByText('Coming soon')).toHaveLength(1)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.queryByText('Or download directly')).not.toBeInTheDocument()
   })
 
   it('once on Google Play: the badge links to the store and the APK is no longer offered', async () => {

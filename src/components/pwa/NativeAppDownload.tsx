@@ -17,6 +17,7 @@ import { useReleaseDownload } from '@/hooks/useReleaseDownload'
 import { useSiteSettings } from '@/hooks/useSiteSettings'
 import { AppStoreBadge, GooglePlayBadge, safeStoreUrl } from './StoreBadges'
 import { Capacitor } from '@capacitor/core'
+import { playStoreLink } from '@/lib/appRelease'
 
 type Release = {
   id: string
@@ -152,7 +153,8 @@ function DownloadRow({ r }: { r: Release }) {
 export function NativeAppDownload() {
   const isNative = Capacitor.isNativePlatform()
   const { settings } = useSiteSettings()
-  const playUrl = safeStoreUrl(settings.play_store_url, 'play')
+  // The app is live on Google Play: use the saved link, or the app's own Play page.
+  const playUrl = playStoreLink(settings.play_store_url)
   const appleUrl = safeStoreUrl(settings.app_store_url, 'apple')
 
   // Latest admin-uploaded release per platform (Admin -> Native Apps).

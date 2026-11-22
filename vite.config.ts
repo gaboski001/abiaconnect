@@ -6,16 +6,25 @@ import path from "path";
 import { readFileSync } from "fs";
 
 const pkg = JSON.parse(readFileSync(path.resolve(__dirname, "package.json"), "utf-8"));
+// One id per build: the site compares it with /version.json to offer "Reload" after an update.
+const BUILD_TIME = new Date().toISOString();
 
 
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version ?? "0.0.0"),
-    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __BUILD_TIME__: JSON.stringify(BUILD_TIME),
     __BUILD_COMMIT__: JSON.stringify(process.env.GITHUB_SHA?.slice(0, 7) ?? process.env.COMMIT_SHA?.slice(0, 7) ?? "dev"),
   },
 
   plugins: [
+    {
+      name: "abia-version-file",
+      apply: "build",
+      generateBundle() {
+        this.emitFile({ type: "asset", fileName: "version.json", source: JSON.stringify({ build: BUILD_TIME }) });
+      },
+    },
     react(),
     tailwindcss(),
     // Inlines above-the-fold CSS into index.html and async-loads the rest
