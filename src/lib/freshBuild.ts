@@ -37,14 +37,17 @@ export function isBusy(path: string) {
 
 let checking = false
 
-export async function checkForNewBuild(reload: () => void = () => location.reload()) {
+export async function checkForNewBuild(
+  reload: () => void = () => location.reload(),
+  busyNow: () => boolean = () => false,
+) {
   if (checking) return
   checking = true
   try {
     const now = runningBuild()
     const latest = await latestBuild()
     if (!now || !latest || now === latest) return
-    if (!isBusy(location.pathname)) {
+    if (!isBusy(location.pathname) && !busyNow()) {
       reload()
       return
     }
@@ -58,11 +61,21 @@ export async function checkForNewBuild(reload: () => void = () => location.reloa
   }
 }
 
-/** Check whenever the app comes back to the front. */
-export function watchForNewBuilds() {
+/**
+ * Check when the app opens and whenever it comes back to the front. Opening
+ * matters too: a phone can restore an old copy of the site at start-up, and
+ * then call fixes we publish never reach it. `busyNow` says when a reload
+ * would cut something off (a call in progress).
+ */
+export function watchForNewBuilds(busyNow: () => boolean = () => false) {
+  const check = () => void checkForNewBuild(undefined, busyNow)
   const onVisible = () => {
-    if (document.visibilityState === 'visible') void checkForNewBuild()
+    if (document.visibilityState === 'visible') check()
   }
   document.addEventListener('visibilitychange', onVisible)
-  return () => document.removeEventListener('visibilitychange', onVisible)
+  const first = window.setTimeout(check, 2000)
+  return () => {
+    window.clearTimeout(first)
+    document.removeEventListener('visibilitychange', onVisible)
+  }
 }

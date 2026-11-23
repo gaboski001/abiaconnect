@@ -49,7 +49,9 @@ if (typeof window !== 'undefined') {
 
 // The app only resumes, so it would keep showing an old version after we publish.
 if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) {
-  void import('./lib/freshBuild').then((m) => m.watchForNewBuilds());
+  void Promise.all([import('./lib/freshBuild'), import('./lib/webrtcCall')]).then(([m, c]) =>
+    m.watchForNewBuilds(() => !['idle', 'ended'].includes(c.callManager.getState().status)),
+  );
 }
 
 // Implement a robust cache-clearing routine that runs on every load to prevent

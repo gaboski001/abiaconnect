@@ -1330,7 +1330,8 @@ class CallManager {
       self_muted: this.state.muted,
       speaker_on: this.state.speakerOn,
       native_app: canSwitchAudioRoute(),
-      device: navigator.userAgent.slice(0, 300),
+      // Which copy of the site the phone ran, so an out-of-date phone shows up.
+      device: `${document.querySelector<HTMLScriptElement>('script[type="module"][src*="/assets/index-"]')?.src.split('/').pop() ?? '?'} ${navigator.userAgent}`.slice(0, 300),
     }
     this.callHealth = { micEnergy: null, heardEnergy: null, audioBytesSent: 0, audioBytesReceived: 0, micRestarts: 0 }
     void (async () => {
