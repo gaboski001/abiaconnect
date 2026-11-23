@@ -17,6 +17,8 @@ declare global {
        * phone's floating window (picture-in-picture). Missing in older apps.
        */
       setVideoCall?: (active: boolean) => void
+      /** App 1.1.4+: a call answered from the alert while the page was still loading ("" if none). */
+      takePendingAnswer?: () => string
     }
   }
 }
@@ -148,6 +150,14 @@ export function CallProvider() {
       }
     }
 
+    // The app was closed when Answer was pressed: the event above fired before
+    // this page was listening, so collect the answer from the app now.
+    try {
+      const pending = window.AbiaCallBridge?.takePendingAnswer?.()
+      if (pending) onAnswer(new CustomEvent('abiaconnect-native-call-answer', { detail: { callId: pending } }))
+    } catch {
+      // older app: nothing to collect
+    }
     window.addEventListener('abiaconnect-native-call-answer', onAnswer)
     window.addEventListener('abiaconnect-native-call-decline', onDecline)
     window.addEventListener('abiaconnect-native-call-hangup', onHangup)

@@ -285,6 +285,8 @@ class CallManager {
   private speakerWatch = freshMicWatch()
   private speakerLastBytes = 0
   private speakerKicks = 0
+  /** Timings for call health: when the call began here, when it was answered, page age at the invite. */
+  private timing = { startAt: 0, answerAt: 0, pageMs: null as number | null, connectMs: null as number | null }
   private spareAudio: HTMLAudioElement | null = null
   private spareCtx: AudioContext | null = null
   /** Last sound readings, saved as a call health record when the call ends. */
@@ -511,6 +513,7 @@ class CallManager {
     if (!areCallsEnabled()) throw new Error('Calling is turned off in your settings')
     if (this.state.status !== 'idle' && this.state.status !== 'ended') return
     const wantVideo = !!opts.video
+    this.timing = { startAt: Date.now(), answerAt: 0, pageMs: null, connectMs: null }
 
     // Ask for the mic/camera BEFORE ringing the other person, so a refused
     // permission never leaves them with a phantom call.
@@ -586,6 +589,7 @@ class CallManager {
     this.wasConnected = false
     const wantVideo = offer.video && opts.video !== false
 
+    this.timing.answerAt = Date.now()
     let media: { stream: MediaStream; video: boolean }
     // Silence the ringtone before the phone switches into call mode and opens
     // the microphone, so nothing is still playing while the sound is rerouted.
@@ -793,12 +797,12 @@ class CallManager {
         return
       }
       attempts += 1
-      if (attempts > 11) {
+      if (attempts > 22) {
         this.clearInviteRetryLoop()
         return
       }
       void this.sendInvite(target, callId)
-    }, 3000)
+    }, 1500)
   }
 
   private clearInviteRetryLoop() {
@@ -985,6 +989,7 @@ class CallManager {
     // this realtime invite arrived, connect right away — no second ring,
     // no lingering "ringing" icon.
     if (this.consumePendingAcceptFor(payload.callId)) {
+      this.timing = { startAt: Date.now(), answerAt: 0, pageMs: Math.round(performance.now()), connectMs: null }
       void this.broadcastToUser(payload.from.id, 'ringing', {
         callId: payload.callId,
         from: this.selfPeer,
@@ -992,6 +997,7 @@ class CallManager {
       void this.accept()
       return
     }
+    this.timing = { startAt: Date.now(), answerAt: 0, pageMs: Math.round(performance.now()), connectMs: null }
     this.patch({
       status: 'ringing',
       callId: payload.callId,
@@ -1140,6 +1146,10 @@ class CallManager {
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState
       if (s === 'connected') {
+        if (this.timing.connectMs == null) {
+          const from = this.timing.answerAt || this.timing.startAt
+          if (from) this.timing.connectMs = Date.now() - from
+        }
         // The ringing sound has just stopped; start the voice player afresh.
         window.setTimeout(() => this.bindRemoteAudio(), 300)
         const wasConnecting = this.state.status !== 'connected'
@@ -1342,6 +1352,13 @@ class CallManager {
       player_state: this.remoteAudio
         ? `${this.remoteAudio.paused ? 'paused' : 'playing'}${this.remoteAudio.muted ? ':muted' : ''}:vol${Math.round(this.remoteAudio.volume * 100)}${this.speakerKicks ? `:fix${this.speakerKicks}` : ''}`
         : 'none',
+      // page = how long the app had been open when the call reached it;
+      // answer = ringing until answered; connect = answered (or dialled) until voice flows.
+      timing: [
+        this.timing.pageMs != null ? `page${this.timing.pageMs}` : '',
+        this.timing.answerAt && this.timing.startAt ? `answer${this.timing.answerAt - this.timing.startAt}` : '',
+        this.timing.connectMs != null ? `connect${this.timing.connectMs}` : '',
+      ].filter(Boolean).join(' ') || null,
       self_muted: this.state.muted,
       speaker_on: this.state.speakerOn,
       native_app: canSwitchAudioRoute(),

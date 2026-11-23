@@ -186,7 +186,17 @@ public class MainActivity extends BaseActivity {
         });
     }
 
+    /**
+     * Answer pressed on the call alert. When the app was closed, the page is
+     * still loading and would miss the event, so the answer is also kept here
+     * for the page to collect (takePendingAnswer) once it is ready.
+     */
+    static volatile String pendingAnswerCallId = null;
+    static volatile long pendingAnswerAt = 0;
+
     private void dispatchCallAnswerToWeb(String callId) {
+        pendingAnswerCallId = callId;
+        pendingAnswerAt = System.currentTimeMillis();
         if (getBridge() == null || getBridge().getWebView() == null) return;
         getBridge().getWebView().post(() -> {
             try {
@@ -373,6 +383,16 @@ public class MainActivity extends BaseActivity {
             } catch (Exception ignored) {
                 // Routing is best effort; never break the call over it.
             }
+        }
+
+        /** A call answered from the alert while the page was loading ("" if none, or older than 45 s). */
+        @JavascriptInterface
+        public String takePendingAnswer() {
+            String id = pendingAnswerCallId;
+            long at = pendingAnswerAt;
+            pendingAnswerCallId = null;
+            if (id == null || System.currentTimeMillis() - at > 45000) return "";
+            return id;
         }
 
         /** The in-app call screen is ringing now: the system call alert can stop. */
