@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const plugin = vi.hoisted(() => ({
   isAvailable: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock('@capgo/capacitor-native-biometric', () => ({
   AuthenticationStrength: { NONE: 0, STRONG: 1, WEAK: 2 },
 }))
 
-import { describeBiometricError, enableBiometric, getBiometricCredentials, isBiometricAvailable } from './biometric'
+import { describeBiometricError, enableBiometric, ownFingerprintCode, getBiometricCredentials, isBiometricAvailable } from './biometric'
 
 // Asking for anything but strong unlock closes the app on Android (Play crash report, Nov 2026).
 const STRONG_ONLY = expect.objectContaining({ allowedBiometryTypes: [3] })
@@ -80,5 +80,53 @@ describe('fingerprint sign-in: turning it on', () => {
       cancelled: false,
       reason: 'Your phone said: Biometric security check failed',
     })
+  })
+})
+
+describe("fingerprint sign-in: the app's own fingerprint screen", () => {
+  let answer: { ok: boolean; code?: number; message?: string }
+  const own = {
+    isAvailable: vi.fn(() => true),
+    verify: vi.fn(() => {
+      setTimeout(() => window.dispatchEvent(new CustomEvent('abia-fingerprint-result', { detail: answer })), 0)
+    }),
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    answer = { ok: true, code: 0, message: '' }
+    plugin.setCredentials.mockResolvedValue(undefined)
+    plugin.getCredentials.mockResolvedValue({ username: 'a@example.com', password: 'made-up' })
+    ;(window as unknown as { AbiaFingerprint?: unknown }).AbiaFingerprint = own
+  })
+
+  afterEach(() => {
+    delete (window as unknown as { AbiaFingerprint?: unknown }).AbiaFingerprint
+  })
+
+  it('uses it instead of the add-on screen whose check fails on some phones', async () => {
+    await expect(enableBiometric('a@example.com', 'made-up')).resolves.toEqual({ ok: true })
+    expect(own.verify).toHaveBeenCalledTimes(1)
+    expect(plugin.verifyIdentity).not.toHaveBeenCalled()
+    await expect(getBiometricCredentials()).resolves.toEqual({ ok: true, creds: { username: 'a@example.com', password: 'made-up' } })
+    expect(plugin.verifyIdentity).not.toHaveBeenCalled()
+  })
+
+  it('reports Cancel as cancelled and lockout as too many tries', async () => {
+    answer = { ok: false, code: 13, message: 'Cancel' }
+    await expect(enableBiometric('a@example.com', 'made-up')).resolves.toMatchObject({ ok: false, cancelled: true })
+    answer = { ok: false, code: 7, message: 'Too many attempts' }
+    await expect(enableBiometric('a@example.com', 'made-up')).resolves.toMatchObject({
+      ok: false,
+      reason: 'Too many tries. Wait a moment, then try again.',
+    })
+  })
+
+  it('maps Android error numbers', () => {
+    expect(ownFingerprintCode(10)).toBe('16')
+    expect(ownFingerprintCode(9)).toBe('4')
+    expect(ownFingerprintCode(11)).toBe('3')
+    expect(ownFingerprintCode(12)).toBe('1')
   })
 })

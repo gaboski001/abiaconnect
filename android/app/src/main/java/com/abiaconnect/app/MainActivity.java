@@ -36,6 +36,7 @@ public class MainActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         installCallJsBridge();
         installAuthJsBridge();
+        installFingerprintBridge();
         handleGoogleReturn(getIntent());
         registerHangupReceiver();
         handleNotificationIntent(getIntent());
@@ -222,6 +223,12 @@ public class MainActivity extends BaseActivity {
      * so the WebRTC code can start the foreground call service when a call
      * actually connects (outgoing calls) and stop it when the call ends.
      */
+    private void installFingerprintBridge() {
+        if (getBridge() == null || getBridge().getWebView() == null) return;
+        getBridge().getWebView().addJavascriptInterface(
+            new FingerprintBridge(this, getBridge().getWebView()), "AbiaFingerprint");
+    }
+
     private void installAuthJsBridge() {
         if (getBridge() == null || getBridge().getWebView() == null) return;
         getBridge().getWebView().addJavascriptInterface(new AuthJsBridge(), "AbiaAuthBridge");

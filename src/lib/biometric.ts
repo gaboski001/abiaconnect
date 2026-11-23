@@ -24,6 +24,56 @@ const DECLINED_KEY = 'abia:biometric-declined-v2'
 // ones only. Phones with only a weak face unlock count as having none.
 const STRONG_ONLY = { allowedBiometryTypes: [BiometryType.FINGERPRINT] }
 
+/**
+ * The app's own fingerprint screen (window.AbiaFingerprint, app 1.1.5+). The add-on's screen
+ * runs an extra key check after a good touch that always fails on some phones ("Biometric
+ * security check failed"), so the app's own screen is used whenever it is there.
+ */
+type OwnFingerprint = {
+  isAvailable?: () => boolean
+  verify?: (title: string, subtitle: string, cancelText: string) => void
+}
+const ownFingerprint = (): OwnFingerprint | undefined =>
+  (window as unknown as { AbiaFingerprint?: OwnFingerprint }).AbiaFingerprint
+
+/** Android's fingerprint error numbers, turned into the add-on's codes used below. */
+export function ownFingerprintCode(androidCode: number): string {
+  if ([3, 5, 10, 13].includes(androidCode)) return '16' // timed out or cancelled
+  if (androidCode === 7 || androidCode === 9) return '4' // too many tries
+  if (androidCode === 11) return '3' // no fingerprint saved
+  if (androidCode === 1 || androidCode === 12) return '1' // reader busy or missing
+  return String(androidCode)
+}
+
+/** Asks for the phone owner's fingerprint; resolves when it matches, throws otherwise. */
+async function confirmOwner(title: string, subtitle = ''): Promise<void> {
+  const own = ownFingerprint()
+  if (typeof own?.verify === 'function') {
+    await new Promise<void>((resolve, reject) => {
+      const timer = window.setTimeout(() => finish({ ok: false, code: 5, message: 'Cancel' }), 120_000)
+      function finish(d: { ok?: boolean; code?: number; message?: string }) {
+        window.clearTimeout(timer)
+        window.removeEventListener('abia-fingerprint-result', onResult)
+        if (d.ok) resolve()
+        else reject(Object.assign(new Error(d.message || 'Fingerprint failed'), { code: ownFingerprintCode(Number(d.code ?? -1)) }))
+      }
+      function onResult(ev: Event) {
+        finish(((ev as CustomEvent).detail ?? {}) as { ok?: boolean; code?: number; message?: string })
+      }
+      window.addEventListener('abia-fingerprint-result', onResult)
+      own.verify!(title, subtitle, 'Cancel')
+    })
+    return
+  }
+  await NativeBiometric.verifyIdentity({
+    ...STRONG_ONLY,
+    maxAttempts: MAX_TOUCHES,
+    reason: title,
+    title: 'Confirm it’s you',
+    ...(subtitle ? { subtitle } : {}),
+  })
+}
+
 export function hasDeclinedBiometric(): boolean {
   try {
     return localStorage.getItem(DECLINED_KEY) === 'true'
@@ -46,6 +96,8 @@ type StoredCreds = { username: string; password: string }
 export async function isBiometricAvailable(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return false
   try {
+    const own = ownFingerprint()
+    if (typeof own?.isAvailable === 'function') return own.isAvailable()
     const res = await NativeBiometric.isAvailable()
     return res.isAvailable && res.authenticationStrength === AuthenticationStrength.STRONG
   } catch {
@@ -93,13 +145,7 @@ export async function enableBiometric(email: string, password: string): Promise<
   }
   try {
     // Verify once so the user explicitly consents.
-    await NativeBiometric.verifyIdentity({
-      ...STRONG_ONLY,
-      maxAttempts: MAX_TOUCHES,
-      reason: 'Turn on fingerprint or face sign-in for AbiaConnect',
-      title: 'Confirm it\'s you',
-      subtitle: 'Future sign-ins will use your fingerprint or face',
-    })
+    await confirmOwner('Turn on fingerprint sign-in for AbiaConnect', 'Future sign-ins will use your fingerprint')
   } catch (e) {
     return { ok: false, ...describeBiometricError(e) }
   }
@@ -158,8 +204,7 @@ export async function getBiometricCredentials(): Promise<BiometricResult> {
   // Hardware / OS-level availability check first so we can differentiate
   // "no fingerprint enrolled" from a user cancellation.
   try {
-    const avail = await NativeBiometric.isAvailable()
-    if (!avail.isAvailable || avail.authenticationStrength !== AuthenticationStrength.STRONG) {
+    if (!(await isBiometricAvailable())) {
       return {
         ok: false,
         error: {
@@ -192,20 +237,16 @@ export async function getBiometricCredentials(): Promise<BiometricResult> {
 
   // Verify identity with the biometric prompt.
   try {
-    await NativeBiometric.verifyIdentity({
-      ...STRONG_ONLY,
-      reason: 'Sign in to AbiaConnect',
-      title: 'Confirm it\'s you',
-    })
+    await confirmOwner('Sign in to AbiaConnect')
   } catch (e) {
-    const raw = e instanceof Error ? e.message : String(e ?? '')
+    const { cancelled, reason } = describeBiometricError(e)
     return {
       ok: false,
       error: {
         kind: 'cancelled',
-        message: raw?.toLowerCase().includes('lock')
-          ? 'Too many failed attempts — biometric is temporarily locked. Try again shortly or use your password.'
-          : 'Biometric verification was cancelled. Try again or sign in with your password.',
+        message: cancelled
+          ? 'Fingerprint was cancelled. Try again or sign in with your password.'
+          : `${reason} You can also sign in with your password.`,
       },
     }
   }
