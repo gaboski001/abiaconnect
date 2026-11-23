@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import { Fingerprint, Lock, ShieldCheck, ToggleRight } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import {
@@ -35,16 +35,19 @@ const POINTS = [
 export function BiometricOptInDialog({ open, email, password, onClose }: Props) {
   const [busy, setBusy] = useState(false)
 
-  async function handleEnable() {
+  async function handleEnable(e: MouseEvent) {
+    // Keep this window open while the phone asks for the fingerprint; otherwise it closes
+    // at once and counts as "Not now".
+    e.preventDefault()
     setBusy(true)
     try {
-      const ok = await enableBiometric(email, password)
-      if (ok) {
+      const result = await enableBiometric(email, password)
+      if (result.ok) {
         toast.success('Fingerprint or face sign-in is on')
         onClose(true)
-      } else {
-        toast.error('Could not turn on fingerprint or face sign-in')
-        onClose(false)
+      } else if (!result.cancelled) {
+        // Stay open so they can try again or choose "Not now".
+        toast.error(`Could not turn on fingerprint sign-in. ${result.reason}`)
       }
     } finally {
       setBusy(false)

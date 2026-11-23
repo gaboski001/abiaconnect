@@ -60,21 +60,60 @@ export function isBiometricEnabled(): boolean {
   }
 }
 
-export async function enableBiometric(email: string, password: string): Promise<boolean> {
-  if (!Capacitor.isNativePlatform()) return false
+/** Touches allowed before the fingerprint screen gives up (the plugin's maximum). */
+const MAX_TOUCHES = 5
+
+export type EnableResult = { ok: true } | { ok: false; cancelled: boolean; reason: string }
+
+/** A plain sentence for why the phone refused, from the plugin's error code and text. */
+export function describeBiometricError(e: unknown): { cancelled: boolean; reason: string } {
+  const err = (e ?? {}) as { code?: unknown; message?: unknown }
+  const code = String(err.code ?? '')
+  const raw = typeof err.message === 'string' ? err.message : String(e ?? '')
+  const text = raw.toLowerCase()
+  if (code === '16' || code === '15' || text.includes('cancel')) {
+    return { cancelled: true, reason: 'Fingerprint was cancelled.' }
+  }
+  if (code === '4' || code === '2' || text.includes('lock') || text.includes('too many')) {
+    return { cancelled: false, reason: 'Too many tries. Wait a moment, then try again.' }
+  }
+  if (code === '3' || text.includes('no biometric') || text.includes('not enrolled')) {
+    return { cancelled: false, reason: 'No fingerprint is saved on this phone. Add one in your phone settings first.' }
+  }
+  if (code === '1' || text.includes('hardware')) {
+    return { cancelled: false, reason: 'The fingerprint reader is busy or not available. Try again.' }
+  }
+  return { cancelled: false, reason: raw ? `Your phone said: ${raw}` : 'Your phone did not allow it.' }
+}
+
+export async function enableBiometric(email: string, password: string): Promise<EnableResult> {
+  if (!Capacitor.isNativePlatform()) {
+    return { ok: false, cancelled: false, reason: 'This only works in the AbiaConnect app.' }
+  }
   try {
     // Verify once so the user explicitly consents.
     await NativeBiometric.verifyIdentity({
       ...STRONG_ONLY,
+      maxAttempts: MAX_TOUCHES,
       reason: 'Turn on fingerprint or face sign-in for AbiaConnect',
       title: 'Confirm it\'s you',
       subtitle: 'Future sign-ins will use your fingerprint or face',
     })
+  } catch (e) {
+    return { ok: false, ...describeBiometricError(e) }
+  }
+  try {
     await NativeBiometric.setCredentials({ username: email, password, server: SERVER })
     localStorage.setItem(ENABLED_KEY, 'true')
-    return true
-  } catch {
-    return false
+    setBiometricDeclined(false)
+    return { ok: true }
+  } catch (e) {
+    const raw = e instanceof Error ? e.message : String(e ?? '')
+    return {
+      ok: false,
+      cancelled: false,
+      reason: `Your phone could not save your sign-in safely${raw ? ` (${raw})` : ''}.`,
+    }
   }
 }
 
