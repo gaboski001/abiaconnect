@@ -1,5 +1,6 @@
 package com.abiaconnect.app;
 
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -7,6 +8,7 @@ import android.content.Intent;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -46,8 +48,16 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
         String url = value(remoteMessage, "url", defaultUrl);
 
+        if ("call_cancel".equals(type)) {
+            // The caller hung up before it was answered: stop ringing.
+            cancelIncomingCall(callId);
+            return;
+        }
         if ("call".equals(type)) {
-            showIncomingCallNotification(title, body, callId, url);
+            String callerName = value(remoteMessage, "callerName", "");
+            boolean video = "video".equals(value(remoteMessage, "callType", "voice"));
+            String photo = value(remoteMessage, "callerAvatar", "");
+            showIncomingCallNotification(callerName, video, photo, callId, url);
         } else {
             showStandardNotification(title, body, type, url, callId);
         }
@@ -128,7 +138,43 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
-    private void showIncomingCallNotification(String title, String body, String callId, String url) {
+    /** The incoming-call alert currently ringing, if any. */
+    private static volatile int ringingNotificationId = 0;
+
+    static void stopRinging(Context ctx) {
+        int id = ringingNotificationId;
+        if (id == 0) return;
+        ringingNotificationId = 0;
+        NotificationManager manager = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) manager.cancel(id);
+    }
+
+    static int incomingCallNotificationId(String callId) {
+        return TextUtils.isEmpty(callId) ? 0 : callId.hashCode();
+    }
+
+    private void cancelIncomingCall(String callId) {
+        if (TextUtils.isEmpty(callId)) return;
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) manager.cancel(incomingCallNotificationId(callId));
+    }
+
+    /** Light the screen up for a call even when the phone is asleep, like a normal phone call. */
+    private void wakeScreen() {
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm == null || pm.isInteractive()) return;
+            @SuppressWarnings("deprecation")
+            PowerManager.WakeLock wl = pm.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "AbiaConnect:IncomingCall");
+            wl.acquire(10_000L);
+        } catch (Exception ignored) {
+            // Some phones refuse; the full-screen call alert still shows.
+        }
+    }
+
+    private void showIncomingCallNotification(String callerNameIn, boolean video, String photoUrl, String callId, String url) {
         // If the app is currently in the foreground, do NOT post the loud
         // system CallStyle notification — the in-app CallOverlay + WebRTC
         // realtime signaling will show and ring the incoming call. This
@@ -139,8 +185,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             return;
         }
 
-        int notificationId = TextUtils.isEmpty(callId) ? (int) System.currentTimeMillis() : callId.hashCode();
-        String callerName = TextUtils.isEmpty(title) ? "Incoming call" : title;
+        int notificationId = TextUtils.isEmpty(callId) ? (int) System.currentTimeMillis() : incomingCallNotificationId(callId);
+        String callerName = TextUtils.isEmpty(callerNameIn) ? "AbiaConnect member" : callerNameIn;
+        String body = video ? "Incoming video call" : "Incoming voice call";
+        android.graphics.Bitmap picture = CallAvatar.forCaller(this, callerName, photoUrl);
         PendingIntent answerIntent = buildContentIntent(notificationId + 1, "call", url, callId, callerName, notificationId, "answer");
         PendingIntent declineIntent = buildDeclineIntent(notificationId + 2, callId, notificationId);
         // Tapping the notification body (full-screen intent) opens the incoming-call UI
@@ -150,11 +198,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         BaseActivity.createNotificationChannels(this);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CALL_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_stat_abiaconnect)
+            .setSmallIcon(R.drawable.ic_stat_call)
+            .setLargeIcon(picture)
             .setColor(ContextCompat.getColor(this, R.color.notification_color))
             .setColorized(true)
             .setContentTitle(callerName)
-            .setContentText(TextUtils.isEmpty(body) ? "Incoming AbiaConnect call" : body)
+            .setContentText(body)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -162,14 +211,14 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             .setAutoCancel(false)
             .setContentIntent(fullScreenIntent)
             .setFullScreenIntent(fullScreenIntent, true)
-            .setTimeoutAfter(45000);
+            .setTimeoutAfter(40000);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             // WhatsApp-style incoming call surface: big Answer/Decline buttons,
             // caller identity, and full-screen presentation on the lockscreen.
             Person caller = new Person.Builder()
                 .setName(callerName)
-                .setIcon(IconCompat.createWithResource(this, R.drawable.ic_stat_abiaconnect))
+                .setIcon(IconCompat.createWithBitmap(picture))
                 .setImportant(true)
                 .build();
             builder.setStyle(
@@ -177,17 +226,21 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             );
         } else {
             builder
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(
-                    TextUtils.isEmpty(body) ? "Tap to answer" : body))
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
                 .setSound(sound)
                 .setVibrate(new long[]{0, 700, 350, 700, 350, 700})
                 .addAction(R.drawable.ic_stat_abiaconnect, "Decline", declineIntent)
                 .addAction(R.drawable.ic_stat_abiaconnect, "Answer", answerIntent);
         }
 
+        Notification notification = builder.build();
+        // Keep ringing until answered, declined or the caller gives up (like a phone call).
+        notification.flags |= Notification.FLAG_INSISTENT;
+        wakeScreen();
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) {
-            manager.notify(notificationId, builder.build());
+            manager.notify(notificationId, notification);
+            ringingNotificationId = notificationId;
         }
     }
 }

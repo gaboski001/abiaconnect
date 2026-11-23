@@ -7,6 +7,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   UUID_RE,
+  buildCallCancelPush,
   buildCallPush,
   parseCallRequest,
   sanitizeFreePush,
@@ -207,21 +208,35 @@ Deno.serve(async (req) => {
         if (blocks?.length) return jsonRes({ error: 'Forbidden' }, 403)
 
         // One alert per call (plus one retry), and a cap per caller.
-        const perCall = await withinRateLimit(supa, `call:${call.callId}`, 'push-call-once', 2, 3600)
-        const perCaller = await withinRateLimit(supa, `uid:${callerId}`, 'push-call', 10, 600)
-        if (!perCall || !perCaller) return jsonRes({ error: 'Too many call alerts, try again shortly' }, 429)
+        if (call.cancel) {
+          if (!(await withinRateLimit(supa, `call:${call.callId}`, 'push-call-cancel', 2, 3600))) {
+            return jsonRes({ error: 'Too many call alerts, try again shortly' }, 429)
+          }
+          content = buildCallCancelPush(call.callId)
+        } else {
+          const perCall = await withinRateLimit(supa, `call:${call.callId}`, 'push-call-once', 2, 3600)
+          const perCaller = await withinRateLimit(supa, `uid:${callerId}`, 'push-call', 10, 600)
+          if (!perCall || !perCaller) return jsonRes({ error: 'Too many call alerts, try again shortly' }, 429)
 
-        const { data: profile } = await supa.from('profiles').select('display_name, username').eq('id', callerId).maybeSingle()
-        content = buildCallPush({
-          callerId,
-          callerName: profile?.display_name || profile?.username,
-          callId: call.callId,
-          callType: call.callType,
-          conversationId: convo.id,
-        })
+          const { data: profile } = await supa
+            .from('profiles')
+            .select('display_name, username, avatar_url')
+            .eq('id', callerId)
+            .maybeSingle()
+          content = buildCallPush({
+            callerId,
+            callerName: profile?.display_name || profile?.username,
+            callerAvatar: profile?.avatar_url,
+            callId: call.callId,
+            callType: call.callType,
+            conversationId: convo.id,
+          })
+        }
       }
     }
     // --------------------------------------------------------------------
+
+    if (!content) return jsonRes({ error: 'Nothing to send' }, 400)
 
     const { data: rows, error } = await supa
       .from('device_push_tokens')
@@ -253,6 +268,7 @@ Deno.serve(async (req) => {
           data: payloadData,
           android: {
             priority: 'HIGH' as const,
+            ...(payloadData.type === 'call' || payloadData.type === 'call_cancel' ? { ttl: '40s' } : {}),
           },
           apns: {
             headers: { 'apns-priority': '10' },

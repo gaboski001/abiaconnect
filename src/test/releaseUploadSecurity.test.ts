@@ -9,7 +9,7 @@ import {
   releaseStoragePath,
   safeEqual,
 } from '../../supabase/functions/_shared/release-package'
-import { buildCallPush, parseCallRequest, sanitizeFreePush } from '../../supabase/functions/_shared/push-policy'
+import { buildCallCancelPush, buildCallPush, parseCallRequest, safeAvatarUrl, sanitizeFreePush } from '../../supabase/functions/_shared/push-policy'
 
 /** Minimal ZIP writer (stored entries) so tests can build real and fake packages. */
 function zip(entries: Array<[string, string | Uint8Array]>, padTo = 8192): Uint8Array {
@@ -131,11 +131,28 @@ describe('release upload validation (server side)', () => {
 describe('push alert rules', () => {
   it('only treats well-formed call alerts as member-to-member pushes', () => {
     const current = { userId: 'x', title: 'Hi', message: 'm', data: { type: 'call', callId: 'c-1727000000000-abc1234', callType: 'video' } }
-    expect(parseCallRequest(current)).toEqual({ callId: 'c-1727000000000-abc1234', callType: 'video' })
+    expect(parseCallRequest(current)).toEqual({ callId: 'c-1727000000000-abc1234', callType: 'video', cancel: false })
     expect(parseCallRequest({ title: 'You won a prize', message: 'click here' })).toBeNull()
     expect(parseCallRequest({ data: { type: 'call', callId: 'c-1', callType: 'voice' } })).toBeNull() // id too short
     expect(parseCallRequest({ data: { type: 'call', callId: 'c-1727000000000-abc1234', callType: 'sms' } })).toBeNull()
     expect(parseCallRequest({ data: { type: 'call', callId: 'c-17270000/../x', callType: 'voice' } })).toBeNull()
+  })
+
+  it('lets the caller stop the ringing, with fixed server wording', () => {
+    expect(parseCallRequest({ data: { type: 'call_cancel', callId: 'c-1727000000000-abc1234' } }))
+      .toEqual({ callId: 'c-1727000000000-abc1234', callType: 'voice', cancel: true })
+    expect(parseCallRequest({ data: { type: 'call_cancel', callId: 'bad id!' } })).toBeNull()
+    expect(buildCallCancelPush('c-1727000000000-abc1234').data).toEqual({ type: 'call_cancel', callId: 'c-1727000000000-abc1234' })
+  })
+
+  it('only passes a normal https photo address to the call alert', () => {
+    expect(safeAvatarUrl('https://cdn.example.com/a.jpg')).toBe('https://cdn.example.com/a.jpg')
+    expect(safeAvatarUrl('http://cdn.example.com/a.jpg')).toBe('')
+    expect(safeAvatarUrl('javascript:alert(1)')).toBe('')
+    expect(safeAvatarUrl(null)).toBe('')
+    const p = buildCallPush({ callerId: 'u1', callerName: 'Ada', callerAvatar: 'https://cdn.example.com/a.jpg', callId: 'c-1727000000000-abc1234', callType: 'voice', conversationId: null })
+    expect(p.data.callerAvatar).toBe('https://cdn.example.com/a.jpg')
+    expect(p.data.callerName).toBe('Ada')
   })
 
   it('writes call alert text on the server, ignoring anything the caller sent', () => {

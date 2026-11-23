@@ -192,7 +192,8 @@ public class CallForegroundService extends Service {
         );
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CALL_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_stat_abiaconnect)
+            .setSmallIcon(R.drawable.ic_stat_call)
+            .setLargeIcon(CallAvatar.initial(this, callerName))
             .setColor(ContextCompat.getColor(this, R.color.notification_color))
             .setColorized(true)
             .setContentTitle(callerName)
@@ -208,7 +209,7 @@ public class CallForegroundService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             Person caller = new Person.Builder()
                 .setName(callerName)
-                .setIcon(IconCompat.createWithResource(this, R.drawable.ic_stat_abiaconnect))
+                .setIcon(IconCompat.createWithBitmap(CallAvatar.initial(this, callerName)))
                 .setImportant(true)
                 .build();
             builder.setStyle(NotificationCompat.CallStyle.forOngoingCall(caller, hangupPending));

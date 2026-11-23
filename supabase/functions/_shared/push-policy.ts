@@ -18,22 +18,38 @@ const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String
  * Reads the call details from a push request. Accepts the current app's shape
  * ({ data: { type: 'call', callId, callType } }) and a top-level form.
  */
-export function parseCallRequest(body: unknown): { callId: string; callType: CallType } | null {
+export function parseCallRequest(
+  body: unknown,
+): { callId: string; callType: CallType; cancel: boolean } | null {
   const b = (body ?? {}) as Record<string, unknown>
   const data = (b.data ?? {}) as Record<string, unknown>
   const type = str(b.type || data.type)
-  if (type !== 'call') return null
+  if (type !== 'call' && type !== 'call_cancel') return null
   const callId = str(b.callId || data.callId)
-  const callType = str(b.callType || data.callType)
   if (!CALL_ID_RE.test(callId)) return null
+  // "Stop ringing" alert: the caller hung up before it was answered.
+  if (type === 'call_cancel') return { callId, callType: 'voice', cancel: true }
+  const callType = str(b.callType || data.callType)
   if (callType !== 'voice' && callType !== 'video') return null
-  return { callId, callType }
+  return { callId, callType, cancel: false }
+}
+
+/** The "stop ringing" alert. The phone removes the incoming-call screen. */
+export function buildCallCancelPush(callId: string): PushContent {
+  return { title: 'Missed call', message: 'Call ended', data: { type: 'call_cancel', callId } }
+}
+
+/** Only a normal web address for the caller's photo; anything else is dropped. */
+export function safeAvatarUrl(url: unknown): string {
+  const u = str(url).trim()
+  return /^https:\/\/[^\s"'<>]{4,500}$/.test(u) ? u : ''
 }
 
 /** The incoming-call alert, worded by the server. */
 export function buildCallPush(opts: {
   callerId: string
   callerName: string | null | undefined
+  callerAvatar?: string | null
   callId: string
   callType: CallType
   conversationId: string | null
@@ -49,6 +65,8 @@ export function buildCallPush(opts: {
     url: opts.conversationId ? `/messages/${opts.conversationId}` : '/messages',
   }
   if (opts.conversationId) data.conversationId = opts.conversationId
+  const avatar = safeAvatarUrl(opts.callerAvatar)
+  if (avatar) data.callerAvatar = avatar
   return {
     title: video ? 'Incoming video call' : 'Incoming call',
     message: `${name} is ${video ? 'video ' : ''}calling you on AbiaConnect`,

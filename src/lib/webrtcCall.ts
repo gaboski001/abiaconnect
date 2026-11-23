@@ -280,6 +280,8 @@ class CallManager {
   /** The phone was put in call mode (Android app), so it must be put back. */
   private audioRouteSet = false
   private micWatch = freshMicWatch()
+  /** Last sound readings, saved as a call health record when the call ends. */
+  private callHealth = { micEnergy: null as number | null, audioBytesSent: 0, audioBytesReceived: 0, micRestarts: 0 }
   /**
    * Recently cancelled call ids (by us or by the peer). Used so a late
    * `invite` for a call the user already hung up on is auto-declined and
@@ -818,7 +820,15 @@ class CallManager {
       // is idempotent, so extra deliveries are harmless.
       void this.sessionSend('bye', { callId }).catch(() => undefined)
       this.sendCancelWithRetries(peerId, callId)
+      // Their phone may be ringing from a push alert with the app closed:
+      // tell it to stop, as the realtime cancel can't reach a closed app.
+      if (direction === 'outgoing' && !wasConnected) {
+        void supabase.functions
+          .invoke('send-push', { body: { userId: peerId, data: { type: 'call_cancel', callId } } })
+          .catch(() => undefined)
+      }
     }
+    if (wasConnected && callId) this.saveCallHealth(callId, direction)
     // Log a call entry in the conversation (missed or completed).
     // Only the caller writes it (single source of truth — both peers see the same row).
     if (direction === 'outgoing' && conversationId && this.userId) {
@@ -1194,6 +1204,12 @@ class CallManager {
         if (r.type === 'media-source' && r.kind === 'audio' && typeof r.totalAudioEnergy === 'number') {
           micEnergy = r.totalAudioEnergy
         }
+        if (r.type === 'outbound-rtp' && r.kind === 'audio' && typeof r.bytesSent === 'number') {
+          this.callHealth.audioBytesSent = r.bytesSent
+        }
+        if (r.type === 'inbound-rtp' && r.kind === 'audio' && typeof r.bytesReceived === 'number') {
+          this.callHealth.audioBytesReceived = r.bytesReceived
+        }
         if (r.type === 'remote-inbound-rtp' && r.kind === 'audio') {
           if (typeof r.roundTripTime === 'number') rttMs = Math.round(r.roundTripTime * 1000)
           if (typeof r.jitter === 'number') jitterMs = Math.round(r.jitter * 1000)
@@ -1220,6 +1236,7 @@ class CallManager {
           }
         }
       })
+      if (micEnergy != null) this.callHealth.micEnergy = micEnergy
       this.checkMic(micEnergy)
       const totalPackets = packetsLost + packetsReceived
       if (totalPackets > 0) {
@@ -1261,6 +1278,42 @@ class CallManager {
     this.audioRouteSet = false
   }
 
+  /**
+   * A few numbers about the call (no sound, no content), so a "they can't
+   * hear me" report can be traced to the phone whose microphone went quiet.
+   */
+  private saveCallHealth(callId: string, direction: CallState['direction']) {
+    const h = this.callHealth
+    const track = this.localStream?.getAudioTracks()[0]
+    const startedAt = this.state.startedAt
+    const row = {
+      call_id: callId,
+      user_id: this.userId,
+      role: direction === 'outgoing' ? 'caller' : 'callee',
+      video: this.state.video,
+      seconds: startedAt ? Math.round((Date.now() - startedAt) / 1000) : null,
+      mic_energy: h.micEnergy,
+      audio_bytes_sent: h.audioBytesSent,
+      audio_bytes_received: h.audioBytesReceived,
+      mic_restarts: h.micRestarts,
+      mic_state: track ? `${track.readyState}${track.muted ? ':muted' : ''}${track.enabled ? '' : ':off'}` : 'none',
+      self_muted: this.state.muted,
+      speaker_on: this.state.speakerOn,
+      native_app: canSwitchAudioRoute(),
+      device: navigator.userAgent.slice(0, 300),
+    }
+    this.callHealth = { micEnergy: null, audioBytesSent: 0, audioBytesReceived: 0, micRestarts: 0 }
+    void (async () => {
+      try {
+        await (supabase as unknown as { from: (t: string) => { insert: (r: unknown) => Promise<unknown> } })
+          .from('call_health')
+          .insert(row)
+      } catch {
+        // Best effort only.
+      }
+    })()
+  }
+
   /** Restart a microphone that has gone completely silent mid-call. */
   private checkMic(energy: number | null) {
     const out = watchMic(this.micWatch, {
@@ -1269,7 +1322,10 @@ class CallManager {
       connected: this.state.status === 'connected',
     })
     this.micWatch = out.watch
-    if (out.restart) void this.restartMic()
+    if (out.restart) {
+      this.callHealth.micRestarts += 1
+      void this.restartMic()
+    }
   }
 
   private async restartMic() {

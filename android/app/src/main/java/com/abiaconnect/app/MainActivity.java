@@ -42,6 +42,14 @@ public class MainActivity extends BaseActivity {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        // The app is open now, so the in-app call screen rings instead:
+        // stop the system ringtone so the phone doesn't ring twice.
+        MyFirebaseMessagingService.stopRinging(this);
+    }
+
+    @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
@@ -335,6 +343,9 @@ public class MainActivity extends BaseActivity {
                 }
                 boolean speaker = "speaker".equals(route);
                 am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                // Some phones mute the microphone when they switch into call
+                // mode, so the other person hears nothing. Make sure it's on.
+                if (am.isMicrophoneMute()) am.setMicrophoneMute(false);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     AudioDeviceInfo chosen = null;
                     for (AudioDeviceInfo d : am.getAvailableCommunicationDevices()) {
@@ -352,7 +363,15 @@ public class MainActivity extends BaseActivity {
                             chosen = d;
                         }
                     }
-                    if (chosen != null) am.setCommunicationDevice(chosen);
+                    if (chosen != null && chosen.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) {
+                        // Plain earpiece: let the phone use its normal call
+                        // routing. Forcing it has silenced the microphone on
+                        // some phones during voice calls.
+                        am.clearCommunicationDevice();
+                        am.setSpeakerphoneOn(false);
+                    } else if (chosen != null) {
+                        am.setCommunicationDevice(chosen);
+                    }
                 } else {
                     // Off = default routing, which already prefers a headset.
                     am.setSpeakerphoneOn(speaker);
