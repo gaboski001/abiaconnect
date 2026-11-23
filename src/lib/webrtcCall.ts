@@ -11,6 +11,7 @@
 // back to STUN only, which fails behind strict / carrier-grade NAT.
 
 import { supabase } from '@/lib/supabase'
+import { freshMicWatch, watchMic } from '@/lib/callMic'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { areCallsEnabled } from '@/lib/callPreferences'
 
@@ -276,6 +277,9 @@ class CallManager {
   private autoReconnecting = false
   private inviteRetryTimer: number | null = null
   private wasConnected = false
+  /** The phone was put in call mode (Android app), so it must be put back. */
+  private audioRouteSet = false
+  private micWatch = freshMicWatch()
   /**
    * Recently cancelled call ids (by us or by the peer). Used so a late
    * `invite` for a call the user already hung up on is auto-declined and
@@ -476,9 +480,11 @@ class CallManager {
     // Ask for the mic/camera BEFORE ringing the other person, so a refused
     // permission never leaves them with a phantom call.
     let media: { stream: MediaStream; video: boolean }
+    this.enterCallAudioMode(wantVideo)
     try {
       media = await this.acquireMedia(wantVideo)
     } catch (err) {
+      this.leaveCallAudioMode()
       throw new Error(mediaErrorMessage(err, wantVideo))
     }
 
@@ -546,9 +552,11 @@ class CallManager {
     const wantVideo = offer.video && opts.video !== false
 
     let media: { stream: MediaStream; video: boolean }
+    this.enterCallAudioMode(offer.video)
     try {
       media = await this.acquireMedia(wantVideo)
     } catch (err) {
+      this.leaveCallAudioMode()
       // Can't answer without a microphone: decline cleanly and explain why.
       this.rememberCancelled(callId)
       this.sendCancelWithRetries(from.id, callId, 'unavailable')
@@ -559,6 +567,7 @@ class CallManager {
     if (this.cancelledCallIds.has(callId)) {
       // Caller hung up while we were asking for permissions.
       media.stream.getTracks().forEach((t) => t.stop())
+      this.leaveCallAudioMode()
       return
     }
     this.localStream = media.stream
@@ -841,9 +850,15 @@ class CallManager {
     this.clearInviteRetryLoop()
     this.clearConnectTimer()
     this.stopStatsLoop()
-    if (this.state.speakerOn || this.state.status === 'connected' || this.state.status === 'connecting') {
-      setNativeAudioRoute('reset')
+    if (
+      this.audioRouteSet ||
+      this.state.speakerOn ||
+      this.state.status === 'connected' ||
+      this.state.status === 'connecting'
+    ) {
+      this.leaveCallAudioMode()
     }
+    this.micWatch = freshMicWatch()
     this.pc?.getSenders().forEach((s) => s.track?.stop())
     this.pc?.close()
     this.pc = null
@@ -1150,6 +1165,7 @@ class CallManager {
     this.stopStatsLoop()
     this.lastBytesReceived = 0
     this.lastBytesTimestamp = 0
+    this.micWatch = freshMicWatch()
     this.statsTimer = window.setInterval(() => {
       void this.pollStats()
     }, 2000)
@@ -1173,7 +1189,11 @@ class CallManager {
       const report = await pc.getStats()
       let packetsLost = 0
       let packetsReceived = 0
+      let micEnergy: number | null = null
       report.forEach((r: any) => {
+        if (r.type === 'media-source' && r.kind === 'audio' && typeof r.totalAudioEnergy === 'number') {
+          micEnergy = r.totalAudioEnergy
+        }
         if (r.type === 'remote-inbound-rtp' && r.kind === 'audio') {
           if (typeof r.roundTripTime === 'number') rttMs = Math.round(r.roundTripTime * 1000)
           if (typeof r.jitter === 'number') jitterMs = Math.round(r.jitter * 1000)
@@ -1200,6 +1220,7 @@ class CallManager {
           }
         }
       })
+      this.checkMic(micEnergy)
       const totalPackets = packetsLost + packetsReceived
       if (totalPackets > 0) {
         packetLossPct = Math.round((packetsLost / totalPackets) * 1000) / 10
@@ -1222,6 +1243,58 @@ class CallManager {
     this.adaptBitrate(quality)
     if (quality !== prev && quality !== 'unknown') this.applyVideoBitrate(quality)
     this.trackPersistentPoor(quality)
+  }
+
+  /**
+   * Android app: put the phone in call mode BEFORE the microphone opens. Some
+   * phones go silent if the mode changes while the mic is already recording,
+   * so the other person couldn't hear voice calls (video was fine).
+   */
+  private enterCallAudioMode(video: boolean) {
+    if (!canSwitchAudioRoute()) return
+    setNativeAudioRoute(video ? 'speaker' : 'earpiece')
+    this.audioRouteSet = true
+  }
+
+  private leaveCallAudioMode() {
+    setNativeAudioRoute('reset')
+    this.audioRouteSet = false
+  }
+
+  /** Restart a microphone that has gone completely silent mid-call. */
+  private checkMic(energy: number | null) {
+    const out = watchMic(this.micWatch, {
+      energy,
+      muted: this.state.muted,
+      connected: this.state.status === 'connected',
+    })
+    this.micWatch = out.watch
+    if (out.restart) void this.restartMic()
+  }
+
+  private async restartMic() {
+    const pc = this.pc
+    const stream = this.localStream
+    if (!pc || !stream) return
+    console.warn('[call] microphone sent only silence; restarting it')
+    try {
+      const fresh = await navigator.mediaDevices.getUserMedia({ audio: AUDIO_CONSTRAINTS, video: false })
+      const track = fresh.getAudioTracks()[0]
+      if (!track || this.pc !== pc) {
+        fresh.getTracks().forEach((t) => t.stop())
+        return
+      }
+      track.enabled = !this.state.muted
+      const sender = pc.getSenders().find((s) => s.track?.kind === 'audio')
+      await sender?.replaceTrack(track)
+      stream.getAudioTracks().forEach((old) => {
+        stream.removeTrack(old)
+        old.stop()
+      })
+      stream.addTrack(track)
+    } catch (err) {
+      console.warn('[call] could not restart the microphone', err)
+    }
   }
 
   private scoreQuality(

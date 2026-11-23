@@ -15,7 +15,7 @@ export const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${A
  * see "Update available" (the app loads this website, so this reaches them
  * without a new app).
  */
-export const LATEST_ANDROID_RELEASE = { version: '1.1.2' }
+export const LATEST_ANDROID_RELEASE = { version: '1.1.3' }
 
 /** What's new, per version, in plain words (shown in the update message). */
 export const ANDROID_RELEASE_NOTES: Record<string, string> = {
