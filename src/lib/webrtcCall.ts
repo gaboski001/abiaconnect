@@ -789,8 +789,10 @@ class CallManager {
       await supabase.functions.invoke('send-push', {
         body: {
           userId: target.id,
-          title: this.state.video ? 'Incoming video call' : 'Incoming call',
-          message: `${this.selfPeer?.name || 'Someone'} is ${this.state.video ? 'video ' : ''}calling you on AbiaConnect`,
+          // The Android app shows the title as the caller's name on its
+          // ringing screen, so the title IS the name.
+          title: this.selfPeer?.name || 'AbiaConnect member',
+          message: this.state.video ? 'Incoming video call' : 'Incoming voice call',
           data,
         },
       })
@@ -824,7 +826,9 @@ class CallManager {
       // tell it to stop, as the realtime cancel can't reach a closed app.
       if (direction === 'outgoing' && !wasConnected) {
         void supabase.functions
-          .invoke('send-push', { body: { userId: peerId, data: { type: 'call_cancel', callId } } })
+          .invoke('send-push', {
+            body: { userId: peerId, title: 'Missed call', message: 'Call ended', data: { type: 'call_cancel', callId } },
+          })
           .catch(() => undefined)
       }
     }
