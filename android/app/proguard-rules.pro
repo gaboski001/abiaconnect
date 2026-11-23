@@ -19,3 +19,28 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# ---- AbiaConnect ----
+# Keep crash reports readable on Google Play (the mapping file is uploaded with the bundle).
+-keepattributes SourceFile,LineNumberTable,*Annotation*,Signature,InnerClasses,EnclosingMethod,Exceptions
+-renamesourcefileattribute SourceFile
+
+# Methods the web page calls through window.AbiaCallBridge / AbiaAuthBridge.
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# The app's own code: small, and reached from the manifest, notifications and the web page.
+-keep class com.abiaconnect.app.** { *; }
+
+# Capacitor and its plugins are found by name at start-up.
+-keep class com.getcapacitor.** { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+-keep class * extends com.getcapacitor.Plugin { *; }
+-keep class org.apache.cordova.** { *; }
+-keep class * extends org.apache.cordova.CordovaPlugin { *; }
+-keep class com.capacitorjs.plugins.** { *; }
+
+# Firebase messaging (push alerts and incoming calls).
+-keep class com.google.firebase.messaging.** { *; }
+-dontwarn com.google.firebase.**

@@ -39,8 +39,11 @@ android {
             if (keystorePropsFile.exists()) {
                 signingConfig signingConfigs.release
             }
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Google Play asks for optimized code (it flags apps below 25%).
+            // Keep-rules for everything the web page or Android reaches by name
+            // are in proguard-rules.pro.
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
