@@ -30,6 +30,8 @@ public class BaseActivity extends BridgeActivity {
     public static final String CHANNEL_ID = "abia_alerts";
     private static final String OLD_CHANNEL_ID = "abia_default";
     public static final String CALL_CHANNEL_ID = "abia_calls";
+    /** The "call in progress" notice: silent, so answering never sets off the ringtone again. */
+    public static final String ONGOING_CALL_CHANNEL_ID = "abia_call_ongoing";
 
     /**
      * Tracks whether the app's Activity is currently visible & interactive.
@@ -244,5 +246,16 @@ public class BaseActivity extends BridgeActivity {
         callChannel.setBypassDnd(true);
         callChannel.setSound(ringtone, audioAttributes);
         notificationManager.createNotificationChannel(callChannel);
+
+        NotificationChannel ongoingChannel = new NotificationChannel(
+            ONGOING_CALL_CHANNEL_ID,
+            ctx.getString(R.string.push_ongoing_call_channel_name),
+            NotificationManager.IMPORTANCE_LOW
+        );
+        ongoingChannel.setSound(null, null);
+        ongoingChannel.enableVibration(false);
+        ongoingChannel.setShowBadge(false);
+        ongoingChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        notificationManager.createNotificationChannel(ongoingChannel);
     }
 }

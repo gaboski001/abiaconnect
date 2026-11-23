@@ -173,6 +173,7 @@ public class CallForegroundService extends Service {
     }
 
     private Notification buildOngoingCallNotification(String callerName, String callId) {
+        BaseActivity.createNotificationChannels(this);
         Intent openIntent = new Intent(this, MainActivity.class);
         openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         openIntent.putExtra("notification_type", "call_ongoing");
@@ -191,7 +192,7 @@ public class CallForegroundService extends Service {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.CALL_CHANNEL_ID)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BaseActivity.ONGOING_CALL_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_call)
             .setLargeIcon(CallAvatar.initial(this, callerName))
             .setColor(ContextCompat.getColor(this, R.color.notification_color))
@@ -204,6 +205,7 @@ public class CallForegroundService extends Service {
             .setOngoing(true)
             .setUsesChronometer(true)
             .setOnlyAlertOnce(true)
+            .setSilent(true)
             .setContentIntent(contentIntent);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
