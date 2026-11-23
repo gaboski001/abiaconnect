@@ -157,8 +157,8 @@ describe('push alert rules', () => {
 
   it('writes call alert text on the server, ignoring anything the caller sent', () => {
     const p = buildCallPush({ callerId: 'u1', callerName: 'Ada\nOkafor', callId: 'c-1727000000000-abc1234', callType: 'voice', conversationId: 'conv1' })
-    expect(p.title).toBe('Incoming call')
-    expect(p.message).toBe('Ada Okafor is calling you on AbiaConnect')
+    expect(p.title).toBe('Ada Okafor')
+    expect(p.message).toBe('Incoming voice call')
     expect(p.data).toMatchObject({ type: 'call', url: '/messages/conv1', conversationId: 'conv1' })
   })
 

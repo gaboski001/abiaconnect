@@ -163,7 +163,11 @@ Deno.serve(async (req) => {
       }
 
       const { data: isAdmin } = await supa.rpc('is_admin', { _user_id: callerId })
-      if (callerId === userId || isAdmin === true) {
+      // A call alert is always checked and worded as a call, even when an
+      // admin places the call (it used to go out as a plain admin message,
+      // so the other phone showed "Incoming call" with no name and no ring).
+      const isCallAlert = callerId !== userId && parseCallRequest(body) !== null
+      if (!isCallAlert && (callerId === userId || isAdmin === true)) {
         const max = isAdmin === true ? 30 : 10
         if (!(await withinRateLimit(supa, `uid:${callerId}`, 'push-free', max, 60))) {
           return jsonRes({ error: 'Too many alerts, try again shortly' }, 429)

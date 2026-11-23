@@ -67,9 +67,11 @@ export function buildCallPush(opts: {
   if (opts.conversationId) data.conversationId = opts.conversationId
   const avatar = safeAvatarUrl(opts.callerAvatar)
   if (avatar) data.callerAvatar = avatar
+  // The title is the caller's name: the Android app (1.1.3 and older) shows
+  // the title as the caller on its ringing screen.
   return {
-    title: video ? 'Incoming video call' : 'Incoming call',
-    message: `${name} is ${video ? 'video ' : ''}calling you on AbiaConnect`,
+    title: name,
+    message: video ? 'Incoming video call' : 'Incoming voice call',
     data,
   }
 }
