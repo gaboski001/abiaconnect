@@ -1,17 +1,28 @@
 /**
- * Professional call ringtone / ringback using WebAudio.
- * - Incoming: classic dual-tone phone ring (440Hz + 480Hz, 2s on / 4s off)
- * - Outgoing ringback: 440Hz + 480Hz, 2s on / 4s off (US ringback)
- * Falls back gracefully if WebAudio is blocked. Also vibrates on mobile.
+ * Call sounds.
+ * - Incoming: in the Android app (1.1.4+) the phone's own ringtone, played by
+ *   the app itself, exactly like a normal phone call. Elsewhere a ringing
+ *   melody made with WebAudio, clearly different from the dialling sound.
+ * - Outgoing (the caller hears this while the other phone rings): the classic
+ *   440 Hz + 480 Hz ringback beep, quietly.
+ *
+ * The WebAudio player is shut down completely when the sound stops, so it
+ * never keeps hold of the phone's sound output once the call itself starts
+ * (a lingering player could leave the caller unable to hear the other person).
  */
+import { getRingtoneSettings, CADENCE_PRESETS } from './ringtoneSettings'
 
 let ctx: AudioContext | null = null
 let masterGain: GainNode | null = null
-let oscA: OscillatorNode | null = null
-let oscB: OscillatorNode | null = null
+let sources: OscillatorNode[] = []
 let cycleTimer: number | null = null
 let vibrateTimer: number | null = null
 let mode: 'incoming' | 'outgoing' | null = null
+let nativeRinging = false
+
+type NativeRingBridge = { startRingtone?: () => void; stopRingtone?: () => void; stopIncomingAlert?: () => void }
+const nativeBridge = (): NativeRingBridge | undefined =>
+  (window as unknown as { AbiaCallBridge?: NativeRingBridge }).AbiaCallBridge
 
 function ensureCtx(): AudioContext | null {
   try {
@@ -27,48 +38,78 @@ function ensureCtx(): AudioContext | null {
   }
 }
 
-function startTone(volume: number) {
+function newGain(ac: AudioContext): GainNode {
+  const g = ac.createGain()
+  g.gain.value = 0
+  g.connect(ac.destination)
+  return g
+}
+
+/** Ringback: steady two-tone beep. */
+function playRingback(volume: number) {
   const ac = ensureCtx()
   if (!ac) return
   stopTone()
-  masterGain = ac.createGain()
-  masterGain.gain.value = 0
-  masterGain.connect(ac.destination)
-
-  oscA = ac.createOscillator()
-  oscB = ac.createOscillator()
-  oscA.type = 'sine'
-  oscB.type = 'sine'
-  oscA.frequency.value = 440
-  oscB.frequency.value = 480
-  oscA.connect(masterGain)
-  oscB.connect(masterGain)
-  oscA.start()
-  oscB.start()
-
-  // soft attack
+  masterGain = newGain(ac)
+  for (const f of [440, 480]) {
+    const o = ac.createOscillator()
+    o.type = 'sine'
+    o.frequency.value = f
+    o.connect(masterGain)
+    o.start()
+    sources.push(o)
+  }
   const t = ac.currentTime
-  masterGain.gain.cancelScheduledValues(t)
   masterGain.gain.setValueAtTime(0, t)
   masterGain.gain.linearRampToValueAtTime(volume, t + 0.08)
 }
 
-function stopTone() {
-  if (masterGain && ctx) {
-    const t = ctx.currentTime
-    try {
-      masterGain.gain.cancelScheduledValues(t)
-      masterGain.gain.linearRampToValueAtTime(0, t + 0.05)
-    } catch {}
+/** Incoming ring: a bright four-note phrase played twice (about 1.8 s). */
+function playRingPhrase(volume: number) {
+  const ac = ensureCtx()
+  if (!ac) return
+  stopTone()
+  const master = newGain(ac)
+  master.gain.value = volume
+  masterGain = master
+  const notes = [659.25, 830.61, 987.77, 830.61] // E5 G#5 B5 G#5
+  const step = 0.2
+  const start = ac.currentTime + 0.02
+  for (let rep = 0; rep < 2; rep++) {
+    notes.forEach((freq, i) => {
+      const at = start + rep * (notes.length * step + 0.15) + i * step
+      const o = ac.createOscillator()
+      const g = ac.createGain()
+      o.type = 'triangle'
+      o.frequency.value = freq
+      g.gain.setValueAtTime(0, at)
+      g.gain.linearRampToValueAtTime(1, at + 0.01)
+      g.gain.exponentialRampToValueAtTime(0.001, at + step * 0.95)
+      o.connect(g)
+      g.connect(master)
+      o.start(at)
+      o.stop(at + step)
+      sources.push(o)
+    })
   }
-  try { oscA?.stop() } catch {}
-  try { oscB?.stop() } catch {}
-  oscA = null
-  oscB = null
+}
+
+function stopTone() {
+  for (const o of sources) {
+    try { o.stop() } catch { /* already stopped */ }
+    try { o.disconnect() } catch { /* ignore */ }
+  }
+  sources = []
+  try { masterGain?.disconnect() } catch { /* ignore */ }
   masterGain = null
 }
 
-import { getRingtoneSettings, CADENCE_PRESETS } from './ringtoneSettings'
+/** Release the phone's sound output entirely. */
+function closeCtx() {
+  const c = ctx
+  ctx = null
+  if (c) void c.close().catch(() => undefined)
+}
 
 export function startRingtone(direction: 'incoming' | 'outgoing') {
   if (mode === direction) return
@@ -77,18 +118,38 @@ export function startRingtone(direction: 'incoming' | 'outgoing') {
 
   const settings = getRingtoneSettings()
   const preset = CADENCE_PRESETS[settings.cadence]
-  const onMs = preset.onMs
-  const offMs = preset.offMs
-  // Outgoing ringback is always quieter; respects the same enabled flag.
-  const baseVolume = direction === 'incoming' ? settings.volume : Math.min(settings.volume, 0.14)
+
+  if (direction === 'incoming') {
+    // The call screen is showing in the app now: the system call alert that
+    // brought the member here can stop (the app rings from here on).
+    try { nativeBridge()?.stopIncomingAlert?.() } catch { /* ignore */ }
+  }
+
+  if (direction === 'incoming' && settings.ringEnabled) {
+    const bridge = nativeBridge()
+    if (typeof bridge?.startRingtone === 'function') {
+      // The phone's own ringtone; it also vibrates by the phone's settings.
+      try {
+        bridge.startRingtone()
+        nativeRinging = true
+        return
+      } catch {
+        // fall back to the in-app melody below
+      }
+    }
+  }
 
   if (settings.ringEnabled) {
+    const volume = direction === 'incoming' ? Math.max(settings.volume, 0.3) : Math.min(settings.volume, 0.14)
+    const ringMs = direction === 'incoming' ? 1900 : preset.onMs
+    const pauseMs = direction === 'incoming' ? Math.min(preset.offMs, 1500) : preset.offMs
     const cycle = () => {
-      startTone(baseVolume)
+      if (direction === 'incoming') playRingPhrase(volume)
+      else playRingback(volume)
       cycleTimer = window.setTimeout(() => {
         stopTone()
-        cycleTimer = window.setTimeout(cycle, offMs)
-      }, onMs)
+        cycleTimer = window.setTimeout(cycle, pauseMs)
+      }, ringMs)
     }
     cycle()
   }
@@ -96,18 +157,22 @@ export function startRingtone(direction: 'incoming' | 'outgoing') {
   if (direction === 'incoming' && settings.vibrateEnabled && 'vibrate' in navigator) {
     const pattern = [600, 400, 600, 400, 600]
     const tick = () => {
-      try { navigator.vibrate(pattern) } catch {}
-      vibrateTimer = window.setTimeout(tick, onMs + offMs - 500)
+      try { navigator.vibrate(pattern) } catch { /* ignore */ }
+      vibrateTimer = window.setTimeout(tick, 3400)
     }
     tick()
   }
 }
 
-
 export function stopRingtone() {
   mode = null
   if (cycleTimer) { window.clearTimeout(cycleTimer); cycleTimer = null }
   if (vibrateTimer) { window.clearTimeout(vibrateTimer); vibrateTimer = null }
+  if (nativeRinging) {
+    nativeRinging = false
+    try { nativeBridge()?.stopRingtone?.() } catch { /* ignore */ }
+  }
   stopTone()
-  try { navigator.vibrate?.(0) } catch {}
+  closeCtx()
+  try { navigator.vibrate?.(0) } catch { /* ignore */ }
 }

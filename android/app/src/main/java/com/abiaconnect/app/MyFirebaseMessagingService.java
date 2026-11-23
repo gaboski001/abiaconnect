@@ -174,6 +174,19 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
+    /** Calls already alerted, so a repeated alert for the same call never rings twice. */
+    private static final java.util.Map<String, Long> alertedCalls = new java.util.HashMap<>();
+
+    private static synchronized boolean firstAlertFor(String callId) {
+        if (TextUtils.isEmpty(callId)) return true;
+        long now = System.currentTimeMillis();
+        java.util.Iterator<java.util.Map.Entry<String, Long>> it = alertedCalls.entrySet().iterator();
+        while (it.hasNext()) if (now - it.next().getValue() > 120_000L) it.remove();
+        if (alertedCalls.containsKey(callId)) return false;
+        alertedCalls.put(callId, now);
+        return true;
+    }
+
     private void showIncomingCallNotification(String callerNameIn, boolean video, String photoUrl, String callId, String url) {
         // If the app is currently in the foreground, do NOT post the loud
         // system CallStyle notification — the in-app CallOverlay + WebRTC
@@ -182,6 +195,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         // banner ringing at the same time as the in-app UI).
         if (BaseActivity.isAppInForeground()) {
             android.util.Log.d(TAG, "Skipping system call notification — app is in foreground");
+            return;
+        }
+        if (!firstAlertFor(callId)) {
+            android.util.Log.d(TAG, "Already alerted for this call");
             return;
         }
 

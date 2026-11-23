@@ -42,14 +42,6 @@ public class MainActivity extends BaseActivity {
     }
 
     @Override
-    public void onResume() {
-        super.onResume();
-        // The app is open now, so the in-app call screen rings instead:
-        // stop the system ringtone so the phone doesn't ring twice.
-        MyFirebaseMessagingService.stopRinging(this);
-    }
-
-    @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
@@ -141,14 +133,16 @@ public class MainActivity extends BaseActivity {
         // ringing notification so the ringtone/vibration stops immediately and
         // future calls aren't blocked.
         if ("call".equals(type)) {
-            int notificationId = intent.getIntExtra("notification_id", -1);
-            android.app.NotificationManager manager =
-                (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-            if (manager != null && notificationId != -1) {
-                manager.cancel(notificationId);
-            }
-
+            // Opening the app from the alert (or unlocking onto it) keeps the
+            // alert ringing until the in-app call screen shows and takes over
+            // (AbiaCallBridge.stopIncomingAlert), so the call never vanishes.
             if ("answer".equals(callAction)) {
+                int notificationId = intent.getIntExtra("notification_id", -1);
+                android.app.NotificationManager manager =
+                    (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                if (manager != null && notificationId != -1) {
+                    manager.cancel(notificationId);
+                }
                 // Promote to a foreground call session BEFORE routing so Android
                 // keeps the process (and WebRTC peer connection) alive.
                 CallForegroundService.start(this, callerName, callId);
@@ -379,6 +373,23 @@ public class MainActivity extends BaseActivity {
             } catch (Exception ignored) {
                 // Routing is best effort; never break the call over it.
             }
+        }
+
+        /** The in-app call screen is ringing now: the system call alert can stop. */
+        @JavascriptInterface
+        public void stopIncomingAlert() {
+            MyFirebaseMessagingService.stopRinging(context);
+        }
+
+        /** The phone's own ringtone for a call that arrives while the app is open. */
+        @JavascriptInterface
+        public void startRingtone() {
+            CallRinger.start(context);
+        }
+
+        @JavascriptInterface
+        public void stopRingtone() {
+            CallRinger.stop();
         }
 
         /** The web app says a video call started or stopped (for the floating window). */

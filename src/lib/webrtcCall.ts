@@ -387,6 +387,32 @@ class CallManager {
     }
   }
 
+  /**
+   * Point the player at the other person's voice, from scratch. The caller's
+   * player was set up while the other phone was still ringing, with nothing
+   * to play; some phones then stayed silent when the voice arrived later
+   * (the person who dialled couldn't hear). A fresh start avoids that.
+   */
+  private bindRemoteAudio() {
+    const el = this.remoteAudio
+    const pc = this.pc
+    if (!el || !pc) return
+    const tracks = pc.getReceivers()
+      .map((r) => r.track)
+      .filter((t): t is MediaStreamTrack => !!t && t.kind === 'audio' && t.readyState === 'live')
+    if (tracks.length === 0) return
+    const fresh = new MediaStream(tracks)
+    try { el.pause() } catch { /* ignore */ }
+    el.srcObject = null
+    el.srcObject = fresh
+    el.muted = false
+    el.volume = 1
+    el.play().catch(() => {
+      // Blocked or interrupted: try once more shortly.
+      window.setTimeout(() => { el.play().catch(() => undefined) }, 400)
+    })
+  }
+
   setRemoteAudioElement(el: HTMLAudioElement | null) {
     this.remoteAudio = el
     // If a peer connection is already receiving remote audio when the sink
@@ -757,12 +783,12 @@ class CallManager {
         return
       }
       attempts += 1
-      if (attempts > 6) {
+      if (attempts > 11) {
         this.clearInviteRetryLoop()
         return
       }
       void this.sendInvite(target, callId)
-    }, 5000)
+    }, 3000)
   }
 
   private clearInviteRetryLoop() {
@@ -1085,14 +1111,7 @@ class CallManager {
       }
       if (e.track.kind !== 'audio') return
       try { remoteStream.addTrack(e.track) } catch { /* ignore duplicates */ }
-      if (this.remoteAudio) {
-        // Re-bind in case the element was reset elsewhere.
-        if (this.remoteAudio.srcObject !== remoteStream) {
-          this.remoteAudio.srcObject = remoteStream
-        }
-        this.remoteAudio.muted = false
-        this.remoteAudio.play().catch(() => undefined)
-      }
+      this.bindRemoteAudio()
       // Hint a small jitter buffer for low-latency speech (Chromium experimental).
       for (const r of pc.getReceivers()) {
         const anyR = r as unknown as { jitterBufferTarget?: number; playoutDelayHint?: number }
@@ -1110,6 +1129,8 @@ class CallManager {
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState
       if (s === 'connected') {
+        // The ringing sound has just stopped; start the voice player afresh.
+        window.setTimeout(() => this.bindRemoteAudio(), 300)
         const wasConnecting = this.state.status !== 'connected'
         if (wasConnecting && !this.wasConnected) {
           // Voice calls start on the earpiece, video calls on the loudspeaker.
