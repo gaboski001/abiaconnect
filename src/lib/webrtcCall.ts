@@ -281,7 +281,7 @@ class CallManager {
   private audioRouteSet = false
   private micWatch = freshMicWatch()
   /** Last sound readings, saved as a call health record when the call ends. */
-  private callHealth = { micEnergy: null as number | null, audioBytesSent: 0, audioBytesReceived: 0, micRestarts: 0 }
+  private callHealth = { micEnergy: null as number | null, heardEnergy: null as number | null, audioBytesSent: 0, audioBytesReceived: 0, micRestarts: 0 }
   /**
    * Recently cancelled call ids (by us or by the peer). Used so a late
    * `invite` for a call the user already hung up on is auto-declined and
@@ -1213,6 +1213,7 @@ class CallManager {
         }
         if (r.type === 'inbound-rtp' && r.kind === 'audio' && typeof r.bytesReceived === 'number') {
           this.callHealth.audioBytesReceived = r.bytesReceived
+          if (typeof r.totalAudioEnergy === 'number') this.callHealth.heardEnergy = r.totalAudioEnergy
         }
         if (r.type === 'remote-inbound-rtp' && r.kind === 'audio') {
           if (typeof r.roundTripTime === 'number') rttMs = Math.round(r.roundTripTime * 1000)
@@ -1301,12 +1302,16 @@ class CallManager {
       audio_bytes_received: h.audioBytesReceived,
       mic_restarts: h.micRestarts,
       mic_state: track ? `${track.readyState}${track.muted ? ':muted' : ''}${track.enabled ? '' : ':off'}` : 'none',
+      heard_energy: h.heardEnergy,
+      player_state: this.remoteAudio
+        ? `${this.remoteAudio.paused ? 'paused' : 'playing'}${this.remoteAudio.muted ? ':muted' : ''}:vol${Math.round(this.remoteAudio.volume * 100)}`
+        : 'none',
       self_muted: this.state.muted,
       speaker_on: this.state.speakerOn,
       native_app: canSwitchAudioRoute(),
       device: navigator.userAgent.slice(0, 300),
     }
-    this.callHealth = { micEnergy: null, audioBytesSent: 0, audioBytesReceived: 0, micRestarts: 0 }
+    this.callHealth = { micEnergy: null, heardEnergy: null, audioBytesSent: 0, audioBytesReceived: 0, micRestarts: 0 }
     void (async () => {
       try {
         await (supabase as unknown as { from: (t: string) => { insert: (r: unknown) => Promise<unknown> } })
