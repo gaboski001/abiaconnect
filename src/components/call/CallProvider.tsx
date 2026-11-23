@@ -86,7 +86,22 @@ export function CallProvider() {
 
     if (state.status === 'connected' && !fgActiveRef.current) {
       fgActiveRef.current = true
-      bridge.startCall(state.peer?.name || 'AbiaConnect call', state.callId || '')
+      const name = state.peer?.name || 'AbiaConnect call'
+      const callId = state.callId || ''
+      const oldApp = typeof (bridge as { stopIncomingAlert?: unknown }).stopIncomingAlert !== 'function'
+      if (oldApp && state.direction === 'incoming') {
+        // App 1.1.3 and older: pressing Answer on the alert starts the "call in
+        // progress" notice on the ringing channel, so the phone's ringtone keeps
+        // playing after the call connects (and can drown out the other person).
+        // Restarting the notice now that the phone is in call mode stops that
+        // ringtone, and Android does not ring again during a call.
+        bridge.endCall()
+        window.setTimeout(() => {
+          if (fgActiveRef.current) bridge.startCall(name, callId)
+        }, 700)
+      } else {
+        bridge.startCall(name, callId)
+      }
     } else if (
       fgActiveRef.current &&
       (state.status === 'idle' || state.status === 'ended')
@@ -94,7 +109,7 @@ export function CallProvider() {
       fgActiveRef.current = false
       bridge.endCall()
     }
-  }, [state.status, state.callId, state.peer?.name])
+  }, [state.status, state.callId, state.peer?.name, state.direction])
 
   // ── Notification action listeners ───────────────────────────────────────
   // MainActivity dispatches these window events when the user taps Answer,
