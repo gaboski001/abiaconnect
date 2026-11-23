@@ -11,7 +11,8 @@
 // back to STUN only, which fails behind strict / carrier-grade NAT.
 
 import { supabase } from '@/lib/supabase'
-import { freshMicWatch, watchMic } from '@/lib/callMic'
+import { freshMicWatch, watchMic, MAX_SPEAKER_RESTARTS, VOICE_BYTES_PER_POLL } from '@/lib/callMic'
+import { stopRingtone } from '@/lib/ringtone'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { areCallsEnabled } from '@/lib/callPreferences'
 
@@ -280,6 +281,12 @@ class CallManager {
   /** The phone was put in call mode (Android app), so it must be put back. */
   private audioRouteSet = false
   private micWatch = freshMicWatch()
+  /** Silent-speaker watchdog (voice arriving but not played). */
+  private speakerWatch = freshMicWatch()
+  private speakerLastBytes = 0
+  private speakerKicks = 0
+  private spareAudio: HTMLAudioElement | null = null
+  private spareCtx: AudioContext | null = null
   /** Last sound readings, saved as a call health record when the call ends. */
   private callHealth = { micEnergy: null as number | null, heardEnergy: null as number | null, audioBytesSent: 0, audioBytesReceived: 0, micRestarts: 0 }
   /**
@@ -580,6 +587,9 @@ class CallManager {
     const wantVideo = offer.video && opts.video !== false
 
     let media: { stream: MediaStream; video: boolean }
+    // Silence the ringtone before the phone switches into call mode and opens
+    // the microphone, so nothing is still playing while the sound is rerouted.
+    stopRingtone()
     this.enterCallAudioMode(offer.video)
     try {
       media = await this.acquireMedia(wantVideo)
@@ -899,6 +909,7 @@ class CallManager {
       this.leaveCallAudioMode()
     }
     this.micWatch = freshMicWatch()
+    this.releaseSparePlayers()
     this.pc?.getSenders().forEach((s) => s.track?.stop())
     this.pc?.close()
     this.pc = null
@@ -1201,6 +1212,9 @@ class CallManager {
     this.lastBytesReceived = 0
     this.lastBytesTimestamp = 0
     this.micWatch = freshMicWatch()
+    this.speakerWatch = freshMicWatch()
+    this.speakerLastBytes = 0
+    this.speakerKicks = 0
     this.statsTimer = window.setInterval(() => {
       void this.pollStats()
     }, 2000)
@@ -1264,6 +1278,7 @@ class CallManager {
       })
       if (micEnergy != null) this.callHealth.micEnergy = micEnergy
       this.checkMic(micEnergy)
+      this.checkSpeaker()
       const totalPackets = packetsLost + packetsReceived
       if (totalPackets > 0) {
         packetLossPct = Math.round((packetsLost / totalPackets) * 1000) / 10
@@ -1325,7 +1340,7 @@ class CallManager {
       mic_state: track ? `${track.readyState}${track.muted ? ':muted' : ''}${track.enabled ? '' : ':off'}` : 'none',
       heard_energy: h.heardEnergy,
       player_state: this.remoteAudio
-        ? `${this.remoteAudio.paused ? 'paused' : 'playing'}${this.remoteAudio.muted ? ':muted' : ''}:vol${Math.round(this.remoteAudio.volume * 100)}`
+        ? `${this.remoteAudio.paused ? 'paused' : 'playing'}${this.remoteAudio.muted ? ':muted' : ''}:vol${Math.round(this.remoteAudio.volume * 100)}${this.speakerKicks ? `:fix${this.speakerKicks}` : ''}`
         : 'none',
       self_muted: this.state.muted,
       speaker_on: this.state.speakerOn,
@@ -1343,6 +1358,88 @@ class CallManager {
         // Best effort only.
       }
     })()
+  }
+
+  /**
+   * The other person's voice keeps arriving but the phone plays none of it.
+   * Try, one step at a time: reconnect the player and re-select the earpiece
+   * or speaker; then a brand-new player; then play through WebAudio.
+   */
+  private checkSpeaker() {
+    const bytes = this.callHealth.audioBytesReceived
+    const delta = bytes - this.speakerLastBytes
+    this.speakerLastBytes = bytes
+    const out = watchMic(
+      this.speakerWatch,
+      {
+        energy: this.callHealth.heardEnergy,
+        muted: delta < VOICE_BYTES_PER_POLL,
+        connected: this.state.status === 'connected',
+      },
+      MAX_SPEAKER_RESTARTS,
+    )
+    this.speakerWatch = out.watch
+    if (!out.restart) return
+    this.speakerKicks += 1
+    console.warn(`[call] voice arriving but not played; fix step ${this.speakerKicks}`)
+    try {
+      if (this.speakerKicks === 1) {
+        if (this.audioRouteSet) setNativeAudioRoute(this.state.speakerOn ? 'speaker' : 'earpiece')
+        this.bindRemoteAudio()
+      } else if (this.speakerKicks === 2) {
+        this.playThroughSparePlayer(false)
+      } else {
+        this.playThroughSparePlayer(true)
+      }
+    } catch {
+      // best effort
+    }
+  }
+
+  private liveRemoteAudioStream(): MediaStream | null {
+    const tracks = (this.pc?.getReceivers() ?? [])
+      .map((r) => r.track)
+      .filter((t): t is MediaStreamTrack => !!t && t.kind === 'audio' && t.readyState === 'live')
+    return tracks.length ? new MediaStream(tracks) : null
+  }
+
+  /** A new player made from scratch; with `webAudio`, the sound goes out through WebAudio instead. */
+  private playThroughSparePlayer(webAudio: boolean) {
+    const stream = this.liveRemoteAudioStream()
+    if (!stream) return
+    this.releaseSparePlayers()
+    if (this.remoteAudio) {
+      try { this.remoteAudio.pause() } catch { /* ignore */ }
+    }
+    const el = new Audio()
+    el.autoplay = true
+    el.srcObject = stream
+    // WebAudio only receives the voice while an element is playing it, so the
+    // element stays on but silent when WebAudio does the playing.
+    el.muted = webAudio
+    el.volume = 1
+    void el.play().catch(() => undefined)
+    this.spareAudio = el
+    if (webAudio) {
+      const Ctor = (window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)
+      if (!Ctor) return
+      const ctx = new Ctor()
+      ctx.createMediaStreamSource(stream).connect(ctx.destination)
+      void ctx.resume().catch(() => undefined)
+      this.spareCtx = ctx
+    }
+  }
+
+  private releaseSparePlayers() {
+    if (this.spareAudio) {
+      try { this.spareAudio.pause() } catch { /* ignore */ }
+      this.spareAudio.srcObject = null
+      this.spareAudio = null
+    }
+    if (this.spareCtx) {
+      void this.spareCtx.close().catch(() => undefined)
+      this.spareCtx = null
+    }
   }
 
   /** Restart a microphone that has gone completely silent mid-call. */

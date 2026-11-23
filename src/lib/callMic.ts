@@ -29,6 +29,7 @@ export const freshMicWatch = (): MicWatch => ({ lastEnergy: null, silentPolls: 0
 export function watchMic(
   watch: MicWatch,
   reading: { energy: number | null; muted: boolean; connected: boolean },
+  maxRestarts: number = MAX_MIC_RESTARTS,
 ): { watch: MicWatch; restart: boolean } {
   // Muted on purpose, not in a call yet, or no data: nothing to judge.
   if (!reading.connected || reading.muted || reading.energy == null) {
@@ -36,7 +37,7 @@ export function watchMic(
   }
   const silent = watch.lastEnergy != null && reading.energy <= watch.lastEnergy
   const silentPolls = silent ? watch.silentPolls + 1 : 0
-  if (silentPolls >= SILENT_POLLS_BEFORE_RESTART && watch.restarts < MAX_MIC_RESTARTS) {
+  if (silentPolls >= SILENT_POLLS_BEFORE_RESTART && watch.restarts < maxRestarts) {
     return {
       watch: { lastEnergy: null, silentPolls: 0, restarts: watch.restarts + 1 },
       restart: true,
@@ -44,3 +45,12 @@ export function watchMic(
   }
   return { watch: { ...watch, lastEnergy: reading.energy, silentPolls }, restart: false }
 }
+
+/**
+ * The same check for the speaker side: the other person's voice is arriving
+ * (bytes keep coming) but the phone plays none of it. Seen on a Pixel 7 that
+ * answered a call: sound arrived, nothing was played. Steps to try, in order.
+ */
+export const MAX_SPEAKER_RESTARTS = 3
+/** Below this many bytes per 2 s poll the other side is muted or quiet: nothing to judge. */
+export const VOICE_BYTES_PER_POLL = 1500

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { freshMicWatch, MAX_MIC_RESTARTS, watchMic, type MicWatch } from './callMic'
+import { freshMicWatch, MAX_MIC_RESTARTS, MAX_SPEAKER_RESTARTS, watchMic, type MicWatch } from './callMic'
 
 const live = (energy: number | null, extra: Partial<{ muted: boolean; connected: boolean }> = {}) => ({
   energy,
@@ -49,5 +49,23 @@ describe('silent microphone during a call', () => {
 
   it('starts counting again once sound comes back', () => {
     expect(run([live(0.1), live(0.1), live(0.1), live(0.2), live(0.2), live(0.2)]).restarts).toEqual([])
+  })
+})
+
+describe('silent speaker during a call', () => {
+  it('tries each fix step once, then stops', () => {
+    let watch = freshMicWatch()
+    let restarts = 0
+    for (let i = 0; i < 60; i++) {
+      const out = watchMic(watch, live(0), MAX_SPEAKER_RESTARTS)
+      watch = out.watch
+      if (out.restart) restarts += 1
+    }
+    expect(restarts).toBe(MAX_SPEAKER_RESTARTS)
+  })
+
+  it('leaves it alone while the other person is quiet or muted', () => {
+    const readings = Array.from({ length: 10 }, () => live(0, { muted: true }))
+    expect(run(readings).restarts).toEqual([])
   })
 })
