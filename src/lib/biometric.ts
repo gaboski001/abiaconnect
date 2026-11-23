@@ -16,7 +16,8 @@ import { AuthenticationStrength, BiometryType, NativeBiometric } from '@capgo/ca
 
 const SERVER = 'com.abiaconnect.app'
 const ENABLED_KEY = 'abia:biometric-enabled'
-const DECLINED_KEY = 'abia:biometric-declined'
+// v2: until 24 Nov 2026 tapping "Turn on" was wrongly saved as "Not now", so everyone is offered it once more.
+const DECLINED_KEY = 'abia:biometric-declined-v2'
 
 // The plugin's screen always uses a secure key, and Android closes the app if
 // that screen also allows "weak" unlock methods. FINGERPRINT asks for strong
