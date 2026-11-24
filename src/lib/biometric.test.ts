@@ -76,9 +76,9 @@ describe('fingerprint sign-in: turning it on', () => {
   })
 
   it('passes on an unknown phone message word for word', async () => {
-    expect(describeBiometricError(new Error('Biometric security check failed'))).toEqual({
+    expect(describeBiometricError(new Error('Sensor is dirty'))).toEqual({
       cancelled: false,
-      reason: 'Your phone said: Biometric security check failed',
+      reason: 'Your phone said: Sensor is dirty',
     })
   })
 })
@@ -128,5 +128,27 @@ describe("fingerprint sign-in: the app's own fingerprint screen", () => {
     expect(ownFingerprintCode(9)).toBe('4')
     expect(ownFingerprintCode(11)).toBe('3')
     expect(ownFingerprintCode(12)).toBe('1')
+  })
+})
+
+describe('fingerprint sign-in: saving the sign-in', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    plugin.verifyIdentity.mockResolvedValue(undefined)
+    plugin.deleteCredentials.mockResolvedValue(undefined)
+  })
+
+  it('clears an old saved copy and tries again when saving fails once', async () => {
+    plugin.setCredentials.mockRejectedValueOnce(new Error('Failed to save credentials')).mockResolvedValueOnce(undefined)
+    await expect(enableBiometric('a@example.com', 'made-up')).resolves.toEqual({ ok: true })
+    expect(plugin.deleteCredentials).toHaveBeenCalledTimes(1)
+    expect(plugin.setCredentials).toHaveBeenCalledTimes(2)
+  })
+
+  it('tells members on an old app to update instead of the add-on message', () => {
+    const out = describeBiometricError({ code: '10', message: 'Biometric security check failed' })
+    expect(out.cancelled).toBe(false)
+    expect(out.reason).toMatch(/update AbiaConnect/)
   })
 })

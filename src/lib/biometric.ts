@@ -133,10 +133,31 @@ export function describeBiometricError(e: unknown): { cancelled: boolean; reason
   if (code === '3' || text.includes('no biometric') || text.includes('not enrolled')) {
     return { cancelled: false, reason: 'No fingerprint is saved on this phone. Add one in your phone settings first.' }
   }
+  if (code === '10' || text.includes('security check')) {
+    // Only the add-on's own screen (apps before 1.1.5) says this; the newer app has its own screen.
+    return {
+      cancelled: false,
+      reason: 'This version of the app cannot do it. Please update AbiaConnect to the newest version, then try again.',
+    }
+  }
   if (code === '1' || text.includes('hardware')) {
     return { cancelled: false, reason: 'The fingerprint reader is busy or not available. Try again.' }
   }
   return { cancelled: false, reason: raw ? `Your phone said: ${raw}` : 'Your phone did not allow it.' }
+}
+
+/** Saves the sign-in; if an old saved copy blocks it, clears that copy and tries once more. */
+async function saveCredentials(email: string, password: string): Promise<void> {
+  try {
+    await NativeBiometric.setCredentials({ username: email, password, server: SERVER })
+  } catch {
+    try {
+      await NativeBiometric.deleteCredentials({ server: SERVER })
+    } catch {
+      /* nothing saved yet */
+    }
+    await NativeBiometric.setCredentials({ username: email, password, server: SERVER })
+  }
 }
 
 export async function enableBiometric(email: string, password: string): Promise<EnableResult> {
@@ -150,7 +171,7 @@ export async function enableBiometric(email: string, password: string): Promise<
     return { ok: false, ...describeBiometricError(e) }
   }
   try {
-    await NativeBiometric.setCredentials({ username: email, password, server: SERVER })
+    await saveCredentials(email, password)
     localStorage.setItem(ENABLED_KEY, 'true')
     setBiometricDeclined(false)
     return { ok: true }
